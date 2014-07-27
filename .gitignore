@@ -1,2 +1,8 @@
 doc/html/
 doc/latex/
+*.mod
+*.swp
+*.swo
+*tags
+src/galileo
+*.o
