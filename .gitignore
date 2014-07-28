@@ -4,5 +4,5 @@ doc/latex/
 *.swp
 *.swo
 *tags
-src/galileo
+galileo
 *.o

@@ -14,8 +14,8 @@
 # The compiler
 FC = mpif90
 # flags for debugging or for maximum performance, comment as necessary
-#FCFLAGS = -g -fbounds-check
-FCFLAGS = -O3 -mkl
+FCFLAGS = -g -traceback -fp-stack-check -check all -fpe0 -warn all -mkl
+#FCFLAGS = -O3 -mkl
 # flags forall (e.g. look for system .mod files, required in gfortran)
 #FCFLAGS += -I/usr/include
 
@@ -34,10 +34,10 @@ all: $(PROGRAMS)
 # ======================================================================
 
 
-nested_sampling.o:  types.o
-galileo.o: 			nested_sampling.o types.o random_utils.o
+nested_sampling.o:  types.o random_utils.o
+galileo.o: 			nested_sampling.o types.o random_utils.o likelihoods.o
 
-galileo: galileo.o nested_sampling.o random_utils.o types.o
+galileo: galileo.o nested_sampling.o random_utils.o types.o likelihoods.o
 
 
 # ======================================================================
