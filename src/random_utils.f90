@@ -83,13 +83,11 @@ module random_module
     !! intel method to generate Gaussian random numbers. Note that this can come
     !! in an accurate form
 
-    subroutine random_coordinate(coordinates,nDims)
+    subroutine random_coordinate(coordinates)
         implicit none
 
         !> The output nDims coordinate
-        double precision, intent(out), dimension(nDims) :: coordinates
-        !> Dimensions of the unit vector
-        integer,          intent(in)                    :: nDims
+        double precision, intent(out), dimension(:) :: coordinates
 
         ! Method to generate random numbers 
         ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
@@ -100,10 +98,14 @@ module random_module
 
         integer :: errcode ! Error code
 
+        integer :: nDims ! Size of coordinate vector
+
+
+        nDims = size(coordinates)
 
         ! Generate nDims random numbers, stored in a vector 'coordinates'
         ! (v=vector,d=double,rng,uniform)
-        errcode=vdrnguniform( method, rng_stream, ndims, coordinates, u_bound, l_bound)
+        errcode=vdrnguniform( method, rng_stream, nDims, coordinates, u_bound, l_bound)
 
 
     end subroutine random_coordinate

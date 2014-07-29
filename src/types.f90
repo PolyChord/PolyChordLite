@@ -17,47 +17,99 @@ module model_module
     !> Type to encode all of the information about the priors.
     type :: model
 
-        
+
         integer :: nDims       !> Dimensionality of the space
-
         integer :: nDerived    !> Number of derived parameters
+        integer :: nTotal      !> 2*ndims + nDerived + 1
 
-        integer :: nTotal      !> nDerived + nDims + 1
+        !> Indices for the sections of a live_points array
+        integer :: h0,h1       !> hypercube indices
+        integer :: p0,p1       !> physical indices
+        integer :: d0,d1       !> derived indices
+        integer :: l0          !> likelihood index
 
-        contains
-        procedure :: loglikelihood => gaussian_loglikelihood
+        procedure(loglike), pass(M), pointer :: loglikelihood 
 
     end type model
 
+    interface
+        function loglike(M,theta)
+            import :: model
+            class(model),     intent(in)               :: M
+            double precision, intent(in), dimension(:) :: theta
+
+            double precision :: loglike
+        end function
+    end interface
+
+
     contains
 
-    function gaussian_loglikelihood(this,theta)
-        class(model),intent(in)                             :: this
-        double precision, intent(in), dimension(this%nDims) :: theta
+    subroutine hypercube_to_physical(M, live_data)
+        type(model),     intent(in)                   :: M
+        double precision, intent(inout) , dimension(:) :: live_data
 
-        double precision :: gaussian_loglikelihood
+        double precision, dimension(M%nDims) :: hypercube_coords
+        double precision, dimension(M%nDims) :: physical_coords
 
-        double precision, dimension(this%nDims) :: sigma  
-        double precision, dimension(this%nDims) :: mu
+        ! copy the hypercube coordinates to a temporary variable
+        hypercube_coords = live_data(M%h0:M%h1)
 
-        double precision :: TwoPi 
+        ! Transform to physical coordinates
+        physical_coords = hypercube_coords
 
-        integer :: i
+        ! copy the physical coordinates back to live_data
+        live_data(M%p0:M%p1) = physical_coords
+
+    end subroutine hypercube_to_physical
 
 
-        TwoPi = 6.2831853d0
-        sigma = 0.01
-        mu    = 0.5
 
-        gaussian_loglikelihood = - this%nDims / 2d0 * log( TwoPi )
+    subroutine calculate_derived_parameters(M, live_data)
+        type(model),      intent(in)                   :: M
+        double precision, intent(inout) , dimension(:) :: live_data
 
-        do i = 1, this%nDims
-            gaussian_loglikelihood = gaussian_loglikelihood - log( sigma(i) )
-        enddo
+        double precision, dimension(M%nDims)    :: physical_coords
+        double precision                        :: loglike
+        double precision, dimension(M%nDerived) :: derived_parameters
 
-        gaussian_loglikelihood = gaussian_loglikelihood &
-            - sum( ( ( theta( 1:this%nDims ) - mu(1:this%nDims ) ) / sigma( 1:this%nDims ) ) ** 2d0 ) / 2d0
+        ! Copy the physical coordinates and loglike to temporary variables
+        physical_coords    = live_data(M%p0:M%p1)
+        loglike            = live_data(M%l0) 
 
-    end function gaussian_loglikelihood
+        derived_parameters = 0.0
+
+        ! transfer the derived parameter back to live_data
+        live_data(M%d0:M%d1) = derived_parameters
+
+    end subroutine calculate_derived_parameters
+
+
+
+    subroutine initialise_model(M)
+        type(model), intent(inout) :: M
+
+        ! Total number of parameters
+        M%nTotal = 2*M%nDims+M%nDerived+1
+
+        ! Hypercube parameter indices
+        M%h0=1
+        M%h1=M%nDims
+
+        ! Physical parameter indices
+        M%p0=M%nDims+1
+        M%p1=2*M%nDims
+
+        ! Derived parameter indices
+        M%d0=2*M%nDims+1
+        M%d1=2*M%nDims+M%nDerived
+
+        ! Loglikelihood index
+        M%l0=M%nTotal
+
+
+    end subroutine initialise_model
+
+
 
 end module model_module 

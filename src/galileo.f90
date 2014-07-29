@@ -1,10 +1,11 @@
 program galileo
 
-    use nested_sampling_module
-    use likelihoods_module
-    use model_module
-    use settings_module
-    use random_module
+    use nested_sampling_module, only: NestedSampling
+    use model_module,           only: model, initialise_model
+    use settings_module,        only: program_settings
+    use random_module,          only: initialise_random, deinitialise_random
+
+    use example_likelihoods
 
     implicit none
 
@@ -13,23 +14,26 @@ program galileo
 
     integer, parameter :: nDims = 2
 
-    double precision, dimension(nDims) :: coords
-
-    !* Initialise the program settings
-    settings%nlive=1024
-    !* Initialise the model
-    M%nDims = nDims
-    M%nDerived = nDims+1
-    M%nTotal = nDims+1
-
     ! Initialise the random number generator with the system time
     ! (Provide an argument to this if you want to set a specific seed
     ! leave argumentless if you want to use the system time)
-    call initialise_random()
+    call initialise_random(2)
+
+    !* Initialise the model
+    M%loglikelihood => gaussian_loglikelihood  ! Assign the likelihood 
+    M%nDims = nDims  ! Assign the dimensionality
+                     ! Assign the priors
+    M%nDerived = 1   ! Assign the number of derived parameters
     
+    call initialise_model(M)   ! Configure the rest
+
+
+    !* Initialise the program settings
+    settings%nlive=8  ! number of live points
+
+
     ! Call the nested sampling algorithm on our chosen likelihood and priors
     call NestedSampling(M,settings)
-
 
     ! De-initialise the random number generator 
     call deinitialise_random
