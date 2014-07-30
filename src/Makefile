@@ -33,7 +33,7 @@ all: $(PROGRAMS)
 # prog3 and prog4, modify to suit your needs
 # ======================================================================
 
-MODULES = nested_sampling.o types.o random_utils.o likelihoods.o galilean_sample.o
+MODULES = nested_sampling.o types.o random_utils.o likelihoods.o galilean_sample.o spherical_sample.o
 
 galilean_sample.o:  random_utils.o types.o
 likelihoods.o:      types.o

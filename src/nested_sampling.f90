@@ -26,26 +26,24 @@ module nested_sampling_module
 
 
         ! Create initial live points
+        write(*,*) 'generating live points'
         call GenerateLivePoints(live_data,M)
 
-        write(*,'(5F9.6, F16.8)') live_data
-        write(*,*)
+            !write(*,'(41F9.6 F16.8)') live_data
+            !write(*,*) '----------------------------------------'
 
+        write(*,*) 'started sampling'
         do while (.true.)
 
             likelihood_bound = live_data(M%l0,1)
 
             ! Generate a new point within the likelihood bounds
-            call GalileanSample(new_point, live_data, likelihood_bound, M)
-
-            write(*,'(5F9.6, F16.8)') new_point
-            write(*,*)
+            call settings%sampler(new_point, live_data, likelihood_bound, M)
 
             ! Insert the point
             call insert_new_point(new_point,live_data)
 
-            write(*,'(5F9.6, F16.8)') live_data
-            write(*,*)
+            write(*,*) likelihood_bound
 
         end do
 

@@ -1,14 +1,32 @@
 module settings_module
+    use model_module, only: model
     implicit none
 
     Type, public :: program_settings
 
         integer :: nlive
 
+        procedure(samp), nopass, pointer :: sampler
+
     end type program_settings
+
+    interface
+        subroutine samp(new_point, live_data, likelihood_bound, M) 
+            import :: model
+            implicit none
+            double precision, intent(out),    dimension(:)   :: new_point
+            double precision, intent(in), dimension(:,:) :: live_data
+            double precision, intent(in) :: likelihood_bound
+            type(model),            intent(in) :: M
+        end subroutine samp
+    end interface
 
 
 end module settings_module 
+
+
+
+
 
 
 module model_module

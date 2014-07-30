@@ -101,6 +101,7 @@ module random_module
         integer :: nDims ! Size of coordinate vector
 
 
+        ! Get the dimensionality of the vector to be generated
         nDims = size(coordinates)
 
         ! Generate nDims random numbers, stored in a vector 'coordinates'
@@ -125,13 +126,11 @@ module random_module
     !! [VSL_RNG_METHOD_GAUSSIAN_BOXMULLER2](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_3_Gaussian_VSL_RNG_METHOD_GAUSSIAN_BOXMULLER2.htm) 
     !! intel method to generate Gaussian random numbers. 
 
-    subroutine random_direction(nhat,nDims)
+    subroutine random_direction(nhat)
         implicit none
 
         !> The output unit vector
-        double precision, intent(out), dimension(nDims) :: nhat
-        !> Dimensions of the unit vector
-        integer,          intent(in)                    :: nDims
+        double precision, intent(out), dimension(:) :: nhat
 
         ! Method to generate random numbers 
         integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIAN_BOXMULLER2
@@ -141,6 +140,11 @@ module random_module
 
         integer :: errcode ! Error code
 
+        integer :: nDims ! Size of coordinate vector
+
+
+        ! Get the dimensionality of the vector to be generated
+        nDims = size(nhat)
 
         ! Generate nDims gaussian random numbers, stored in a vector nhat
         ! with mean=0 variance=1
