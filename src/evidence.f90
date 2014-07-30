@@ -1,95 +1,63 @@
-!> This module contains all the tools to calculate evidence estimators
+!> This module contains tools to calculate evidence estimators
 module evidence_module
     implicit none
 
     contains
 
-    !> This take the existing estimate of 
-    function update_Z_dead(evidence,likelihood,nlive,ndead)
+
+    subroutine KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec)
+        use settings_module
+
         implicit none
-        double precision, intent(in) :: evidence   !> Current evidence value to be updated
-        double precision, intent(in) :: likelihood !> Likelihood of the late point
-        integer,          intent(in) :: nlive      !> Number of live points
-        integer,          intent(in) :: ndead      !> Number of dead points
 
-        double precision :: update_Z_dead
+        ! ------- Inputs ------- 
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
 
-        update_Z_dead = evidence + average_dead_volume(nlive,ndead)
-        
-    end function update_Z_dead
+        !> loglikelihood of the newest created point
+        double precision,       intent(in) :: new_loglikelihood
 
+        !> loglikelihood of the most recently dead point
+        double precision,       intent(in) :: old_loglikelihood
 
-    function average_dead_volume(i,nlive)
-        implicit none
-        integer,intent(in) :: nlive      !> Number of live points
-        integer,intent(in) :: i          !> index of point
-        double precision :: average_dead_volume
+        !> number of dead points/ number of iterations
+        integer,                intent(in) :: ndead
 
-        average_dead_volume = (1d0 + 1d0/nlive)**(-i)
+        ! ------- Outputs ------- 
+        !> vector containing [evidence, evidence error]
+        double precision, intent(out), dimension(2) :: evidence_vec
 
-    end function average_dead_volume
+        ! ------- Local Variables -------
+        ! Temporary names for now, will think of better ones shortly
+        double precision, save :: evA=0
+        double precision, save :: evB=0
+        double precision, save :: evC=0
+        double precision, save :: evD=0
 
-
-    !> This function gives the average prior volume contained within the iso-likelihood contour defined by the
-    !! \f$\ell^\mathrm{th}\f$ live point:
-    !! \f{eqnarray*}{ 
-    !!   \left\langle X^{(\ell)}_\mathrm{live}\right\rangle 
-    !!   &= \left\langle X^{(N)}_\mathrm{dead} \right\rangle \frac{(n-\ell+1)(n-\ell+2)}{(n+1)(n+2)} \\
-    !!   &= {\left(1+\frac{1}{n}\right)}^{-N}                \frac{(n-\ell+1)(n-\ell+2)}{(n+1)(n+2)} \\
-    !! \f}
-    !! For more details on how this is calculated 
-    !!
-
-    function average_live_volume(ell,nlive,ndead)
-        implicit none
-        integer,intent(in) :: nlive      !> Number of live points
-        integer,intent(in) :: ndead      !> Number of dead points
-        integer,intent(in) :: ell        !> index of point
-
-        double precision :: average_live_volume
-
-        average_live_volume = &
-            average_dead_volume(ndead,nlive) * (nlive-ell+1d0)/(nlive+1d0)
-
-    end function average_live_volume
+        integer :: nlive ! number of live points (taken from settings%nlive)
 
 
 
-    function correlation_live_volumes(ell,m,nlive,ndead)
-        implicit none
-        integer,intent(in) :: nlive      !> Number of live points
-        integer,intent(in) :: ndead      !> Number of dead points
-        integer,intent(in) :: ell,m      !> indices of points
 
-        double precision :: correlation_live_volumes
 
-        correlation_live_volumes = correlation_dead_volumes(ndead,ndead,nlive,ndead)
-        if ( ell >= m ) then
-            correlation_live_volumes = correlation_live_volumes &
-                * (nlive-ell+1d0) * (nlive-m+2d0) &
-                / (nlive+1d0)     / (nlive+2d0)
-        else
-            correlation_live_volumes = correlation_live_volumes &
-                * (nlive-m+1d0) * (nlive-ell+2d0) &
-                / (nlive+1d0)   / (nlive+2d0)
-        endif
+        nlive = settings%nlive ! get the number of live points
+
+        evA = evA + exp( old_loglikelihood + ndead * log(dble(nlive)  /dble(nlive+1)) ) / dble(nlive)
+
+        evB = evB + exp( old_loglikelihood + ndead * log(dble(nlive+1)/dble(nlive+2)) ) / dble(nlive+1) 
+
+        evC = evC + exp( old_loglikelihood + ndead * log(dble(nlive)  /dble(nlive+1)) ) / dble(nlive) * evB
+
+        !evD = evD + ( exp(new_likelihood) - exp(late_likelihood) )/dble(nlive)
+        evD = evD + ( exp(new_loglikelihood) - exp(old_loglikelihood) )/dble(nlive)
+
+
+        evidence_vec(1) = evA + evD * exp( ndead * log(dble(nlive)/dble(nlive+1)) )
+        evidence_vec(2) = evD 
 
 
 
-    end function correlation_live_volumes
-
-
-    function correlation_dead_volumes(i,j,nlive,ndead)
-        implicit none
-        integer,intent(in) :: nlive      !> Number of live points
-        integer,intent(in) :: ndead      !> Number of dead points
-        integer,intent(in) :: i,j        !> indices of points
-
-        double precision :: correlation_dead_volumes
-
-
-
-    end function correlation_dead_volumes
+    end subroutine KeetonEvidence
 
 
 end module evidence_module

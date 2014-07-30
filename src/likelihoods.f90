@@ -3,31 +3,34 @@ module example_likelihoods
 
     contains
 
+    !> Basic Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
+    !! 
+    !! It is normalised so that it should output an evidence of 0.0 for
+    !! effectively infinite priors.
+    !!
+    !! The mean is set at 0.5 by default, and all sigmas at 0.01
+
     function gaussian_loglikelihood(M,theta)
         class(model),intent(in)                    :: M
         double precision, intent(in), dimension(:) :: theta
 
+
         double precision :: gaussian_loglikelihood
 
-        double precision, dimension(M%nDims) :: sigma  
-        double precision, dimension(M%nDims) :: mu
+        double precision, dimension(M%nDims) :: sigma ! Standard deviation (uncorrelated) 
+        double precision, dimension(M%nDims) :: mu    ! Mean
 
-        double precision, parameter :: TwoPi = 6.2831853d0
+        double precision, parameter :: TwoPi = 8*atan(1d0) ! 2\pi in double precision
         
-        sigma = 0.01
-        mu    = 0.5
-
-        if (size(theta) .ne. M%nDims) then
-            write(*,*) 'error in log likelihood, size(theta) != nDims'
-            return
-        end if
+        ! Initialise the mean and standard deviation
+        mu    = 0.5   ! mean in the center
+        sigma = 0.01  ! all sigma set relatively small
 
         ! Gaussian normalisation
         gaussian_loglikelihood = - M%nDims / 2d0 * log( TwoPi ) - sum( log( sigma ) ) 
 
         ! theta dependence
-        gaussian_loglikelihood = gaussian_loglikelihood &
-            - sum( ( ( theta - mu ) / sigma ) ** 2d0 ) / 2d0
+        gaussian_loglikelihood = gaussian_loglikelihood - sum( ( ( theta - mu ) / sigma ) ** 2d0 ) / 2d0
 
     end function gaussian_loglikelihood
 

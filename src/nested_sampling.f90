@@ -22,12 +22,31 @@ module nested_sampling_module
         ! The new-born point
         double precision,    dimension(M%nTotal)   :: new_point
 
-        double precision :: likelihood_bound
+        double precision :: likelihood_bound,new_likelihood,late_likelihood
+        double precision, dimension(2) :: evidence_vec
+
+
+        integer :: ndead
+
+        !double precision :: mean_likelihood
 
 
         ! Create initial live points
         write(*,*) 'generating live points'
         call GenerateLivePoints(live_data,M)
+
+
+        ! Count the number of dead points
+        ndead = 0
+
+        !compute the mean likelihood
+        !mean_likelihood = sum(exp(live_data(M%l0,:))) / dble(settings%nlive)
+        !write(*,*) 'mean likelihood' , mean_likelihood
+
+        ! Give this info to the evidence calculator
+        !call settings%evidence_calculator(mean_likelihood,late_likelihood,ndead,evidence_vec)
+
+
 
             !write(*,'(41F9.6 F16.8)') live_data
             !write(*,*) '----------------------------------------'
@@ -40,10 +59,25 @@ module nested_sampling_module
             ! Generate a new point within the likelihood bounds
             call settings%sampler(new_point, live_data, likelihood_bound, M)
 
-            ! Insert the point
-            call insert_new_point(new_point,live_data)
+            ndead = ndead + 1
+            new_likelihood  = new_point(M%l0)
+            late_likelihood = live_data(M%l0,1)
 
-            write(*,*) likelihood_bound
+            ! Calculate the new evidence
+            call settings%evidence_calculator(new_likelihood,late_likelihood,ndead,evidence_vec)
+
+            !write(*,'("new_point: (", F9.6, ",", F9.6 ") ->", F10.5 )') new_point(M%p0:M%p1), new_point(M%l0)
+            if (evidence_vec(1) * evidence_vec(2) .ne. 0 ) then
+                write(*,'("log(Z) = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1)
+                write(*,'("Z       = ", F12.5, " +/- ", F12.5)') evidence_vec(1:2)
+            end if
+            !write(*,'("new_point: (", F9.6, ",", F9.6 ") ->", F10.5 )') new_point(M%p0:M%p1), new_point(M%l0)
+            !write(*,'("ndead: ", I10, E12.5,E12.5)') ndead, ndead_double, ndead_double -ndead
+
+            if( evidence_vec(1) > 3.0) return
+
+            ! Insert the new point
+            call insert_new_point(new_point,live_data)
 
         end do
 
@@ -86,9 +120,6 @@ module nested_sampling_module
 
             ! Calculate the derived parameters
             call calculate_derived_parameters( M, live_data(:,i_live) )
-
-            ! Calculate the derived parameters
-            !> @todo Need to calculate the derived parameters
 
         end do
 

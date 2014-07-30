@@ -1,50 +1,25 @@
-module settings_module
-    use model_module, only: model
-    implicit none
-
-    Type, public :: program_settings
-
-        integer :: nlive
-
-        procedure(samp), nopass, pointer :: sampler
-
-    end type program_settings
-
-    interface
-        subroutine samp(new_point, live_data, likelihood_bound, M) 
-            import :: model
-            implicit none
-            double precision, intent(out),    dimension(:)   :: new_point
-            double precision, intent(in), dimension(:,:) :: live_data
-            double precision, intent(in) :: likelihood_bound
-            type(model),            intent(in) :: M
-        end subroutine samp
-    end interface
-
-
-end module settings_module 
-
-
-
-
-
-
 module model_module
     implicit none
 
     !> Type to encode all of the information about the priors.
     type :: model
+        !> Dimensionality of the space
+        integer :: nDims       
+        !> Number of derived parameters
+        integer :: nDerived    
+        !> 2*ndims + nDerived + 1
+        integer :: nTotal      
 
-
-        integer :: nDims       !> Dimensionality of the space
-        integer :: nDerived    !> Number of derived parameters
-        integer :: nTotal      !> 2*ndims + nDerived + 1
-
-        !> Indices for the sections of a live_points array
-        integer :: h0,h1       !> hypercube indices
-        integer :: p0,p1       !> physical indices
-        integer :: d0,d1       !> derived indices
-        integer :: l0          !> likelihood index
+        ! Indices for the sections of a live_points array
+        !> @todo make array indices read only
+        !> hypercube indices
+        integer :: h0,h1       
+        !> physical indices
+        integer :: p0,p1       
+        !> derived indices
+        integer :: d0,d1       
+        !> likelihood index
+        integer :: l0          
 
         procedure(loglike), pass(M), pointer :: loglikelihood 
 
@@ -62,6 +37,33 @@ module model_module
 
 
     contains
+
+
+    subroutine initialise_model(M)
+        type(model), intent(inout) :: M
+
+        ! Total number of parameters
+        M%nTotal = 2*M%nDims+M%nDerived+1
+
+        ! Hypercube parameter indices
+        M%h0=1
+        M%h1=M%nDims
+
+        ! Physical parameter indices
+        M%p0=M%nDims+1
+        M%p1=2*M%nDims
+
+        ! Derived parameter indices
+        M%d0=2*M%nDims+1
+        M%d1=2*M%nDims+M%nDerived
+
+        ! Loglikelihood index
+        M%l0=M%nTotal
+
+
+    end subroutine initialise_model
+
+
 
     subroutine hypercube_to_physical(M, live_data)
         type(model),     intent(in)                   :: M
@@ -102,31 +104,6 @@ module model_module
 
     end subroutine calculate_derived_parameters
 
-
-
-    subroutine initialise_model(M)
-        type(model), intent(inout) :: M
-
-        ! Total number of parameters
-        M%nTotal = 2*M%nDims+M%nDerived+1
-
-        ! Hypercube parameter indices
-        M%h0=1
-        M%h1=M%nDims
-
-        ! Physical parameter indices
-        M%p0=M%nDims+1
-        M%p1=2*M%nDims
-
-        ! Derived parameter indices
-        M%d0=2*M%nDims+1
-        M%d1=2*M%nDims+M%nDerived
-
-        ! Loglikelihood index
-        M%l0=M%nTotal
-
-
-    end subroutine initialise_model
 
 
 
