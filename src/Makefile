@@ -23,7 +23,7 @@ FCFLAGS = -g -traceback -fp-stack-check -check all -fpe0 -warn all -mkl
 #LDFLAGS = -li_need_this_lib
 
 # List of executables to be built within the package
-PROGRAMS = galileo
+PROGRAMS = main
 
 # "make" builds all
 all: $(PROGRAMS)
@@ -38,9 +38,9 @@ MODULES = nested_sampling.o types.o random_utils.o likelihoods.o galilean_sample
 galilean_sample.o:  random_utils.o types.o
 likelihoods.o:      types.o
 nested_sampling.o:  types.o random_utils.o galilean_sample.o
-galileo.o: 			$(MODULES)
+main.o:   		  	$(MODULES)
 
-galileo: galileo.o $(MODULES)
+main: main.o $(MODULES)
 
 
 # ======================================================================

@@ -1,7 +1,7 @@
 default: all
 
-galileo: ./src/*90
-	cd ./src && make galileo && mv galileo ../
+main: ./src/*90
+	cd ./src && make main && mv main ../
 
 clean:
 	cd ./src && make clean
@@ -9,4 +9,4 @@ clean:
 veryclean:
 	cd ./src && make veryclean
 
-all: galileo
+all: main
