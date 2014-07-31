@@ -25,34 +25,37 @@ module nested_sampling_module
         double precision :: likelihood_bound,new_likelihood,late_likelihood
         double precision, dimension(2) :: evidence_vec
 
+        double precision :: mean_loglike
+
+        logical :: more_samples_needed
+
 
         integer :: ndead
 
-        !double precision :: mean_likelihood
-
 
         ! Create initial live points
-        write(*,*) 'generating live points'
+        if (settings%feedback>0) write(*,*) 'generating live points'
         call GenerateLivePoints(live_data,M)
+
+        ! Compute the average loglikelihood and hand it to the evidence calculator
+        mean_loglike = sum(exp(live_data(M%l0,:)))/settings%nlive
+        more_samples_needed = settings%evidence_calculator(mean_loglike,mean_loglike,-1,evidence_vec)
 
 
         ! Count the number of dead points
         ndead = 0
 
-        !compute the mean likelihood
-        !mean_likelihood = sum(exp(live_data(M%l0,:))) / dble(settings%nlive)
-        !write(*,*) 'mean likelihood' , mean_likelihood
-
-        ! Give this info to the evidence calculator
-        !call settings%evidence_calculator(mean_likelihood,late_likelihood,ndead,evidence_vec)
-
+        ! Definately need more samples than this
+        more_samples_needed=.true.
 
 
             !write(*,'(41F9.6 F16.8)') live_data
             !write(*,*) '----------------------------------------'
 
-        write(*,*) 'started sampling'
-        do while (.true.)
+
+        if (settings%feedback>0) write(*,*) 'started sampling'
+
+        do while (more_samples_needed)
 
             likelihood_bound = live_data(M%l0,1)
 
@@ -64,22 +67,27 @@ module nested_sampling_module
             late_likelihood = live_data(M%l0,1)
 
             ! Calculate the new evidence
-            call settings%evidence_calculator(new_likelihood,late_likelihood,ndead,evidence_vec)
+            more_samples_needed =  settings%evidence_calculator(new_likelihood,late_likelihood,ndead,evidence_vec)
 
-            !write(*,'("new_point: (", F9.6, ",", F9.6 ") ->", F10.5 )') new_point(M%p0:M%p1), new_point(M%l0)
-            if (evidence_vec(1) * evidence_vec(2) .ne. 0 ) then
-                write(*,'("log(Z) = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1)
-                write(*,'("Z       = ", F12.5, " +/- ", F12.5)') evidence_vec(1:2)
+            if (settings%feedback>0)  then
+                if (settings%feedback>1) then
+                    write(*,'("new_point: (", F9.6, ",", F9.6 ") ->", F10.5 )') new_point(M%p0:M%p1), new_point(M%l0)
+                end if
+                if (evidence_vec(1) > 0 ) then
+                    write(*,'("ndead   = ", I12                  )') ndead
+                    write(*,'("Z       = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
+                    write(*,'("log(Z)  = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
+                end if
             end if
-            !write(*,'("new_point: (", F9.6, ",", F9.6 ") ->", F10.5 )') new_point(M%p0:M%p1), new_point(M%l0)
-            !write(*,'("ndead: ", I10, E12.5,E12.5)') ndead, ndead_double, ndead_double -ndead
-
-            if( evidence_vec(1) > 3.0) return
 
             ! Insert the new point
             call insert_new_point(new_point,live_data)
 
         end do
+
+        write(*,'("ndead   = ", I12                  )') ndead
+        write(*,'("Z       = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
+        write(*,'("log(Z)  = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
 
     end subroutine NestedSampling
 
@@ -221,8 +229,6 @@ module nested_sampling_module
 
         if( loglike > data_array(loglike_pos,nlive) ) then
             new_position = nlive
-        else if( loglike < data_array(loglike_pos,1) ) then
-            new_position = 1
         else
             new_position =  binary_search(1,nlive)
         end if

@@ -5,7 +5,7 @@ module evidence_module
     contains
 
 
-    subroutine KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec)
+    function KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec) result (more_samples_needed)
         use settings_module
 
         implicit none
@@ -27,37 +27,71 @@ module evidence_module
         !> vector containing [evidence, evidence error]
         double precision, intent(out), dimension(2) :: evidence_vec
 
+        !> Whether we have obtained enough samples for an accurate evidence
+        logical :: more_samples_needed
+
         ! ------- Local Variables -------
-        ! Temporary names for now, will think of better ones shortly
-        double precision, save :: evA=0
-        double precision, save :: evB=0
-        double precision, save :: evC=0
-        double precision, save :: evD=0
 
-        integer :: nlive ! number of live points (taken from settings%nlive)
+        ! The accumulated evidence associated with the dead points
+        double precision, save :: Z_dead=0
 
+        ! The accumulated evidence squared Z^2
+        double precision, save :: Z2_dead=0
 
+        ! part of the accumulated evidence squared
+        double precision, save :: Z2_dead_part=0
 
+        ! the mean log likelihood of the live points
+        double precision, save :: mean_log_like_live=0
 
+        double precision :: nlive ! number of live points in double precision (taken from settings%nlive)
 
-        nlive = settings%nlive ! get the number of live points
-
-        evA = evA + exp( old_loglikelihood + ndead * log(dble(nlive)  /dble(nlive+1)) ) / dble(nlive)
-
-        evB = evB + exp( old_loglikelihood + ndead * log(dble(nlive+1)/dble(nlive+2)) ) / dble(nlive+1) 
-
-        evC = evC + exp( old_loglikelihood + ndead * log(dble(nlive)  /dble(nlive+1)) ) / dble(nlive) * evB
-
-        !evD = evD + ( exp(new_likelihood) - exp(late_likelihood) )/dble(nlive)
-        evD = evD + ( exp(new_loglikelihood) - exp(old_loglikelihood) )/dble(nlive)
+        double precision :: X1,X2
 
 
-        evidence_vec(1) = evA + evD * exp( ndead * log(dble(nlive)/dble(nlive+1)) )
-        evidence_vec(2) = evD 
+        if (ndead <= 0) then
+            ! save the average value
+            mean_log_like_live = new_loglikelihood
+            more_samples_needed = .true.
+            return
+        end if
+        
 
 
 
-    end subroutine KeetonEvidence
+        nlive = settings%nlive ! get the number of live points (and convert to double precision implicitly)
+
+
+
+        X1 = (   nlive  /(nlive+1) ) ** ndead
+        X2 = ( (nlive+1)/(nlive+2) ) ** ndead 
+
+
+
+
+        Z_dead = Z_dead             + exp( old_loglikelihood + ndead * log( nlive   /(nlive+1) ) ) / nlive
+
+        Z2_dead_part = Z2_dead_part + exp( old_loglikelihood + ndead * log((nlive+1)/(nlive+2) ) ) /(nlive+1) 
+
+        Z2_dead = Z2_dead           + exp( old_loglikelihood + ndead * log( nlive   /(nlive+1) ) ) / nlive * Z2_dead_part
+
+        mean_log_like_live = mean_log_like_live + ( exp(new_loglikelihood) - exp(old_loglikelihood) )/ nlive
+
+
+        evidence_vec(1) = Z_dead + mean_log_like_live  * X1
+        evidence_vec(2) = sqrt(abs(2*Z2_dead - Z_dead**2 &
+            + mean_log_like_live**2 * X1 * (X2-X1) + 2*mean_log_like_live * X1**2 * ( Z2_dead_part-Z_dead)   ))
+
+
+        if (mean_log_like_live  * X1 < 1d-5 * Z_dead) then
+            more_samples_needed = .false.
+        else
+            more_samples_needed = .true.
+        end if
+
+
+
+    end function KeetonEvidence
 
 
 end module evidence_module

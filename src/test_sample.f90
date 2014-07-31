@@ -78,31 +78,38 @@ module test_sampler_module
         double precision, intent(out),    dimension(:)   :: new_point
 
         ! ------- Local Variables -------
-        double precision, dimension(1) ::  rad
+        double precision, dimension(1) ::  rand_rad
 
+        double precision, parameter :: Vfrac = 3
+
+        integer num_attempts
+
+        double precision :: max_radius
 
 
 
         ! Calculate the radial distance of the lowest loglikelihood point from the center
-        new_point = live_data(:,1) -0.5  ! Displacement of lowest loglikelihood point from center
-
-        ! create a random radial distance  between 0 and the
-        ! displacement of the lowest loglikelihood point from center
-        call random_coordinate(rad)      ! generate a random number between 0 and 1
-        rad = rad * sqrt(dot_product(new_point(M%h0:M%h1),new_point(M%h0:M%h1))) 
-
+        
+        new_point = live_data(:,1) -5d-1  ! Displacement of lowest loglikelihood point from center
+        ! Scale the modulus of this by Vfrac
+        max_radius = sqrt(dot_product(new_point(M%h0:M%h1),new_point(M%h0:M%h1))) * Vfrac**(1/dble(M%nDims) ) 
 
         ! reset new_point to be the lowest loglikelihood point for now 
         ! (so the loop below is entered)
         new_point = live_data(:,1)
 
+        num_attempts = 0
         do while(new_point(M%l0)<=loglikelihood_bound)
 
             ! Generate a random point
-            call random_direction(new_point(:M%nDims))               ! Generate a random direction
-            new_point(:M%nDims) = 0.5 + rad(1) * new_point(:M%nDims) ! Generate a point a distance rad away 0.5
+            ! create a random radial distance  between 0 and the
+            ! displacement of the lowest loglikelihood point from center
+            call random_coordinate(rand_rad)             ! generate a random number between 0 and 1
+            rand_rad = rand_rad ** (1d0/dble(M%nDims))   ! Make it distributed as P(r) ~ r^(d-1)
+            rand_rad = rand_rad * max_radius             ! rescale up to the max radius
 
-
+            call random_direction(new_point(:M%nDims))                 ! Generate a random direction
+            new_point(:M%nDims) = 5d-1 + rand_rad(1) * new_point(:M%nDims) ! Generate a point a distance rad away 0.5
 
             ! Transform the the hypercube coordinates to the physical coordinates
             call hypercube_to_physical( M, new_point )
@@ -112,6 +119,7 @@ module test_sampler_module
 
             ! Calculate the derived parameters
             call calculate_derived_parameters( M, new_point )
+
         end do
 
 

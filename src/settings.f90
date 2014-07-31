@@ -8,10 +8,10 @@ module settings_module
     Type :: program_settings
 
         !> The number of live points
-        integer :: nlive    
+        integer :: nlive =512   
 
-        !> The maximum number of iterations
-        integer :: maxndead 
+        !> The degree of feedback to provide
+        integer :: feedback = 1
 
         !> Pointer to the sampling procedure.
         !!
@@ -98,7 +98,7 @@ module settings_module
         !!
         !! It ouputs a length 2 vector with the [evidence, evidence error]
         !!
-        subroutine ev(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec)
+        function ev(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec) result (more_samples_needed)
 
             import :: program_settings
 
@@ -117,11 +117,14 @@ module settings_module
             !> number of dead points/ number of iterations
             integer,                intent(in) :: ndead
 
+            !> Whether we have obtained enough samples for an accurate evidence
+            logical :: more_samples_needed
+
             ! ------- Outputs ------- 
             !> vector containing [evidence, evidence error]
             double precision, intent(out), dimension(2) :: evidence_vec
 
-        end subroutine ev
+        end function ev
     end interface
 
 end module settings_module 

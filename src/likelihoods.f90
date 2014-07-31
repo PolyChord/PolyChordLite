@@ -5,7 +5,7 @@ module example_likelihoods
 
     !> Basic Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! 
-    !! It is normalised so that it should output an evidence of 0.0 for
+    !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
     !!
     !! The mean is set at 0.5 by default, and all sigmas at 0.01

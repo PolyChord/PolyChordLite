@@ -18,9 +18,6 @@ program main
     type(program_settings) :: settings  ! The program settings 
     type(model)            :: M         ! The model details
 
-    integer, parameter :: nDims = 2     ! Dimensionality of the problem
-    integer, parameter :: nDerived = 0  ! number of derived parameters
-
 
 
     ! ======= (1) Initialisation =======
@@ -41,19 +38,21 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood  
 
-    M%nDims = nDims            ! Assign the dimensionality
+    M%nDims = 6                ! Assign the dimensionality
                                ! Assign the priors
                                !>@todo sort out the code for transforming/configuring the
                                !! priors
-    M%nDerived = nDerived      ! Assign the number of derived parameters
+    M%nDerived = 0             ! Assign the number of derived parameters
     
     call initialise_model(M)   ! Configure the rest of the model
 
 
     ! ------- (1c) Initialise the program settings -------
-    settings%nlive                =  256                     ! number of live points
+    settings%nlive                =  1000                    ! number of live points
+    !settings%sampler              => BruteForceSampling      !Sampler choice
     settings%sampler              => SphericalCenterSampling !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
+    settings%feedback             = 0                        !degree of feedback
 
 
 
