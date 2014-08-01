@@ -77,9 +77,9 @@ module nested_sampling_module
                 if (settings%feedback>1) then
                     write(*,'("new_point: (", F9.6, ",", F9.6 ") ->", F10.5 )') new_point(M%p0:M%p1), new_point(M%l0)
                 end if
+                write(*,'("ndead   = ", I12                  )') ndead
+                write(*,'("Z       = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
                 if (evidence_vec(1) > 0 ) then
-                    write(*,'("ndead   = ", I12                  )') ndead
-                    write(*,'("Z       = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
                     write(*,'("log(Z)  = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
                 end if
             end if

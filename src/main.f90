@@ -39,7 +39,7 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood  
 
-    M%nDims = 24               ! Assign the dimensionality
+    M%nDims = 12               ! Assign the dimensionality
                                ! Assign the priors
                                !>@todo sort out the code for transforming/configuring the
                                !! priors
