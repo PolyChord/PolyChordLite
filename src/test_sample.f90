@@ -3,10 +3,10 @@ module test_sampler_module
 
     contains
 
-    subroutine BruteForceSampling(new_point, live_data, loglikelihood_bound, M) 
+    function BruteForceSampling(live_data, loglikelihood_bound, M) result(new_point)
 
-        use random_module, only: random_coordinate
-        use model_module,  only: model, hypercube_to_physical, calculate_derived_parameters
+        use random_module, only: random_hypercube_point
+        use model_module,  only: model, calculate_point
 
         implicit none
 
@@ -26,7 +26,7 @@ module test_sampler_module
 
         ! ------- Outputs -------
         !> The newly generated point
-        double precision, intent(out),    dimension(:)   :: new_point
+        double precision,    dimension(M%nTotal)   :: new_point
 
 
 
@@ -37,25 +37,20 @@ module test_sampler_module
         do while(new_point(M%l0)<=loglikelihood_bound)
 
             ! Generate a random point
-            call random_coordinate(new_point(:M%nDims))              ! Generate a random coordinate
+            new_point = random_hypercube_point(M%nDims)              ! Generate a random coordinate
 
-            ! Transform the the hypercube coordinates to the physical coordinates
-            call hypercube_to_physical( M, new_point )
+            ! Compute physical coordinates, likelihoods and derived parameters
+            call calculate_point( M, new_point )
 
-            ! Calculate the loglikelihood and store it in the last index
-            new_point(M%l0) = M%loglikelihood( new_point(M%p0:M%p1) )
-
-            ! Calculate the derived parameters
-            call calculate_derived_parameters( M, new_point )
         end do
 
 
-    end subroutine BruteForceSampling
+    end function BruteForceSampling
 
-    subroutine SphericalCenterSampling(new_point, live_data, loglikelihood_bound, M) 
+    function SphericalCenterSampling(live_data, loglikelihood_bound, M) result(new_point)
 
         use random_module, only: random_point_in_sphere
-        use model_module,  only: model, hypercube_to_physical, calculate_derived_parameters
+        use model_module,  only: model, calculate_point
 
         implicit none
 
@@ -75,11 +70,9 @@ module test_sampler_module
 
         ! ------- Outputs -------
         !> The newly generated point
-        double precision, intent(out),    dimension(:)   :: new_point
+        double precision,    dimension(M%nTotal)   :: new_point
 
         ! ------- Local Variables -------
-        double precision, dimension(1) ::  rand_rad
-
         double precision, parameter :: Vfrac = 3
 
         double precision :: max_radius
@@ -102,24 +95,18 @@ module test_sampler_module
         do while(new_point(M%l0)<=loglikelihood_bound)
 
             ! Generate a random point within the unit sphere
-            call random_point_in_sphere(new_point(M%h0:M%h1))
+            new_point = random_point_in_sphere(M%nDims)
 
             ! scale it to be within max_radius and centered on 0.5
             new_point(M%h0:M%h1) = 0.5 +  max_radius * new_point(M%h0:M%h1)
 
-            ! Transform the the hypercube coordinates to the physical coordinates
-            call hypercube_to_physical( M, new_point )
-
-            ! Calculate the loglikelihood and store it in the last index
-            new_point(M%l0) = M%loglikelihood( new_point(M%p0:M%p1) )
-
-            ! Calculate the derived parameters
-            call calculate_derived_parameters( M, new_point )
+            ! Compute physical coordinates, likelihoods and derived parameters
+            call calculate_point( M, new_point )
 
         end do
 
 
-    end subroutine SphericalCenterSampling
+    end function SphericalCenterSampling
 
 end module test_sampler_module
 

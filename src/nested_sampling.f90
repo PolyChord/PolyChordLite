@@ -35,7 +35,7 @@ module nested_sampling_module
 
         ! Create initial live points
         if (settings%feedback>0) write(*,*) 'generating live points'
-        call GenerateLivePoints(live_data,M)
+        live_data = GenerateLivePoints(M,settings%nlive)
 
         ! Compute the average loglikelihood and hand it to the evidence calculator
         mean_loglike = sum(exp(live_data(M%l0,:)))/settings%nlive
@@ -60,7 +60,7 @@ module nested_sampling_module
             likelihood_bound = live_data(M%l0,1)
 
             ! Generate a new point within the likelihood bounds
-            call settings%sampler(new_point, live_data, likelihood_bound, M)
+            new_point = settings%sampler(live_data, likelihood_bound, M)
 
             ndead = ndead + 1
             new_likelihood  = new_point(M%l0)
@@ -97,16 +97,16 @@ module nested_sampling_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    subroutine GenerateLivePoints(live_data,M)
+    function GenerateLivePoints(M,nlive) result(live_data)
         use model_module
-        use random_module, only: random_coordinate
+        use random_module, only: random_hypercube_point
         implicit none
 
         type(model), intent(in) :: M     !> The model details (loglikelihood, priors, ndims etc...)
 
         !>live_data(:,i) constitutes the information in the ith live point in the unit hypercube: 
         !! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(:,:), intent(out) :: live_data
+        double precision, dimension(M%nTotal,nlive) :: live_data
 
         ! Loop variable
         integer i_live
@@ -120,16 +120,10 @@ module nested_sampling_module
         do i_live=1, nlive
 
             ! Generate a random coordinate in the first nDims rows of live_data
-            call random_coordinate( live_data(M%h0:M%h1,i_live) )
+            live_data(:,i_live) = random_hypercube_point(M%nDims)
 
-            ! Transform the the hypercube coordinates to the physical coordinates
-            call hypercube_to_physical( M, live_data(:,i_live) )
-
-            ! Calculate the likelihood and store it in the last index
-            live_data(M%l0,i_live) = M%loglikelihood( live_data(M%p0:M%p1,i_live))
-
-            ! Calculate the derived parameters
-            call calculate_derived_parameters( M, live_data(:,i_live) )
+            ! Compute physical coordinates, likelihoods and derived parameters
+            call calculate_point( M, live_data(:,i_live) )
 
         end do
 
@@ -138,7 +132,7 @@ module nested_sampling_module
 
 
 
-    end subroutine 
+    end function GenerateLivePoints
 
 
 

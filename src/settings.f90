@@ -71,7 +71,7 @@ module settings_module
         !! set of live points (live_data) in order to generate a new_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood_bound
-        subroutine samp(new_point, live_data, loglikelihood_bound, M) 
+        function samp(live_data, loglikelihood_bound, M) result(new_point)
 
             import :: model
             implicit none
@@ -92,8 +92,8 @@ module settings_module
 
             ! ------- Outputs -------
             !> The newly generated point
-            double precision, intent(out),    dimension(:)   :: new_point
-        end subroutine samp
+            double precision,    dimension(M%nTotal)   :: new_point
+        end function samp
     end interface
 
     interface

@@ -4,8 +4,8 @@ module galileo_module
     contains
 
     subroutine GalileanSample(new_point, live_data, likelihood_bound, M) 
-        use random_module, only: random_direction,random_coordinate
-        use model_module,  only: model, hypercube_to_physical, calculate_derived_parameters
+        use random_module, only: random_direction,random_hypercube_point
+        use model_module,  only: model, calculate_point
         implicit none
         double precision, intent(out),    dimension(:)   :: new_point
         double precision, intent(in), dimension(:,:) :: live_data
@@ -18,16 +18,10 @@ module galileo_module
         do while(new_point(M%l0)<=likelihood_bound)
 
             ! Generate a random coordinate
-            call random_coordinate(new_point(M%h0:M%h1))
+            new_point = random_hypercube_point(M%nDims)
 
-            ! Transform the the hypercube coordinates to the physical coordinates
-            call hypercube_to_physical( M, new_point )
-
-            ! Calculate the likelihood and store it in the last index
-            new_point(M%l0) = M%loglikelihood( new_point(M%p0:M%p1) )
-
-            ! Calculate the derived parameters
-            call calculate_derived_parameters( M, new_point )
+            ! Compute physical coordinates, likelihoods and derived parameters
+            call calculate_point( M, new_point )
 
         end do
 

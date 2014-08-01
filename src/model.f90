@@ -64,6 +64,22 @@ module model_module
     end subroutine initialise_model
 
 
+    subroutine calculate_point(M, live_data)
+        type(model),     intent(in)                   :: M
+        double precision, intent(inout) , dimension(:) :: live_data
+
+        ! Transform the the hypercube coordinates to the physical coordinates
+        call hypercube_to_physical( M, live_data(:) )
+
+        ! Calculate the likelihood and store it in the last index
+        live_data(M%l0) = M%loglikelihood( live_data(M%p0:M%p1))
+
+        ! Calculate the derived parameters
+        call calculate_derived_parameters( M, live_data(:) )
+
+    end subroutine calculate_point
+
+
 
     subroutine hypercube_to_physical(M, live_data)
         type(model),     intent(in)                   :: M
