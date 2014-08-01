@@ -83,7 +83,7 @@ module evidence_module
             + mean_log_like_live**2 * X1 * (X2-X1) + 2*mean_log_like_live * X1**2 * ( Z2_dead_part-Z_dead)   ))
 
 
-        if (mean_log_like_live  * X1 < 1d-5 * Z_dead) then
+        if (mean_log_like_live  * X1 < settings%precision_criterion * Z_dead) then
             more_samples_needed = .false.
         else
             more_samples_needed = .true.

@@ -27,7 +27,7 @@ module example_likelihoods
         sigma = 0.01  ! all sigma set relatively small
 
         ! Gaussian normalisation
-        gaussian_loglikelihood = - M%nDims / 2d0 * log( TwoPi ) - sum( log( sigma ) ) 
+        gaussian_loglikelihood = - dble(M%nDims)/2d0 * log( TwoPi ) - sum( log( sigma ) ) 
 
         ! theta dependence
         gaussian_loglikelihood = gaussian_loglikelihood - sum( ( ( theta - mu ) / sigma ) ** 2d0 ) / 2d0

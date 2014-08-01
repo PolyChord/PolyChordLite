@@ -123,7 +123,7 @@ module random_module
     !! normalising this give a random direction.
     !!
     !! We use the 
-    !! [VSL_RNG_METHOD_GAUSSIAN_BOXMULLER2](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_3_Gaussian_VSL_RNG_METHOD_GAUSSIAN_BOXMULLER2.htm) 
+    !! [VSL_RNG_METHOD_GAUSSIAN_ICDF](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_4_Gaussian_VSL_RNG_METHOD_GAUSSIAN_ICDF.htm) 
     !! intel method to generate Gaussian random numbers. 
 
     subroutine random_direction(nhat)
@@ -133,7 +133,7 @@ module random_module
         double precision, intent(out), dimension(:) :: nhat
 
         ! Method to generate random numbers 
-        integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIAN_BOXMULLER2
+        integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIAN_ICDF
 
         double precision, parameter :: sigma = 1.0 ! Standard deviation of gaussian random numbers
         double precision, parameter :: mean  = 0.0 ! Mean of gaussian random numbers
@@ -159,7 +159,86 @@ module random_module
     end subroutine random_direction
 
     ! ===========================================================================================
-    
+
+
+    !>  Random point in unit sphere
+    !!
+    !! Generate a uniformly distributed point in the unit n-sphere
+    !!
+    !! This is done by generating a random direction, and then multiplying it by
+    !! a radius distributed as \f$ P(r) ~ r^{d-1}\f$. where \f$d$\f is the
+    !! dimension of the input vector
+
+    subroutine random_point_in_sphere(point)
+        implicit none
+
+        !> The output unit vector
+        double precision, intent(out), dimension(:) :: point
+
+        integer :: nDims ! Size of coordinate vector
+
+        double precision :: rand_rad(1)
+
+
+        ! Get the dimensionality of the vector to be generated
+        nDims = size(point)
+
+        ! generate a random direction
+        call random_direction(point)
+
+        ! generate a random radius
+        call random_beta_vec(rand_rad, nDims+0d0,1d0)
+
+        ! Create a point in the sphere
+        point = point * rand_rad(1)
+
+
+    end subroutine random_point_in_sphere
+
+    ! ===========================================================================================
+
+
+    !> Random point in beta distribution
+    !!
+    !! Generate a vector of points distributed as \f$ P(r;p,q) ~ r^{p-1}(1-r)^{q-1}\f$
+    !!
+    !! We use the 
+    !! [VSL_RNG_METHOD_BETA_CJA](
+    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_17_Beta_VSL_RNG_METHOD_BETA_CJA.htm#9_3_16_Beta_VSL_RNG) 
+    !! intel method to generate points. Note that this can come in an accurate form                               
+
+    subroutine random_beta_vec(point,p,q)
+        implicit none
+
+        !> The output unit vector
+        double precision, intent(out), dimension(:) :: point
+
+        !> The input beta parameters
+        double precision, intent(in) :: p
+        double precision, intent(in) :: q
+
+        ! Method to generate random numbers 
+        integer,parameter       :: method=VSL_RNG_METHOD_BETA_CJA
+
+        double precision, parameter :: offset = 0.0 ! Mean of the beta distribution
+        double precision, parameter :: scale_factor  = 1.0 ! width of the beta distribution
+
+        integer :: errcode ! Error code
+
+        integer :: nDims ! Size of coordinate vector
+
+
+
+        ! Get the dimensionality of the vector to be generated
+        nDims = size(point)
+
+        ! call the intel procedure to generate the point
+        errcode=vdrngbeta( method, rng_stream, nDims, point, p, q, offset, scale_factor )
+
+
+    end subroutine random_beta_vec
+
+    ! ===========================================================================================
 
     !> De-initialise the random number generators
 

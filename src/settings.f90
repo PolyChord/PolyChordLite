@@ -13,6 +13,14 @@ module settings_module
         !> The degree of feedback to provide
         integer :: feedback = 1
 
+        !> The degree of precision in the final answer
+        double precision :: precision_criterion = 1d-5
+
+        !> The maximum number of dead points/samples
+        !!
+        !! Set equal to -1 for no maximum number
+        integer :: max_ndead = -1
+
         !> Pointer to the sampling procedure.
         !!
         !! e.g: MultiNest, Galilean Sampling, Hamiltonian sampling ...

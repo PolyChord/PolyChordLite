@@ -20,6 +20,7 @@ program main
 
 
 
+
     ! ======= (1) Initialisation =======
     ! We need to initialise:
     ! a) random number generator
@@ -38,7 +39,7 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood  
 
-    M%nDims = 6                ! Assign the dimensionality
+    M%nDims = 12               ! Assign the dimensionality
                                ! Assign the priors
                                !>@todo sort out the code for transforming/configuring the
                                !! priors
@@ -53,6 +54,8 @@ program main
     settings%sampler              => SphericalCenterSampling !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             = 0                        !degree of feedback
+    settings%precision_criterion  = 1d-5                     !degree of precision in answer
+    settings%max_ndead            = 12000                    !maximum number of samples
 
 
 

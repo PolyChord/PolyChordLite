@@ -83,6 +83,8 @@ module nested_sampling_module
             ! Insert the new point
             call insert_new_point(new_point,live_data)
 
+            if (settings%max_ndead .ne. -1 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
+
         end do
 
         write(*,'("ndead   = ", I12                  )') ndead
