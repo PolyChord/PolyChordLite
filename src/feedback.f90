@@ -8,7 +8,6 @@
 !! |----------|--------------------
 !! |    0     | Only output the final evidence and error
 !! |    1     | Indicate when entering various major sections of the program
-!! |          |  
 
 module feedback_module
     implicit none
@@ -157,12 +156,12 @@ module feedback_module
         integer,intent(in) :: ndead
 
         if (feedback>=0) then
-            write(*,'(A42                                       )') ' ________________________________________ '
-            write(*,'(A42                                       )') '/                                        \'
+            write(*,'(A42)')                                        ' ________________________________________ '
+            write(*,'(A42)')                                        '|                                        |'
             write(*,'("| ndead  = ", I12, "                  |"  )') ndead
             write(*,'("| Z      = ", E12.5, " +/- ", E12.5,  " |")') evidence_vec(1:2)
             write(*,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
-            write(*,'(A42                                       )') '\________________________________________/'
+            write(*,'(A42)')                                        '|________________________________________|'
         endif
 
     end subroutine write_final_results

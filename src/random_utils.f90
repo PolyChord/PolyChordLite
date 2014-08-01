@@ -86,6 +86,9 @@ module random_module
     function random_hypercube_point(nDims)
         implicit none
 
+        !> Size of coordinate vector
+        integer :: nDims 
+
         ! The output nDims coordinate
         double precision, dimension(nDims) :: random_hypercube_point
 
@@ -97,8 +100,6 @@ module random_module
         double precision, parameter :: l_bound  = 1.0 ! 
 
         integer :: errcode ! Error code
-
-        integer :: nDims ! Size of coordinate vector
 
         ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
         ! (v=vector,d=double,rng,uniform)
@@ -167,13 +168,16 @@ module random_module
     function random_beta_vec(p,q,nDims)
         implicit none
 
-        ! The output vector
-        double precision, dimension(nDims) :: random_beta_vec
-
         !> beta shape parameter 1
         double precision, intent(in) :: p
         !> beta shape parameter 2
         double precision, intent(in) :: q
+        !> Size of coordinate vector
+        integer :: nDims
+
+        ! The output vector
+        double precision, dimension(nDims) :: random_beta_vec
+
 
         ! Method to generate random numbers 
         integer,parameter       :: method=VSL_RNG_METHOD_BETA_CJA
@@ -183,7 +187,6 @@ module random_module
 
         integer :: errcode ! Error code
 
-        integer :: nDims ! Size of coordinate vector
 
 
         ! call the intel procedure to generate the point
@@ -200,7 +203,7 @@ module random_module
     !! Generate a uniformly distributed point in the unit n-sphere
     !!
     !! This is done by generating a random direction, and then multiplying it by
-    !! a radius distributed as \f$ P(r) ~ r^{d-1}\f$. where \f$d$\f is the
+    !! a radius distributed as \f$ P(r) ~ r^{d-1}\f$. where \f$d\f$ is the
     !! dimension of the input vector
 
     function random_point_in_sphere(nDims)
