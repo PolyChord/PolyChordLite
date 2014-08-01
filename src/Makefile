@@ -14,8 +14,12 @@
 # The compiler
 FC = mpif90
 # flags for debugging or for maximum performance, comment as necessary
+DEBUG ?= 0
+ifeq ($(DEBUG), 1)
 FCFLAGS = -g -traceback -fp-stack-check -check all -fpe0 -warn all -mkl
-#FCFLAGS = -O3 -mkl
+else
+FCFLAGS = -O3 -mkl
+endif
 # flags forall (e.g. look for system .mod files, required in gfortran)
 #FCFLAGS += -I/usr/include
 

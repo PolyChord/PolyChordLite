@@ -1,3 +1,6 @@
+DEBUG ?= 0
+export DEBUG
+
 default: all
 
 main: ./src/*90
