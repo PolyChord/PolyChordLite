@@ -43,7 +43,7 @@ module nested_sampling_module
 
         ! Compute the average loglikelihood and hand it to the evidence calculator
         mean_loglike = sum(exp(live_data(M%l0,:)))/settings%nlive
-        more_samples_needed = settings%evidence_calculator(mean_loglike,mean_loglike,-1,evidence_vec)
+        evidence_vec = settings%evidence_calculator(mean_loglike,mean_loglike,-1,more_samples_needed)
 
 
         ! Count the number of dead points
@@ -71,7 +71,18 @@ module nested_sampling_module
             late_likelihood = live_data(M%l0,1)
 
             ! Calculate the new evidence
-            more_samples_needed =  settings%evidence_calculator(new_likelihood,late_likelihood,ndead,evidence_vec)
+            evidence_vec =  settings%evidence_calculator(new_likelihood,late_likelihood,ndead,more_samples_needed)
+
+            if (settings%feedback>0)  then
+                if (settings%feedback>1) then
+                    write(*,'("new_point: (", F9.6, ",", F9.6 ") ->", F10.5 )') new_point(M%p0:M%p1), new_point(M%l0)
+                end if
+                if (evidence_vec(1) > 0 ) then
+                    write(*,'("ndead   = ", I12                  )') ndead
+                    write(*,'("Z       = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
+                    write(*,'("log(Z)  = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
+                end if
+            end if
 
             ! Insert the new point
             call insert_new_point(new_point,live_data)

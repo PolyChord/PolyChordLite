@@ -5,7 +5,7 @@ module evidence_module
     contains
 
 
-    function KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec) result (more_samples_needed)
+    function KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed) result (evidence_vec)
         use settings_module
 
         implicit none
@@ -24,11 +24,12 @@ module evidence_module
         integer,                intent(in) :: ndead
 
         ! ------- Outputs ------- 
-        !> vector containing [evidence, evidence error]
-        double precision, intent(out), dimension(2) :: evidence_vec
-
         !> Whether we have obtained enough samples for an accurate evidence
-        logical :: more_samples_needed
+        logical,intent(out) :: more_samples_needed
+
+        ! vector containing [evidence, evidence error]
+        double precision, dimension(2) :: evidence_vec
+
 
         ! ------- Local Variables -------
 

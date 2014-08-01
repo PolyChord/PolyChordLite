@@ -39,7 +39,7 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood  
 
-    M%nDims = 12               ! Assign the dimensionality
+    M%nDims = 24               ! Assign the dimensionality
                                ! Assign the priors
                                !>@todo sort out the code for transforming/configuring the
                                !! priors
@@ -49,13 +49,13 @@ program main
 
 
     ! ------- (1c) Initialise the program settings -------
-    settings%nlive                =  1000                    ! number of live points
+    settings%nlive                =  1000                   ! number of live points
     !settings%sampler              => BruteForceSampling      !Sampler choice
     settings%sampler              => SphericalCenterSampling !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%feedback             = 1                        !degree of feedback
+    settings%feedback             = 0                        !degree of feedback
     settings%precision_criterion  = 1d-5                     !degree of precision in answer
-    settings%max_ndead            = 12000                    !maximum number of samples
+    settings%max_ndead            = -1                       !maximum number of samples
 
 
 

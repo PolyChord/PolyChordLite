@@ -113,8 +113,10 @@ module settings_module
         !! iterations/dead points (ndead).
         !!
         !! It ouputs a length 2 vector with the [evidence, evidence error]
+        !! as well as information whether more samples are needed in the logical
+        !! variable more_samples_needed
         !!
-        function ev(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec) result (more_samples_needed)
+        function ev(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed) result (evidence_vec)
 
             import :: program_settings
 
@@ -133,12 +135,12 @@ module settings_module
             !> number of dead points/ number of iterations
             integer,                intent(in) :: ndead
 
-            !> Whether we have obtained enough samples for an accurate evidence
-            logical :: more_samples_needed
-
             ! ------- Outputs ------- 
-            !> vector containing [evidence, evidence error]
-            double precision, intent(out), dimension(2) :: evidence_vec
+            !> Whether we have obtained enough samples for an accurate evidence
+            logical,intent(out) :: more_samples_needed
+
+            ! vector containing [evidence, evidence error]
+            double precision, dimension(2) :: evidence_vec
 
         end function ev
     end interface
