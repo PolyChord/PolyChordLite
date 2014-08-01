@@ -46,7 +46,9 @@ module evidence_module
 
         double precision :: nlive ! number of live points in double precision (taken from settings%nlive)
 
-        double precision :: X1,X2
+        double precision :: logX_k,logY_k
+
+        double precision :: mean, variance
 
 
         if (ndead <= 0) then
@@ -63,27 +65,35 @@ module evidence_module
 
 
 
-        X1 = (   nlive  /(nlive+1) ) ** ndead
-        X2 = ( (nlive+1)/(nlive+2) ) ** ndead 
+        logX_k = ndead * log(   nlive  /(nlive+1) )
+        logY_k = ndead * log( (nlive+1)/(nlive+2) )
 
 
+        Z_dead = Z_dead             + exp( old_loglikelihood + logX_k ) / nlive
 
+        Z2_dead_part = Z2_dead_part + exp( old_loglikelihood + logY_k ) /(nlive+1) 
 
-        Z_dead = Z_dead             + exp( old_loglikelihood + ndead * log( nlive   /(nlive+1) ) ) / nlive
-
-        Z2_dead_part = Z2_dead_part + exp( old_loglikelihood + ndead * log((nlive+1)/(nlive+2) ) ) /(nlive+1) 
-
-        Z2_dead = Z2_dead           + exp( old_loglikelihood + ndead * log( nlive   /(nlive+1) ) ) / nlive * Z2_dead_part
+        Z2_dead = Z2_dead           + exp( old_loglikelihood + logX_k ) / nlive * Z2_dead_part
 
         mean_log_like_live = mean_log_like_live + ( exp(new_loglikelihood) - exp(old_loglikelihood) )/ nlive
 
 
-        evidence_vec(1) = Z_dead + mean_log_like_live  * X1
-        evidence_vec(2) = sqrt(abs(2*Z2_dead - Z_dead**2 &
-            + mean_log_like_live**2 * X1 * (X2-X1) + 2*mean_log_like_live * X1**2 * ( Z2_dead_part-Z_dead)   ))
+        mean =        Z_dead 
+        mean = mean + mean_log_like_live * exp(logX_k)
+
+        variance =            2*Z2_dead - Z_dead**2 
+        variance = variance + mean_log_like_live**2 * ( exp(logX_k+logY_k) - exp(2*logX_k) )
+        variance = variance + 2*mean_log_like_live * exp(2*logX_k) * ( Z2_dead_part-Z_dead)  
 
 
-        if (mean_log_like_live  * X1 < settings%precision_criterion * Z_dead) then
+
+        evidence_vec(1) = mean
+        evidence_vec(2) = sqrt(abs(variance))
+
+        
+
+
+        if (mean_log_like_live  * exp(logX_k) < settings%precision_criterion * Z_dead) then
             more_samples_needed = .false.
         else
             more_samples_needed = .true.

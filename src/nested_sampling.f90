@@ -8,6 +8,7 @@ module nested_sampling_module
         use model_module,    only: model
         use settings_module, only: program_settings
         use galileo_module,  only: GalileanSample
+        use feedback_module
 
         implicit none
         type(model),            intent(in) :: M
@@ -33,9 +34,12 @@ module nested_sampling_module
         integer :: ndead
 
 
+        call write_started_generating(settings%feedback)
+
         ! Create initial live points
-        if (settings%feedback>0) write(*,*) 'generating live points'
-        live_data = GenerateLivePoints(M,settings%nlive)
+        live_data = GenerateLivePoints(M,settings)
+
+        call write_finished_generating(settings%feedback)
 
         ! Compute the average loglikelihood and hand it to the evidence calculator
         mean_loglike = sum(exp(live_data(M%l0,:)))/settings%nlive
@@ -53,7 +57,7 @@ module nested_sampling_module
             !write(*,*) '----------------------------------------'
 
 
-        if (settings%feedback>0) write(*,*) 'started sampling'
+        call write_started_sampling(settings%feedback)
 
         do while (more_samples_needed)
 
@@ -69,17 +73,6 @@ module nested_sampling_module
             ! Calculate the new evidence
             more_samples_needed =  settings%evidence_calculator(new_likelihood,late_likelihood,ndead,evidence_vec)
 
-            if (settings%feedback>0)  then
-                if (settings%feedback>1) then
-                    write(*,'("new_point: (", F9.6, ",", F9.6 ") ->", F10.5 )') new_point(M%p0:M%p1), new_point(M%l0)
-                end if
-                if (evidence_vec(1) > 0 ) then
-                    write(*,'("ndead   = ", I12                  )') ndead
-                    write(*,'("Z       = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
-                    write(*,'("log(Z)  = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
-                end if
-            end if
-
             ! Insert the new point
             call insert_new_point(new_point,live_data)
 
@@ -87,9 +80,7 @@ module nested_sampling_module
 
         end do
 
-        write(*,'("ndead   = ", I12                  )') ndead
-        write(*,'("Z       = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
-        write(*,'("log(Z)  = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
+        call write_final_results(evidence_vec,ndead,settings%feedback)
 
     end subroutine NestedSampling
 
@@ -97,33 +88,38 @@ module nested_sampling_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(M,nlive) result(live_data)
-        use model_module
-        use random_module, only: random_hypercube_point
+    function GenerateLivePoints(M,settings) result(live_data)
+        use model_module,    only: model, calculate_point
+        use random_module,   only: random_hypercube_point
+        use settings_module, only: program_settings
+        use feedback_module, only: write_generating_live_points 
         implicit none
 
-        type(model), intent(in) :: M     !> The model details (loglikelihood, priors, ndims etc...)
+        !> The model details (loglikelihood, priors, ndims etc...)
+        type(model), intent(in) :: M
 
-        !>live_data(:,i) constitutes the information in the ith live point in the unit hypercube: 
-        !! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(M%nTotal,nlive) :: live_data
+        !> The program settings
+        type(program_settings), intent(in) :: settings
+
+        !live_data(:,i) constitutes the information in the ith live point in the unit hypercube: 
+        ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
+        double precision, dimension(M%nTotal,settings%nlive) :: live_data
 
         ! Loop variable
         integer i_live
 
-        integer nlive
-
-        nlive = size(live_data,2)
-
 
         ! Generate nlive points
-        do i_live=1, nlive
+        do i_live=1, settings%nlive
 
             ! Generate a random coordinate in the first nDims rows of live_data
             live_data(:,i_live) = random_hypercube_point(M%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
             call calculate_point( M, live_data(:,i_live) )
+
+            call write_generating_live_points(settings%feedback,i_live,settings%nlive)
+
 
         end do
 

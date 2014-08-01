@@ -30,11 +30,15 @@ module settings_module
         !! there with the interface specified in samp. Once this is done you can
         !! point to in it the main program by writing
         !!
-        !!     settings%sampler => my_sampling_procedure
+        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !! settings%sampler => my_sampling_procedure
+        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         !!
         !! where settings is of type program_settings: 
         !!
-        !!     type(program settings) :: settings
+        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !! type(program settings) :: settings
+        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         !!
         !! and should be passed to the NestedSampling algorithm 
         !!
@@ -52,11 +56,15 @@ module settings_module
         !! specified in ev. Once this is done you can point to in it the main
         !! program by writing
         !!
-        !!     settings%evidence_calculator => my_evidence_calculator
+        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !! settings%evidence_calculator => my_evidence_calculator
+        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         !!
         !! where settings is of type program_settings: 
         !!
-        !!     type(program settings) :: settings
+        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !! type(program settings) :: settings
+        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         !!
         !! and should be passed to the NestedSampling algorithm 
         !!

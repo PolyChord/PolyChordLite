@@ -53,7 +53,7 @@ program main
     !settings%sampler              => BruteForceSampling      !Sampler choice
     settings%sampler              => SphericalCenterSampling !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%feedback             = 0                        !degree of feedback
+    settings%feedback             = 1                        !degree of feedback
     settings%precision_criterion  = 1d-5                     !degree of precision in answer
     settings%max_ndead            = 12000                    !maximum number of samples
 
