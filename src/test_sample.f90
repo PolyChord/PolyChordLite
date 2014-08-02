@@ -3,7 +3,7 @@ module test_sampler_module
 
     contains
 
-    function BruteForceSampling(live_data, loglikelihood_bound, M) result(new_point)
+    function BruteForceSampling(live_data, loglikelihood_bound, M, feedback) result(new_point)
 
         use random_module, only: random_hypercube_point
         use model_module,  only: model, calculate_point
@@ -23,6 +23,9 @@ module test_sampler_module
 
         !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
         type(model),            intent(in) :: M
+        
+        !> Optional argument to cause the sampler to print out relevent information
+        integer, intent(in), optional :: feedback
 
         ! ------- Outputs -------
         !> The newly generated point
@@ -47,7 +50,7 @@ module test_sampler_module
 
     end function BruteForceSampling
 
-    function SphericalCenterSampling(live_data, loglikelihood_bound, M) result(new_point)
+    function SphericalCenterSampling(live_data, loglikelihood_bound, M,feedback) result(new_point)
 
         use random_module, only: random_point_in_sphere
         use model_module,  only: model, calculate_point
@@ -67,6 +70,9 @@ module test_sampler_module
 
         !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
         type(model),            intent(in) :: M
+        
+        !> Optional argument to cause the sampler to print out relevent information
+        integer, intent(in), optional :: feedback
 
         ! ------- Outputs -------
         !> The newly generated point
@@ -81,6 +87,14 @@ module test_sampler_module
 
         ! Set the center of the sampler
         center = 0.5
+
+        ! Feedback if requested
+        if(present(feedback)) then
+            if(feedback>=0) then
+                write(*,'( "Sampler    : Spherical Central" )')
+            end if
+            return
+        end if
 
         ! Calculate the radial distance of the lowest loglikelihood point from the center
         
@@ -110,7 +124,7 @@ module test_sampler_module
 
 
 
-    function CubicCenterSampling(live_data, loglikelihood_bound, M) result(new_point)
+    function CubicCenterSampling(live_data, loglikelihood_bound, M, feedback) result(new_point)
 
         use random_module, only: random_hypercube_point
         use model_module,  only: model, calculate_point
@@ -131,6 +145,9 @@ module test_sampler_module
         !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
         type(model),            intent(in) :: M
 
+        !> Optional argument to cause the sampler to print out relevent information
+        integer, intent(in), optional :: feedback
+
         ! ------- Outputs -------
         !> The newly generated point
         double precision,    dimension(M%nTotal)   :: new_point
@@ -141,20 +158,25 @@ module test_sampler_module
         double precision :: max_radius
         double precision, dimension(M%nDims) :: center
 
-        integer num_attempts
-        integer,save :: max_num_attempts
-
-
-        num_attempts=0
 
         ! Set the center of the sampler
-        center = 0.5
+        center = 5d-1
+
+        ! Feedback if requested
+        if(present(feedback)) then
+            if(feedback>=0) then
+                write(*,'( "Sampler    : Cubic Central" )')
+            end if
+            return
+        end if
 
         ! Calculate the radial distance of the lowest loglikelihood point from the center
+
+        max_radius = maxval(abs(live_data(M%h0:M%h1,1)-5d-1))
         
-        max_radius = sqrt( dot_product(  &
-            live_data(M%h0:M%h1,1)-center,                           &
-            live_data(M%h0:M%h1,1)-center   )) 
+        !max_radius = sqrt( dot_product(  &
+        !   live_data(M%h0:M%h1,1)-center,                           &
+        !   live_data(M%h0:M%h1,1)-center   )) 
 
         ! set new_point to be the lowest loglikelihood point for now 
         ! (so the loop below is entered)
@@ -171,11 +193,7 @@ module test_sampler_module
             ! Compute physical coordinates, likelihoods and derived parameters
             call calculate_point( M, new_point )
 
-            num_attempts=num_attempts+1
         end do
-
-        if (num_attempts> max_num_attempts) max_num_attempts=num_attempts
-        write(*,'("max_num_attempts: ", I9)') max_num_attempts
 
 
     end function CubicCenterSampling

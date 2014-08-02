@@ -79,7 +79,7 @@ module settings_module
         !! set of live points (live_data) in order to generate a new_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood_bound
-        function samp(live_data, loglikelihood_bound, M) result(new_point)
+        function samp(live_data, loglikelihood_bound, M,feedback) result(new_point)
 
             import :: model
             implicit none
@@ -97,6 +97,9 @@ module settings_module
 
             !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
             type(model),            intent(in) :: M
+
+            !> Optional argument to cause the sampler to print out relevent information
+            integer, intent(in), optional :: feedback
 
             ! ------- Outputs -------
             !> The newly generated point

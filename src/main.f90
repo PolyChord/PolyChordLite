@@ -11,6 +11,7 @@ program main
     use test_sampler_module
     use evidence_module
     use example_likelihoods
+    use feedback_module
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
@@ -37,9 +38,10 @@ program main
     ! ------- (1b) Initialise the model -------
     ! Assign the likelihood function
     ! This one is a basic gaussian log likelihood
-    M%loglikelihood => gaussian_loglikelihood  
+    !M%loglikelihood => gaussian_loglikelihood  
+    M%loglikelihood => pyramidal_loglikelihood  
 
-    M%nDims = 12               ! Assign the dimensionality
+    M%nDims =  12              ! Assign the dimensionality
                                ! Assign the priors
                                !>@todo sort out the code for transforming/configuring the
                                !! priors
@@ -49,18 +51,20 @@ program main
 
 
     ! ------- (1c) Initialise the program settings -------
-    settings%nlive                =  1000                   ! number of live points
+    settings%nlive                =  1024                   ! number of live points
     !settings%sampler              => BruteForceSampling      !Sampler choice
     settings%sampler              => SphericalCenterSampling !Sampler choice
+    settings%sampler              => CubicCenterSampling !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             = 0                        !degree of feedback
-    settings%precision_criterion  = 1d-5                     !degree of precision in answer
+    settings%precision_criterion  = 1d-3                     !degree of precision in answer
     settings%max_ndead            = -1                       !maximum number of samples
 
 
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
+    call write_opening_statement(M,settings)
     call NestedSampling(M,settings)
 
 

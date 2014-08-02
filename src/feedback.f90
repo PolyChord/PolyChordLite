@@ -14,6 +14,39 @@ module feedback_module
 
     contains
 
+    !> Called before running the program
+    subroutine write_opening_statement(M,settings)
+        use model_module,    only: model
+        use settings_module, only: program_settings
+        implicit none
+        type(program_settings), intent(in) :: settings  ! The program settings 
+        type(model),            intent(in) :: M         ! The model details
+
+        double precision, dimension(1) :: temp
+        double precision, dimension(1,1) :: temp2
+
+
+        if(settings%feedback >=1) then
+            write(*,'("Nested Sampling Algorithm")')
+            write(*,'("  author: Will Handley")')
+            write(*,'("   email: wh260@cam.ac.uk")')
+            write(*,*)
+        end if
+
+        if(settings%feedback >=0) then
+            write(*,'("nlive      :",I8)')   settings%nlive
+            write(*,'("nDims      :",I8)')   M%nDims
+            write(*,'("nDerived   :",I8)')   M%nDerived
+            temp(1) = M%loglikelihood(temp,settings%feedback) ! Write out the likelihood
+            temp(:) = settings%sampler(temp2,temp(1),M,settings%feedback) ! Write out the sampler
+        end if
+       
+
+
+
+    end subroutine write_opening_statement
+
+
 
     !> Called before generating the live points
     subroutine write_started_generating(feedback)

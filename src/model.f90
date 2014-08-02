@@ -26,10 +26,11 @@ module model_module
     end type model
 
     interface
-        function loglike(M,theta)
+        function loglike(M,theta,feedback)
             import :: model
-            class(model),     intent(in)               :: M
-            double precision, intent(in), dimension(:) :: theta
+            class(model),     intent(in)                :: M
+            double precision, intent(in),  dimension(:) :: theta
+            integer,          intent(in),  optional     :: feedback
 
             double precision :: loglike
         end function

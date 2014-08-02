@@ -39,6 +39,7 @@ all: $(PROGRAMS)
 
 MODULES = nested_sampling.o settings.o model.o random_utils.o likelihoods.o galilean_sample.o test_sample.o evidence.o feedback.o
 
+feedback.o:         model.o settings.o
 settings.o:			model.o
 evidence.o:         model.o settings.o 
 galilean_sample.o:  model.o settings.o random_utils.o
