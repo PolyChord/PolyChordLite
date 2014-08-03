@@ -73,9 +73,9 @@ module nested_sampling_module
             ! Calculate the new evidence
             evidence_vec =  settings%evidence_calculator(new_likelihood,late_likelihood,ndead,more_samples_needed)
 
-            if (settings%feedback>0)  then
-                if (settings%feedback>1) then
-                    write(*,'("new_point: (", F9.6, ",", F9.6 ") ->", F10.5 )') new_point(M%p0:M%p1), new_point(M%l0)
+            if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
+                if (settings%feedback>=2) then
+                    write(*,'("new_point: (", <M%nDims>F10.5, ") ->", F12.5 )') new_point(M%p0:M%p1), new_point(M%l0)
                 end if
                 write(*,'("ndead   = ", I12                  )') ndead
                 write(*,'("Z       = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
@@ -87,7 +87,7 @@ module nested_sampling_module
             ! Insert the new point
             call insert_new_point(new_point,live_data)
 
-            if (settings%max_ndead .ne. -1 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
+            if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
 
         end do
 

@@ -79,14 +79,17 @@ module test_sampler_module
         double precision,    dimension(M%nTotal)   :: new_point
 
         ! ------- Local Variables -------
-        double precision, parameter :: Vfrac = 3
+        double precision, parameter :: Vfrac = 3d0
 
         double precision :: max_radius
         double precision, dimension(M%nDims) :: center
 
+        double precision :: sigma
+
 
         ! Set the center of the sampler
-        center = 0.5
+        center = 5d-1
+        sigma = 1d-2
 
         ! Feedback if requested
         if(present(feedback)) then
@@ -97,16 +100,28 @@ module test_sampler_module
         end if
 
         ! Calculate the radial distance of the lowest loglikelihood point from the center
+        !max_radius = maxval(abs(live_data(M%h0:M%h1,1)-5d-1))
+        !max_radius = sqrt(M%nDims+0d0) * max_radius
+
+        !max_radius = sqrt(2d0) * sigma * sqrt( - loglikelihood_bound - &
+        !    M%nDims/2d0 * log(6.2831853071795864769252867665590058d0) - M%nDims *log(sigma) )
         
-        max_radius = Vfrac**(1/dble(M%nDims) )*  sqrt( dot_product(  &
-            live_data(M%h0:M%h1,1)-center,                           &
-            live_data(M%h0:M%h1,1)-center   )) 
+        new_point = live_data(:,1)
+        new_point(M%h0:M%h1) = new_point(M%h0:M%h1) - center
+
+        max_radius = Vfrac**(1d0/M%nDims )*  sqrt( dot_product(new_point(M%h0:M%h1),new_point(M%h0:M%h1)))
+
+
+        !max_radius = Vfrac**(1d0/M%nDims )*  sqrt( dot_product(  &
+        !    live_data(M%h0:M%h1,1)-center,                           &
+        !    live_data(M%h0:M%h1,1)-center   )) 
 
         ! reset new_point to be the lowest loglikelihood point for now 
         ! (so the loop below is entered)
         new_point = live_data(:,1)
+        new_point(1) = 1.01d0
 
-        do while(new_point(M%l0)<=loglikelihood_bound)
+        do while( new_point(M%l0)<=loglikelihood_bound .or.   any(new_point(M%h0:M%h1) > 1d0) .or. any(new_point(M%h0:M%h1) < 0d0) )  
 
             ! Generate a random point within the unit sphere
             new_point = random_point_in_sphere(M%nDims)
@@ -181,8 +196,9 @@ module test_sampler_module
         ! set new_point to be the lowest loglikelihood point for now 
         ! (so the loop below is entered)
         new_point = live_data(:,1)
+        new_point(1) = 1.01
 
-        do while(new_point(M%l0)<=loglikelihood_bound)
+        do while( new_point(M%l0)<=loglikelihood_bound .or.   any(new_point(M%h0:M%h1) > 1d0) .or. any(new_point(M%h0:M%h1) < 0d0) )  
 
             ! Generate a random point within the unit sphere
             new_point = random_hypercube_point(M%nDims)

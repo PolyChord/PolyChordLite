@@ -22,7 +22,7 @@ module example_likelihoods
         double precision, dimension(M%nDims) :: sigma ! Standard deviation (uncorrelated) 
         double precision, dimension(M%nDims) :: mu    ! Mean
 
-        double precision, parameter :: TwoPi = 8*atan(1d0) ! 2\pi in double precision
+        double precision, parameter :: TwoPi = 8d0*atan(1d0) ! 2\pi in double precision
 
         
         ! Initialise the mean and standard deviation
@@ -45,22 +45,17 @@ module example_likelihoods
 
 
         ! Gaussian normalisation
-        gaussian_loglikelihood = - dble(M%nDims)/2d0 * log( TwoPi ) - sum( log( sigma ) ) 
+        gaussian_loglikelihood = - M%nDims/2d0 * log( TwoPi ) - sum( log( sigma ) ) 
 
         ! theta dependence
         gaussian_loglikelihood = gaussian_loglikelihood - sum( ( ( theta - mu ) / sigma ) ** 2d0 ) / 2d0
 
-        !gaussian_loglikelihood = - (M%nDims+0d0)/2d0 * log( TwoPi )
-        !do i=1,M%nDims
-        !    gaussian_loglikelihood = gaussian_loglikelihood - log( sigma(i) )  
-        !end do
-
-        !! theta dependence
-        !do i=1,M%nDims
-        !    gaussian_loglikelihood = gaussian_loglikelihood - ( ( theta(i) - mu(i) ) / sigma(i) ) ** 2d0  / 2d0
-        !end do
 
     end function gaussian_loglikelihood
+
+
+
+
 
     !> Pyramidal likelihood centered on 0.5.
     !! 
