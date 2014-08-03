@@ -37,15 +37,17 @@ all: $(PROGRAMS)
 # prog3 and prog4, modify to suit your needs
 # ======================================================================
 
-MODULES = nested_sampling.o settings.o model.o random_utils.o likelihoods.o galilean_sample.o test_sample.o evidence.o feedback.o
+MODULES = evidence.o feedback.o galilean_sample.o likelihoods.o model.o nested_sampling.o random_utils.o settings.o test_sample.o 
 
-feedback.o:         model.o settings.o
-settings.o:			model.o
-evidence.o:         model.o settings.o 
-galilean_sample.o:  model.o settings.o random_utils.o
-likelihoods.o:      model.o settings.o 
-nested_sampling.o:  model.o settings.o random_utils.o galilean_sample.o feedback.o
-main.o:   		  	$(MODULES)
+random_utils.o:
+settings.o:        model.o
+likelihoods.o:     model.o
+evidence.o:        settings.o
+feedback.o:        model.o settings.o
+test_sample.o:     model.o random_utils.o
+galilean_sample.o: model.o random_utils.o
+nested_sampling.o: feedback.o galilean_sample.o model.o random_utils.o settings.o
+main.o:            $(MODULES)
 
 main: main.o $(MODULES)
 

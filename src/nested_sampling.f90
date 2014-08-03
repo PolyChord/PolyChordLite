@@ -7,7 +7,7 @@ module nested_sampling_module
     subroutine NestedSampling(M,settings)
         use model_module,    only: model
         use settings_module, only: program_settings
-        use galileo_module,  only: GalileanSample
+        use galileo_module,  only: GalileanSampling
         use feedback_module
 
         implicit none

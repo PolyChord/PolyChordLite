@@ -110,14 +110,14 @@ module settings_module
     interface
         !> Interface to an evidence calculator
         !!
-        !! The evidence calculator recieves the relevent information, namely the
-        !! loglikelihoods of the newly created point and the dying point
-        !! (new_loglikelihood and old_loglikelihood) and the number of
-        !! iterations/dead points (ndead).
+        !! The evidence calculator recieves the relevent information, namely 
+        !! * the loglikelihood of the newly created point ( new_loglikelihood )
+        !! * the loglikelihood of the dying point  ( old_loglikelihood )
+        !! * number of iterations/dead points ( ndead )
         !!
-        !! It ouputs a length 2 vector with the [evidence, evidence error]
-        !! as well as information whether more samples are needed in the logical
-        !! variable more_samples_needed
+        !! It ouputs 
+        !! * a length 2 vector ( evidence_vec ) with the [evidence, evidence error] in the value of the function
+        !! * whether more samples are needed in the logical variable more_samples_needed
         !!
         function ev(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed) result (evidence_vec)
 

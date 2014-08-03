@@ -8,6 +8,7 @@ program main
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
+    use galileo_module, only: GalileanSampling
     use test_sampler_module
     use evidence_module
     use example_likelihoods
@@ -40,7 +41,7 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood  
 
-    M%nDims = 20               ! Assign the dimensionality
+    M%nDims = 2                ! Assign the dimensionality
                                ! Assign the priors
                                !>@todo sort out the code for transforming/configuring the
                                !! priors
@@ -50,12 +51,12 @@ program main
 
 
     ! ------- (1c) Initialise the program settings -------
-    settings%nlive                =  1024*16                 ! number of live points
-    settings%sampler              => SphericalCenterSampling !Sampler choice
+    settings%nlive                =  1024                    !number of live points
+    settings%sampler              => GalileanSampling        !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%feedback             = 1                        !degree of feedback
-    settings%precision_criterion  = 1d-3                     !degree of precision in answer
-    settings%max_ndead            = -1                       !maximum number of samples
+    settings%feedback             =  1                       !degree of feedback
+    settings%precision_criterion  =  1d-3                    !degree of precision in answer
+    settings%max_ndead            =  -1                      !maximum number of samples
 
 
 
