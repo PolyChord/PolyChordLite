@@ -9,7 +9,8 @@ program main
     use random_module,          only: initialise_random, deinitialise_random
 
     use galileo_module, only: GalileanSampling
-    use test_sampler_module
+    use chordal_module, only: ChordalSampling
+    use test_sampler_module, only: BruteForceSampling,SphericalCenterSampling,CubicCenterSampling
     use evidence_module
     use example_likelihoods
     use feedback_module

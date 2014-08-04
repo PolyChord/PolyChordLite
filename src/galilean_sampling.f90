@@ -65,9 +65,6 @@ module galileo_module
         ! find a root in that direction
         new_point = find_edge(nhat,new_point,initial_step,acceleration,loglikelihood_bound,M)
 
-        ! find a root in that direction
-        new_point = find_edge(nhat,new_point,initial_step,acceleration,loglikelihood_bound,M)
-
         do while(.true.)
             write(*,*) new_point(M%h0:M%h1)
 
