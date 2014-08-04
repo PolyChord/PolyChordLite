@@ -1,11 +1,6 @@
 module chordal_module
     implicit none
 
-    type, extends(program_settings) :: chordal_settings
-
-
-
-    end type program_settings
 
     contains
 
@@ -34,9 +29,10 @@ module chordal_module
 
         ! ------- Outputs -------
         !> The newly generated point
+        double precision,    dimension(M%nTotal)   :: new_point
+
+
         double precision,    dimension(M%nTotal)   :: random_point
-        double precision,    dimension(M%nTotal)   :: edge_point_1
-        double precision,    dimension(M%nTotal)   :: edge_point_2
 
         ! ------- Local Variables -------
         integer, dimension(1) :: point_number 
@@ -46,9 +42,7 @@ module chordal_module
 
         double precision :: initial_step, acceleration
 
-        double precision :: random_temp
-
-        initial_step = 0.01
+        initial_step = 0.0001
         acceleration = 2
 
         ! Feedback if requested
@@ -80,6 +74,7 @@ module chordal_module
 
     function random_chordal_point(nhat,random_point,initial_step,acceleration,loglikelihood_bound,M) result(new_point)
         use model_module,  only: model, calculate_point, logzero
+        use random_module, only: random_real
         implicit none
 
         !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
@@ -98,6 +93,11 @@ module chordal_module
         ! The output finish point
         double precision,    dimension(M%nTotal)   :: new_point
 
+        double precision,    dimension(M%nTotal)   :: edge_point_1
+        double precision,    dimension(M%nTotal)   :: edge_point_2
+
+        double precision random_temp
+
 
         ! find an edge in the nhat direction
         edge_point_1 = find_edge( nhat,random_point,initial_step,acceleration,loglikelihood_bound,M)
@@ -105,13 +105,13 @@ module chordal_module
         edge_point_2 = find_edge(-nhat,random_point,initial_step,acceleration,loglikelihood_bound,M)
 
         ! Set the loglikelihood of the new point to zero for now
-        new_oint(M%l0) = logzero
+        new_point(M%l0) = logzero
 
         ! Select a point randomly along the chord (edge_point_1, edge_point_2)
         do while(new_point(M%l0)< loglikelihood_bound)
             random_temp = random_real()
             new_point(M%h0:M%h1) =  random_temp * edge_point_1(M%h0:M%h1)  + (1d0-random_temp)*edge_point_2(M%h0:M%h1)
-            calculate_point(M,new_point)
+            call calculate_point(M,new_point)
         end do
 
 
@@ -168,6 +168,8 @@ module chordal_module
             step_length = step_length * acceleration
 
         end do
+
+        finish_point = new_point
 
     end function find_edge
 

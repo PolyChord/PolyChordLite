@@ -122,9 +122,6 @@ module random_module
     function random_real()
         implicit none
 
-        !> Size of coordinate vector
-        integer :: nDims 
-
         ! output random real number
         double precision :: random_real
 
