@@ -1,5 +1,6 @@
 module model_module
     implicit none
+    double precision, parameter :: logzero = -1d20
 
     !> Type to encode all of the information about the priors.
     type :: model
@@ -69,14 +70,19 @@ module model_module
         type(model),     intent(in)                   :: M
         double precision, intent(inout) , dimension(:) :: live_data
 
-        ! Transform the the hypercube coordinates to the physical coordinates
-        call hypercube_to_physical( M, live_data(:) )
+        if ( any(live_data(M%h0:M%h1)<0d0) .or. any(live_data(M%h0:M%h1)>1d0) )  then
+            live_data(M%p0:M%d1) = 0
+            live_data(M%l0) = logzero
+        else
+            ! Transform the the hypercube coordinates to the physical coordinates
+            call hypercube_to_physical( M, live_data(:) )
 
-        ! Calculate the likelihood and store it in the last index
-        live_data(M%l0) = M%loglikelihood( live_data(M%p0:M%p1))
+            ! Calculate the likelihood and store it in the last index
+            live_data(M%l0) = M%loglikelihood( live_data(M%p0:M%p1))
 
-        ! Calculate the derived parameters
-        call calculate_derived_parameters( M, live_data(:) )
+            ! Calculate the derived parameters
+            call calculate_derived_parameters( M, live_data(:) )
+        end if
 
     end subroutine calculate_point
 

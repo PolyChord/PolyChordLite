@@ -1,5 +1,5 @@
 module example_likelihoods
-    use model_module , only: model
+    use model_module , only: model,logzero
 
     contains
 
@@ -40,6 +40,7 @@ module example_likelihoods
                 write(*,'( "     sigma: ")')
                 write(*,'( " [", <M%nDims>F15.9 ,"]")') sigma
             end if
+            gaussian_loglikelihood = logzero
             return
         end if
 

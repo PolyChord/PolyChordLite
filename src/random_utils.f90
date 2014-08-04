@@ -80,8 +80,7 @@ module random_module
     !! We use the 
     !! [VSL_RNG_METHOD_UNIFORM_STD](
     !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
-    !! intel method to generate Gaussian random numbers. Note that this can come
-    !! in an accurate form
+    !! intel method to generate uniform random numbers. Note that this can come in an accurate form
 
     function random_hypercube_point(nDims)
         implicit none
@@ -107,6 +106,46 @@ module random_module
 
 
     end function random_hypercube_point
+
+    ! ===========================================================================================
+
+
+    !>  Random integers between 1 and nmax (inclusive)
+    !!
+    !! Generate nDims integers between 1 and nmax inclusive
+    !!
+    !! We use the 
+    !! [VSL_RNG_METHOD_UNIFORM_STD](
+    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
+    !! intel method to generate uniform random numbers. Note that this can come in an accurate form
+
+    function random_integer(nDims,nmax)
+        implicit none
+
+        !> Size of coordinate vector
+        integer :: nDims 
+
+        !> Maximum integer to generate
+        integer :: nmax
+
+        ! The output nDims coordinate
+        integer, dimension(nDims) :: random_integer
+
+        ! Method to generate random numbers 
+        ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
+        integer,parameter       :: method=VSL_RNG_METHOD_UNIFORM_STD
+
+        integer, parameter :: u_bound  = 1 ! generate random numbers between 0 and 1
+
+        integer :: errcode ! Error code
+
+        ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
+        ! (v=vector,i=integer,rng,uniform)
+        ! This generates a vector of random integers between [1,nmax+1) = [1,nmax]
+        errcode=virnguniform( method, rng_stream, nDims, random_integer, u_bound, nmax+1)
+
+
+    end function random_integer
 
     ! ===========================================================================================
 

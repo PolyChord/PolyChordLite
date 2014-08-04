@@ -5,4 +5,5 @@ doc/latex/
 *.swo
 *tags
 *.o
+*.dat
 main

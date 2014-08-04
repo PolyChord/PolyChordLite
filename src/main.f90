@@ -54,7 +54,7 @@ program main
     settings%nlive                =  1024                    !number of live points
     settings%sampler              => GalileanSampling        !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%feedback             =  1                       !degree of feedback
+    settings%feedback             =  -1                      !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
 
