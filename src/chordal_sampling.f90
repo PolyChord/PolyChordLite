@@ -41,9 +41,13 @@ module chordal_module
         double precision,    dimension(M%nDims)   :: nhat
 
         double precision :: initial_step, acceleration
+        integer :: num_chords
+
+        integer :: i
 
         initial_step = 0.0001
         acceleration = 2
+        num_chords = 4
 
         ! Feedback if requested
         if(present(feedback)) then
@@ -60,24 +64,18 @@ module chordal_module
 
         random_point(M%d0) = loglikelihood_bound
         ! pick a random point
-        !do while(random_point(M%d0) .ge. loglikelihood_bound)
-            point_number = random_integer(1,nlive-1)        ! get a random number in [1,nlive-1]
-            random_point = live_data(:,1+point_number(1))   ! get this point from live_data 
-                                                            ! (excluding the possibility of drawing the late point)
-        !end do
+        point_number = random_integer(1,nlive-1)        ! get a random number in [1,nlive-1]
+        new_point = live_data(:,1+point_number(1))      ! get this point from live_data 
+                                                        ! (excluding the possibility of drawing the late point)
 
-        ! get a random direction
-        nhat = random_direction(M%nDims)
-
-        ! generate a new random point seeded by this point
-        new_point = random_chordal_point( nhat, random_point, initial_step, acceleration, loglikelihood_bound, M)
-
-        ! record the loglikelihood of the created point
-        live_data(M%d0,1+point_number(1)) = new_point(M%l0)
-
-        ! mark the new point as ok
-        new_point(M%d0) = logzero
-
+        ! We do this twice so as to generate a point that is independent of the
+        ! initially chosen live point
+        do i=1,num_chords
+            ! get a random direction
+            nhat = random_direction(M%nDims)
+            ! generate a new random point seeded by this point
+            new_point = random_chordal_point( nhat, new_point, initial_step, acceleration, loglikelihood_bound, M)
+        end do
 
 
     end function ChordalSampling

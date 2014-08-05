@@ -4,7 +4,7 @@ module galileo_module
     contains
 
     function GalileanSampling(live_data, loglikelihood_bound, M,feedback)  result(new_point)
-        use random_module, only: random_direction,random_hypercube_point,random_integer
+        use random_module, only: random_direction,random_hypercube_point,random_integer, random_real
         use model_module,  only: model, calculate_point
 
         implicit none
@@ -38,8 +38,13 @@ module galileo_module
 
         double precision :: initial_step, acceleration
 
+        integer i
+        double precision,    dimension(M%nTotal)   :: old_point
+        integer, save ::  ndead=0
 
-        initial_step = 0.01
+        ndead=ndead+1
+
+        initial_step = 0.0001
         acceleration = 2
 
         ! Feedback if requested
@@ -55,25 +60,41 @@ module galileo_module
         nlive = size(live_data,2)
 
         ! pick a random point
-        point_number = random_integer(1,nlive)        ! get a random number in [1,nlive]
-        new_point = live_data(:,point_number(1))      ! get this point from live_data
+        point_number = random_integer(1,nlive-1)        ! get a random number in [1,nlive]
+        new_point = live_data(:,1+point_number(1))      ! get this point from live_data
 
         ! get a random direction
         nhat = random_direction(M%nDims)
 
-        write(*,*) new_point(M%h0:M%h1)
         ! find a root in that direction
         new_point = find_edge(nhat,new_point,initial_step,acceleration,loglikelihood_bound,M)
 
-        do while(.true.)
+        do while (ndead == 10)
             write(*,*) new_point(M%h0:M%h1)
 
-            ! get a random direction pointing inwards
-            nhat = random_inwards_direction(new_point,initial_step,loglikelihood_bound,M)
+            old_point = new_point
 
-            new_point = find_edge(nhat,new_point,initial_step,acceleration,loglikelihood_bound,M) 
+            ! get a random direction pointing inwards
+            nhat = random_inwards_direction(old_point,initial_step,loglikelihood_bound,M)
+
+            ! get a new point on the opposite edge
+            new_point = find_edge(nhat,old_point,initial_step,acceleration,loglikelihood_bound,M) 
+        end do
+
+        do i = 1, 10
+            old_point = new_point
+
+            ! get a random direction pointing inwards
+            nhat = random_inwards_direction(old_point,initial_step,loglikelihood_bound,M)
+
+            ! get a new point on the opposite edge
+            new_point = find_edge(nhat,old_point,initial_step,acceleration,loglikelihood_bound,M) 
 
         end do
+
+        new_point(M%h0:M%h1) = new_point(M%h0:M%h1) + random_real() * ( new_point(M%h0:M%h1) - old_point(M%h0:M%h1) )
+
+        call calculate_point(M, new_point)
 
 
 
@@ -120,7 +141,7 @@ module galileo_module
             old_point = new_point
 
             ! Take a new step
-            new_point = new_point + nhat * step_length
+            new_point = start_point + nhat * step_length
 
             ! Compute physical coordinates, likelihoods and derived parameters
             call calculate_point( M, new_point )
@@ -159,8 +180,13 @@ module galileo_module
 
         double precision, dimension(M%nTotal)    :: a,b
 
+
         a = old_point
         b = new_point
+
+        if ( (a(M%l0) - loglikelihood_bound) * (a(M%l0) - loglikelihood_bound) >= 0d0 ) then
+            !write (*,*) "Points are not of opposite sign"
+        end if
 
         do while ( dot_product(a(M%h0:M%h1)-b(M%h0:M%h1),a(M%h0:M%h1)-b(M%h0:M%h1)) > prec**2 )
 
@@ -183,9 +209,6 @@ module galileo_module
         else
             s=b
         end if
-
-
-
 
     end function refine_edge
 
@@ -216,6 +239,8 @@ module galileo_module
             temp_point = new_point + nhat * delta
             call calculate_point(M, temp_point)
         end do
+
+        
 
 
 

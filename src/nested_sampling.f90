@@ -50,15 +50,8 @@ module nested_sampling_module
         ! Count the number of dead points
         ndead = 0
 
-        ! Definately need more samples than this
+        ! Definitely need more samples than this
         more_samples_needed=.true.
-
-        ! mark them as being visible initially
-        live_data(M%d0,:) = logzero
-
-
-            !write(*,'(41F9.6 F16.8)') live_data
-            !write(*,*) '----------------------------------------'
 
 
         call write_started_sampling(settings%feedback)
@@ -93,9 +86,6 @@ module nested_sampling_module
                 if (evidence_vec(1) > 0 ) then
                     write(*,'("log(Z)  = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
                 end if
-                ! count the number of dead points
-                write(*,*) 'fraction of sleeping points: ', count(live_data(M%d0,:).ge.late_likelihood)/(settings%nlive+0d0)
-
             end if
 
 
