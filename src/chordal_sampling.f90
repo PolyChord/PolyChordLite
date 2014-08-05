@@ -6,7 +6,7 @@ module chordal_module
 
     function ChordalSampling(live_data, loglikelihood_bound, M,feedback)  result(new_point)
         use random_module, only: random_direction,random_hypercube_point,random_integer
-        use model_module,  only: model, calculate_point
+        use model_module,  only: model, calculate_point, logzero
 
         implicit none
 
@@ -16,7 +16,7 @@ module chordal_module
         !! First index ranges over ( hypercube coords, physical coords, derived params, loglikelihood),
         !!
         !! Second index ranges over all the live points
-        double precision, intent(in), dimension(:,:) :: live_data
+        double precision, intent(inout), dimension(:,:) :: live_data
 
         !> The current loglikelihood bound
         double precision, intent(in) :: loglikelihood_bound
@@ -57,15 +57,27 @@ module chordal_module
         ! Get the number of live points
         nlive = size(live_data,2)
 
+
+        random_point(M%d0) = loglikelihood_bound
         ! pick a random point
-        point_number = random_integer(1,nlive)        ! get a random number in [1,nlive]
-        random_point = live_data(:,point_number(1))      ! get this point from live_data
+        !do while(random_point(M%d0) .ge. loglikelihood_bound)
+            point_number = random_integer(1,nlive-1)        ! get a random number in [1,nlive-1]
+            random_point = live_data(:,1+point_number(1))   ! get this point from live_data 
+                                                            ! (excluding the possibility of drawing the late point)
+        !end do
 
         ! get a random direction
         nhat = random_direction(M%nDims)
 
         ! generate a new random point seeded by this point
         new_point = random_chordal_point( nhat, random_point, initial_step, acceleration, loglikelihood_bound, M)
+
+        ! record the loglikelihood of the created point
+        live_data(M%d0,1+point_number(1)) = new_point(M%l0)
+
+        ! mark the new point as ok
+        new_point(M%d0) = logzero
+
 
 
     end function ChordalSampling

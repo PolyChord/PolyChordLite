@@ -42,11 +42,11 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood  
 
-    M%nDims = 12               ! Assign the dimensionality
+    M%nDims = 3                ! Assign the dimensionality
                                ! Assign the priors
                                !>@todo sort out the code for transforming/configuring the
                                !! priors
-    M%nDerived = 0             ! Assign the number of derived parameters
+    M%nDerived = 1             ! Assign the number of derived parameters
     
     call initialise_model(M)   ! Configure the rest of the model
 
@@ -55,7 +55,7 @@ program main
     settings%nlive                =  1024                    !number of live points
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%feedback             =  0                       !degree of feedback
+    settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
 

@@ -120,7 +120,7 @@ module model_module
         physical_coords    = live_data(M%p0:M%p1)
         loglike            = live_data(M%l0) 
 
-        derived_parameters = 0.0
+        derived_parameters = live_data(M%d0:M%d1)
 
         ! transfer the derived parameter back to live_data
         live_data(M%d0:M%d1) = derived_parameters

@@ -5,7 +5,7 @@ module nested_sampling_module
 
     !> Main subroutine for computing a generic nested sampling algorithm
     subroutine NestedSampling(M,settings)
-        use model_module,    only: model
+        use model_module,    only: model,logzero
         use settings_module, only: program_settings
         use feedback_module
 
@@ -21,6 +21,8 @@ module nested_sampling_module
 
         ! The new-born point
         double precision,    dimension(M%nTotal)   :: new_point
+        ! The recently dead point
+        double precision,    dimension(M%nTotal)   :: late_point
 
         double precision :: likelihood_bound,new_likelihood,late_likelihood
         double precision, dimension(2) :: evidence_vec
@@ -51,6 +53,9 @@ module nested_sampling_module
         ! Definately need more samples than this
         more_samples_needed=.true.
 
+        ! mark them as being visible initially
+        live_data(M%d0,:) = logzero
+
 
             !write(*,'(41F9.6 F16.8)') live_data
             !write(*,*) '----------------------------------------'
@@ -58,19 +63,26 @@ module nested_sampling_module
 
         call write_started_sampling(settings%feedback)
 
+        open(unit=222, file='dead_points.dat')
+
         do while (more_samples_needed)
 
             likelihood_bound = live_data(M%l0,1)
 
             ! Generate a new point within the likelihood bounds
             new_point = settings%sampler(live_data, likelihood_bound, M)
+            late_point = live_data(:,1)
 
             ndead = ndead + 1
             new_likelihood  = new_point(M%l0)
-            late_likelihood = live_data(M%l0,1)
+            late_likelihood = late_point(M%l0)
 
             ! Calculate the new evidence
             evidence_vec =  settings%evidence_calculator(new_likelihood,late_likelihood,ndead,more_samples_needed)
+
+            ! Insert the new point
+            call insert_new_point(new_point,live_data)
+
 
             if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
                 if (settings%feedback>=2) then
@@ -81,16 +93,20 @@ module nested_sampling_module
                 if (evidence_vec(1) > 0 ) then
                     write(*,'("log(Z)  = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
                 end if
+                ! count the number of dead points
+                write(*,*) 'fraction of sleeping points: ', count(live_data(M%d0,:).ge.late_likelihood)/(settings%nlive+0d0)
+
             end if
 
-            ! Insert the new point
-            call insert_new_point(new_point,live_data)
 
             if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
+
+            write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
 
         end do
 
         call write_final_results(evidence_vec,ndead,settings%feedback)
+        close(222)
 
     end subroutine NestedSampling
 

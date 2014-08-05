@@ -194,7 +194,7 @@ module test_sampler_module
         new_point = live_data(:,1)
         new_point(1) = 1.01
 
-        do while( new_point(M%l0)<=loglikelihood_bound .or.   any(new_point(M%h0:M%h1) > 1d0) .or. any(new_point(M%h0:M%h1) < 0d0) )  
+        do while( new_point(M%l0)<=loglikelihood_bound )  
 
             ! Generate a random point within the unit sphere
             new_point = random_hypercube_point(M%nDims)
