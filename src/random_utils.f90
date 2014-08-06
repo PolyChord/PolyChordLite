@@ -132,8 +132,8 @@ module random_module
         ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
         integer,parameter       :: method=VSL_RNG_METHOD_UNIFORM_STD
 
-        double precision, parameter :: u_bound  = 0.0 ! generate random numbers between 0 and 1
-        double precision, parameter :: l_bound  = 1.0 ! 
+        double precision, parameter :: u_bound  = 0.d0 ! generate random numbers between 0 and 1
+        double precision, parameter :: l_bound  = 1.d0 ! 
 
         integer :: errcode ! Error code
 

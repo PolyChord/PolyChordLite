@@ -8,9 +8,10 @@ program main
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
-    use galileo_module, only: GalileanSampling
-    use chordal_module, only: ChordalSampling
-    use test_sampler_module, only: BruteForceSampling,SphericalCenterSampling,CubicCenterSampling
+    use galileo_module,         only: GalileanSampling
+    use chordal_module,         only: ChordalSampling
+    use chaotic_chordal_module, only: ChaoticChordalSampling
+    use test_sampler_module,    only: BruteForceSampling,SphericalCenterSampling,CubicCenterSampling
     use evidence_module
     use example_likelihoods
     use feedback_module
@@ -53,7 +54,7 @@ program main
 
     ! ------- (1c) Initialise the program settings -------
     settings%nlive                =  1024                    !number of live points
-    settings%sampler              => ChordalSampling         !Sampler choice
+    settings%sampler              => ChaoticChordalSampling  !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
