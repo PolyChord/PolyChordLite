@@ -8,10 +8,8 @@ program main
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
-    use galileo_module,         only: GalileanSampling
-    use chordal_module,         only: ChordalSampling
-    use chaotic_chordal_module, only: ChaoticChordalSampling
-    use test_sampler_module,    only: BruteForceSampling,SphericalCenterSampling,CubicCenterSampling
+    use chordal_module,      only: ChordalSampling
+    use test_sampler_module, only: BruteForceSampling,SphericalCenterSampling,CubicCenterSampling
     use evidence_module
     use example_likelihoods
     use feedback_module
@@ -53,15 +51,15 @@ program main
 
 
     ! ------- (1c) Initialise the program settings -------
-    settings%nlive                =  1024*4                  !number of live points
-    settings%sampler              => ChaoticChordalSampling  !Sampler choice
+    settings%nlive                =  1024                    !number of live points
+    settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-5                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%save_dead            =  .true.                  !don't save any dead points
 
-    settings%num_chords           =  6                       !don't save any dead points
+    settings%num_chords           =  1500                    !don't save any dead points
 
 
     ! ======= (2) Perform Nested Sampling =======

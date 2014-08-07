@@ -4,13 +4,17 @@ module chordal_module
 
     contains
 
-    function ChordalSampling(live_data, loglikelihood_bound, M,feedback)  result(new_point)
+    function ChordalSampling(settings,live_data, loglikelihood_bound, M,feedback)  result(new_point)
+        use settings_module, only: program_settings
         use random_module, only: random_direction,random_reals,random_integers
         use model_module,  only: model, calculate_point, logzero
 
         implicit none
 
         ! ------- Inputs -------
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
         !> The current set of live points. 2D array:
         !!
         !! First index ranges over ( hypercube coords, physical coords, derived params, loglikelihood),
@@ -36,53 +40,50 @@ module chordal_module
 
         ! ------- Local Variables -------
         integer, dimension(1) :: point_number 
-        integer :: nlive
 
         double precision,    dimension(M%nDims)   :: nhat
 
-        double precision :: initial_step, acceleration
-        integer :: num_chords
+        double precision :: max_distance
 
         integer :: i
 
-        initial_step = 0.0001
-        acceleration = 2
-        num_chords = 4
+        max_distance = sqrt(M%nDims+0d0)
 
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
                 write(*,'( "Sampler    : Chordal" )')
+                write(*,'( "  num chords = ",I4 )') settings%num_chords
             end if
             return
         end if
 
 
-        ! Get the number of live points
-        nlive = size(live_data,2)
-
 
         random_point(M%d0) = loglikelihood_bound
         ! pick a random point
-        point_number = random_integers(1,nlive-1)        ! get a random number in [1,nlive-1]
-        new_point = live_data(:,1+point_number(1))      ! get this point from live_data 
-                                                        ! (excluding the possibility of drawing the late point)
+        point_number = random_integers(1,settings%nlive-1) ! get a random number in [1,nlive-1]
+        new_point = live_data(:,1+point_number(1))        ! get this point from live_data 
+                                                          ! (excluding the possibility of drawing the late point)
 
-        ! We do this twice so as to generate a point that is independent of the
-        ! initially chosen live point
-        do i=1,num_chords
-            ! get a random direction
+        new_point(M%d0) = 0
+
+        do i=1,settings%num_chords
+
+            ! get a random direction nhat
             nhat = random_direction(M%nDims)
-            ! generate a new random point seeded by this point
-            new_point = random_chordal_point( nhat, new_point, initial_step, acceleration, loglikelihood_bound, M)
+
+            ! generate a new random point along the chord defined by new_point and nhat
+            new_point = random_chordal_point( nhat, new_point, loglikelihood_bound, max_distance, M)
         end do
 
+        !max_distance = max_distance * (settings%nlive/(settings%nlive+1d0))**(1d0/M%nDims)
 
     end function ChordalSampling
 
 
 
-    function random_chordal_point(nhat,random_point,initial_step,acceleration,loglikelihood_bound,M) result(new_point)
+    function random_chordal_point(nhat,random_point,loglikelihood_bound,max_distance,M) result(new_point)
         use model_module,  only: model, calculate_point, logzero
         use random_module, only: random_reals
         implicit none
@@ -93,97 +94,134 @@ module chordal_module
         double precision, intent(in),    dimension(M%nDims)   :: nhat
         !> The start point
         double precision, intent(in),    dimension(M%nTotal)   :: random_point
-        !> The initial step
-        double precision, intent(in) :: initial_step
-        !> The acceleration parameter
-        double precision, intent(in) :: acceleration
         !> The root value to find
         double precision, intent(in) :: loglikelihood_bound
+        !> The maximum distance to explore
+        double precision, intent(in) :: max_distance
 
         ! The output finish point
         double precision,    dimension(M%nTotal)   :: new_point
 
-        double precision,    dimension(M%nTotal)   :: edge_point_1
-        double precision,    dimension(M%nTotal)   :: edge_point_2
+        ! The upper bound
+        double precision,    dimension(M%nTotal)   :: u_bound
+        ! The lower bound
+        double precision,    dimension(M%nTotal)   :: l_bound
 
-        double precision, dimension(1) :: random_temp
 
+        ! Get the start bounds
+        u_bound(M%h0:M%h1) = random_point(M%h0:M%h1) + nhat * max_distance
+        l_bound(M%h0:M%h1) = random_point(M%h0:M%h1) - nhat * max_distance
 
-        ! find an edge in the nhat direction
-        edge_point_1 = find_edge( nhat,random_point,initial_step,acceleration,loglikelihood_bound,M)
-        ! find an edge in the opposite direction
-        edge_point_2 = find_edge(-nhat,random_point,initial_step,acceleration,loglikelihood_bound,M)
+        ! record the number of likelihood calls
+        u_bound(M%d0) = random_point(M%d0)
+        l_bound(M%d0) = 0
 
-        ! Set the loglikelihood of the new point to zero for now
-        new_point(M%l0) = logzero
+        call calculate_point(M,u_bound)
+        call calculate_point(M,l_bound)
 
-        ! Select a point randomly along the chord (edge_point_1, edge_point_2)
-        do while(new_point(M%l0)< loglikelihood_bound)
-            random_temp = random_reals(1)
-            new_point(M%h0:M%h1) =  random_temp(1) * edge_point_1(M%h0:M%h1)  + (1d0-random_temp(1))*edge_point_2(M%h0:M%h1)
-            call calculate_point(M,new_point)
-        end do
+        new_point = find_positive_within(l_bound,u_bound)
 
+        contains
+
+        recursive function find_positive_within(l_bound,u_bound) result(point)
+            implicit none
+            !> The upper bound
+            double precision, intent(inout), dimension(M%nTotal)   :: u_bound
+            !> The lower bound
+            double precision, intent(inout), dimension(M%nTotal)   :: l_bound
+
+            ! The output finish point
+            double precision,    dimension(M%nTotal)   :: point
+
+            double precision,dimension(1) :: random_temp
+
+            ! Draw a random point within l_bound and u_bound
+            random_temp =random_reals(1)
+            point(M%h0:M%h1) = l_bound(M%h0:M%h1)*(1d0-random_temp(1)) + random_temp(1) * u_bound(M%h0:M%h1)
+
+            ! Pass on the number of likelihood calls that have been made
+            point(M%d0) = l_bound(M%d0) + u_bound(M%d0)
+            ! zero the likelihood calls for l_bound and u_bound, as these are
+            ! now stored in point
+            l_bound(M%d0) = 0
+            u_bound(M%d0) = 0
+
+            ! calculate the likelihood 
+            call calculate_point(M,point)
+
+            ! If we're not within the likelihood bound then we need to sample further
+            if( point(M%l0) < loglikelihood_bound ) then
+
+                if ( dot_product(point(M%h0:M%h1)-random_point(M%h0:M%h1),nhat) > 0d0 ) then
+                    ! If new_point is on the u_bound side of random_point, then
+                    ! contract u_bound
+                    u_bound = point
+                else
+                    ! If new_point is on the l_bound side of random_point, then
+                    ! contract l_bound
+                    l_bound = point
+                end if
+
+                ! Call the function again
+                point = find_positive_within(l_bound,u_bound)
+
+            end if
+            ! otherwise new_point is returned
+
+        end function find_positive_within
 
 
     end function random_chordal_point
 
 
-
-    function find_edge(nhat,start_point,initial_step,acceleration,loglikelihood_bound,M) result(finish_point)
-        use model_module,  only: model, calculate_point
+    !> Takes a point a, and if it is outside the hypercube moves it back along
+    !! nhat until it is at the edge of the cube
+    !! This function assumes that nhat is pointing away out of the cube
+    function restrict_to_hypercube(a,nhat,nDims) result(abar)
         implicit none
+        !> Dimensionality of the cube
+        integer, intent(in) :: nDims
+        !> The direction of the line
+        double precision, intent(in),    dimension(nDims)   :: nhat
+        !> A point on the line
+        double precision, intent(in),    dimension(nDims)   :: a
 
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        type(model),            intent(in) :: M
-        !> The direction to search for the root in
-        double precision, intent(in),    dimension(M%nDims)   :: nhat
-        !> The start point
-        double precision, intent(in),    dimension(M%nTotal)   :: start_point
-        !> The initial step
-        double precision, intent(in) :: initial_step
-        !> The acceleration parameter
-        double precision, intent(in) :: acceleration
-        !> The root value to find
-        double precision, intent(in) :: loglikelihood_bound
+        !> The restricted point
+        double precision,    dimension(nDims)   :: abar
 
-        ! The output finish point
-        double precision,    dimension(M%nTotal)   :: finish_point
+        double precision, dimension(nDims) :: lambda
 
-        ! The output finish point
-        double precision,    dimension(M%nTotal)    :: new_point
+        lambda = nhat
 
-        ! saving for root searching
-        double precision,    dimension(M%nTotal)    :: old_point
+        if( any(a>1 .or. a<0) )  then
+            !abar = intersect_hypercube_with_line(nhat,a,nDims)
+        else
+            abar = a
+        end if
 
-        double precision :: step_length
+    end function
 
-        step_length=initial_step
-
-        new_point = start_point
-
-        ! Search using an expanding binary search
-        do while( new_point(M%l0) > loglikelihood_bound )
-
-            ! Save the old position for later
-            old_point = new_point
-
-            ! Take a new step
-            new_point = new_point + nhat * step_length
-
-            ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point( M, new_point )
-
-            ! Increase the step length
-            step_length = step_length * acceleration
-
-        end do
-
-        finish_point = new_point
-
-    end function find_edge
-
-
+    !> Calculates the 'nearest' intersection of a line with the unit hypercube
+    !! (where nearest is understood in the sense of the uniform norm - see below)
+    !!
+    !! The line is parameterised by \f$\lambda\f$ as:
+    !! \f[ \mathbf{r}(\lambda) = \mathbf{a} + \lambda \mathbf{\hat{n}}\f]
+    !!
+    !! We use a clever trick by exploiting the fact that in the [Uniform Norm](http://en.wikipedia.org/wiki/Uniform_norm)
+    !! we may define a metric:
+    !! \f[ d_\infty(x,y) = \|x-y\|_\infty = \max(\{|x_i-y_i| : i=1\ldots d\}) \f]
+    !! such that "spheres" \f$d_\infty(x,0) = const \f$ are in fact hypercubes.
+    !!
+    !! The unit hypercube is thus: 
+    !! \f[ d_\infty(x,\mathbf{0.5}) = 0.5 \f]
+    !! where \f$\mathbf{0.5} = (0.5,\ldots,0.5)\f$ is the center of the unit hypercube
+    !!
+    !! So to find the intersection points of the line with the unit hypercube,
+    !! we just normalise any point on the line subject to the measure \f$d_\infty(\mathbf{r},\mathbf{0.5})/0.5\f$
+    !!
+    !! Note that this will only return the nearest intersection point in terms
+    !! of this norm
+    !! 
 
 end module chordal_module
 

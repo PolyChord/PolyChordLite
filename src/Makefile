@@ -41,7 +41,7 @@ all: $(PROGRAMS)
 # ======================================================================
 
 MODULES = random_utils.o model.o settings.o feedback.o evidence.o likelihoods.o \
-		  test_sampling.o chordal_sampling.f90 galilean_sampling.o nested_sampling.o chaotic_chordal_sampling.o
+		  test_sampling.o nested_sampling.o chordal_sampling.o
 
 random_utils.o:
 settings.o:                 model.o
@@ -50,10 +50,8 @@ evidence.o:                 settings.o
 feedback.o:                 model.o settings.o
 chordal_sampling.o:         model.o random_utils.o
 test_sampling.o:            model.o random_utils.o
-galilean_sampling.o:        model.o random_utils.o
-chaotic_chordal_sampling.o: model.o random_utils.o
 nested_sampling.o:   		feedback.o model.o random_utils.o settings.o\
-                            chordal_sampling.o test_sampling.o galilean_sampling.o chaotic_chordal_sampling.o
+                            chordal_sampling.o test_sampling.o 
 main.o:                     $(MODULES)
 
 main: main.o $(MODULES)
