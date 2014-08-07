@@ -21,6 +21,11 @@ module settings_module
         !! Set equal to -1 for no maximum number
         integer :: max_ndead = -1
 
+        !> Whether or not to save the dead points
+        !! 
+        !! It may not be worth saving them when doing extremely high dimensional problems
+        logical :: save_dead = .true.
+
         !> Pointer to the sampling procedure.
         !!
         !! e.g: MultiNest, Galilean Sampling, Hamiltonian sampling ...
@@ -42,7 +47,7 @@ module settings_module
         !!
         !! and should be passed to the NestedSampling algorithm 
         !!
-        procedure(samp), nopass,         pointer :: sampler
+        procedure(samp), pass(settings),       pointer :: sampler
 
 
         !> Pointer to the evidence calculator
@@ -79,12 +84,16 @@ module settings_module
         !! set of live points (live_data) in order to generate a new_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood_bound
-        function samp(live_data, loglikelihood_bound, M,feedback) result(new_point)
+        function samp(settings, live_data, loglikelihood_bound, M,feedback) result(new_point)
 
             import :: model
+            import :: program_settings
             implicit none
 
             ! ------- Inputs -------
+            !> program settings (mostly useful to pass on the number of live points)
+            class(program_settings), intent(in) :: settings
+
             !> The current set of live points. 2D array:
             !!
             !! First index ranges over ( hypercube coords, physical coords, derived params, loglikelihood),

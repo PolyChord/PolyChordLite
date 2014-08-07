@@ -106,7 +106,7 @@ module chordal_module
         double precision,    dimension(M%nTotal)   :: edge_point_1
         double precision,    dimension(M%nTotal)   :: edge_point_2
 
-        double precision random_temp
+        double precision, dimension(1) :: random_temp
 
 
         ! find an edge in the nhat direction
@@ -119,8 +119,8 @@ module chordal_module
 
         ! Select a point randomly along the chord (edge_point_1, edge_point_2)
         do while(new_point(M%l0)< loglikelihood_bound)
-            random_temp = random_real()
-            new_point(M%h0:M%h1) =  random_temp * edge_point_1(M%h0:M%h1)  + (1d0-random_temp)*edge_point_2(M%h0:M%h1)
+            random_temp = random_real(1)
+            new_point(M%h0:M%h1) =  random_temp(1) * edge_point_1(M%h0:M%h1)  + (1d0-random_temp(1))*edge_point_2(M%h0:M%h1)
             call calculate_point(M,new_point)
         end do
 

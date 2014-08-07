@@ -28,6 +28,7 @@ module nested_sampling_module
         double precision, dimension(2) :: evidence_vec
 
         double precision :: mean_loglike
+        double precision :: mean_likelihood_calls
 
         logical :: more_samples_needed
 
@@ -45,6 +46,11 @@ module nested_sampling_module
         ! Compute the average loglikelihood and hand it to the evidence calculator
         mean_loglike = sum(exp(live_data(M%l0,:)))/settings%nlive
         evidence_vec = settings%evidence_calculator(mean_loglike,mean_loglike,-1,more_samples_needed)
+
+        ! Set the number of likelihood calls to 1 for now
+        ! and initialise the mean at 1
+        live_data(M%d0,:) = 1
+        mean_likelihood_calls = 1d0
 
 
         ! Count the number of dead points
@@ -72,6 +78,8 @@ module nested_sampling_module
 
             ! Calculate the new evidence
             evidence_vec =  settings%evidence_calculator(new_likelihood,late_likelihood,ndead,more_samples_needed)
+            ! update the mean number of likelihood calls
+            mean_likelihood_calls = mean_likelihood_calls + (new_point(M%d0) - late_point(M%d0) ) / (settings%nlive + 0d0)
 
             ! Insert the new point
             call insert_new_point(new_point,live_data)
@@ -81,17 +89,18 @@ module nested_sampling_module
                 if (settings%feedback>=2) then
                     write(*,'("new_point: (", <M%nDims>F10.5, ") ->", F12.5 )') new_point(M%p0:M%p1), new_point(M%l0)
                 end if
-                write(*,'("ndead   = ", I12                  )') ndead
-                write(*,'("Z       = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
+                write(*,'("ndead     = ", I12                  )') ndead
+                write(*,'("efficiency= ", F12.2                )') mean_likelihood_calls
+                write(*,'("Z         = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
                 if (evidence_vec(1) > 0 ) then
-                    write(*,'("log(Z)  = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
+                    write(*,'("log(Z)    = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
                 end if
             end if
 
 
             if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
 
-            write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
+            if (settings%save_dead) write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
 
         end do
 

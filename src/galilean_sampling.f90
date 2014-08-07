@@ -38,6 +38,8 @@ module galileo_module
 
         double precision :: initial_step, acceleration
 
+        double precision,dimension(1) :: random_temp
+
         integer i
         double precision,    dimension(M%nTotal)   :: old_point
         integer, save ::  ndead=0
@@ -91,8 +93,9 @@ module galileo_module
             new_point = find_edge(nhat,old_point,initial_step,acceleration,loglikelihood_bound,M) 
 
         end do
+        random_temp = random_real(1)
 
-        new_point(M%h0:M%h1) = new_point(M%h0:M%h1) + random_real() * ( new_point(M%h0:M%h1) - old_point(M%h0:M%h1) )
+        new_point(M%h0:M%h1) = new_point(M%h0:M%h1) + random_temp(1) * ( new_point(M%h0:M%h1) - old_point(M%h0:M%h1) )
 
         call calculate_point(M, new_point)
 

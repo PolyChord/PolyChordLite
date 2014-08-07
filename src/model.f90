@@ -71,7 +71,7 @@ module model_module
         double precision, intent(inout) , dimension(:) :: live_data
 
         if ( any(live_data(M%h0:M%h1)<0d0) .or. any(live_data(M%h0:M%h1)>1d0) )  then
-            live_data(M%p0:M%d1) = 0
+            live_data(M%p0:M%p1) = 0
             live_data(M%l0) = logzero
         else
             ! Transform the the hypercube coordinates to the physical coordinates
@@ -121,6 +121,9 @@ module model_module
         loglike            = live_data(M%l0) 
 
         derived_parameters = live_data(M%d0:M%d1)
+
+        ! accumulate the number of likelihood calls that we've made
+        derived_parameters(1) = derived_parameters(1) + 1
 
         ! transfer the derived parameter back to live_data
         live_data(M%d0:M%d1) = derived_parameters

@@ -112,21 +112,21 @@ module random_module
 
     !>  Random real number
     !!
-    !! Generate a single random real number in the range [0,1]
+    !! Generate nDims random real numbers between 0 and 1
     !!
     !! We use the 
     !! [VSL_RNG_METHOD_UNIFORM_STD](
     !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
     !! intel method to generate uniform random numbers. Note that this can come in an accurate form
 
-    function random_real()
+    function random_real(nDims)
         implicit none
 
-        ! output random real number
-        double precision :: random_real
+        !> Size of coordinate vector
+        integer :: nDims 
 
-        ! temporary vector to pass to vdrnguniform
-        double precision, dimension(1) :: random_real_vec
+        ! output random real numbers
+        double precision, dimension(nDims) :: random_real
 
         ! Method to generate random numbers 
         ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
@@ -139,9 +139,7 @@ module random_module
 
         ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
         ! (v=vector,d=double,rng,uniform)
-        errcode=vdrnguniform( method, rng_stream, 1, random_real_vec, u_bound, l_bound)
-
-        random_real = random_real_vec(1)
+        errcode=vdrnguniform( method, rng_stream, nDims, random_real, u_bound, l_bound)
 
 
     end function random_real

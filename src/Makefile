@@ -18,13 +18,16 @@ DEBUG ?= 0
 ifeq ($(DEBUG), 1)
 FCFLAGS = -g -traceback -fp-stack-check -check all -fpe0 -warn all -mkl
 else
-FCFLAGS = -O3 -mkl
+FCFLAGS = -O3 -mkl -fpp
+# O3  : maximum optimisation
+# mkl : use the mkl library
+# fpp : perform preprocessing
 endif
 # flags forall (e.g. look for system .mod files, required in gfortran)
 #FCFLAGS += -I/usr/include
 
 # libraries needed for linking, unused in the examples
-#LDFLAGS = -li_need_this_lib
+LDFLAGS =
 
 # List of executables to be built within the package
 PROGRAMS = main
