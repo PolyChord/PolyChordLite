@@ -4,7 +4,7 @@ module galileo_module
     contains
 
     function GalileanSampling(live_data, loglikelihood_bound, M,feedback)  result(new_point)
-        use random_module, only: random_direction,random_hypercube_point,random_integer, random_real
+        use random_module, only: random_direction,random_reals,random_integers, random_reals
         use model_module,  only: model, calculate_point
 
         implicit none
@@ -62,7 +62,7 @@ module galileo_module
         nlive = size(live_data,2)
 
         ! pick a random point
-        point_number = random_integer(1,nlive-1)        ! get a random number in [1,nlive]
+        point_number = random_integers(1,nlive-1)        ! get a random number in [1,nlive]
         new_point = live_data(:,1+point_number(1))      ! get this point from live_data
 
         ! get a random direction
@@ -93,7 +93,7 @@ module galileo_module
             new_point = find_edge(nhat,old_point,initial_step,acceleration,loglikelihood_bound,M) 
 
         end do
-        random_temp = random_real(1)
+        random_temp = random_reals(1)
 
         new_point(M%h0:M%h1) = new_point(M%h0:M%h1) + random_temp(1) * ( new_point(M%h0:M%h1) - old_point(M%h0:M%h1) )
 

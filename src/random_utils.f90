@@ -82,14 +82,14 @@ module random_module
     !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
     !! intel method to generate uniform random numbers. Note that this can come in an accurate form
 
-    function random_hypercube_point(nDims)
+    function random_reals(nDims)
         implicit none
 
         !> Size of coordinate vector
         integer :: nDims 
 
         ! The output nDims coordinate
-        double precision, dimension(nDims) :: random_hypercube_point
+        double precision, dimension(nDims) :: random_reals
 
         ! Method to generate random numbers 
         ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
@@ -102,47 +102,11 @@ module random_module
 
         ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
         ! (v=vector,d=double,rng,uniform)
-        errcode=vdrnguniform( method, rng_stream, nDims, random_hypercube_point, u_bound, l_bound)
+        errcode=vdrnguniform( method, rng_stream, nDims, random_reals, u_bound, l_bound)
 
 
-    end function random_hypercube_point
+    end function random_reals
 
-    ! ===========================================================================================
-
-
-    !>  Random real number
-    !!
-    !! Generate nDims random real numbers between 0 and 1
-    !!
-    !! We use the 
-    !! [VSL_RNG_METHOD_UNIFORM_STD](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
-    !! intel method to generate uniform random numbers. Note that this can come in an accurate form
-
-    function random_real(nDims)
-        implicit none
-
-        !> Size of coordinate vector
-        integer :: nDims 
-
-        ! output random real numbers
-        double precision, dimension(nDims) :: random_real
-
-        ! Method to generate random numbers 
-        ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
-        integer,parameter       :: method=VSL_RNG_METHOD_UNIFORM_STD
-
-        double precision, parameter :: u_bound  = 0.d0 ! generate random numbers between 0 and 1
-        double precision, parameter :: l_bound  = 1.d0 ! 
-
-        integer :: errcode ! Error code
-
-        ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
-        ! (v=vector,d=double,rng,uniform)
-        errcode=vdrnguniform( method, rng_stream, nDims, random_real, u_bound, l_bound)
-
-
-    end function random_real
     ! ===========================================================================================
 
 
@@ -155,7 +119,7 @@ module random_module
     !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
     !! intel method to generate uniform random numbers. Note that this can come in an accurate form
 
-    function random_integer(nDims,nmax)
+    function random_integers(nDims,nmax)
         implicit none
 
         !> Size of coordinate vector
@@ -165,7 +129,7 @@ module random_module
         integer :: nmax
 
         ! The output nDims coordinate
-        integer, dimension(nDims) :: random_integer
+        integer, dimension(nDims) :: random_integers
 
         ! Method to generate random numbers 
         ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
@@ -178,10 +142,10 @@ module random_module
         ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
         ! (v=vector,i=integer,rng,uniform)
         ! This generates a vector of random integers between [1,nmax+1) = [1,nmax]
-        errcode=virnguniform( method, rng_stream, nDims, random_integer, u_bound, nmax+1)
+        errcode=virnguniform( method, rng_stream, nDims, random_integers, u_bound, nmax+1)
 
 
-    end function random_integer
+    end function random_integers
 
     ! ===========================================================================================
 
@@ -306,6 +270,33 @@ module random_module
 
     end function random_point_in_sphere
 
+    !> Construct a randomly oriented ndimensional orthogonormal basis by using 
+    !! [Gram-Schmidt Orthogonalisation](http://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process). 
+    !!
+    !! Outputs a matrix where the ith basis vector is stored in basis(:,i)
+    function random_orthonormal_basis(nDims) result(basis)
+        !> Dimensionality of the basis
+        integer, intent(in) ::  nDims
+
+        ! Set of vectors, the ith vector is in basis(:,i)
+        double precision, dimension(nDims,nDims) :: basis
+
+        ! Iterators
+        integer :: i,j
+
+        do i=1,nDims
+            ! Generate a randomly directed vector 
+            basis(:,i) = random_direction(nDims)
+            ! Othogonalise it with respect to the other vectors using Gram
+            ! Schmidt orthogonalisation
+            do j= 1,i-1
+                basis(:,i) = basis(:,i)- dot_product(basis(:,i),basis(:,j)) * basis(:,j)
+            end do
+            ! normalise the vector
+            basis(:,i) = basis(:,i)/sqrt(dot_product(basis(:,i),basis(:,i)))
+        end do
+
+    end function random_orthonormal_basis
 
     ! ===========================================================================================
 

@@ -60,7 +60,7 @@ module example_likelihoods
     !! effectively infinite priors.
 
     function gaussian_loglikelihood_corr(M,theta,feedback)
-        use random_module, only: random_real
+        use random_module, only: random_reals
         implicit none
         class(model),     intent(in)               :: M
         double precision, intent(in), dimension(:) :: theta
@@ -72,20 +72,19 @@ module example_likelihoods
         double precision, allocatable, dimension(:,:), save :: invcovmat ! covariance matrix
         double precision, allocatable, dimension(:,:), save :: covmat ! Standard deviation (uncorrelated) 
         double precision, allocatable, dimension(:),   save :: mu    ! Mean
-        double precision, allocatable, dimension(:),   save :: eigenvalues
         double precision, save :: logdetcovmat
 
         logical,save :: initialised=.false.
 
         double precision, parameter :: TwoPi = 8d0*atan(1d0) ! 2\pi in double precision
+        double precision, parameter :: sigma = 0.01 ! width of peak
 
-        integer :: info
-        integer :: i
 
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
                 write(*,'( "Likelihood : Correlated Gaussian" )')
+                write(*,'( "  sigma     = ",E15.7 )') sigma
             end if
             if(feedback>=2) then
                 write(*,'( "     mean: ")')
@@ -98,60 +97,13 @@ module example_likelihoods
         end if
 
 
-
         if(.not. initialised) then
-            allocate(invcovmat(M%nDims,M%nDims),covmat(M%nDims,M%nDims),mu(M%nDims),eigenvalues(max(3*M%nDims-1,1)))
-            ! Generate a random mean vector
-            mu = random_real(M%nDims)
+            allocate(invcovmat(M%nDims,M%nDims),covmat(M%nDims,M%nDims),mu(M%nDims))
 
-            ! generate a 'random' positive semi-definite matrix
-            !    start by generating a random vector of length ndims*ndims and
-            !    reshaping it into a square matrix
-            covmat = reshape(random_real(M%nDims*M%nDims),(/M%nDims,M%nDims/))
-            ! symmetrise this to make it positive semi-definate
-            covmat = matmul(transpose(covmat),covmat)
-
-            covmat = 0d0
-            do i=1,M%nDims
-                covmat(i,i) = 0.01
-            end do
-
-            write(*,'("/------ covmat -------------\")')
-            write(*,'("|", <M%nDims>F9.5,"|")') covmat
-            write(*,'("\---------------------------/")')
-
-            ! Invert the symmetric matrix
-            invcovmat = covmat      !initialise it with the covmat
-            !    Perform scalar decomposition
-            !    (d=double,po=symmetric positive definite,trf=triangular matrix factorization)
-            !   'U' = compute upper half of matrix
-            call potrf(invcovmat, 'U', info)
-            write(*,'("/------ invcovmat ----------\")')
-            write(*,'("|", <M%nDims>F9.5,"|")') invcovmat
-            write(*,'("\---------------------------/")')
-            !    Invert matrix
-            !    (d=double,po=symmetric positive definite,trf=inverse matrix using the factorization)
-            !   'U' = compute upper half of matrix
-            call potri(invcovmat,'U', info)
-            write(*,'("/------ invcovmat ----------\")')
-            write(*,'("|", <M%nDims>F9.5,"|")') invcovmat
-            write(*,'("\---------------------------/")')
-
-            ! Compute the eigenvalues with ssyev
-            !   (d=double, sy=symmetric, ev=eigenvalues)
-            !   'N' = don't compute eigenvectors
-            !   'U' = compute upper half of matrix
-            call syev(covmat,eigenvalues,'N','U',info)
-            write(*,*) '------ eigenvalues --------'
-            write(*,'("|", <M%nDims>F9.5,"|")') eigenvalues
-            write(*,*) '---------------------------'
-            ! sum up the logs of the eigenvalues to get the determinant
-            logdetcovmat = sum(log(eigenvalues))
-
-
-
-
-
+            ! Generate a random mean vector, localised around the center 
+            mu = 0.5d0 + sigma*(2d0*random_reals(M%nDims) -1d0)
+            ! Generate a random covariance vector and its inverse and logdet
+            call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims)
 
             initialised=.true.
         end if
@@ -162,6 +114,114 @@ module example_likelihoods
 
     end function gaussian_loglikelihood_corr
 
+    !> Cluster of correlated gaussians
+    !! 
+    !! It is normalised so that it should output an evidence of 1.0 for
+    !! effectively infinite priors.
+
+    function gaussian_loglikelihood_cluster(M,theta,feedback)
+        use random_module, only: random_reals
+        implicit none
+        class(model),     intent(in)               :: M
+        double precision, intent(in), dimension(:) :: theta
+        integer,optional, intent(in)               :: feedback
+
+
+        double precision :: gaussian_loglikelihood_cluster
+
+        double precision, allocatable, dimension(:,:,:), save :: invcovmat ! list of covariance matrices
+        double precision, allocatable, dimension(:,:,:), save :: covmat 
+        double precision, allocatable, dimension(:,:),   save :: mu    ! list of means
+        double precision, allocatable, dimension(:),     save :: logdetcovmat !list of log(determinants)
+
+        double precision, allocatable, dimension(:) :: log_likelihoods
+
+        logical,save :: initialised=.false.
+
+        double precision, parameter :: TwoPi = 8d0*atan(1d0) ! 2\pi in double precision
+        double precision, parameter :: sigma = 0.01 ! width of peak
+        integer, parameter :: num_peaks = 10
+        integer :: i !iterator
+
+
+        ! Feedback if requested
+        if(present(feedback)) then
+            if(feedback>=0) then
+                write(*,'( "Likelihood : Clustered Gaussian" )')
+                write(*,'( "  num_peaks = ",I4 )') num_peaks
+                write(*,'( "  sigma     = ",E15.7 )') sigma
+            end if
+            if(feedback>=2) then
+                write(*,'( "     mean: ")')
+                write(*,'( " [", <M%nDims>F15.9 ,"]")') mu
+                write(*,'( "     sigma: ")')
+                write(*,'( " [", <M%nDims>F15.9 ,"]")') covmat
+            end if
+            gaussian_loglikelihood_cluster = logzero
+            return
+        end if
+
+
+        if(.not. initialised) then
+            allocate(invcovmat(M%nDims,M%nDims,num_peaks),covmat(M%nDims,M%nDims,num_peaks),mu(M%nDims,num_peaks),logdetcovmat(num_peaks),log_likelihoods(num_peaks))
+
+            ! Generate num_peaks random mean vectors, localised around the center 
+            do i=1,num_peaks
+                mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(M%nDims) -1d0)
+            end do
+            ! Generate a i random covariance matricesi, their inverses and logdets
+            do i=1,num_peaks
+                call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims)
+            end do
+            write(*,'(<M%nDims>E12.5)') invcovmat(:,:,1)
+            initialised=.true.
+        end if
+        
+        ! Compute log likelihood
+        gaussian_loglikelihood_cluster = logzero
+        do i =1,num_peaks
+            gaussian_loglikelihood_cluster = logsumexp(gaussian_loglikelihood_cluster,&
+                log_gauss(theta(:),mu(:,i),invcovmat(:,:,i),logdetcovmat(i)))
+        end do
+        gaussian_loglikelihood_cluster = gaussian_loglikelihood_cluster - log(num_peaks+0d0)
+
+
+    end function gaussian_loglikelihood_cluster
+
+
+
+
+
+    subroutine generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
+        use random_module, only: random_reals, random_orthonormal_basis
+        implicit none
+        double precision, intent(out),dimension(nDims,nDims) :: invcovmat
+        double precision, intent(out)                        :: logdetcovmat
+        double precision, intent(in)                         :: sigma
+        integer,          intent(in)                         :: nDims
+
+        double precision, dimension(nDims)       :: eigenvalues
+        double precision, dimension(nDims,nDims) :: eigenvectors
+        integer :: j
+
+        ! Generate a random basis for the eigenvectors
+        eigenvectors = random_orthonormal_basis(nDims)
+        ! Generate the eigenvalues uniformly in [0,sigma]
+        eigenvalues  = sigma *random_reals(nDims)
+
+        ! Create the inverse covariance matrix in the eigenbasis
+        invcovmat = 0d0
+        do j=1,nDims
+            invcovmat(j,j) = 1d0/eigenvalues(j)**2
+        end do
+
+        ! Rotate the matrix into the coordinate basis
+        invcovmat = matmul(eigenvectors,matmul(invcovmat,transpose(eigenvectors)))
+
+        ! sum up the logs of the eigenvalues to get the log of the determinant
+        logdetcovmat = 2 * sum(log(eigenvalues))
+
+    end subroutine generate_covariance
 
 
     !> Compute the loglikelihood of a multivariate gaussian
@@ -176,21 +236,15 @@ module example_likelihoods
         !> The precomputed logarithm of the determinant
         double precision, intent(in) :: logdetcovmat
 
-        ! temp variable
-        double precision, dimension(size(theta)) :: Etheta
-
         double precision, parameter :: TwoPi = 8d0*atan(1d0) ! 2\pi in double precision
 
         ! The output
         double precision :: log_gauss
 
         ! Gaussian normalisation
-        log_gauss = - size(theta)/2d0 * ( log( TwoPi ) + logdetcovmat )
+        log_gauss = - ( size(theta) * log( TwoPi ) + logdetcovmat )/2d0 
 
-        ! note the use of blas routine dsymv to avoid having to symmetrise the matrix
-        !   (d=double,sy=symmetric,mv=matrix-vector product)
-        call dsymv(invcovmat,theta-mean,Etheta,'U')
-        log_gauss = log_gauss - dot_product(theta-mean,Etheta)/2d0
+        log_gauss = log_gauss - dot_product(theta-mean,matmul(invcovmat,theta-mean))/2d0
 
     end function log_gauss
 
@@ -239,6 +293,19 @@ module example_likelihoods
         pyramidal_loglikelihood = pyramidal_loglikelihood - maxval(abs(theta-center)/sigma)**2
 
     end function pyramidal_loglikelihood
+
+    ! logsumexp(x,y)=log(exp(x)+exp(y))
+    function logsumexp(x,y)
+        double precision x,y
+        double precision logsumexp
+
+        if (x.gt.y) then
+            logsumexp=x+log(1+exp(y-x))
+        else
+            logsumexp=y+log(1+exp(x-y))
+        end if
+
+    end function logsumexp
 
 
 

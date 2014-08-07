@@ -41,9 +41,9 @@ program main
     ! ------- (1b) Initialise the model -------
     ! Assign the likelihood function
     ! This one is a basic gaussian log likelihood
-    M%loglikelihood => gaussian_loglikelihood_corr
+    M%loglikelihood => gaussian_loglikelihood_cluster
 
-    M%nDims = 3                ! Assign the dimensionality
+    M%nDims =  2               ! Assign the dimensionality
                                ! Assign the priors
                                !>@todo sort out the code for transforming/configuring the
                                !! priors
@@ -53,14 +53,15 @@ program main
 
 
     ! ------- (1c) Initialise the program settings -------
-    settings%nlive                =  1024                    !number of live points
+    settings%nlive                =  1024*4                  !number of live points
     settings%sampler              => ChaoticChordalSampling  !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
-    settings%precision_criterion  =  1d-10                   !degree of precision in answer
+    settings%precision_criterion  =  1d-5                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
-    settings%save_dead            =  .false.                 !don't save any dead points
+    settings%save_dead            =  .true.                  !don't save any dead points
 
+    settings%num_chords           =  6                       !don't save any dead points
 
 
     ! ======= (2) Perform Nested Sampling =======

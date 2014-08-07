@@ -5,7 +5,7 @@ module test_sampler_module
 
     function BruteForceSampling(live_data, loglikelihood_bound, M, feedback) result(new_point)
 
-        use random_module, only: random_hypercube_point
+        use random_module, only: random_reals
         use model_module,  only: model, calculate_point
 
         implicit none
@@ -47,7 +47,7 @@ module test_sampler_module
         do while(new_point(M%l0)<=loglikelihood_bound)
 
             ! Generate a random point
-            new_point = random_hypercube_point(M%nDims)              ! Generate a random coordinate
+            new_point = random_reals(M%nDims)              ! Generate a random coordinate
 
             ! Compute physical coordinates, likelihoods and derived parameters
             call calculate_point( M, new_point )
@@ -137,7 +137,7 @@ module test_sampler_module
 
     function CubicCenterSampling(live_data, loglikelihood_bound, M, feedback) result(new_point)
 
-        use random_module, only: random_hypercube_point
+        use random_module, only: random_reals
         use model_module,  only: model, calculate_point
 
         implicit none
@@ -197,7 +197,7 @@ module test_sampler_module
         do while( new_point(M%l0)<=loglikelihood_bound )  
 
             ! Generate a random point within the unit sphere
-            new_point = random_hypercube_point(M%nDims)
+            new_point = random_reals(M%nDims)
 
             ! Re scale it about center with a side length max_radius*2
             new_point(M%h0:M%h1) = center + 2*min(max_radius,1d0) * (new_point(M%h0:M%h1) -center)

@@ -26,6 +26,9 @@ module settings_module
         !! It may not be worth saving them when doing extremely high dimensional problems
         logical :: save_dead = .true.
 
+        !> The number of chords to draw
+        integer :: num_chords = 6
+
         !> Pointer to the sampling procedure.
         !!
         !! e.g: MultiNest, Galilean Sampling, Hamiltonian sampling ...

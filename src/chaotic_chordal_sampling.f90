@@ -6,7 +6,7 @@ module chaotic_chordal_module
 
     function ChaoticChordalSampling(settings,live_data, loglikelihood_bound, M,feedback)  result(new_point)
         use settings_module, only: program_settings
-        use random_module, only: random_direction,random_hypercube_point,random_integer
+        use random_module, only: random_direction,random_reals,random_integers
         use model_module,  only: model, calculate_point, logzero
 
         implicit none
@@ -44,17 +44,16 @@ module chaotic_chordal_module
         double precision,    dimension(M%nDims)   :: nhat
 
         double precision :: max_distance
-        integer :: num_chords
 
         integer :: i
 
         max_distance = sqrt(M%nDims+0d0)
-        num_chords = 6
 
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
                 write(*,'( "Sampler    : Chordal" )')
+                write(*,'( "  num chords = ",I4 )') settings%num_chords
             end if
             return
         end if
@@ -63,13 +62,13 @@ module chaotic_chordal_module
 
         random_point(M%d0) = loglikelihood_bound
         ! pick a random point
-        point_number = random_integer(1,settings%nlive-1) ! get a random number in [1,nlive-1]
+        point_number = random_integers(1,settings%nlive-1) ! get a random number in [1,nlive-1]
         new_point = live_data(:,1+point_number(1))        ! get this point from live_data 
                                                           ! (excluding the possibility of drawing the late point)
 
         new_point(M%d0) = 0
 
-        do i=1,num_chords
+        do i=1,settings%num_chords
 
             ! get a random direction nhat
             nhat = random_direction(M%nDims)
@@ -78,13 +77,15 @@ module chaotic_chordal_module
             new_point = random_chordal_point( nhat, new_point, loglikelihood_bound, max_distance, M)
         end do
 
+        !max_distance = max_distance * (settings%nlive/(settings%nlive+1d0))**(1d0/M%nDims)
+
     end function ChaoticChordalSampling
 
 
 
     function random_chordal_point(nhat,random_point,loglikelihood_bound,max_distance,M) result(new_point)
         use model_module,  only: model, calculate_point, logzero
-        use random_module, only: random_real
+        use random_module, only: random_reals
         implicit none
 
         !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
@@ -135,7 +136,7 @@ module chaotic_chordal_module
             double precision,dimension(1) :: random_temp
 
             ! Draw a random point within l_bound and u_bound
-            random_temp =random_real(1)
+            random_temp =random_reals(1)
             point(M%h0:M%h1) = l_bound(M%h0:M%h1)*(1d0-random_temp(1)) + random_temp(1) * u_bound(M%h0:M%h1)
 
             ! Pass on the number of likelihood calls that have been made

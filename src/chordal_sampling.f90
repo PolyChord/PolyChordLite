@@ -5,7 +5,7 @@ module chordal_module
     contains
 
     function ChordalSampling(live_data, loglikelihood_bound, M,feedback)  result(new_point)
-        use random_module, only: random_direction,random_hypercube_point,random_integer
+        use random_module, only: random_direction,random_reals,random_integers
         use model_module,  only: model, calculate_point, logzero
 
         implicit none
@@ -64,7 +64,7 @@ module chordal_module
 
         random_point(M%d0) = loglikelihood_bound
         ! pick a random point
-        point_number = random_integer(1,nlive-1)        ! get a random number in [1,nlive-1]
+        point_number = random_integers(1,nlive-1)        ! get a random number in [1,nlive-1]
         new_point = live_data(:,1+point_number(1))      ! get this point from live_data 
                                                         ! (excluding the possibility of drawing the late point)
 
@@ -84,7 +84,7 @@ module chordal_module
 
     function random_chordal_point(nhat,random_point,initial_step,acceleration,loglikelihood_bound,M) result(new_point)
         use model_module,  only: model, calculate_point, logzero
-        use random_module, only: random_real
+        use random_module, only: random_reals
         implicit none
 
         !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
@@ -119,7 +119,7 @@ module chordal_module
 
         ! Select a point randomly along the chord (edge_point_1, edge_point_2)
         do while(new_point(M%l0)< loglikelihood_bound)
-            random_temp = random_real(1)
+            random_temp = random_reals(1)
             new_point(M%h0:M%h1) =  random_temp(1) * edge_point_1(M%h0:M%h1)  + (1d0-random_temp(1))*edge_point_2(M%h0:M%h1)
             call calculate_point(M,new_point)
         end do

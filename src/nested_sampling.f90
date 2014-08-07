@@ -115,7 +115,7 @@ module nested_sampling_module
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
     function GenerateLivePoints(M,settings) result(live_data)
         use model_module,    only: model, calculate_point
-        use random_module,   only: random_hypercube_point
+        use random_module,   only: random_reals
         use settings_module, only: program_settings
         use feedback_module, only: write_generating_live_points 
         implicit none
@@ -138,7 +138,7 @@ module nested_sampling_module
         do i_live=1, settings%nlive
 
             ! Generate a random coordinate in the first nDims rows of live_data
-            live_data(:,i_live) = random_hypercube_point(M%nDims)
+            live_data(:,i_live) = random_reals(M%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
             call calculate_point( M, live_data(:,i_live) )
