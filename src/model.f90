@@ -22,9 +22,25 @@ module model_module
         !> likelihood index
         integer :: l0          
 
+        ! Prior details:
+        ! Separable priors:
+        !> Uniform prior indices
+        integer                                        :: uniform_num   = 0
+        double precision, allocatable, dimension(:,:)  :: uniform_params
+        integer                                        :: uniform_index = 1
+
+        !> log-uniform indices
+        integer                                        :: log_uniform_num   = 0   
+        double precision, allocatable, dimension(:,:)  :: log_uniform_params
+        integer                                        :: log_uniform_index = 1
+
+
         procedure(loglike), pass(M), pointer :: loglikelihood 
 
+
+
     end type model
+
 
     interface
         function loglike(M,theta,feedback)
@@ -99,7 +115,23 @@ module model_module
         hypercube_coords = live_data(M%h0:M%h1)
 
         ! Transform to physical coordinates
-        physical_coords = hypercube_coords
+
+        ! Uniform priors:
+        ! This is a fairly simple transformation, each parameter is transformed as
+        ! hypercube_coord -> min + hypercube_coord * (max-min)
+        ! Param 1 is the minimum bound, Param 2 is the maximum
+        if(M%uniform_num>0) &
+            physical_coords(M%uniform_index:) = &
+            M%uniform_params(:,1) + (M%uniform_params(:,2) - M%uniform_params(:,1) ) * hypercube_coords(M%uniform_index:)
+
+        ! log-uniform priors:
+        ! hypercube_coord -> min * (max/min)**hypercube_coord
+        ! Param 1 is the minimum bound, Param 2 is the maximum
+        if(M%log_uniform_num>0) &
+            physical_coords(M%log_uniform_index:) = &
+            M%log_uniform_params(:,1) * (M%log_uniform_params(:,2)/M%log_uniform_params(:,1) ) ** hypercube_coords(M%log_uniform_index:)
+
+
 
         ! copy the physical coordinates back to live_data
         live_data(M%p0:M%p1) = physical_coords
@@ -129,6 +161,22 @@ module model_module
         live_data(M%d0:M%d1) = derived_parameters
 
     end subroutine calculate_derived_parameters
+
+    function prior_log_volume(M) result(log_volume)
+        implicit none
+        type(model),      intent(in)                   :: M
+
+        double precision :: log_volume
+
+        log_volume = 0
+
+        ! Uniform contribution
+        if (M%uniform_num >0 ) &
+            log_volume = log_volume + sum(log(M%uniform_params(:,2)-M%uniform_params(:,1) ))
+        if (M%log_uniform_num >0 ) &
+            log_volume = log_volume + sum( log(log(M%log_uniform_params(:,2)/M%log_uniform_params(:,1))) )
+        
+    end function prior_log_volume
 
 
 

@@ -66,6 +66,7 @@ module chordal_module
         new_point = live_data(:,1+point_number(1))        ! get this point from live_data 
                                                           ! (excluding the possibility of drawing the late point)
 
+        ! Set the number of likelihood evaluations to zero
         new_point(M%d0) = 0
 
         do i=1,settings%num_chords

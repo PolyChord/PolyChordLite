@@ -104,7 +104,7 @@ module nested_sampling_module
 
         end do
 
-        call write_final_results(evidence_vec,ndead,settings%feedback)
+        call write_final_results(M,evidence_vec,ndead,settings%feedback)
         close(222)
 
     end subroutine NestedSampling

@@ -179,8 +179,11 @@ module feedback_module
 
 
     !> Nicely formatted final output statement
-    subroutine write_final_results(evidence_vec,ndead,feedback)
+    subroutine write_final_results(M,evidence_vec,ndead,feedback)
+        use model_module,    only: model, prior_log_volume
         implicit none
+        !> The model details
+        type(model),            intent(in) :: M 
         !> The degree of feedback required
         integer, intent(in) :: feedback 
         !> the evidence information
@@ -194,6 +197,7 @@ module feedback_module
             write(*,'("| ndead  = ", I12, "                  |"  )') ndead
             write(*,'("| Z      = ", E12.5, " +/- ", E12.5,  " |")') evidence_vec(1:2)
             write(*,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
+            write(*,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1:2) * exp(prior_log_volume(M))
             write(*,'(A42)')                                        '|________________________________________|'
         endif
 

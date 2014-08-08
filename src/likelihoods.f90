@@ -294,6 +294,71 @@ module example_likelihoods
 
     end function pyramidal_loglikelihood
 
+    !> Upside down [Rosenbrock function](http://en.wikipedia.org/wiki/Rosenbrock_function).
+    !!
+    !! \f[ -\log\mathcal{L}(\theta) = \sum_{i=1}^{N-1}   (a-\theta_i)^2+ b (\theta_{i+1} -\theta_i^2 )^2 \f]
+    !!
+    !! This is the industry standard 'Banana'. It useful for testing whether the
+    !! algorithm is capable of navigating a curving degenerate space and able to
+    !! find the global maximum. As is conventional, we choose \f$a=1\f$ and
+    !! \f$b=100\f$
+    !!
+    !! It is only valid in nDims>2.
+    !!
+    !! To be precise, we choose our log likelihood as the negative of the 'true'
+    !! Rosenbrock function, as our algorithm is a maximiser.
+    !!
+    !! In addition, we add an offset to normalise the loglikelihood so that in
+    !! 2D it should integrate to 1. (There is no analytic formula for ND).
+    !! 
+    !! The global maximum is atop a long, narrow, parabolic shaped ridge.
+    !!
+    !! dimension | extrema
+    !! ----------|------
+    !! \f$ 2 \f$ | One maximum at \f$(1,1)\f$
+    !! \f$ 3 \f$ | One maximum at \f$(1,1,1)\f$ 
+    !! \f$4-7\f$ | One global maximum at \f$(1,\ldots,1)\f$, one local near \f$(-1,1,\ldots,1)\f$
+    !!
+    !! \f$(1,\ldots,1)\f$ is always the
+    !! global maximum, but it is unclear analytically how many (if any) local maxima there
+    !! are elsewhere in dimensions higher than 7.
+    !!
+    function rosenbrock_loglikelihood(M,theta,feedback) result(loglikelihood)
+        implicit none
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        class(model),intent(in)                    :: M
+        !> The input parameters
+        double precision, intent(in), dimension(:) :: theta
+        !> Optional argument. If provided, then the function simply prints out a few details
+        integer,optional, intent(in)               :: feedback
+
+        double precision, parameter :: a = 1d0
+        double precision, parameter :: b = 1d2
+        double precision, parameter :: pi = 4d0*atan(1d0) ! \pi in double precision
+
+        ! The return value
+        double precision :: loglikelihood
+
+        ! Feedback if requested
+        if(present(feedback)) then
+            if(feedback>=0) then
+                write(*,'( "Likelihood : RosenBrock" )')
+            end if
+            return
+        end if
+
+        ! Normalisation for 2D
+        loglikelihood = -log(pi/sqrt(b))
+        
+        ! Sum expressed with fortran intrinsics
+        loglikelihood =  loglikelihood  - sum( (a-theta(1:M%nDims-1))**2 + b*(theta(2:M%nDims) - theta(1:M%nDims-1)**2)**2 )
+
+        
+    end function rosenbrock_loglikelihood
+
+
+
+
     ! logsumexp(x,y)=log(exp(x)+exp(y))
     function logsumexp(x,y)
         double precision x,y
