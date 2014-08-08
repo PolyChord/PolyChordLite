@@ -70,7 +70,6 @@ module example_likelihoods
         double precision :: gaussian_loglikelihood_corr
 
         double precision, allocatable, dimension(:,:), save :: invcovmat ! covariance matrix
-        double precision, allocatable, dimension(:,:), save :: covmat ! Standard deviation (uncorrelated) 
         double precision, allocatable, dimension(:),   save :: mu    ! Mean
         double precision, save :: logdetcovmat
 
@@ -86,27 +85,24 @@ module example_likelihoods
                 write(*,'( "Likelihood : Correlated Gaussian" )')
                 write(*,'( "  sigma     = ",E15.7 )') sigma
             end if
-            if(feedback>=2) then
-                write(*,'( "     mean: ")')
-                write(*,'( " [", <M%nDims>F15.9 ,"]")') mu
-                write(*,'( "     sigma: ")')
-                write(*,'( " [", <M%nDims>F15.9 ,"]")') covmat
-            end if
             gaussian_loglikelihood_corr = logzero
+
+            if(.not. initialised) then
+                allocate(invcovmat(M%nDims,M%nDims), &
+                         mu(M%nDims))
+
+                ! Generate a random mean vector, localised around the center 
+                mu = 0.5d0 + sigma*(2d0*random_reals(M%nDims) -1d0)
+                ! Generate a random covariance vector and its inverse and logdet
+                call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims,feedback)
+
+                initialised=.true.
+            end if
+
             return
         end if
 
 
-        if(.not. initialised) then
-            allocate(invcovmat(M%nDims,M%nDims),covmat(M%nDims,M%nDims),mu(M%nDims))
-
-            ! Generate a random mean vector, localised around the center 
-            mu = 0.5d0 + sigma*(2d0*random_reals(M%nDims) -1d0)
-            ! Generate a random covariance vector and its inverse and logdet
-            call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims)
-
-            initialised=.true.
-        end if
         
         ! Compute log likelihood
         gaussian_loglikelihood_corr = log_gauss(theta,mu,invcovmat,logdetcovmat)
@@ -130,7 +126,6 @@ module example_likelihoods
         double precision :: gaussian_loglikelihood_cluster
 
         double precision, allocatable, dimension(:,:,:), save :: invcovmat ! list of covariance matrices
-        double precision, allocatable, dimension(:,:,:), save :: covmat 
         double precision, allocatable, dimension(:,:),   save :: mu    ! list of means
         double precision, allocatable, dimension(:),     save :: logdetcovmat !list of log(determinants)
 
@@ -146,37 +141,36 @@ module example_likelihoods
 
         ! Feedback if requested
         if(present(feedback)) then
+
             if(feedback>=0) then
                 write(*,'( "Likelihood : Clustered Gaussian" )')
                 write(*,'( "  num_peaks = ",I4 )') num_peaks
                 write(*,'( "  sigma     = ",E15.7 )') sigma
             end if
-            if(feedback>=2) then
-                write(*,'( "     mean: ")')
-                write(*,'( " [", <M%nDims>F15.9 ,"]")') mu
-                write(*,'( "     sigma: ")')
-                write(*,'( " [", <M%nDims>F15.9 ,"]")') covmat
+
+            if(.not. initialised) then
+                allocate(invcovmat(M%nDims,M%nDims,num_peaks),&
+                         mu(M%nDims,num_peaks),               &
+                         logdetcovmat(num_peaks),             &
+                         log_likelihoods(num_peaks) )
+
+                ! Generate num_peaks random mean vectors, localised around the center 
+                do i=1,num_peaks
+                    mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(M%nDims) -1d0)
+                end do
+                ! Generate a i random covariance matricesi, their inverses and logdets
+                do i=1,num_peaks
+                    call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims,feedback)
+                end do
+                write(*,'(<M%nDims>E12.5)') invcovmat(:,:,1)
+                initialised=.true.
             end if
+
             gaussian_loglikelihood_cluster = logzero
             return
         end if
 
 
-        if(.not. initialised) then
-            allocate(invcovmat(M%nDims,M%nDims,num_peaks),covmat(M%nDims,M%nDims,num_peaks),mu(M%nDims,num_peaks),logdetcovmat(num_peaks),log_likelihoods(num_peaks))
-
-            ! Generate num_peaks random mean vectors, localised around the center 
-            do i=1,num_peaks
-                mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(M%nDims) -1d0)
-            end do
-            ! Generate a i random covariance matricesi, their inverses and logdets
-            do i=1,num_peaks
-                call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims)
-            end do
-            write(*,'(<M%nDims>E12.5)') invcovmat(:,:,1)
-            initialised=.true.
-        end if
-        
         ! Compute log likelihood
         gaussian_loglikelihood_cluster = logzero
         do i =1,num_peaks
@@ -192,13 +186,14 @@ module example_likelihoods
 
 
 
-    subroutine generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
+    subroutine generate_covariance(invcovmat,logdetcovmat,sigma,nDims,feedback)
         use random_module, only: random_reals, random_orthonormal_basis
         implicit none
         double precision, intent(out),dimension(nDims,nDims) :: invcovmat
         double precision, intent(out)                        :: logdetcovmat
         double precision, intent(in)                         :: sigma
         integer,          intent(in)                         :: nDims
+        integer,          intent(in)                         :: feedback
 
         double precision, dimension(nDims)       :: eigenvalues
         double precision, dimension(nDims,nDims) :: eigenvectors
@@ -206,8 +201,8 @@ module example_likelihoods
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)
-        ! Generate the eigenvalues uniformly in [0,sigma]
-        eigenvalues  = sigma *random_reals(nDims)
+        ! Generate the eigenvalues uniformly in [0.5,1] * sigma
+        eigenvalues  = sigma *(0.5 + 0.5*random_reals(nDims))
 
         ! Create the inverse covariance matrix in the eigenbasis
         invcovmat = 0d0
@@ -220,6 +215,10 @@ module example_likelihoods
 
         ! sum up the logs of the eigenvalues to get the log of the determinant
         logdetcovmat = 2 * sum(log(eigenvalues))
+
+        if(feedback>=1) then
+            write (*,'("  eigenvalue range: log(max/min) = ", F6.3)') log(maxval(eigenvalues)/minval(eigenvalues))
+        end if
 
     end subroutine generate_covariance
 

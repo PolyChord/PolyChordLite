@@ -52,6 +52,9 @@ module nested_sampling_module
         live_data(M%d0,:) = 1
         mean_likelihood_calls = 1d0
 
+        ! Set the initial trial values of the chords as the diagonal of the hypercube
+        live_data(M%d0+1,:) = sqrt(M%nDims+0d0)
+
 
         ! Count the number of dead points
         ndead = 0

@@ -16,14 +16,14 @@ module feedback_module
 
     !> Called before running the program
     subroutine write_opening_statement(M,settings)
-        use model_module,    only: model
+        use model_module,    only: model,logzero
         use settings_module, only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
         type(model),            intent(in) :: M         ! The model details
 
-        double precision, dimension(1) :: temp
-        double precision, dimension(1,1) :: temp2
+        double precision, dimension(M%nTotal) :: temp
+        double precision, dimension(M%nTotal,settings%nlive) :: temp2
 
 
         if(settings%feedback >=1) then
@@ -37,8 +37,8 @@ module feedback_module
             write(*,'("nlive      :",I8)')   settings%nlive
             write(*,'("nDims      :",I8)')   M%nDims
             write(*,'("nDerived   :",I8)')   M%nDerived
-            temp(1) = M%loglikelihood(temp,settings%feedback) ! Write out the likelihood
-            temp(:) = settings%sampler(temp2,temp(1),M,settings%feedback) ! Write out the sampler
+            temp    = M%loglikelihood(temp(M%p0:M%p1),settings%feedback) ! Write out the likelihood
+            temp    = settings%sampler(temp2,logzero,M,settings%feedback) ! Write out the sampler
         end if
        
 

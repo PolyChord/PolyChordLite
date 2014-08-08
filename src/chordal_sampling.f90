@@ -43,11 +43,9 @@ module chordal_module
 
         double precision,    dimension(M%nDims)   :: nhat
 
-        double precision :: max_distance
 
         integer :: i
 
-        max_distance = sqrt(M%nDims+0d0)
 
         ! Feedback if requested
         if(present(feedback)) then
@@ -75,16 +73,15 @@ module chordal_module
             nhat = random_direction(M%nDims)
 
             ! generate a new random point along the chord defined by new_point and nhat
-            new_point = random_chordal_point( nhat, new_point, loglikelihood_bound, max_distance, M)
+            new_point = random_chordal_point( nhat, new_point, loglikelihood_bound, M)
         end do
 
-        !max_distance = max_distance * (settings%nlive/(settings%nlive+1d0))**(1d0/M%nDims)
 
     end function ChordalSampling
 
 
 
-    function random_chordal_point(nhat,random_point,loglikelihood_bound,max_distance,M) result(new_point)
+    function random_chordal_point(nhat,random_point,loglikelihood_bound,M) result(new_point)
         use model_module,  only: model, calculate_point, logzero
         use random_module, only: random_reals
         implicit none
@@ -97,8 +94,6 @@ module chordal_module
         double precision, intent(in),    dimension(M%nTotal)   :: random_point
         !> The root value to find
         double precision, intent(in) :: loglikelihood_bound
-        !> The maximum distance to explore
-        double precision, intent(in) :: max_distance
 
         ! The output finish point
         double precision,    dimension(M%nTotal)   :: new_point
@@ -108,19 +103,41 @@ module chordal_module
         ! The lower bound
         double precision,    dimension(M%nTotal)   :: l_bound
 
+        double precision :: trial_chord_length
 
-        ! Get the start bounds
-        u_bound(M%h0:M%h1) = random_point(M%h0:M%h1) + nhat * max_distance
-        l_bound(M%h0:M%h1) = random_point(M%h0:M%h1) - nhat * max_distance
 
         ! record the number of likelihood calls
         u_bound(M%d0) = random_point(M%d0)
         l_bound(M%d0) = 0
 
-        call calculate_point(M,u_bound)
-        call calculate_point(M,l_bound)
+        ! set the likelihoods of start bounds so that the loop below is entered
+        u_bound(M%l0) = loglikelihood_bound
+        l_bound(M%l0) = loglikelihood_bound
+
+        ! set the trial chord length at half the bound of the old length
+        trial_chord_length = random_point(M%d0+1)/2
+
+        do while(u_bound(M%l0) >= loglikelihood_bound )
+            trial_chord_length = 2*trial_chord_length
+            u_bound(M%h0:M%h1) = random_point(M%h0:M%h1) + nhat * trial_chord_length
+            call calculate_point(M,u_bound)
+        end do
+
+        trial_chord_length = trial_chord_length/2
+        do while(l_bound(M%l0) >= loglikelihood_bound )
+            trial_chord_length = 2*trial_chord_length
+            l_bound(M%h0:M%h1) = random_point(M%h0:M%h1) - nhat * trial_chord_length
+            call calculate_point(M,l_bound)
+        end do
 
         new_point = find_positive_within(l_bound,u_bound)
+
+        ! Store the new length
+        new_point(M%d0+1) = max(&
+            dot_product(u_bound(M%h0:M%h1)-random_point(M%h0:M%h1),u_bound(M%h0:M%h1)-random_point(M%h0:M%h1)),&
+            dot_product(l_bound(M%h0:M%h1)-random_point(M%h0:M%h1),l_bound(M%h0:M%h1)-random_point(M%h0:M%h1)))
+        new_point(M%d0+1) = sqrt(new_point(M%d0+1))
+        
 
         contains
 
