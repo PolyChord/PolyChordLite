@@ -1,7 +1,8 @@
 !> This module encodes the type 'program_settings' which contains all of the
 !! details required to perform a nested sampling run.
 module settings_module
-    use model_module, only: model
+    use model_module,   only: model
+    use cluster_module, only: cluster_info
     implicit none
 
     !> Type to contain all of the parameters involved in a nested sampling run
@@ -84,38 +85,40 @@ module settings_module
         !> Interface to the sampling procedure
         !!
         !! The sampling procedure takes the details of the model (M) and the current
-        !! set of live points (live_data) in order to generate a new_point
+        !! set of live points (live_data) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood_bound
-        function samp(settings, live_data, loglikelihood_bound, M,feedback) result(new_point)
+        function samp(settings, seed_point, loglikelihood_bound, clusters, M,feedback) result(baby_point)
 
             import :: model
             import :: program_settings
+            import :: cluster_info
             implicit none
 
             ! ------- Inputs -------
             !> program settings (mostly useful to pass on the number of live points)
             class(program_settings), intent(in) :: settings
 
-            !> The current set of live points. 2D array:
-            !!
-            !! First index ranges over ( hypercube coords, physical coords, derived params, loglikelihood),
-            !!
-            !! Second index ranges over all the live points
-            double precision, intent(in), dimension(:,:) :: live_data
+            !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+            type(model),            intent(in) :: M
+
+            !> The seed point
+            double precision, intent(in), dimension(M%nTotal)   :: seed_point
 
             !> The current loglikelihood bound
             double precision, intent(in) :: loglikelihood_bound
 
-            !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-            type(model),            intent(in) :: M
+            !> The current clustering information
+            type(cluster_info), intent(in) :: clusters
 
             !> Optional argument to cause the sampler to print out relevent information
             integer, intent(in), optional :: feedback
 
             ! ------- Outputs -------
             !> The newly generated point
-            double precision,    dimension(M%nTotal)   :: new_point
+            double precision,    dimension(M%nTotal)   :: baby_point
+
+
         end function samp
     end interface
 

@@ -131,7 +131,7 @@ module example_likelihoods
         double precision, allocatable, dimension(:,:),   save :: mu    ! list of means
         double precision, allocatable, dimension(:),     save :: logdetcovmat !list of log(determinants)
 
-        double precision, allocatable, dimension(:) :: log_likelihoods
+        double precision, allocatable, dimension(:),     save :: log_likelihoods
 
         logical,save :: initialised=.false.
 
@@ -154,12 +154,19 @@ module example_likelihoods
                 allocate(invcovmat(M%nDims,M%nDims,num_peaks),&
                          mu(M%nDims,num_peaks),               &
                          logdetcovmat(num_peaks),             &
-                         log_likelihoods(num_peaks) )
+                         log_likelihoods(num_peaks)           &
+                     )
 
                 ! Generate num_peaks random mean vectors, localised around the center 
                 do i=1,num_peaks
                     mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(M%nDims) -1d0)
                 end do
+
+                ! Set them all on the center to create a 'boo-bah' structure
+                mu(:,:) = 0.5d0
+
+
+
                 ! Generate a i random covariance matricesi, their inverses and logdets
                 do i=1,num_peaks
                     call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims,feedback)
@@ -203,8 +210,8 @@ module example_likelihoods
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)
-        ! Generate the eigenvalues uniformly in [0.5,1] * sigma
-        eigenvalues  = sigma *(0.5 + 0.5*random_reals(nDims))
+        ! Generate the eigenvalues uniformly in [0.01,1] * sigma
+        eigenvalues  = sigma *(0.01 + 0.99*random_reals(nDims))
 
         ! Create the inverse covariance matrix in the eigenbasis
         invcovmat = 0d0

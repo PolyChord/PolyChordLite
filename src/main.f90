@@ -41,10 +41,7 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood
 
-    M%nDims =  20              ! Assign the dimensionality
-                               ! Assign the priors
-                               !>@todo sort out the code for transforming/configuring the
-                               !! priors
+    M%nDims=5                  ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
 
     ! set priors as uniform with all
@@ -61,7 +58,7 @@ program main
 
 
     ! ------- (1c) Initialise the program settings -------
-    settings%nlive                =  1024                    !number of live points
+    settings%nlive                =  100*M%nDims             !number of live points
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
@@ -69,7 +66,7 @@ program main
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%save_dead            =  .false.                 !don't save any dead points
 
-    settings%num_chords           =  12                      !number of chords to draw        
+    settings%num_chords           =  10                      !number of chords to draw        
 
 
     ! ======= (2) Perform Nested Sampling =======

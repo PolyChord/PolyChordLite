@@ -9,11 +9,15 @@ module nested_sampling_module
         use utils_module,    only: logzero
         use settings_module, only: program_settings
         use utils_module,    only: logsumexp
+        use random_module,   only: random_integers
+        use cluster_module,  only: cluster_info,update_global_covariance,initialise_cluster
         use feedback_module
 
         implicit none
         type(model),            intent(in) :: M
         type(program_settings), intent(in) :: settings
+
+        type(cluster_info) :: cluster
 
 
         !> This is a very important array. live_data(:,i) constitutes the
@@ -26,7 +30,12 @@ module nested_sampling_module
         ! The recently dead point
         double precision,    dimension(M%nTotal)   :: late_point
 
-        double precision :: likelihood_bound
+        ! Point to seed a new one from
+        double precision,    dimension(M%nTotal)   :: seed_point
+
+        ! temp variable for getting a random integer
+        integer, dimension(1) :: point_number 
+
         double precision :: baby_likelihood
         double precision :: late_likelihood
 
@@ -37,6 +46,7 @@ module nested_sampling_module
 
         logical :: more_samples_needed
 
+        integer :: i
 
         integer :: ndead
 
@@ -77,6 +87,19 @@ module nested_sampling_module
         ! no dead points originally
         ndead = 0
 
+        ! choose the clustering method
+        cluster%nlive = settings%nlive
+        cluster%nDims = M%nDims
+        cluster%detect_clusters => update_global_covariance
+        call initialise_cluster(cluster)
+
+        ! calculate the initial global clustering
+        late_point = 0
+        late_point(M%l0)=logzero
+
+        do i=1,settings%nlive
+            call cluster%detect_clusters(M,live_data(:,i), late_point)
+        end do
 
         if (settings%save_dead) open(unit=222, file='dead_points.dat')
 
@@ -84,47 +107,56 @@ module nested_sampling_module
 
         do while (more_samples_needed)
 
-            ! Get the likelihood contour
-            likelihood_bound = live_data(M%l0,1)
-
-            ! Select a seed point
-
-            ! Generate a new point within the likelihood bounds
-            baby_point = settings%sampler(live_data, likelihood_bound, M)
+            ! Record the point that's just died
             late_point = live_data(:,1)
-
             ndead = ndead + 1
-            baby_likelihood  = baby_point(M%l0)
+
+            ! Get the likelihood contour
             late_likelihood = late_point(M%l0)
 
-            ! Calculate the new evidence
-            evidence_vec =  settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed)
+            ! Select a seed point for the generator
+            !   - get a random number in [1,nlive-1]
+            point_number = random_integers(1,settings%nlive-1) 
+            !   - get this point from live_data  (excluding the possibility of drawing the late point)
+            seed_point = live_data(:,1+point_number(1))
+
+            ! Generate a new point within the likelihood bound of the late point
+            baby_point = settings%sampler(seed_point, late_likelihood, cluster, M)
+            baby_likelihood  = baby_point(M%l0)
+
             ! update the mean number of likelihood calls
             mean_likelihood_calls = mean_likelihood_calls + (baby_point(M%d0) - late_point(M%d0) ) / (settings%nlive + 0d0)
 
             ! Insert the new point
             call insert_baby_point(baby_point,live_data)
 
+            ! Update the clustering 
+            call cluster%detect_clusters(M,baby_point,late_point)
 
+
+            ! Calculate the new evidence (and check to see if we're accurate enough)
+            evidence_vec =  settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed)
+
+            ! Halt if we've reached the desired maximum iterations
+            if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
+
+            ! Write the dead points to a file if desired
+            if (settings%save_dead) write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
+
+            ! Feedback to command line every nlive iterations
             if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
-
                 write(*,'("ndead     = ", I12                  )') ndead
                 write(*,'("efficiency= ", F12.2                )') mean_likelihood_calls
                 write(*,'("log(Z)    = ", F12.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
                 write(*,*)
             end if
-
-
-            if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
-
-            if (settings%save_dead) write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
-
         end do
 
-        !-----------------------------------------------
-        call write_final_results(M,evidence_vec,ndead,settings%feedback)
-        !-----------------------------------------------
+
+        ! close the dead points file if we're nearly done
         if (settings%save_dead) close(222)
+
+        call write_final_results(M,evidence_vec,ndead,settings%feedback)
 
     end subroutine NestedSampling
 

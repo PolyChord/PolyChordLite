@@ -44,7 +44,7 @@ module evidence_module
         !> Whether we have obtained enough samples for an accurate evidence
         logical,intent(out) :: more_samples_needed
 
-        ! vector containing [evidence, evidence error]
+        ! vector containing [logevidence, logevidence error]
         double precision, dimension(2) :: evidence_vec
 
 
@@ -79,7 +79,7 @@ module evidence_module
 
 
         ! Throughout the calculation, we measure all likelihoods relative to
-        double precision :: max_loglikelihood
+        double precision, save :: max_loglikelihood
 
 
         ! If the function is called with a non-positive ndead, then simply store
@@ -136,8 +136,8 @@ module evidence_module
         logvariance = log( logvariance + 2*exp( logmean_loglike_live + 2*logX_k) * ( exp(logZ2_dead_part)-exp(logZ_dead)) )  ! cross correlation
 
         ! Pass the mean and variance to evidence_vec in order to be outputted
-        evidence_vec(1) = logmean + old_loglikelihood
-        evidence_vec(2) = logvariance + 2*old_loglikelihood
+        evidence_vec(1) = logmean + max_loglikelihood
+        evidence_vec(2) = logvariance + 2*max_loglikelihood
 
         logZ_dead =             logZ_dead            + max_loglikelihood
         logZ2_dead =            logZ2_dead           + 2*max_loglikelihood

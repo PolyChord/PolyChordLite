@@ -19,12 +19,13 @@ module feedback_module
         use model_module,    only: model
         use utils_module,    only: logzero
         use settings_module, only: program_settings
+        use cluster_module, only: cluster_info
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
         type(model),            intent(in) :: M         ! The model details
 
         double precision, dimension(M%nTotal) :: temp
-        double precision, dimension(M%nTotal,settings%nlive) :: temp2
+        type(cluster_info) :: temp2
 
 
         if(settings%feedback >=1) then
@@ -39,7 +40,7 @@ module feedback_module
             write(*,'("nDims      :",I8)')   M%nDims
             write(*,'("nDerived   :",I8)')   M%nDerived
             temp    = M%loglikelihood(temp(M%p0:M%p1),settings%feedback) ! Write out the likelihood
-            temp    = settings%sampler(temp2,logzero,M,settings%feedback) ! Write out the sampler
+            temp    = settings%sampler(temp,logzero,temp2,M,settings%feedback) ! Write out the sampler
         end if
        
 
@@ -184,7 +185,7 @@ module feedback_module
         use model_module,    only: model, prior_log_volume
         implicit none
         !> The model details
-        type(model),            intent(in) :: M 
+        type(model), intent(in) :: M
         !> The degree of feedback required
         integer, intent(in) :: feedback 
         !> the evidence information
@@ -198,9 +199,9 @@ module feedback_module
             write(*,'("| ndead  = ", I12, "                  |"  )') ndead
             write(*,'("| Z      = ", E12.5, " +/- ", E12.5,  " |")') evidence_vec(1:2)
             write(*,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1))  
+            write(*,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1)+prior_log_volume(M), exp(0.5*evidence_vec(2)-evidence_vec(1))  
             write(*,'(A42)')                                        '|________________________________________|'
         endif
-
     end subroutine write_final_results
 
 end module feedback_module

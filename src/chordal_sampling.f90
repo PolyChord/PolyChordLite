@@ -4,11 +4,12 @@ module chordal_module
 
     contains
 
-    function ChordalSampling(settings,live_data, loglikelihood_bound, M,feedback)  result(new_point)
+    function ChordalSampling(settings,seed_point, loglikelihood_bound, cluster, M,feedback)  result(baby_point)
         use settings_module, only: program_settings
-        use random_module, only: random_direction,random_reals,random_integers
+        use random_module, only: random_skewed_direction,random_direction,random_reals,random_integers
         use model_module,  only: model, calculate_point
         use utils_module, only: logzero
+        use cluster_module, only: cluster_info
 
         implicit none
 
@@ -16,32 +17,27 @@ module chordal_module
         !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
 
-        !> The current set of live points. 2D array:
-        !!
-        !! First index ranges over ( hypercube coords, physical coords, derived params, loglikelihood),
-        !!
-        !! Second index ranges over all the live points
-        double precision, intent(inout), dimension(:,:) :: live_data
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        type(model),            intent(in) :: M
+
+        !> The seed point
+        double precision, intent(in), dimension(M%nTotal)   :: seed_point
 
         !> The current loglikelihood bound
         double precision, intent(in) :: loglikelihood_bound
 
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        type(model),            intent(in) :: M
+        !> The current clustering information
+        type(cluster_info), intent(in) :: cluster
 
         !> Optional argument to cause the sampler to print out relevent information
         integer, intent(in), optional :: feedback
 
         ! ------- Outputs -------
         !> The newly generated point
-        double precision,    dimension(M%nTotal)   :: new_point
+        double precision,    dimension(M%nTotal)   :: baby_point
 
-
-        double precision,    dimension(M%nTotal)   :: random_point
 
         ! ------- Local Variables -------
-        integer, dimension(1) :: point_number 
-
         double precision,    dimension(M%nDims)   :: nhat
 
 
@@ -58,23 +54,19 @@ module chordal_module
         end if
 
 
-
-        random_point(M%d0) = loglikelihood_bound
-        ! pick a random point
-        point_number = random_integers(1,settings%nlive-1) ! get a random number in [1,nlive-1]
-        new_point = live_data(:,1+point_number(1))        ! get this point from live_data 
-                                                          ! (excluding the possibility of drawing the late point)
+        ! Start the baby point at the seed point
+        baby_point = seed_point
 
         ! Set the number of likelihood evaluations to zero
-        new_point(M%d0) = 0
+        baby_point(M%d0) = 0
 
         do i=1,settings%num_chords
 
             ! get a random direction nhat
-            nhat = random_direction(M%nDims)
+            nhat = random_skewed_direction(M%nDims,cluster%cholesky(:,:,1),cluster%invcovmat(:,:,1))
 
-            ! generate a new random point along the chord defined by new_point and nhat
-            new_point = random_chordal_point( nhat, new_point, loglikelihood_bound, M)
+            ! generate a new random point along the chord defined by baby_point and nhat
+            baby_point = random_chordal_point( nhat, baby_point, loglikelihood_bound, M)
         end do
 
 
@@ -82,7 +74,7 @@ module chordal_module
 
 
 
-    function random_chordal_point(nhat,random_point,loglikelihood_bound,M) result(new_point)
+    function random_chordal_point(nhat,seed_point,loglikelihood_bound,M) result(baby_point)
         use model_module,  only: model, calculate_point
         use utils_module,  only: logzero
         use random_module, only: random_reals
@@ -93,12 +85,12 @@ module chordal_module
         !> The direction to search for the root in
         double precision, intent(in),    dimension(M%nDims)   :: nhat
         !> The start point
-        double precision, intent(in),    dimension(M%nTotal)   :: random_point
+        double precision, intent(in),    dimension(M%nTotal)   :: seed_point
         !> The root value to find
         double precision, intent(in) :: loglikelihood_bound
 
         ! The output finish point
-        double precision,    dimension(M%nTotal)   :: new_point
+        double precision,    dimension(M%nTotal)   :: baby_point
 
         ! The upper bound
         double precision,    dimension(M%nTotal)   :: u_bound
@@ -109,7 +101,7 @@ module chordal_module
 
 
         ! record the number of likelihood calls
-        u_bound(M%d0) = random_point(M%d0)
+        u_bound(M%d0) = seed_point(M%d0)
         l_bound(M%d0) = 0
 
         ! set the likelihoods of start bounds so that the loop below is entered
@@ -117,33 +109,33 @@ module chordal_module
         l_bound(M%l0) = loglikelihood_bound
 
         ! set the trial chord length at half the bound of the old length
-        trial_chord_length = random_point(M%d0+1)/2
+        trial_chord_length = seed_point(M%d0+1)/2
 
         do while(u_bound(M%l0) >= loglikelihood_bound )
             trial_chord_length = 2*trial_chord_length
-            u_bound(M%h0:M%h1) = random_point(M%h0:M%h1) + nhat * trial_chord_length
+            u_bound(M%h0:M%h1) = seed_point(M%h0:M%h1) + nhat * trial_chord_length
             call calculate_point(M,u_bound)
         end do
 
         trial_chord_length = trial_chord_length/2
         do while(l_bound(M%l0) >= loglikelihood_bound )
             trial_chord_length = 2*trial_chord_length
-            l_bound(M%h0:M%h1) = random_point(M%h0:M%h1) - nhat * trial_chord_length
+            l_bound(M%h0:M%h1) = seed_point(M%h0:M%h1) - nhat * trial_chord_length
             call calculate_point(M,l_bound)
         end do
 
-        new_point = find_positive_within(l_bound,u_bound)
+        baby_point = find_positive_within(l_bound,u_bound)
 
         ! Store the new length
-        new_point(M%d0+1) = max(&
-            dot_product(u_bound(M%h0:M%h1)-random_point(M%h0:M%h1),u_bound(M%h0:M%h1)-random_point(M%h0:M%h1)),&
-            dot_product(l_bound(M%h0:M%h1)-random_point(M%h0:M%h1),l_bound(M%h0:M%h1)-random_point(M%h0:M%h1)))
-        new_point(M%d0+1) = sqrt(new_point(M%d0+1))
+        baby_point(M%d0+1) = max(&
+            dot_product(u_bound(M%h0:M%h1)-seed_point(M%h0:M%h1),u_bound(M%h0:M%h1)-seed_point(M%h0:M%h1)),&
+            dot_product(l_bound(M%h0:M%h1)-seed_point(M%h0:M%h1),l_bound(M%h0:M%h1)-seed_point(M%h0:M%h1)))
+        baby_point(M%d0+1) = sqrt(baby_point(M%d0+1))
         
 
         contains
 
-        recursive function find_positive_within(l_bound,u_bound) result(point)
+        recursive function find_positive_within(l_bound,u_bound) result(finish_point)
             implicit none
             !> The upper bound
             double precision, intent(inout), dimension(M%nTotal)   :: u_bound
@@ -151,42 +143,42 @@ module chordal_module
             double precision, intent(inout), dimension(M%nTotal)   :: l_bound
 
             ! The output finish point
-            double precision,    dimension(M%nTotal)   :: point
+            double precision,    dimension(M%nTotal)   :: finish_point
 
             double precision,dimension(1) :: random_temp
 
             ! Draw a random point within l_bound and u_bound
             random_temp =random_reals(1)
-            point(M%h0:M%h1) = l_bound(M%h0:M%h1)*(1d0-random_temp(1)) + random_temp(1) * u_bound(M%h0:M%h1)
+            finish_point(M%h0:M%h1) = l_bound(M%h0:M%h1)*(1d0-random_temp(1)) + random_temp(1) * u_bound(M%h0:M%h1)
 
             ! Pass on the number of likelihood calls that have been made
-            point(M%d0) = l_bound(M%d0) + u_bound(M%d0)
+            finish_point(M%d0) = l_bound(M%d0) + u_bound(M%d0)
             ! zero the likelihood calls for l_bound and u_bound, as these are
             ! now stored in point
             l_bound(M%d0) = 0
             u_bound(M%d0) = 0
 
             ! calculate the likelihood 
-            call calculate_point(M,point)
+            call calculate_point(M,finish_point)
 
             ! If we're not within the likelihood bound then we need to sample further
-            if( point(M%l0) < loglikelihood_bound ) then
+            if( finish_point(M%l0) < loglikelihood_bound ) then
 
-                if ( dot_product(point(M%h0:M%h1)-random_point(M%h0:M%h1),nhat) > 0d0 ) then
-                    ! If new_point is on the u_bound side of random_point, then
+                if ( dot_product(finish_point(M%h0:M%h1)-seed_point(M%h0:M%h1),nhat) > 0d0 ) then
+                    ! If finish_point is on the u_bound side of seed_point, then
                     ! contract u_bound
-                    u_bound = point
+                    u_bound = finish_point
                 else
-                    ! If new_point is on the l_bound side of random_point, then
+                    ! If finish_point is on the l_bound side of seed_point, then
                     ! contract l_bound
-                    l_bound = point
+                    l_bound = finish_point
                 end if
 
                 ! Call the function again
-                point = find_positive_within(l_bound,u_bound)
+                finish_point = find_positive_within(l_bound,u_bound)
 
             end if
-            ! otherwise new_point is returned
+            ! otherwise finish_point is returned
 
         end function find_positive_within
 

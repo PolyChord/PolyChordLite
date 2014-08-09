@@ -18,7 +18,7 @@ DEBUG ?= 0
 ifeq ($(DEBUG), 1)
 FCFLAGS = -g -traceback -fp-stack-check -check all -fpe0 -warn all -mkl
 else
-FCFLAGS = -O3 -mkl -fpp
+FCFLAGS = -O3 -mkl -fpp 
 # O3  : maximum optimisation
 # mkl : use the mkl library
 # fpp : perform preprocessing
@@ -27,7 +27,7 @@ endif
 #FCFLAGS += -I/usr/include
 
 # libraries needed for linking, unused in the examples
-LDFLAGS =
+LDFLAGS = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
 
 # List of executables to be built within the package
 PROGRAMS = main
@@ -40,12 +40,14 @@ all: $(PROGRAMS)
 # prog3 and prog4, modify to suit your needs
 # ======================================================================
 
-MODULES = random_utils.o model.o settings.o feedback.o evidence.o likelihoods.o utils.o \
+MODULES = random_utils.o model.o settings.o feedback.o evidence.o likelihoods.o utils.o cluster.o \
 		  test_sampling.o nested_sampling.o chordal_sampling.o
 
 utils.o:
+model.o:
 random_utils.o:
-settings.o:                 model.o
+cluster.o:                  model.o utils.o
+settings.o:                 model.o cluster.o
 likelihoods.o:              model.o utils.o 
 evidence.o:                 settings.o
 feedback.o:                 model.o settings.o utils.o

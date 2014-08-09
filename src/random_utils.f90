@@ -80,13 +80,18 @@ module random_module
     !! We use the 
     !! [VSL_RNG_METHOD_UNIFORM_STD](
     !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
-    !! intel method to generate uniform random numbers. Note that this can come in an accurate form
+    !! intel method to generate uniform random numbers using the 
+    !! [vdrnguniform](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-D7AD317E-34EC-4789-8027-01D0E194FAC1.htm)
+    !!
+    !! Note that [VSL_RNG_METHOD_UNIFORM_STD](
+    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm)
+    !! can come in an accurate form.
 
     function random_reals(nDims)
         implicit none
 
         !> Size of coordinate vector
-        integer :: nDims 
+        integer,intent(in) :: nDims 
 
         ! The output nDims coordinate
         double precision, dimension(nDims) :: random_reals
@@ -117,16 +122,21 @@ module random_module
     !! We use the 
     !! [VSL_RNG_METHOD_UNIFORM_STD](
     !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
-    !! intel method to generate uniform random numbers. Note that this can come in an accurate form
+    !! intel method to generate uniform random integers using the 
+    !! [virnguniform](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-46FE7EF1-CE00-42CB-891D-17FD96062255.htm)
+    !!
+    !! Note that [VSL_RNG_METHOD_UNIFORM_STD](
+    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm)
+    !! can come in an accurate form.
 
     function random_integers(nDims,nmax)
         implicit none
 
         !> Size of coordinate vector
-        integer :: nDims 
+        integer,intent(in) :: nDims 
 
         !> Maximum integer to generate
-        integer :: nmax
+        integer,intent(in) :: nmax
 
         ! The output nDims coordinate
         integer, dimension(nDims) :: random_integers
@@ -160,13 +170,14 @@ module random_module
     !!
     !! We use the 
     !! [VSL_RNG_METHOD_GAUSSIAN_ICDF](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_4_Gaussian_VSL_RNG_METHOD_GAUSSIAN_ICDF.htm) 
-    !! intel method to generate Gaussian random numbers. 
+    !! intel method to generate Gaussian random numbers using the
+    !! [vdrnggaussian](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-63196F25-5013-4038-8BCD-2613C4EF3DE4.htm) function.
 
     function random_direction(nDims)
         implicit none
 
         !> Size of vector to be generated
-        integer :: nDims
+        integer,intent(in) :: nDims
 
         ! The output unit vector
         double precision, dimension(nDims) :: random_direction
@@ -192,6 +203,56 @@ module random_module
     end function random_direction
 
     ! ===========================================================================================
+
+
+    !>  Random skewed direction vector
+    !!
+    !! Generate a randomly directed unit vector in nDims dimensional space
+    !! according to the covariance matrix recieved
+    !!
+    !! This is rather subtle, but it is equivalent to generating points
+    !! uniformly in a linearly transformed space, i.e.
+    !!
+    !! We use the 
+    !! [VSL_RNG_METHOD_GAUSSIANMV_ICDF](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_7_GaussianMV_VSL_RNG_METHOD_GAUSSIANMV_ICDF.htm#9_3_7_GaussianMV_VSL_RNG) 
+    !! intel method to generate multivariate gaussian random numbers using the 
+    !! [vdrnggaussianmv](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F) function.
+
+    function random_skewed_direction(nDims,cholesky,invcovmat) result(random_direction)
+        implicit none
+
+        !> Size of vector to be generated
+        integer,intent(in) :: nDims
+        double precision, dimension(nDims) :: mean
+        double precision, dimension(nDims,nDims),intent(in) :: cholesky
+        double precision, dimension(nDims,nDims),intent(in) :: invcovmat
+
+        ! The output unit vector
+        double precision, dimension(nDims) :: random_direction
+        double precision, dimension(nDims,1) :: random_direction_temp
+
+        ! Method to generate random numbers 
+        integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIANMV_ICDF
+        ! The type of matrix storage (this indicates 'full' storage, i.e. the
+        ! easy to understand kind)
+        integer,parameter       :: mstorage=VSL_MATRIX_STORAGE_FULL
+
+        integer :: errcode ! Error code
+
+
+        mean =0
+
+        errcode=vdrnggaussianmv( method, rng_stream, 1,random_direction_temp, nDims, mstorage, mean, cholesky)
+
+        ! normalise the vector according to the mahalabois metric
+        call dsymv('U',nDims,1d0,invcovmat,nDims,random_direction_temp(:,1),1,0d0,random_direction,1)
+        random_direction = random_direction_temp(:,1) /sqrt(dot_product(random_direction,random_direction_temp(:,1)))
+
+
+    end function random_skewed_direction
+
+    ! ===========================================================================================
+
 
 
     !> Random point in the [beta distribution](http://en.wikipedia.org/wiki/Beta_distribution)
@@ -249,7 +310,7 @@ module random_module
         implicit none
 
         !> Dimension of sphere
-        integer :: nDims 
+        integer,intent(in) :: nDims 
 
         ! The output vector
         double precision, dimension(nDims) :: random_point_in_sphere
