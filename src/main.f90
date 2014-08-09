@@ -39,7 +39,7 @@ program main
     ! ------- (1b) Initialise the model -------
     ! Assign the likelihood function
     ! This one is a basic gaussian log likelihood
-    M%loglikelihood => gaussian_loglikelihood_cluster
+    M%loglikelihood => gaussian_loglikelihood
 
     M%nDims =  20              ! Assign the dimensionality
                                ! Assign the priors
@@ -61,7 +61,7 @@ program main
 
 
     ! ------- (1c) Initialise the program settings -------
-    settings%nlive                =  1024*8                  !number of live points
+    settings%nlive                =  1024                    !number of live points
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback

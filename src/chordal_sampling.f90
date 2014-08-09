@@ -7,7 +7,8 @@ module chordal_module
     function ChordalSampling(settings,live_data, loglikelihood_bound, M,feedback)  result(new_point)
         use settings_module, only: program_settings
         use random_module, only: random_direction,random_reals,random_integers
-        use model_module,  only: model, calculate_point, logzero
+        use model_module,  only: model, calculate_point
+        use utils_module, only: logzero
 
         implicit none
 
@@ -82,7 +83,8 @@ module chordal_module
 
 
     function random_chordal_point(nhat,random_point,loglikelihood_bound,M) result(new_point)
-        use model_module,  only: model, calculate_point, logzero
+        use model_module,  only: model, calculate_point
+        use utils_module,  only: logzero
         use random_module, only: random_reals
         implicit none
 

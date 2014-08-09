@@ -5,8 +5,10 @@ module nested_sampling_module
 
     !> Main subroutine for computing a generic nested sampling algorithm
     subroutine NestedSampling(M,settings)
-        use model_module,    only: model,logzero
+        use model_module,    only: model
+        use utils_module,    only: logzero
         use settings_module, only: program_settings
+        use utils_module,    only: logsumexp
         use feedback_module
 
         implicit none
@@ -19,15 +21,18 @@ module nested_sampling_module
         !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
         double precision, dimension(M%nTotal,settings%nlive) :: live_data
 
-        ! The new-born point
-        double precision,    dimension(M%nTotal)   :: new_point
+        ! The new-born baby point
+        double precision,    dimension(M%nTotal)   :: baby_point
         ! The recently dead point
         double precision,    dimension(M%nTotal)   :: late_point
 
-        double precision :: likelihood_bound,new_likelihood,late_likelihood
+        double precision :: likelihood_bound
+        double precision :: baby_likelihood
+        double precision :: late_likelihood
+
         double precision, dimension(2) :: evidence_vec
 
-        double precision :: mean_loglike
+        ! Means to be calculated
         double precision :: mean_likelihood_calls
 
         logical :: more_samples_needed
@@ -36,68 +41,77 @@ module nested_sampling_module
         integer :: ndead
 
 
-        call write_started_generating(settings%feedback)
+        !------- 1) Initialisation ---------------------------------
+        ! Need to initialise
+        !  * live_data
+        !  * mean log likelihood to be passed to the evidence calculator
+        !  * more_samples_needed
+        !  * mean_likelihood_calls
+        !  * ndead
 
         ! Create initial live points
+        call write_started_generating(settings%feedback)
         live_data = GenerateLivePoints(M,settings)
-
         call write_finished_generating(settings%feedback)
 
-        ! Compute the average loglikelihood and hand it to the evidence calculator
-        mean_loglike = sum(exp(live_data(M%l0,:)))/settings%nlive
-        evidence_vec = settings%evidence_calculator(mean_loglike,mean_loglike,-1,more_samples_needed)
-
-        ! Set the number of likelihood calls to 1 for now
-        ! and initialise the mean at 1
+        ! Set the number of likelihood calls for each point to 1
         live_data(M%d0,:) = 1
+
+        ! Definitely need more samples than this
+        more_samples_needed=.true.
+
+        ! Compute the average loglikelihood and hand it to the evidence calculator via the second argument,
+        ! and pass the maximum likelihood value in the first argument
+        ! (note the negative number of dead points in the third argument to trigger initialisation). 
+        evidence_vec = settings%evidence_calculator(                                       &
+                                  live_data(M%l0,settings%nlive),                          &
+                                  logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0) , &
+                                  -1,more_samples_needed)
+
+        ! initialise the mean number of likelihood calls to 1
         mean_likelihood_calls = 1d0
 
         ! Set the initial trial values of the chords as the diagonal of the hypercube
         live_data(M%d0+1,:) = sqrt(M%nDims+0d0)
 
-
-        ! Count the number of dead points
+        ! no dead points originally
         ndead = 0
 
-        ! Definitely need more samples than this
-        more_samples_needed=.true.
 
+        if (settings%save_dead) open(unit=222, file='dead_points.dat')
 
         call write_started_sampling(settings%feedback)
 
-        open(unit=222, file='dead_points.dat')
-
         do while (more_samples_needed)
 
+            ! Get the likelihood contour
             likelihood_bound = live_data(M%l0,1)
 
+            ! Select a seed point
+
             ! Generate a new point within the likelihood bounds
-            new_point = settings%sampler(live_data, likelihood_bound, M)
+            baby_point = settings%sampler(live_data, likelihood_bound, M)
             late_point = live_data(:,1)
 
             ndead = ndead + 1
-            new_likelihood  = new_point(M%l0)
+            baby_likelihood  = baby_point(M%l0)
             late_likelihood = late_point(M%l0)
 
             ! Calculate the new evidence
-            evidence_vec =  settings%evidence_calculator(new_likelihood,late_likelihood,ndead,more_samples_needed)
+            evidence_vec =  settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed)
             ! update the mean number of likelihood calls
-            mean_likelihood_calls = mean_likelihood_calls + (new_point(M%d0) - late_point(M%d0) ) / (settings%nlive + 0d0)
+            mean_likelihood_calls = mean_likelihood_calls + (baby_point(M%d0) - late_point(M%d0) ) / (settings%nlive + 0d0)
 
             ! Insert the new point
-            call insert_new_point(new_point,live_data)
+            call insert_baby_point(baby_point,live_data)
 
 
             if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
-                if (settings%feedback>=2) then
-                    write(*,'("new_point: (", <M%nDims>F10.5, ") ->", F12.5 )') new_point(M%p0:M%p1), new_point(M%l0)
-                end if
+
                 write(*,'("ndead     = ", I12                  )') ndead
                 write(*,'("efficiency= ", F12.2                )') mean_likelihood_calls
-                write(*,'("Z         = ", E12.5, " +/- ", E12.5)') evidence_vec(1:2)
-                if (evidence_vec(1) > 0 ) then
-                    write(*,'("log(Z)    = ", F12.5, " +/- ", F12.5)') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
-                end if
+                write(*,'("log(Z)    = ", F12.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
+                write(*,*)
             end if
 
 
@@ -107,8 +121,10 @@ module nested_sampling_module
 
         end do
 
+        !-----------------------------------------------
         call write_final_results(M,evidence_vec,ndead,settings%feedback)
-        close(222)
+        !-----------------------------------------------
+        if (settings%save_dead) close(222)
 
     end subroutine NestedSampling
 
@@ -232,58 +248,58 @@ module nested_sampling_module
     !!
     !! Since the data array is already sorted, one can insert a new point using
     !! binary search insertion algorithm, which is contained in here
-    subroutine insert_new_point(new_point,data_array)
-        double precision, intent(in),    dimension(:)   :: new_point
+    subroutine insert_baby_point(baby_point,data_array)
+        double precision, intent(in),    dimension(:)   :: baby_point
         double precision, intent(inout), dimension(:,:) :: data_array
 
         double precision :: loglike 
         integer          :: loglike_pos
         integer          :: nlive
 
-        integer :: new_position
+        integer :: baby_position
 
         loglike_pos = size(data_array,1)
         nlive       = size(data_array,2)
 
-        loglike = new_point(loglike_pos)
+        loglike = baby_point(loglike_pos)
 
         if( loglike > data_array(loglike_pos,nlive) ) then
-            new_position = nlive
+            baby_position = nlive
         else
-            new_position =  binary_search(1,nlive)
+            baby_position =  binary_search(1,nlive)
         end if
 
         ! Delete the lowest likelihood point by shifting the points in the data
-        ! array from new_position and below down by one
-        data_array(:,1:new_position-1) = data_array(:,2:new_position)
+        ! array from baby_position and below down by one
+        data_array(:,1:baby_position-1) = data_array(:,2:baby_position)
 
         ! Add the new point
-        data_array(:,new_position) = new_point(:)
+        data_array(:,baby_position) = baby_point(:)
 
         contains
 
         !> Binary search algorithm
-        recursive function binary_search(imin,imax) result(newpoint_pos)
+        recursive function binary_search(imin,imax) result(baby_point_pos)
             integer, intent(in) :: imin
             integer, intent(in) :: imax
 
-            integer :: newpoint_pos
+            integer :: baby_point_pos
 
-            newpoint_pos = (imin + imax)/2
+            baby_point_pos = (imin + imax)/2
 
-            if ( newpoint_pos == imin ) then
+            if ( baby_point_pos == imin ) then
                 return
-            else if( data_array(loglike_pos,newpoint_pos) > loglike ) then
-                ! new_point in lower subset
-                newpoint_pos = binary_search(imin,newpoint_pos)
+            else if( data_array(loglike_pos,baby_point_pos) > loglike ) then
+                ! baby_point in lower subset
+                baby_point_pos = binary_search(imin,baby_point_pos)
             else 
-                ! new_point in upper subset
-                newpoint_pos = binary_search(newpoint_pos,imax)
+                ! baby_point in upper subset
+                baby_point_pos = binary_search(baby_point_pos,imax)
             end if
 
         end function binary_search
 
-    end subroutine insert_new_point
+    end subroutine insert_baby_point
 
 
 

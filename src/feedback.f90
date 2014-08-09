@@ -16,7 +16,8 @@ module feedback_module
 
     !> Called before running the program
     subroutine write_opening_statement(M,settings)
-        use model_module,    only: model,logzero
+        use model_module,    only: model
+        use utils_module,    only: logzero
         use settings_module, only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
@@ -196,8 +197,7 @@ module feedback_module
             write(*,'(A42)')                                        '|                                        |'
             write(*,'("| ndead  = ", I12, "                  |"  )') ndead
             write(*,'("| Z      = ", E12.5, " +/- ", E12.5,  " |")') evidence_vec(1:2)
-            write(*,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') log(evidence_vec(1)), evidence_vec(2)/evidence_vec(1) 
-            write(*,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1:2) * exp(prior_log_volume(M))
+            write(*,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1))  
             write(*,'(A42)')                                        '|________________________________________|'
         endif
 
