@@ -174,9 +174,9 @@ module example_likelihoods
         ! Compute log likelihood
         gaussian_loglikelihood_cluster = logzero
         do i =1,num_peaks
-            gaussian_loglikelihood_cluster = logsumexp(gaussian_loglikelihood_cluster,&
-                log_gauss(theta(:),mu(:,i),invcovmat(:,:,i),logdetcovmat(i)))
+            log_likelihoods(i) = log_gauss(theta(:),mu(:,i),invcovmat(:,:,i),logdetcovmat(i))
         end do
+        gaussian_loglikelihood_cluster = logsumexp(log_likelihoods)
         gaussian_loglikelihood_cluster = gaussian_loglikelihood_cluster - log(num_peaks+0d0)
 
 
@@ -358,16 +358,25 @@ module example_likelihoods
 
 
 
-    ! logsumexp(x,y)=log(exp(x)+exp(y))
-    function logsumexp(x,y)
-        double precision x,y
-        double precision logsumexp
+    !> How to actually calculate sums from logs.
+    !!
+    !! i.e. if one has a set of logarithms \f$\{\log(L_i)\}\f$, how should one
+    !! calculate \f$ \log(\sum_i L_i)\f$ without underflow?
+    !!
+    !! One does it with the 'log-sum-exp' trick, by subtracting off the maximum
+    !! value so that at least the maxmimum value doesn't underflow, and then add
+    !! it back on at the end:
+    function logsumexp(vector)
+        implicit none
+        !> vector of log(w
+        double precision, dimension(:),intent(in) :: vector
 
-        if (x.gt.y) then
-            logsumexp=x+log(1+exp(y-x))
-        else
-            logsumexp=y+log(1+exp(x-y))
-        end if
+        double precision :: logsumexp
+        double precision :: maximumlog
+
+        maximumlog = maxval(vector)
+
+        logsumexp =  maximumlog + log(sum(exp(vector - maximumlog)))
 
     end function logsumexp
 
