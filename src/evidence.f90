@@ -136,7 +136,7 @@ module evidence_module
         logvariance = logsubexp(logvariance,2*logmean_loglike_live + 2*logX_k)                         
 
         logvariance = logaddexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ2_dead_part ) ! cross correlation
-        logvariance = logsubexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ2_dead      )
+        logvariance = logsubexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ_dead       )
 
         ! Pass the mean and variance to evidence_vec in order to be outputted
         evidence_vec(1) = logmean 
@@ -178,7 +178,7 @@ module evidence_module
         double precision :: b
         double precision :: logsubexp
 
-        if(a<b) write(*,*) 'no good', a,b
+        if(a<b) write(*,*) 'Warning: logsubexp being called incorrectly'
         logsubexp = a + log(1-exp(b-a))
 
     end function logsubexp

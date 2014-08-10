@@ -8,6 +8,21 @@ module utils_module
 
 
 
+    !> Euclidean distance of two coordinates
+    !!
+    !! returns \f$\sqrt{\sum_i (a_i-b_i)^2 } \f$
+    function distance(a,b)
+        implicit none
+        !> First vector
+        double precision, dimension(:) :: a
+        !> Second vector
+        double precision, dimension(:) :: b
+
+        double precision :: distance
+
+        distance = sqrt( dot_product(a-b,a-b) )
+
+    end function distance
 
 
 

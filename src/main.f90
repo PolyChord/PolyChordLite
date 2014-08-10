@@ -39,9 +39,9 @@ program main
     ! ------- (1b) Initialise the model -------
     ! Assign the likelihood function
     ! This one is a basic gaussian log likelihood
-    M%loglikelihood => gaussian_loglikelihood
+    M%loglikelihood => gaussian_loglikelihood_corr
 
-    M%nDims=5                  ! Dimensionality of the space
+    M%nDims=2                 ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
 
     ! set priors as uniform with all
@@ -62,11 +62,12 @@ program main
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
-    settings%precision_criterion  =   1d-5                   !degree of precision in answer
+    settings%precision_criterion  =  1d-5                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%save_dead            =  .false.                 !don't save any dead points
 
-    settings%num_chords           =  10                      !number of chords to draw        
+    settings%num_chords           =  10                     !number of chords to draw        
+    settings%do_clustering        = .true.
 
 
     ! ======= (2) Perform Nested Sampling =======

@@ -30,6 +30,9 @@ module settings_module
         !> The number of chords to draw
         integer :: num_chords = 6
 
+        !> Whether to do clustering
+        logical :: do_clustering
+
         !> Pointer to the sampling procedure.
         !!
         !! e.g: MultiNest, Galilean Sampling, Hamiltonian sampling ...

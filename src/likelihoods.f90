@@ -210,8 +210,8 @@ module example_likelihoods
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)
-        ! Generate the eigenvalues uniformly in [0.01,1] * sigma
-        eigenvalues  = sigma *(0.01 + 0.99*random_reals(nDims))
+        ! Generate the eigenvalues logarithmically in [1e-5,1] * sigma
+        eigenvalues  = sigma *(1e-5 * 1e5**random_reals(nDims))
 
         ! Create the inverse covariance matrix in the eigenbasis
         invcovmat = 0d0

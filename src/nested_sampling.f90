@@ -131,7 +131,7 @@ module nested_sampling_module
             call insert_baby_point(baby_point,live_data)
 
             ! Update the clustering 
-            call cluster%detect_clusters(M,baby_point,late_point)
+            if(settings%do_clustering) call cluster%detect_clusters(M,baby_point,late_point)
 
 
             ! Calculate the new evidence (and check to see if we're accurate enough)

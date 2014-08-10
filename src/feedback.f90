@@ -197,7 +197,6 @@ module feedback_module
             write(*,'(A42)')                                        ' ________________________________________ '
             write(*,'(A42)')                                        '|                                        |'
             write(*,'("| ndead  = ", I12, "                  |"  )') ndead
-            write(*,'("| Z      = ", E12.5, " +/- ", E12.5,  " |")') evidence_vec(1:2)
             write(*,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1))  
             write(*,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1)+prior_log_volume(M), exp(0.5*evidence_vec(2)-evidence_vec(1))  
             write(*,'(A42)')                                        '|________________________________________|'

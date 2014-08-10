@@ -40,7 +40,7 @@ module chordal_module
         ! ------- Local Variables -------
         double precision,    dimension(M%nDims)   :: nhat
 
-
+        
         integer :: i
 
 
@@ -63,7 +63,11 @@ module chordal_module
         do i=1,settings%num_chords
 
             ! get a random direction nhat
-            nhat = random_skewed_direction(M%nDims,cluster%cholesky(:,:,1),cluster%invcovmat(:,:,1))
+            if( settings%do_clustering) then
+                nhat = random_skewed_direction(M%nDims,cluster%cholesky(:,:,1),cluster%invcovmat(:,:,1))
+            else 
+                nhat = random_direction(M%nDims) 
+            end if
 
             ! generate a new random point along the chord defined by baby_point and nhat
             baby_point = random_chordal_point( nhat, baby_point, loglikelihood_bound, M)
