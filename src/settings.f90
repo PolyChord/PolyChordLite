@@ -2,7 +2,6 @@
 !! details required to perform a nested sampling run.
 module settings_module
     use model_module,   only: model
-    use cluster_module, only: cluster_info
     implicit none
 
     !> Type to contain all of the parameters involved in a nested sampling run
@@ -29,9 +28,6 @@ module settings_module
 
         !> The number of chords to draw
         integer :: num_chords = 6
-
-        !> Whether to do clustering
-        logical :: do_clustering
 
         !> Pointer to the sampling procedure.
         !!
@@ -91,11 +87,10 @@ module settings_module
         !! set of live points (live_data) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood_bound
-        function samp(settings, seed_point, loglikelihood_bound, clusters, M,feedback) result(baby_point)
+        function samp(settings, seed_point, loglikelihood_bound, M,feedback) result(baby_point)
 
             import :: model
             import :: program_settings
-            import :: cluster_info
             implicit none
 
             ! ------- Inputs -------
@@ -110,9 +105,6 @@ module settings_module
 
             !> The current loglikelihood bound
             double precision, intent(in) :: loglikelihood_bound
-
-            !> The current clustering information
-            type(cluster_info), intent(in) :: clusters
 
             !> Optional argument to cause the sampler to print out relevent information
             integer, intent(in), optional :: feedback

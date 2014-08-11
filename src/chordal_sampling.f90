@@ -4,12 +4,11 @@ module chordal_module
 
     contains
 
-    function ChordalSampling(settings,seed_point, loglikelihood_bound, cluster, M,feedback)  result(baby_point)
+    function ChordalSampling(settings,seed_point, loglikelihood_bound, M,feedback)  result(baby_point)
         use settings_module, only: program_settings
         use random_module, only: random_skewed_direction,random_direction,random_reals,random_integers
         use model_module,  only: model, calculate_point
         use utils_module, only: logzero
-        use cluster_module, only: cluster_info
 
         implicit none
 
@@ -25,9 +24,6 @@ module chordal_module
 
         !> The current loglikelihood bound
         double precision, intent(in) :: loglikelihood_bound
-
-        !> The current clustering information
-        type(cluster_info), intent(in) :: cluster
 
         !> Optional argument to cause the sampler to print out relevent information
         integer, intent(in), optional :: feedback
@@ -60,21 +56,10 @@ module chordal_module
         ! Set the number of likelihood evaluations to zero
         baby_point(M%d0) = 0
 
-!        open(5555, file='vecs.dat')
-!        do i=1,1000
-!            nhat = random_skewed_direction(M%nDims,cluster%cholesky(:,:,1),cluster%invcovmat(:,:,1))
-!            write(5555,'(<M%nDims>E14.6)') nhat
-!        end do
-!        close(5555)
 
         do i=1,settings%num_chords
 
-            ! get a random direction nhat
-            if( settings%do_clustering) then
-                nhat = random_skewed_direction(M%nDims,cluster%cholesky(:,:,1),cluster%invcovmat(:,:,1))
-            else 
-                nhat = random_direction(M%nDims) 
-            end if
+            nhat = random_direction(M%nDims) 
 
             ! generate a new random point along the chord defined by baby_point and nhat
             baby_point = random_chordal_point( nhat, baby_point, loglikelihood_bound, M)

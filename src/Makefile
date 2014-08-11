@@ -40,14 +40,13 @@ all: $(PROGRAMS)
 # prog3 and prog4, modify to suit your needs
 # ======================================================================
 
-MODULES = random_utils.o model.o settings.o feedback.o evidence.o likelihoods.o utils.o cluster.o \
+MODULES = random_utils.o model.o settings.o feedback.o evidence.o likelihoods.o utils.o \
 		  test_sampling.o nested_sampling.o chordal_sampling.o
 
 utils.o:
 model.o:                    utils.o
 random_utils.o:             utils.o
-cluster.o:                  model.o utils.o
-settings.o:                 model.o cluster.o
+settings.o:                 model.o 
 likelihoods.o:              model.o utils.o 
 evidence.o:                 settings.o
 feedback.o:                 model.o settings.o utils.o

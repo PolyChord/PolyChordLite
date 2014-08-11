@@ -10,14 +10,12 @@ module nested_sampling_module
         use settings_module, only: program_settings
         use utils_module,    only: logsumexp
         use random_module,   only: random_integers
-        use cluster_module,  only: cluster_info,update_global_covariance,initialise_cluster
         use feedback_module
 
         implicit none
         type(model),            intent(in) :: M
         type(program_settings), intent(in) :: settings
 
-        type(cluster_info) :: cluster
 
 
         !> This is a very important array. live_data(:,i) constitutes the
@@ -85,30 +83,6 @@ module nested_sampling_module
         ndead = 0
 
 
-        ! calculate the initial global clustering
-        ! We do this by calling it for each of the live points, 'removing' a
-        ! null point and adding in a new live point
-        if(settings%do_clustering) then
-
-            ! pass over the relevant variables to the clusterer
-            cluster%nlive = settings%nlive
-            cluster%nDims = M%nDims
-
-            ! choose the clustering method
-            cluster%detect_clusters => update_global_covariance
-
-            ! Allocate the arrays and set everything to zero
-            call initialise_cluster(cluster)
-
-            ! Initialise the null point
-            late_point = 0
-            late_point(M%l0)=logzero
-
-            do i=1,settings%nlive
-                ! add in a live point and 'remove' the null point
-                call cluster%detect_clusters(M,live_data(:,i), late_point)
-            end do
-        end if
 
 
         ! If we're saving the dead points, open the relevant file
@@ -134,7 +108,7 @@ module nested_sampling_module
             seed_point = live_data(:,1+point_number(1))
 
             ! Generate a new point within the likelihood bound of the late point
-            baby_point = settings%sampler(seed_point, late_likelihood, cluster, M)
+            baby_point = settings%sampler(seed_point, late_likelihood, M)
             baby_likelihood  = baby_point(M%l0)
 
             ! update the mean number of likelihood calls
@@ -143,8 +117,6 @@ module nested_sampling_module
             ! Insert the new point
             call insert_baby_point(baby_point,live_data)
 
-            ! Update the clustering 
-            if(settings%do_clustering) call cluster%detect_clusters(M,baby_point,late_point)
 
 
             ! Calculate the new evidence (and check to see if we're accurate enough)

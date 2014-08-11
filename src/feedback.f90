@@ -19,13 +19,11 @@ module feedback_module
         use model_module,    only: model
         use utils_module,    only: logzero
         use settings_module, only: program_settings
-        use cluster_module, only: cluster_info
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
         type(model),            intent(in) :: M         ! The model details
 
         double precision, dimension(M%nTotal) :: temp
-        type(cluster_info) :: temp2
 
 
         if(settings%feedback >=1) then
@@ -40,7 +38,7 @@ module feedback_module
             write(*,'("nDims      :",I8)')   M%nDims
             write(*,'("nDerived   :",I8)')   M%nDerived
             temp    = M%loglikelihood(temp(M%p0:M%p1),settings%feedback) ! Write out the likelihood
-            temp    = settings%sampler(temp,logzero,temp2,M,settings%feedback) ! Write out the sampler
+            temp    = settings%sampler(temp,logzero,M,settings%feedback) ! Write out the sampler
         end if
        
 

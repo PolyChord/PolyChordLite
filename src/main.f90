@@ -67,7 +67,6 @@ program main
     settings%save_dead            =  .false.                 !don't save any dead points
 
     settings%num_chords           =  20                     !number of chords to draw        
-    settings%do_clustering        = .true.
 
 
     ! ======= (2) Perform Nested Sampling =======
