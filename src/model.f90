@@ -1,6 +1,6 @@
 module model_module
+    use utils_module, only: logzero
     implicit none
-    double precision, parameter :: logzero = -1d20
 
     !> Type to encode all of the information about the priors.
     type :: model

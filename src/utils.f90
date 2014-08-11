@@ -1,7 +1,7 @@
 module utils_module
 
     !> The effective value of \f$ log(0) \f$
-    double precision, parameter :: logzero = -1d20
+    double precision, parameter :: logzero = -1d300
 
 
     contains

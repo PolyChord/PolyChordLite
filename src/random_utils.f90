@@ -217,7 +217,7 @@ module random_module
     !! intel method to generate multivariate gaussian random numbers using the 
     !! [vdrnggaussianmv](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F) function.
 
-    function random_skewed_direction(nDims,cholesky,invcovmat) result(random_direction)
+    function random_skewed_direction(nDims,cholesky,invcovmat) result(nhat)
         use utils_module, only: distance
         implicit none
 
@@ -231,10 +231,10 @@ module random_module
         double precision, dimension(nDims,nDims),intent(in) :: invcovmat
 
         ! The output normalised vector
-        double precision, dimension(nDims) :: random_direction
+        double precision, dimension(nDims) :: nhat
 
         ! Temporary length 1 vector of nDims vectors for passing to the routine
-        double precision, dimension(nDims,1) :: random_direction_temp
+        double precision, dimension(nDims,1) :: nhat_temp
 
         ! Method to generate random numbers 
         integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIANMV_ICDF
@@ -250,14 +250,16 @@ module random_module
 
 
         mean =0
-        modulus =0d0
 
-
-        do while(modulus <= 0d0) 
-            errcode=vdrnggaussianmv( method, rng_stream, 1,random_direction_temp, nDims, mstorage, mean, cholesky)
-            modulus = dot_product(random_direction_temp(:,1),random_direction_temp(:,1))
-        end do
-        random_direction = random_direction_temp(:,1)/sqrt(modulus)
+        errcode=vdrnggaussianmv( method, rng_stream, 1,nhat_temp, nDims, mstorage, mean, cholesky)
+        call dsymv('U',nDims,1d0,invcovmat,nDims,nhat_temp(:,1),1,0d0,nhat,1)
+        modulus = dot_product(nhat,nhat_temp(:,1))
+        if (modulus /= 0 ) then
+            nhat = nhat_temp(:,1)/sqrt(modulus)
+        else
+            write(*,*) 'modulus zero'
+            nhat = random_direction(nDims)
+        end if
 
 
         ! normalise the vector according to the mahalabois metric

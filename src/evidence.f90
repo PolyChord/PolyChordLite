@@ -132,8 +132,7 @@ module evidence_module
         ! Calculate the variance in the evidence
         logvariance = logsubexp(log(2d0) +logZ2_dead,2*logZ_dead)                                         ! dead contribution
 
-        logvariance = logaddexp(logvariance,2*logmean_loglike_live + logX_k+logY_k)                       ! live contribution
-        logvariance = logsubexp(logvariance,2*logmean_loglike_live + 2*logX_k)                         
+        logvariance = logaddexp(logvariance,2*logmean_loglike_live + logX_k+ logsubexp(logY_k,logX_k))    ! live contribution
 
         logvariance = logaddexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ2_deadp ) ! cross correlation
         logvariance = logsubexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ_dead       )
@@ -173,13 +172,17 @@ module evidence_module
     end function logaddexp
 
     function logsubexp(a,b)
+        use utils_module, only: logzero
         implicit none
         double precision :: a
         double precision :: b
         double precision :: logsubexp
 
-        if(a<b) write(*,*) 'Warning: logsubexp being called incorrectly'
-        logsubexp = a + log(1-exp(b-a))
+        if(a>b) then
+            logsubexp = a + log(1-exp(b-a))
+        else 
+            logsubexp = logzero
+        end if
 
     end function logsubexp
 

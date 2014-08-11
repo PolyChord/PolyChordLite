@@ -39,10 +39,10 @@ program main
     ! ------- (1b) Initialise the model -------
     ! Assign the likelihood function
     ! This one is a basic gaussian log likelihood
-    M%loglikelihood => gaussian_loglikelihood_corr
+    M%loglikelihood => gaussian_loglikelihood
 
-    M%nDims=2                  ! Dimensionality of the space
-    M%nDerived = 2             ! Assign the number of derived parameters
+    M%nDims=30                 ! Dimensionality of the space
+    M%nDerived = 1             ! Assign the number of derived parameters
 
     ! set priors as uniform with all
     M%uniform_num = M%nDims
@@ -66,7 +66,7 @@ program main
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%save_dead            =  .false.                 !don't save any dead points
 
-    settings%num_chords           =  10                     !number of chords to draw        
+    settings%num_chords           =  20                     !number of chords to draw        
     settings%do_clustering        = .true.
 
 

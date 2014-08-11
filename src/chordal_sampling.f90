@@ -120,10 +120,10 @@ module chordal_module
         l_bound(M%l0) = loglikelihood_bound
 
         ! set the trial chord length at half the bound of the old length
-        trial_chord_length = seed_point(M%d0+1)/2
+        trial_chord_length = 2d0
 
         do while(u_bound(M%l0) >= loglikelihood_bound )
-            trial_chord_length = 2*trial_chord_length
+            trial_chord_length = 2d0*trial_chord_length
             u_bound(M%h0:M%h1) = seed_point(M%h0:M%h1) + nhat * trial_chord_length
             call calculate_point(M,u_bound)
         end do
@@ -137,12 +137,6 @@ module chordal_module
 
         baby_point = find_positive_within(l_bound,u_bound)
 
-        ! Store the new length
-        baby_point(M%d0+1) = max(&
-            dot_product(u_bound(M%h0:M%h1)-seed_point(M%h0:M%h1),u_bound(M%h0:M%h1)-seed_point(M%h0:M%h1)),&
-            dot_product(l_bound(M%h0:M%h1)-seed_point(M%h0:M%h1),l_bound(M%h0:M%h1)-seed_point(M%h0:M%h1)))
-        baby_point(M%d0+1) = sqrt(baby_point(M%d0+1))
-        
 
         contains
 

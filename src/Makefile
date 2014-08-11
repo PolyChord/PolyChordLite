@@ -44,14 +44,14 @@ MODULES = random_utils.o model.o settings.o feedback.o evidence.o likelihoods.o 
 		  test_sampling.o nested_sampling.o chordal_sampling.o
 
 utils.o:
-model.o:
-random_utils.o:
+model.o:                    utils.o
+random_utils.o:             utils.o
 cluster.o:                  model.o utils.o
 settings.o:                 model.o cluster.o
 likelihoods.o:              model.o utils.o 
 evidence.o:                 settings.o
 feedback.o:                 model.o settings.o utils.o
-chordal_sampling.o:         model.o utils.o random_utils.o likelihoods.o
+chordal_sampling.o:         model.o utils.o random_utils.o
 test_sampling.o:            model.o random_utils.o
 nested_sampling.o:   		feedback.o model.o utils.o random_utils.o settings.o\
                             chordal_sampling.o test_sampling.o 
