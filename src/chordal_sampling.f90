@@ -60,6 +60,13 @@ module chordal_module
         ! Set the number of likelihood evaluations to zero
         baby_point(M%d0) = 0
 
+!        open(5555, file='vecs.dat')
+!        do i=1,1000
+!            nhat = random_skewed_direction(M%nDims,cluster%cholesky(:,:,1),cluster%invcovmat(:,:,1))
+!            write(5555,'(<M%nDims>E14.6)') nhat
+!        end do
+!        close(5555)
+
         do i=1,settings%num_chords
 
             ! get a random direction nhat

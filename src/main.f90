@@ -41,7 +41,7 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood_corr
 
-    M%nDims=2                 ! Dimensionality of the space
+    M%nDims=2                  ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
 
     ! set priors as uniform with all

@@ -87,23 +87,39 @@ module nested_sampling_module
         ! no dead points originally
         ndead = 0
 
-        ! choose the clustering method
-        cluster%nlive = settings%nlive
-        cluster%nDims = M%nDims
-        cluster%detect_clusters => update_global_covariance
-        call initialise_cluster(cluster)
 
         ! calculate the initial global clustering
-        late_point = 0
-        late_point(M%l0)=logzero
+        ! We do this by calling it for each of the live points, 'removing' a
+        ! null point and adding in a new live point
+        if(settings%do_clustering) then
 
-        do i=1,settings%nlive
-            call cluster%detect_clusters(M,live_data(:,i), late_point)
-        end do
+            ! pass over the relevant variables to the clusterer
+            cluster%nlive = settings%nlive
+            cluster%nDims = M%nDims
 
+            ! choose the clustering method
+            cluster%detect_clusters => update_global_covariance
+
+            ! Allocate the arrays and set everything to zero
+            call initialise_cluster(cluster)
+
+            ! Initialise the null point
+            late_point = 0
+            late_point(M%l0)=logzero
+
+            do i=1,settings%nlive
+                ! add in a live point and 'remove' the null point
+                call cluster%detect_clusters(M,live_data(:,i), late_point)
+            end do
+        end if
+
+
+        ! If we're saving the dead points, open the relevant file
         if (settings%save_dead) open(unit=222, file='dead_points.dat')
 
         call write_started_sampling(settings%feedback)
+
+
 
         do while (more_samples_needed)
 
@@ -145,9 +161,9 @@ module nested_sampling_module
 
             ! Feedback to command line every nlive iterations
             if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
-                write(*,'("ndead     = ", I12                  )') ndead
-                write(*,'("efficiency= ", F12.2                )') mean_likelihood_calls
-                write(*,'("log(Z)    = ", F12.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
+                write(*,'("ndead     = ", I20                  )') ndead
+                write(*,'("efficiency= ", F20.2                )') mean_likelihood_calls
+                write(*,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
                 write(*,*)
             end if
         end do

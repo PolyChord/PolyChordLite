@@ -61,7 +61,7 @@ module example_likelihoods
     !! effectively infinite priors.
 
     function gaussian_loglikelihood_corr(M,theta,feedback)
-        use random_module, only: random_reals
+        use random_module, only: random_reals, random_skewed_direction
         implicit none
         class(model),     intent(in)               :: M
         double precision, intent(in), dimension(:) :: theta
@@ -79,7 +79,6 @@ module example_likelihoods
         double precision, parameter :: TwoPi = 8d0*atan(1d0) ! 2\pi in double precision
         double precision, parameter :: sigma = 0.01 ! width of peak
 
-
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
@@ -93,9 +92,9 @@ module example_likelihoods
                          mu(M%nDims))
 
                 ! Generate a random mean vector, localised around the center 
-                mu = 0.5d0 + sigma*(2d0*random_reals(M%nDims) -1d0)
+                mu = 0.5d0
                 ! Generate a random covariance vector and its inverse and logdet
-                call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims,feedback)
+                call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims)
 
                 initialised=.true.
             end if
@@ -169,7 +168,7 @@ module example_likelihoods
 
                 ! Generate a i random covariance matricesi, their inverses and logdets
                 do i=1,num_peaks
-                    call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims,feedback)
+                    call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims)
                 end do
                 write(*,'(<M%nDims>E12.5)') invcovmat(:,:,1)
                 initialised=.true.
@@ -195,23 +194,23 @@ module example_likelihoods
 
 
 
-    subroutine generate_covariance(invcovmat,logdetcovmat,sigma,nDims,feedback)
+    subroutine generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
         use random_module, only: random_reals, random_orthonormal_basis
         implicit none
         double precision, intent(out),dimension(nDims,nDims) :: invcovmat
         double precision, intent(out)                        :: logdetcovmat
         double precision, intent(in)                         :: sigma
         integer,          intent(in)                         :: nDims
-        integer,          intent(in)                         :: feedback
 
         double precision, dimension(nDims)       :: eigenvalues
         double precision, dimension(nDims,nDims) :: eigenvectors
         integer :: j
+        double precision, parameter :: rng=1e-5
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)
         ! Generate the eigenvalues logarithmically in [1e-5,1] * sigma
-        eigenvalues  = sigma *(1e-5 * 1e5**random_reals(nDims))
+        eigenvalues  = sigma *(rng * rng**random_reals(nDims))
 
         ! Create the inverse covariance matrix in the eigenbasis
         invcovmat = 0d0
@@ -224,10 +223,6 @@ module example_likelihoods
 
         ! sum up the logs of the eigenvalues to get the log of the determinant
         logdetcovmat = 2 * sum(log(eigenvalues))
-
-        if(feedback>=1) then
-            write (*,'("  eigenvalue range: log(max/min) = ", F6.3)') log(maxval(eigenvalues)/minval(eigenvalues))
-        end if
 
     end subroutine generate_covariance
 

@@ -55,12 +55,12 @@ module evidence_module
         double precision, save :: logZ_dead = logzero
 
         ! The accumulated evidence squared Z^2
-        ! Z2_dead = 1/nlive  sum_k L_k  (nlive/(nlive+1))^k * Z2_dead_part_k
+        ! Z2_dead = 1/nlive  sum_k L_k  (nlive/(nlive+1))^k * Z2_deadp_k
         double precision, save :: logZ2_dead = logzero
 
         ! part of the accumulated evidence squared
-        ! Z2_dead_part = 1/(nlive+1)  sum_k L_k  ((nlive+1)/(nlive+2))^k
-        double precision, save :: logZ2_dead_part = logzero
+        ! Z2_deadp = 1/(nlive+1)  sum_k L_k  ((nlive+1)/(nlive+2))^k
+        double precision, save :: logZ2_deadp = logzero
 
         ! the mean log likelihood of the live points
         ! mean_log_like_live = 1/nlive * sum(L_live)
@@ -111,10 +111,10 @@ module evidence_module
         logZ_dead = logaddexp(logZ_dead , old_loglikelihood+ logX_k -lognlive )
 
         ! Accumulate part of the dead evidence^2
-        logZ2_dead_part = logaddexp(logZ2_dead_part, old_loglikelihood + logY_k -lognlivep1  )
+        logZ2_deadp = logaddexp(logZ2_deadp, old_loglikelihood + logY_k -lognlivep1  )
 
         ! Accumulate the rest of the dead evidence^2
-        logZ2_dead = logaddexp(logZ2_dead, old_loglikelihood + logX_k + logZ2_dead_part- lognlive )
+        logZ2_dead = logaddexp(logZ2_dead, old_loglikelihood + logX_k + logZ2_deadp- lognlive )
 
 
         ! Add the contribution of the new_loglikelihood from the mean ...
@@ -135,7 +135,7 @@ module evidence_module
         logvariance = logaddexp(logvariance,2*logmean_loglike_live + logX_k+logY_k)                       ! live contribution
         logvariance = logsubexp(logvariance,2*logmean_loglike_live + 2*logX_k)                         
 
-        logvariance = logaddexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ2_dead_part ) ! cross correlation
+        logvariance = logaddexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ2_deadp ) ! cross correlation
         logvariance = logsubexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ_dead       )
 
         ! Pass the mean and variance to evidence_vec in order to be outputted

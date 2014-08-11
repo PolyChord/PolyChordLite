@@ -207,11 +207,10 @@ module random_module
 
     !>  Random skewed direction vector
     !!
-    !! Generate a randomly directed unit vector in nDims dimensional space
-    !! according to the covariance matrix recieved
-    !!
-    !! This is rather subtle, but it is equivalent to generating points
-    !! uniformly in a linearly transformed space, i.e.
+    !! Generate a randomly directed normalised vector in nDims dimensional space
+    !! according to the covariance matrix recieved. The vector is normalised
+    !! with respect to the [Mahalanobis_distance](http://en.wikipedia.org/wiki/Mahalanobis_distance)
+    !! defined by the variance-covariance matrix.
     !!
     !! We use the 
     !! [VSL_RNG_METHOD_GAUSSIANMV_ICDF](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_7_GaussianMV_VSL_RNG_METHOD_GAUSSIANMV_ICDF.htm#9_3_7_GaussianMV_VSL_RNG) 
@@ -219,16 +218,22 @@ module random_module
     !! [vdrnggaussianmv](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F) function.
 
     function random_skewed_direction(nDims,cholesky,invcovmat) result(random_direction)
+        use utils_module, only: distance
         implicit none
 
         !> Size of vector to be generated
         integer,intent(in) :: nDims
-        double precision, dimension(nDims) :: mean
+
+        !> The cholesky decomposition of the variance-covariance matrix
         double precision, dimension(nDims,nDims),intent(in) :: cholesky
+
+        !> The inverse covariance matrix (for normalisation purposes)
         double precision, dimension(nDims,nDims),intent(in) :: invcovmat
 
-        ! The output unit vector
+        ! The output normalised vector
         double precision, dimension(nDims) :: random_direction
+
+        ! Temporary length 1 vector of nDims vectors for passing to the routine
         double precision, dimension(nDims,1) :: random_direction_temp
 
         ! Method to generate random numbers 
@@ -237,16 +242,27 @@ module random_module
         ! easy to understand kind)
         integer,parameter       :: mstorage=VSL_MATRIX_STORAGE_FULL
 
+        double precision, dimension(nDims) :: mean
+
+        double precision :: modulus
+
         integer :: errcode ! Error code
 
 
         mean =0
+        modulus =0d0
 
-        errcode=vdrnggaussianmv( method, rng_stream, 1,random_direction_temp, nDims, mstorage, mean, cholesky)
+
+        do while(modulus <= 0d0) 
+            errcode=vdrnggaussianmv( method, rng_stream, 1,random_direction_temp, nDims, mstorage, mean, cholesky)
+            modulus = dot_product(random_direction_temp(:,1),random_direction_temp(:,1))
+        end do
+        random_direction = random_direction_temp(:,1)/sqrt(modulus)
+
 
         ! normalise the vector according to the mahalabois metric
-        call dsymv('U',nDims,1d0,invcovmat,nDims,random_direction_temp(:,1),1,0d0,random_direction,1)
-        random_direction = random_direction_temp(:,1) /sqrt(dot_product(random_direction,random_direction_temp(:,1)))
+        !call dsymv('U',nDims,1d0,invcovmat,nDims,random_direction_temp(:,1),1,0d0,random_direction,1)
+        !random_direction = random_direction_temp(:,1) /sqrt(dot_product(random_direction,random_direction_temp(:,1)))
 
 
     end function random_skewed_direction

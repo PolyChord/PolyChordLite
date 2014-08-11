@@ -13,7 +13,7 @@ module cluster_module
         integer :: ncluster = 1
 
         !> The number of live points
-        integer :: nlive
+        double precision :: nlive
 
         !> The dimensionality
         integer :: nDims
@@ -93,47 +93,49 @@ module cluster_module
         !> The recently dead point
         double precision,    dimension(M%nTotal)   :: late_point
 
-        double precision, save :: lognormalisation = logzero
-
-        double precision maximum
-
         integer :: info
 
         integer :: nDims
 
         nDims = cluster%nDims
 
-        ! Update the normalisation
-        maximum = max(lognormalisation,baby_point(M%l0),late_point(M%l0))
-        lognormalisation = maximum + log(exp(lognormalisation-maximum) + &
-                                         exp(baby_point(M%l0)-maximum) - &
-                                         exp(late_point(M%l0)-maximum) )
+
+        ! Initially
+        ! covmat = <x_i x_j> - <x_i><x_j>
 
 
         ! Remove the old mean from the covariance matrix to start with
+        ! covmat  -> covmat + <x_i><x_j>
+        ! covmat = <x_i x_j>
         call dsyr('U',nDims,+1d0,cluster%mean(:,1),1,cluster%covmat(:,:,1),nDims) 
 
 
         ! Add the new point to the mean
-        cluster%mean(:,1) = cluster%mean(:,1) + exp(baby_point(M%l0)-lognormalisation) * baby_point(M%h0:M%h1) / cluster%nlive
+        ! mean = <x_i>
+        cluster%mean(:,1) = cluster%mean(:,1) + baby_point(M%h0:M%h1) / cluster%nlive
         ! Remove the old point from mean
-        cluster%mean(:,1) = cluster%mean(:,1) - exp(late_point(M%l0)-lognormalisation) * late_point(M%h0:M%h1) / cluster%nlive
+        cluster%mean(:,1) = cluster%mean(:,1) - late_point(M%h0:M%h1) / cluster%nlive
 
-
-
-        ! Add the new point to the sum of the squares, weighted by the likelihood
-        call dsyr('U',nDims, exp(baby_point(M%l0)-lognormalisation)/(cluster%nlive-1),baby_point(M%h0:M%h1),1,cluster%covmat(:,:,1),nDims)
+        ! Add the new point to the sum of the squares (now stored in covmat)
+        ! covmat = <x_i x_j>
+        call dsyr('U',nDims,1d0/cluster%nlive,baby_point(M%h0:M%h1),1,cluster%covmat(:,:,1),nDims)
         ! Remove the old point
-        call dsyr('U',nDims,-exp(late_point(M%l0)-lognormalisation)/(cluster%nlive-1),late_point(M%h0:M%h1),1,cluster%covmat(:,:,1),nDims)
+        call dsyr('U',nDims,-1d0/cluster%nlive,late_point(M%h0:M%h1),1,cluster%covmat(:,:,1),nDims)
+
         ! add the new mean back in
+        ! covmat -> covmat - <x_i><x_j>
+        ! covmat = <x_i x_j> - <x_i><x_j>
         call dsyr('U',nDims,-1d0,cluster%mean(:,1),1,cluster%covmat(:,:,1),nDims) 
 
-        ! calculate the cholesky factorisation
+
+        ! calculate the cholesky factorisation of the covariance matrix
         cluster%cholesky = cluster%covmat
         call dpotrf('U',nDims,cluster%cholesky(:,:,1),nDims,info)
-        ! calculate the inverse matrix
+
+        ! calculate the inverse covariance matrix
         cluster%invcovmat = cluster%cholesky
         call dpotri('U',nDims,cluster%invcovmat(:,:,1),nDims,info)
+
 
     end subroutine update_global_covariance
 

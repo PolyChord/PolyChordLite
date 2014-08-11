@@ -51,7 +51,7 @@ settings.o:                 model.o cluster.o
 likelihoods.o:              model.o utils.o 
 evidence.o:                 settings.o
 feedback.o:                 model.o settings.o utils.o
-chordal_sampling.o:         model.o utils.o random_utils.o
+chordal_sampling.o:         model.o utils.o random_utils.o likelihoods.o
 test_sampling.o:            model.o random_utils.o
 nested_sampling.o:   		feedback.o model.o utils.o random_utils.o settings.o\
                             chordal_sampling.o test_sampling.o 
