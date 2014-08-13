@@ -205,12 +205,12 @@ module example_likelihoods
         double precision, dimension(nDims)       :: eigenvalues
         double precision, dimension(nDims,nDims) :: eigenvectors
         integer :: j
-        double precision, parameter :: rng=1e-2
+        double precision, parameter :: rng=5e-1
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)
-        ! Generate the eigenvalues logarithmically in [1e-5,1] * sigma
-        eigenvalues  = sigma *(rng * rng**random_reals(nDims))
+        ! Generate the eigenvalues logarithmically in [rng,1] * sigma
+        eigenvalues  = sigma *( rng**random_reals(nDims))
 
         ! Create the inverse covariance matrix in the eigenbasis
         invcovmat = 0d0

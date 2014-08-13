@@ -44,8 +44,6 @@ module nested_sampling_module
 
         logical :: more_samples_needed
 
-        integer :: i
-
         integer :: ndead
 
 
@@ -67,6 +65,9 @@ module nested_sampling_module
 
         ! Definitely need more samples than this
         more_samples_needed=.true.
+
+        ! Set the initial trial values of the chords as the diagonal of the hypercube
+        live_data(M%d0+1,:) = sqrt(M%nDims+0d0)
 
         ! Compute the average loglikelihood and hand it to the evidence calculator via the second argument,
         ! and pass the maximum likelihood value in the first argument

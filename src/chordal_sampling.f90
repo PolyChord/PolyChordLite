@@ -72,7 +72,7 @@ module chordal_module
 
     function random_chordal_point(nhat,seed_point,loglikelihood_bound,M) result(baby_point)
         use model_module,  only: model, calculate_point
-        use utils_module,  only: logzero
+        use utils_module,  only: logzero, distance
         use random_module, only: random_reals
         implicit none
 
@@ -105,7 +105,7 @@ module chordal_module
         l_bound(M%l0) = loglikelihood_bound
 
         ! set the trial chord length at half the bound of the old length
-        trial_chord_length = 2d0
+        trial_chord_length = seed_point(M%d0+1)/2d0 
 
         do while(u_bound(M%l0) >= loglikelihood_bound )
             trial_chord_length = 2d0*trial_chord_length
@@ -121,6 +121,12 @@ module chordal_module
         end do
 
         baby_point = find_positive_within(l_bound,u_bound)
+
+        ! Store the new length
+        baby_point(M%d0+1) = max(&
+            distance(u_bound(M%h0:M%h1),seed_point(M%h0:M%h1)),&
+            distance(l_bound(M%h0:M%h1),seed_point(M%h0:M%h1))&
+            ) 
 
 
         contains

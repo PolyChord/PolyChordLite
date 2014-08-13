@@ -41,8 +41,13 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood
 
-    M%nDims=30                 ! Dimensionality of the space
-    M%nDerived = 1             ! Assign the number of derived parameters
+    M%nDims=2                  ! Dimensionality of the space
+    M%nDerived = 2             ! Assign the number of derived parameters
+    ! There are two derived parameters:
+    ! 1) the number of likelihood evaluations required for the calculation of the
+    ! new point
+    ! 2) the smallest plausible chord length
+        
 
     ! set priors as uniform with all
     M%uniform_num = M%nDims
