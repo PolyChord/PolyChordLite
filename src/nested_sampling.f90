@@ -46,6 +46,8 @@ module nested_sampling_module
 
         integer :: ndead
 
+        double precision,    dimension(M%nDims,2)   :: min_max_array
+
 
         !------- 1) Initialisation ---------------------------------
         ! Need to initialise
@@ -83,7 +85,9 @@ module nested_sampling_module
         ! no dead points originally
         ndead = 0
 
-
+        ! Get the maximum and minimum coordinates in each dimension for the live points
+        min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
+        min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
 
 
         ! If we're saving the dead points, open the relevant file
@@ -109,7 +113,7 @@ module nested_sampling_module
             seed_point = live_data(:,1+point_number(1))
 
             ! Generate a new point within the likelihood bound of the late point
-            baby_point = settings%sampler(seed_point, late_likelihood, M)
+            baby_point = settings%sampler(seed_point, late_likelihood, min_max_array, M)
             baby_likelihood  = baby_point(M%l0)
 
             ! update the mean number of likelihood calls
@@ -118,6 +122,9 @@ module nested_sampling_module
             ! Insert the new point
             call insert_baby_point(baby_point,live_data)
 
+            ! update the minimum and maximum values of the live points
+            min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
+            min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
 
 
             ! Calculate the new evidence (and check to see if we're accurate enough)

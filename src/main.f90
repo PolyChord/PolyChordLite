@@ -41,7 +41,7 @@ program main
     ! This one is a basic gaussian log likelihood
     M%loglikelihood => gaussian_loglikelihood_corr
 
-    M%nDims=2                 ! Dimensionality of the space
+    M%nDims=24                 ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the

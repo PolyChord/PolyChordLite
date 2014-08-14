@@ -87,7 +87,7 @@ module settings_module
         !! set of live points (live_data) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood_bound
-        function samp(settings, seed_point, loglikelihood_bound, M,feedback) result(baby_point)
+        function samp(settings, seed_point, loglikelihood_bound, min_max_array, M,feedback) result(baby_point)
 
             import :: model
             import :: program_settings
@@ -105,6 +105,9 @@ module settings_module
 
             !> The current loglikelihood bound
             double precision, intent(in) :: loglikelihood_bound
+
+            !> The minimum and maximum values from each of the live points
+            double precision, intent(in),    dimension(:,:)   :: min_max_array
 
             !> Optional argument to cause the sampler to print out relevent information
             integer, intent(in), optional :: feedback
