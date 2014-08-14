@@ -23,13 +23,6 @@ module model_module
         !! h0 indicates the starting index, h1 the finishing index.
         integer :: h0,h1       
 
-        !> algorithm indices
-        !!
-        !! These are any variables attached to each live point, e.g. the number
-        !! of likelihood calls, or the estimated slice size.
-        !! a0 indicates the starting index, a1 the finishing index.
-        integer :: a0,a1       
-
         !> physical indices
         !!
         !! These are the coordinates in the physical space 
@@ -49,11 +42,55 @@ module model_module
         !! This is the likelihood attached to each live point
         integer :: l0          
 
+        !==========================================================================
         ! Prior details:
         !
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! Separable priors:
         !
+        ! These are priors which are separable in each parameter {x_i}:
+        ! pi(x_1,x_2,...) = pi_1(x_1) pi_2(x_2) ...
+        !
+        ! These may be subdivided into categories of prior. Currently supported
+        ! are:
+        ! 1) Uniform priors: 
+        !     - parameters  a, b 
+        !                       pi(x) = 1/(b-a)  if a<x<b
+        !                               0        otherwise
+        ! 2) Log-uniform priors
+        !     - parameters  a, b 
+        !                       pi(x) = log(a/b) * 1/x      if a<x<b
+        !                               0                   otherwise
+        ! 3) Gaussian priors
+        !     - parameters  mu, sigma 
+        !      pi(x) = 1/(sqrt(2pi)sigma) exp( -(x-mu)^2/(2*sigma^2) )
+        !
+        ! In general there will be <prior type>_num of each of these, and their
+        ! parameters are stored in the 2D array <prior type>_params, which has
+        ! shape (<prior type>_num, number of parameters)
+        !
+        ! These are stored sequentially in the hypercube array and physical
+        ! parameters array, in between the indices: 
+        !      <prior type>_index : <prior type>_index +<prior type>_num -1
+        !
+        ! If you wish to add a new separable prior type, follow the examples
+        ! above. You need to:
+        !   1) add <my type>_num, <my type>_params, <my type>_index as below
+        !   2) add code to allocate the array in the subroutine initialise_model
+        !   3) work out the transformation from the unit hypercube to the
+        !      physical parameters. To do this, you should calculate the inverse
+        !      function F^-1(x) of the cumulative distribution function of the
+        !      prior pi(x):
+        !       F(x) = int_{-inf}^x  pi(t) dt
+        !   4) Implement this transformation in the subroutine hypercube_to_physical
+        !   5) initialise the prior in main.f90 like so:
+        !      M%<my type>_num = <number of paramers with this type>
+        !      call initialise_model(M)
+        !      M%<my_type>_params = <parameter choices>
+        !
+        !--------------------------------------------------------------------------
         ! Uniform priors:
+        !
         !> The number of parameters with uniform priors
         integer                                        :: uniform_num   = 0
         !> The maximum and minimum of the uniform prior
@@ -63,31 +100,75 @@ module model_module
         double precision, allocatable, dimension(:,:)  :: uniform_params
         !> The starting index of the coordinates of the uniform parameters (in
         !! both physical and hypercube coordinates)
-        integer                                        :: uniform_index = 1
-
+        integer                                        :: uniform_index = 0
+        !
+        !--------------------------------------------------------------------------
         ! Log-uniform
+        !
         !> The number of parameters with log-uniform priors
         integer                                        :: log_uniform_num   = 0   
         !> The maximum and minimum of the log-uniform priors
         !!
-        !! This is a two dimensional array of shape (uniform_num,2).
+        !! This is a two dimensional array of shape (sorted_uniform_num,2).
         !! The first row is the minimum, the second the maximum
         double precision, allocatable, dimension(:,:)  :: log_uniform_params
         !> The starting index of the coordinates of the log-uniform parameters (in
         !! both physical and hypercube coordinates)
-        integer                                        :: log_uniform_index = 1
-
+        integer                                        :: log_uniform_index = 0
+        !
+        !--------------------------------------------------------------------------
         ! Gaussian 
+        !
         !> The number of parameters with Gaussian priors
         integer                                        :: gaussian_num   = 0   
         !> The mean and standard deviation of the Gaussian priors
         !!
-        !! This is a two dimensional array of shape (uniform_num,2).
+        !! This is a two dimensional array of shape (gaussian_num,2).
         !! The first row is the mean, the second the standard deviation
         double precision, allocatable, dimension(:,:)  :: gaussian_params
         !> The starting index of the coordinates of the Gaussian parameters (in
         !! both physical and hypercube coordinates)
-        integer                                        :: gaussian_index = 1
+        integer                                        :: gaussian_index = 0
+        !
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ! Non separable priors
+        !
+        ! These priors cannot be separated out, and must be transformed together
+        ! using joint conditionals.
+        !
+        ! These may be sub-divided into categories of multivariate prior.
+        ! Currently supported are:
+        !
+        ! 1) Sorted uniform priors
+        !     - parameters  x_min,x_max,N
+        !     
+        !    These are a set of variables {x_i} distributed uniformly in
+        !    [x_min,x_max] such that x_1<x_2<...<x_N
+        !    We transform using the distributions which are marginalised over
+        !    the greater parameters and conditioned on the lower parameters:
+        !
+        !    pi(x_1)                 = N/(x_N-x_min) * x_1^(N-1)     xmin<x<xmax
+        !                              0                             otherwise
+        !    pi(x_{i+1}|x_i,...,x_1) = 1/(x_N-x_i)   * x_1^(N-i-1)   x_i <x<xmax
+        !                              0                             otherwise
+        !--------------------------------------------------------------------------
+        ! Sorted uniform priors
+        !
+        !> The number of sets of sorted uniform priors.
+        integer                                        :: sorted_uniform_num   = 0   
+        !
+        !> The maximum and minimum of the sorted uniform priors
+        !! This is a two dimensional array of shape (sorted_uniform_num,3).
+        !!
+        !! The first row is the minimum, the second the maximum, and the third
+        !! is the number of parameters in the set.
+        !! columns indicate which set of parameters these belong to.
+        double precision, allocatable, dimension(:,:)  :: sorted_uniform_params
+        !> The starting index of the coordinates of the sorted uniform parameters (in
+        !! both physical and hypercube coordinates)
+        integer, allocatable, dimension(:)             :: sorted_uniform_index
+        !
+        !==========================================================================
 
 
         procedure(loglike), pass(M), pointer :: loglikelihood 
@@ -112,7 +193,8 @@ module model_module
     contains
 
 
-    subroutine initialise_model(M)
+    subroutine allocate_live_indices(M)
+        implicit none
         type(model), intent(inout) :: M
 
         ! Total number of parameters
@@ -133,8 +215,56 @@ module model_module
         ! Loglikelihood index
         M%l0=M%nTotal
 
+    end subroutine allocate_live_indices
 
-    end subroutine initialise_model
+    subroutine allocate_prior_arrays(M)
+        implicit none
+        type(model), intent(inout) :: M
+
+        ! Allocate the prior arrays if they're required, and not already
+        ! allocated
+        if(M%uniform_num>0 .and. .not. allocated(M%uniform_params) ) then
+            allocate( M%uniform_params(M%uniform_num,2) )
+            M%uniform_params(:,1) = 0d0
+            M%uniform_params(:,2) = 1d0
+        end if
+        if(M%log_uniform_num>0 .and. .not. allocated(M%log_uniform_params) ) then
+            allocate( M%log_uniform_params(M%log_uniform_num,2) )
+            M%log_uniform_params(:,1) = exp(0d0)
+            M%log_uniform_params(:,2) = exp(1d0)
+        end if
+        if(M%gaussian_num>0 .and. .not. allocated(M%gaussian_params) ) then
+            allocate( M%gaussian_params(M%gaussian_num,2) )
+            M%log_uniform_params(:,1) = 0d0
+            M%log_uniform_params(:,2) = 1d0
+        end if
+
+        if(M%sorted_uniform_num>0) then
+            if (.not. allocated(M%sorted_uniform_params) ) allocate( M%sorted_uniform_params(M%sorted_uniform_num,3) )
+            if (.not. allocated(M%sorted_uniform_index)  ) allocate( M%sorted_uniform_index(M%sorted_uniform_num) )
+            M%sorted_uniform_params(:,1) = 0d0
+            M%sorted_uniform_params(:,2) = 1d0
+            M%sorted_uniform_params(:,3) = nint(0d0)
+        end if
+    end subroutine allocate_prior_arrays
+        
+        
+    subroutine set_up_prior_indices(M)
+        implicit none
+        type(model), intent(inout) :: M
+        integer :: i
+
+        ! Set up the indices
+        M%uniform_index        = 1
+        M%log_uniform_index    = M%uniform_index     + M%uniform_num
+        M%gaussian_index       = M%log_uniform_index + M%log_uniform_num
+
+        do i=1,M%sorted_uniform_num
+            M%sorted_uniform_index(i) = M%gaussian_index  + sum(nint(M%sorted_uniform_params(:i,3)))
+        end do
+
+    end subroutine set_up_prior_indices
+
 
 
     subroutine calculate_point(M, live_data)
@@ -201,6 +331,9 @@ module model_module
             physical_coords(M%gaussian_index:) = M%gaussian_params(:,1) + M%gaussian_params(:,2) * physical_coords(M%gaussian_index:)
 
         end if
+
+        ! Sorted uniform priors:
+        ! 
 
 
 

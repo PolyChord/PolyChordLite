@@ -157,10 +157,6 @@ module example_likelihoods
                     mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(M%nDims) -1d0)
                 end do
 
-                ! Set them all on the center to create a 'boo-bah' structure
-                mu(:,:) = 0.5d0
-
-
 
                 ! Generate a i random covariance matricesi, their inverses and logdets
                 do i=1,num_peaks

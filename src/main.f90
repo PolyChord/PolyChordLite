@@ -4,7 +4,8 @@ program main
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
     use nested_sampling_module, only: NestedSampling
-    use model_module,           only: model, initialise_model
+    use model_module,           only: model, allocate_live_indices, allocate_prior_arrays, set_up_prior_indices
+    
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
@@ -37,11 +38,11 @@ program main
 
 
     ! ------- (1b) Initialise the model -------
-    ! Assign the likelihood function
-    ! This one is a basic gaussian log likelihood
+    ! (i) Assign the likelihood function
     M%loglikelihood => gaussian_loglikelihood_corr
 
-    M%nDims=24                 ! Dimensionality of the space
+    ! (ii) Set the dimensionality
+    M%nDims=3                  ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the
@@ -49,17 +50,25 @@ program main
     ! 2) the smallest plausible chord length
         
 
-    ! set priors as uniform with all
-    M%uniform_num = M%nDims
-    allocate( M%uniform_params(M%uniform_num,2) )
-    M%uniform_params(:,1) = 0
-    M%uniform_params(:,2) = 1
-    M%uniform_index = 1
+    ! (iii) Assign the priors
+    !       
+    M%uniform_num = M%nDims-1
+    M%gaussian_num = 1
+
+    call allocate_live_indices(M)
+
+    call allocate_prior_arrays(M)
+
+    !       - settings of priors
+    M%uniform_params(:,1) = 0d0
+    M%uniform_params(:,2) = 1d0
+
+    M%gaussian_params(:,1) = 0.5d0
+    M%gaussian_params(:,2) = 100d0
+
+    call set_up_prior_indices(M)
 
 
-
-    
-    call initialise_model(M)   ! Configure the rest of the model
 
 
     ! ------- (1c) Initialise the program settings -------
