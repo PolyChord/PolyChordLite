@@ -39,9 +39,9 @@ program main
     ! ------- (1b) Initialise the model -------
     ! Assign the likelihood function
     ! This one is a basic gaussian log likelihood
-    M%loglikelihood => gaussian_loglikelihood
+    M%loglikelihood => gaussian_loglikelihood_corr
 
-    M%nDims=2                  ! Dimensionality of the space
+    M%nDims=2                 ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the
@@ -71,7 +71,7 @@ program main
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%save_dead            =  .false.                 !don't save any dead points
 
-    settings%num_chords           =  20                     !number of chords to draw        
+    settings%num_chords           =  6                      !number of chords to draw        
 
 
     ! ======= (2) Perform Nested Sampling =======

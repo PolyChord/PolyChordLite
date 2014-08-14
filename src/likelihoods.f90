@@ -1,6 +1,6 @@
 module example_likelihoods
     use model_module,    only: model
-    use utils_module,    only: logzero
+    use utils_module,    only: logzero,TwoPi
 
     contains
 
@@ -22,8 +22,6 @@ module example_likelihoods
 
         double precision, dimension(M%nDims) :: sigma ! Standard deviation (uncorrelated) 
         double precision, dimension(M%nDims) :: mu    ! Mean
-
-        double precision, parameter :: TwoPi = 8d0*atan(1d0) ! 2\pi in double precision
 
         
         ! Initialise the mean and standard deviation
@@ -76,7 +74,6 @@ module example_likelihoods
 
         logical,save :: initialised=.false.
 
-        double precision, parameter :: TwoPi = 8d0*atan(1d0) ! 2\pi in double precision
         double precision, parameter :: sigma = 0.01 ! width of peak
 
         ! Feedback if requested
@@ -134,7 +131,6 @@ module example_likelihoods
 
         logical,save :: initialised=.false.
 
-        double precision, parameter :: TwoPi = 8d0*atan(1d0) ! 2\pi in double precision
         double precision, parameter :: sigma = 0.01 ! width of peak
         integer, parameter :: num_peaks = 10
         integer :: i !iterator
@@ -239,7 +235,6 @@ module example_likelihoods
         !> The precomputed logarithm of the determinant
         double precision, intent(in) :: logdetcovmat
 
-        double precision, parameter :: TwoPi = 8d0*atan(1d0) ! 2\pi in double precision
 
         ! The output
         double precision :: log_gauss

@@ -3,6 +3,9 @@ module utils_module
     !> The effective value of \f$ log(0) \f$
     double precision, parameter :: logzero = -1d300
 
+    !> \f$ 2\pi \f$ in double precision
+    double precision, parameter :: TwoPi = 8d0*atan(1d0)
+
 
     contains
 

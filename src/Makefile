@@ -27,7 +27,7 @@ endif
 #FCFLAGS += -I/usr/include
 
 # libraries needed for linking, unused in the examples
-LDFLAGS = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
+LDFLAGS = #-lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lmkl_lapack -lmkl_blas95 -lmkl_vml
 
 # List of executables to be built within the package
 PROGRAMS = main
@@ -73,7 +73,7 @@ main: main.o $(MODULES)
 # used in order to list only the first prerequisite (the source file)
 # and not the additional prerequisites such as module or include files
 %.o: %.f90
-	$(FC) $(FCFLAGS) -c $<
+	$(FC) $(FCFLAGS) -c $< $(LDFLAGS)
 
 %.o: %.F90
 	$(FC) $(FCFLAGS) -c $<
