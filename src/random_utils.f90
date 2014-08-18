@@ -1,5 +1,6 @@
-include 'mkl_vsl.f90'  ! Include the Intel Math Kernel Library - Vector Statistical Library
-                       ! This is a library used for generating random numbers optimally on intel cores
+! Include the Intel Math Kernel Library - Vector Statistical Library
+! This is a library used for generating random numbers optimally on intel cores 
+include 'mkl_vsl.f90'  
 
 !> Module containing utilities to generate random numbers
 !!
@@ -14,7 +15,12 @@ module random_module
     use mkl_vsl_type
     use mkl_vsl
 
-    implicit none
+#ifdef MPI
+    use mpi_module
+#endif
+
+    implicit none           
+
 
     !> The stream state for vector random number generators
     type (vsl_stream_state) :: rng_stream
@@ -43,7 +49,7 @@ module random_module
     !!
     !! @todo Write seed to log file
     !!
-    !! @todo parallel stream initialisation
+    !! @todo parallel stream initialisation : check that they're independent
 
     subroutine initialise_random(seed_input)
         implicit none
@@ -61,11 +67,19 @@ module random_module
 
         if (present(seed_input)) then
             ! If the seed argument is present, initialise stream with this
+#ifdef MPI
+            errcode=vslnewstream( rng_stream, basic_rng_type,  seed_input + mpi_rank() )
+#else
             errcode=vslnewstream( rng_stream, basic_rng_type,  seed_input )
+#endif
         else
             ! Otherwise initialise it with the system time
             call system_clock(seed)
+#ifdef MPI
+            errcode=vslnewstream( rng_stream, basic_rng_type,  seed + mpi_rank() )
+#else
             errcode=vslnewstream( rng_stream, basic_rng_type,  seed )
+#endif
         end if
 
     end subroutine initialise_random

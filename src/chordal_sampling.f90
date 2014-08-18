@@ -64,9 +64,10 @@ module chordal_module
 
         do i=1,settings%num_chords
 
+            ! Get a new random direction
             nhat = random_direction(M%nDims) 
 
-            ! generate a new random point along the chord defined by baby_point and nhat
+            ! Generate a new random point along the chord defined by baby_point and nhat
             baby_point = random_chordal_point( nhat, baby_point, loglikelihood_bound,min_max_array, M)
         end do
 
@@ -109,7 +110,7 @@ module chordal_module
         u_bound(M%d0) = seed_point(M%d0)
         l_bound(M%d0) = 0
 
-        ! set the likelihoods of start bounds so that the loop below is entered
+        ! set the likelihoods of start bounds so that the loops below are entered
         u_bound(M%l0) = loglikelihood_bound
         l_bound(M%l0) = loglikelihood_bound
 

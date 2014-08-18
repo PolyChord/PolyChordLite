@@ -16,9 +16,9 @@ FC = mpif90
 # flags for debugging or for maximum performance, comment as necessary
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
-FCFLAGS = -g -traceback -fp-stack-check -check all -fpe0 -warn all -mkl
+FCFLAGS = -g -traceback -fp-stack-check -check all -fpe0 -warn all -mkl -fpp -DMPI
 else
-FCFLAGS = -O3 -mkl -fpp 
+FCFLAGS = -O3 -mkl -fpp -xHost -DMPI
 # O3  : maximum optimisation
 # mkl : use the mkl library
 # fpp : perform preprocessing
@@ -40,19 +40,20 @@ all: $(PROGRAMS)
 # prog3 and prog4, modify to suit your needs
 # ======================================================================
 
-MODULES = random_utils.o model.o settings.o feedback.o evidence.o likelihoods.o utils.o \
+MODULES = mpi_utils.o random_utils.o model.o settings.o feedback.o evidence.o likelihoods.o utils.o \
 		  test_sampling.o nested_sampling.o chordal_sampling.o
 
+mpi_utils.o:
 utils.o:
 model.o:                    utils.o
-random_utils.o:             utils.o
+random_utils.o:             mpi_utils.o utils.o
 settings.o:                 model.o 
-likelihoods.o:              model.o utils.o 
+likelihoods.o:              mpi_utils.o model.o utils.o 
 evidence.o:                 settings.o
 feedback.o:                 model.o settings.o utils.o
 chordal_sampling.o:         model.o utils.o random_utils.o
 test_sampling.o:            model.o random_utils.o
-nested_sampling.o:   		feedback.o model.o utils.o random_utils.o settings.o\
+nested_sampling.o:   		mpi_utils.o feedback.o model.o utils.o random_utils.o settings.o\
                             chordal_sampling.o test_sampling.o 
 main.o:                     $(MODULES)
 

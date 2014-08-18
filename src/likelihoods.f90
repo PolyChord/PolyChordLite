@@ -1,6 +1,9 @@
 module example_likelihoods
     use model_module,    only: model
     use utils_module,    only: logzero,TwoPi
+#ifdef MPI
+    use mpi_module
+#endif
 
     contains
 
@@ -84,19 +87,42 @@ module example_likelihoods
             end if
             gaussian_loglikelihood_corr = logzero
 
-            if(.not. initialised) then
-                allocate(invcovmat(M%nDims,M%nDims), &
-                         mu(M%nDims))
-
-                ! Generate a random mean vector, localised around the center 
-                mu = 0.5d0
-                ! Generate a random covariance vector and its inverse and logdet
-                call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims)
-
-                initialised=.true.
-            end if
-
             return
+        end if
+
+        if(.not. initialised) then
+            allocate(invcovmat(M%nDims,M%nDims), &
+                mu(M%nDims))
+
+            ! Create a mean vector at the center of the space
+            mu = 0.5d0
+#ifdef MPI
+            ! Generate a random covariance matrix, its inverse and logdet on the root node
+            if(mpi_rank()==0) call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims)
+            ! Broadcast the covariance matrix and normalisation data to the
+            ! rest of the nodes
+            ! Covariance matrix:
+            call MPI_BCAST(           &
+                invcovmat,            & ! inverse covariance matrix data to be broadcast
+                M%nDims*M%nDims,      & ! size of the data
+                MPI_DOUBLE_PRECISION, & ! type of data
+                0,                    & ! root node id
+                MPI_COMM_WORLD,       & ! communication info
+                mpierror)               ! error (from mpiutils)
+            ! normalisation logdet covmat
+            call MPI_BCAST(           &
+                logdetcovmat,         & ! log(determinant of inverse covariance matrix) data to be broadcast
+                1,                    & ! size of the data
+                MPI_DOUBLE_PRECISION, & ! type of data
+                0,                    & ! root node id
+                MPI_COMM_WORLD,       & ! communication info
+                mpierror)               ! error (from mpiutils)
+#else
+            ! Generate a random covariance matrix, its inverse and logdet
+            call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims)
+#endif
+
+            initialised=.true.
         end if
 
 
@@ -115,6 +141,9 @@ module example_likelihoods
     function gaussian_loglikelihood_cluster(M,theta,feedback)
         use random_module, only: random_reals
         use utils_module,  only: logsumexp
+#ifdef MPI
+        use mpi_module
+#endif
         implicit none
         class(model),     intent(in)               :: M
         double precision, intent(in), dimension(:) :: theta
@@ -145,29 +174,70 @@ module example_likelihoods
                 write(*,'( "  sigma     = ",E15.7 )') sigma
             end if
 
-            if(.not. initialised) then
-                allocate(invcovmat(M%nDims,M%nDims,num_peaks),&
-                         mu(M%nDims,num_peaks),               &
-                         logdetcovmat(num_peaks),             &
-                         log_likelihoods(num_peaks)           &
-                     )
+            gaussian_loglikelihood_cluster = logzero
+            return
+        end if
 
-                ! Generate num_peaks random mean vectors, localised around the center 
+        if(.not. initialised) then
+            allocate(invcovmat(M%nDims,M%nDims,num_peaks),&
+                mu(M%nDims,num_peaks),               &
+                logdetcovmat(num_peaks),             &
+                log_likelihoods(num_peaks)           &
+                )
+
+#ifdef MPI
+
+            if(mpi_rank()==0) then
+                ! Generate num_peaks random mean vectors, localised around the center on the root node
                 do i=1,num_peaks
                     mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(M%nDims) -1d0)
                 end do
-
-
-                ! Generate a i random covariance matricesi, their inverses and logdets
+                ! Generate num_peaks random covariance matrices, their inverses and logdets on the root node
                 do i=1,num_peaks
                     call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims)
                 end do
-                write(*,'(<M%nDims>E12.5)') invcovmat(:,:,1)
-                initialised=.true.
             end if
+            ! Broadcast the means, covariances and normalisation data to the
+            ! rest of the nodes
+            ! Means:
+            call MPI_BCAST(                &
+                mu,                        & ! inverse covariance matrix data to be broadcast
+                M%nDims*num_peaks,         & ! size of the data
+                MPI_DOUBLE_PRECISION,      & ! type of data
+                0,                         & ! root node id
+                MPI_COMM_WORLD,            & ! communication info
+                mpierror)                    ! error (from mpiutils)
 
-            gaussian_loglikelihood_cluster = logzero
-            return
+            ! Inverse Covariance matrices
+            call MPI_BCAST(                &
+                invcovmat,                 & ! inverse covariance matrix data to be broadcast
+                M%nDims*M%nDims*num_peaks, & ! size of the data
+                MPI_DOUBLE_PRECISION,      & ! type of data
+                0,                         & ! root node id
+                MPI_COMM_WORLD,            & ! communication info
+                mpierror)                    ! error (from mpiutils)
+
+            ! normalisation logdetcovmat
+            call MPI_BCAST(                &
+                logdetcovmat,              & ! log(determinant of inverse covariance matrix) data to be broadcast
+                num_peaks,                 & ! size of the data
+                MPI_DOUBLE_PRECISION,      & ! type of data
+                0,                         & ! root node id
+                MPI_COMM_WORLD,            & ! communication info
+                mpierror)                    ! error (from mpiutils)
+#else
+            ! Generate num_peaks random mean vectors, localised around the center 
+            do i=1,num_peaks
+                mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(M%nDims) -1d0)
+            end do
+
+            ! Generate num_peaks random covariance matrices, their inverses and logdets
+            do i=1,num_peaks
+                call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims)
+            end do
+#endif
+
+            initialised=.true.
         end if
 
 

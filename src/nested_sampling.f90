@@ -5,6 +5,9 @@ module nested_sampling_module
 
     !> Main subroutine for computing a generic nested sampling algorithm
     subroutine NestedSampling(M,settings)
+#ifdef MPI
+        use mpi_module
+#endif
         use model_module,    only: model
         use utils_module,    only: logzero
         use settings_module, only: program_settings
@@ -48,6 +51,13 @@ module nested_sampling_module
 
         double precision,    dimension(M%nDims,2)   :: min_max_array
 
+#ifdef MPI
+        double precision, allocatable, dimension(:,:) :: live_data_local
+        integer :: nprocs
+        integer :: myrank
+        integer :: nlive_local
+        integer :: ierror
+#endif
 
         !------- 1) Initialisation ---------------------------------
         ! Need to initialise
@@ -57,16 +67,85 @@ module nested_sampling_module
         !  * mean_likelihood_calls
         !  * ndead
 
-        ! Create initial live points
+
+
+
+
+
+#ifdef MPI
+        nprocs = mpi_size()  ! Get the number of MPI procedures
+        myrank = mpi_rank()  ! Get the MPI label of the current processor
+
+        if(myrank==0) call write_opening_statement(M,settings)
+#else
+        call write_opening_statement(M,settings) 
+#endif
+
+
+
+
+
+#ifdef MPI
+        if(myrank==0) call write_started_generating(settings%feedback)
+
+        ! Create initial live points on all processors, and then merge them onto
+        ! the root with MPI_GATHER
+
+        ! First allocate a local live_data array which is nlive/nprocs on each
+        ! of the nprocs nodes
+        nlive_local = ceiling(settings%nlive/(nprocs+0d0))
+        allocate(live_data_local(M%nTotal,nlive_local))
+
+        ! Generate nlive/nprocs live points on each of the nprocs nodes
+        live_data_local = GenerateLivePoints(M,nlive_local)
+
+        ! Sort the live points in order of likelihood, first point lowest, last point highest on every node
+        call quick_sort(live_data_local)
+
+        ! Gather all of this data onto the root node
+        call MPI_GATHER(          &  
+            live_data_local,      & ! sending array
+            M%nTotal*nlive_local, & ! number of elements to be sent
+            MPI_DOUBLE_PRECISION, & ! type of element to be sent
+            live_data,            & ! recieving array
+            M%nTotal*nlive_local, & ! number of elements to be recieved from each node
+            MPI_DOUBLE_PRECISION, & ! type of element recieved
+            0,                    & ! root node address
+            MPI_COMM_WORLD,       & ! communication info
+            mpierror)               ! error (from module mpi_module)
+
+        ! deallocate the now unused local live points array to save memory
+        deallocate(live_data_local)
+
+        ! Sort the live points in order of likelihood, first point lowest, last point highest on the root node
+        ! (note that this is made easier by the fact that this array is semi-sorted
+        if(myrank==0) call quick_sort(live_data)
+
+        if(myrank==0) call write_finished_generating(settings%feedback) 
+#else
         call write_started_generating(settings%feedback)
-        live_data = GenerateLivePoints(M,settings)
+
+        ! Create initial live points
+        live_data = GenerateLivePoints(M,settings%nlive)
+
+        ! Sort them in order of likelihood, first point lowest, last point highest
+        call quick_sort(live_data)
+
         call write_finished_generating(settings%feedback)
+#endif
+
+
+
+#ifdef MPI
+        if (myrank>0) return
+#endif
+
+
+        ! definately more samples needed than this
+        more_samples_needed = .true.
 
         ! Set the number of likelihood calls for each point to 1
         live_data(M%d0,:) = 1
-
-        ! Definitely need more samples than this
-        more_samples_needed=.true.
 
         ! Set the initial trial values of the chords as the diagonal of the hypercube
         live_data(M%d0+1,:) = sqrt(M%nDims+0d0)
@@ -75,20 +154,15 @@ module nested_sampling_module
         ! and pass the maximum likelihood value in the first argument
         ! (note the negative number of dead points in the third argument to trigger initialisation). 
         evidence_vec = settings%evidence_calculator(                                       &
-                                  live_data(M%l0,settings%nlive),                          &
-                                  logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0) , &
-                                  -1,more_samples_needed)
+            live_data(M%l0,settings%nlive),                          &
+            logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0) , &
+            -1,more_samples_needed)
 
         ! initialise the mean number of likelihood calls to 1
         mean_likelihood_calls = 1d0
 
         ! no dead points originally
         ndead = 0
-
-        ! Get the maximum and minimum coordinates in each dimension for the live points
-        min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
-        min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
-
 
         ! If we're saving the dead points, open the relevant file
         if (settings%save_dead) open(unit=222, file='dead_points.dat')
@@ -97,7 +171,11 @@ module nested_sampling_module
 
 
 
-        do while (more_samples_needed)
+        do while ( more_samples_needed )
+
+            ! update the minimum and maximum values of the live points
+            min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
+            min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
 
             ! Record the point that's just died
             late_point = live_data(:,1)
@@ -121,11 +199,6 @@ module nested_sampling_module
 
             ! Insert the new point
             call insert_baby_point(baby_point,live_data)
-
-            ! update the minimum and maximum values of the live points
-            min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
-            min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
-
 
             ! Calculate the new evidence (and check to see if we're accurate enough)
             evidence_vec =  settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed)
@@ -157,45 +230,37 @@ module nested_sampling_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(M,settings) result(live_data)
+    function GenerateLivePoints(M,nlive) result(live_data)
         use model_module,    only: model, calculate_point
         use random_module,   only: random_reals
-        use settings_module, only: program_settings
-        use feedback_module, only: write_generating_live_points 
+        use feedback_module, only: write_generating_live_points,write_started_generating,write_finished_generating
         implicit none
 
         !> The model details (loglikelihood, priors, ndims etc...)
         type(model), intent(in) :: M
 
-        !> The program settings
-        type(program_settings), intent(in) :: settings
+        !> The number of points to be generated
+        integer, intent(in) :: nlive
 
         !live_data(:,i) constitutes the information in the ith live point in the unit hypercube: 
         ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(M%nTotal,settings%nlive) :: live_data
+        double precision, dimension(M%nTotal,nlive) :: live_data
 
         ! Loop variable
         integer i_live
 
+        ! initialise live points at zero
+        live_data = 0d0
 
-        ! Generate nlive points
-        do i_live=1, settings%nlive
+        do i_live=1,nlive
 
-            ! Generate a random coordinate in the first nDims rows of live_data
+            ! Generate a random coordinate
             live_data(:,i_live) = random_reals(M%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
             call calculate_point( M, live_data(:,i_live) )
 
-            call write_generating_live_points(settings%feedback,i_live,settings%nlive)
-
-
         end do
-
-        ! Sort them in order of likelihood, first argument lowest, last argument highest
-        call quick_sort(live_data)
-
-
 
     end function GenerateLivePoints
 
