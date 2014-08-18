@@ -185,10 +185,15 @@ module nested_sampling_module
             late_likelihood = late_point(M%l0)
 
             ! Select a seed point for the generator
-            !   - get a random number in [1,nlive-1]
-            point_number = random_integers(1,settings%nlive-1) 
-            !   - get this point from live_data  (excluding the possibility of drawing the late point)
-            seed_point = live_data(:,1+point_number(1))
+            !  -excluding the points which have likelihoods equal to the
+            !   loglikelihood bound
+            seed_point(M%l0)=late_likelihood
+            do while (seed_point(M%l0)<=late_likelihood)
+                ! get a random number in [1,nlive]
+                point_number = random_integers(1,settings%nlive) 
+                ! get this point from live_data 
+                seed_point = live_data(:,point_number(1))
+            end do
 
             ! Generate a new point within the likelihood bound of the late point
             baby_point = settings%sampler(seed_point, late_likelihood, min_max_array, M)
