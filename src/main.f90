@@ -49,7 +49,7 @@ program main
 
     ! ------- (1c) Initialise the model -------
     ! (i) Assign the likelihood function
-    M%loglikelihood => gaussian_loglikelihood_corr
+    M%loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
     M%nDims=2                  ! Dimensionality of the space
@@ -84,7 +84,7 @@ program main
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
-    settings%save_dead            =  .false.                 !don't save any dead points
+    settings%save_dead            =  .true.                  !don't save any dead points
 
     settings%num_chords           =  6                       !number of chords to draw        
 

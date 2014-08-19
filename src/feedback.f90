@@ -39,7 +39,7 @@ module feedback_module
             write(*,'("nDims      :",I8)')   M%nDims
             write(*,'("nDerived   :",I8)')   M%nDerived
             temp    = M%loglikelihood(temp(M%p0:M%p1),settings%feedback) ! Write out the likelihood
-            temp    = settings%sampler(temp,logzero,temp2,M,settings%feedback) ! Write out the sampler
+            temp    = settings%sampler(temp,temp2,M,settings%feedback) ! Write out the sampler
         end if
        
 

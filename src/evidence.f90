@@ -21,9 +21,9 @@ module evidence_module
     !!
     !! The algorithm terminates when the contribution from the live evidence is
     !! less than a fraction of the contribution from the dead evidence
-    function KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed) result (evidence_vec)
+    subroutine KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed, evidence_vec)
         use settings_module
-        use utils_module, only: logzero
+        use utils_module, only: logzero,logaddexp,logsubexp
 
         implicit none
 
@@ -40,31 +40,32 @@ module evidence_module
         !> number of dead points/ number of iterations
         integer,                intent(in) :: ndead
 
+        !> vector containing [logevidence, logevidence error,logZ_dead,logZ2_dead,logZ2_deadp,logmean_loglike_live]
+        double precision, intent(inout), dimension(6) :: evidence_vec
+
         ! ------- Outputs ------- 
         !> Whether we have obtained enough samples for an accurate evidence
         logical,intent(out) :: more_samples_needed
 
-        ! vector containing [logevidence, logevidence error]
-        double precision, dimension(2) :: evidence_vec
 
 
         ! ------- Local Variables -------
 
         ! The accumulated evidence associated with the dead points
         ! Z_dead = 1/nlive  sum_k L_k  (nlive/(nlive+1))^k
-        double precision, save :: logZ_dead = logzero
+        double precision :: logZ_dead = logzero
 
         ! The accumulated evidence squared Z^2
         ! Z2_dead = 1/nlive  sum_k L_k  (nlive/(nlive+1))^k * Z2_deadp_k
-        double precision, save :: logZ2_dead = logzero
+        double precision :: logZ2_dead = logzero
 
         ! part of the accumulated evidence squared
         ! Z2_deadp = 1/(nlive+1)  sum_k L_k  ((nlive+1)/(nlive+2))^k
-        double precision, save :: logZ2_deadp = logzero
+        double precision :: logZ2_deadp = logzero
 
         ! the mean log likelihood of the live points
         ! mean_log_like_live = 1/nlive * sum(L_live)
-        double precision, save :: logmean_loglike_live=0
+        double precision :: logmean_loglike_live=0
 
         ! Two measures of volume at the kth iteration 
         ! logX_k = (  nlive  /(nlive+1))^k
@@ -82,20 +83,6 @@ module evidence_module
         double precision,parameter :: log2 = log(2d0)
 
 
-        ! Throughout the calculation, we measure all likelihoods relative to
-
-
-        ! If the function is called with a non-positive ndead, then simply store
-        ! the mean_log_likelihood that has been calculated and passed via
-        ! new_loglikelihood
-        if (ndead <= 0) then
-            ! save the average value
-            logmean_loglike_live = old_loglikelihood
-            more_samples_needed = .true.
-            return
-        end if
-
-
         ! Get the number of live points (and convert to double precision implicitly)
         lognlive = log(settings%nlive+0d0)
         lognlivep1 = log(settings%nlive+1d0)
@@ -106,6 +93,11 @@ module evidence_module
         logX_k = ndead * (lognlive  -lognlivep1)
         logY_k = ndead * (lognlivep1-lognlivep2) 
 
+        ! Grab the accumulated values
+        logZ_dead           = evidence_vec(3)
+        logZ2_dead          = evidence_vec(4)
+        logZ2_deadp         = evidence_vec(5)
+        logmean_loglike_live= evidence_vec(6)
 
         ! Add the evidence contribution of the kth dead point to the accumulated dead evidence
         logZ_dead = logaddexp(logZ_dead , old_loglikelihood+ logX_k -lognlive )
@@ -130,17 +122,20 @@ module evidence_module
         logmean = logaddexp(logZ_dead, logmean_loglike_live + logX_k) 
 
         ! Calculate the variance in the evidence
-        logvariance = logsubexp(log(2d0) +logZ2_dead,2*logZ_dead)                                         ! dead contribution
+        logvariance = logsubexp(log2 +logZ2_dead,2*logZ_dead)                                         ! dead contribution
 
         logvariance = logaddexp(logvariance,2*logmean_loglike_live + logX_k+ logsubexp(logY_k,logX_k))    ! live contribution
 
-        logvariance = logaddexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ2_deadp ) ! cross correlation
-        logvariance = logsubexp(logvariance, log(2d0) + logmean_loglike_live + logX_k + logZ_dead       )
+        logvariance = logaddexp(logvariance, log2 + logmean_loglike_live + logX_k + logZ2_deadp ) ! cross correlation
+        logvariance = logsubexp(logvariance, log2 + logmean_loglike_live + logX_k + logZ_dead       )
 
         ! Pass the mean and variance to evidence_vec in order to be outputted
         evidence_vec(1) = logmean 
         evidence_vec(2) = logvariance 
-
+        evidence_vec(3) = logZ_dead            
+        evidence_vec(4) = logZ2_dead           
+        evidence_vec(5) = logZ2_deadp          
+        evidence_vec(6) = logmean_loglike_live 
 
 
         ! Test to see whether we have enough samples. If the contribution from
@@ -154,37 +149,9 @@ module evidence_module
 
 
 
-    end function KeetonEvidence
+    end subroutine KeetonEvidence
 
 
-    function logaddexp(a,b)
-        implicit none
-        double precision :: a
-        double precision :: b
-        double precision :: logaddexp
-
-        if (a>b) then
-            logaddexp = a + log(exp(b-a) + 1)
-        else
-            logaddexp = b + log(exp(a-b) + 1)
-        end if
-
-    end function logaddexp
-
-    function logsubexp(a,b)
-        use utils_module, only: logzero
-        implicit none
-        double precision :: a
-        double precision :: b
-        double precision :: logsubexp
-
-        if(a>b) then
-            logsubexp = a + log(1-exp(b-a))
-        else 
-            logsubexp = logzero
-        end if
-
-    end function logsubexp
 
 
 end module evidence_module

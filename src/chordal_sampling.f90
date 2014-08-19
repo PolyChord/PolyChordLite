@@ -4,7 +4,7 @@ module chordal_module
 
     contains
 
-    function ChordalSampling(settings,seed_point, loglikelihood_bound,min_max_array, M,feedback)  result(baby_point)
+    function ChordalSampling(settings,seed_point,min_max_array, M,feedback)  result(baby_point)
         use settings_module, only: program_settings
         use random_module, only: random_skewed_direction,random_direction,random_reals,random_integers
         use model_module,  only: model, calculate_point
@@ -22,9 +22,6 @@ module chordal_module
         !> The seed point
         double precision, intent(in), dimension(M%nTotal)   :: seed_point
 
-        !> The current loglikelihood bound
-        double precision, intent(in) :: loglikelihood_bound
-
         !> The minimum and maximum values from each of the live points
         double precision, intent(in),    dimension(:,:)   :: min_max_array
 
@@ -32,7 +29,8 @@ module chordal_module
         integer, intent(in), optional :: feedback
 
         ! ------- Outputs -------
-        !> The newly generated point
+        !> The newly generated point, plus the loglikelihood bound that
+        !! generated it
         double precision,    dimension(M%nTotal)   :: baby_point
 
 
@@ -68,7 +66,7 @@ module chordal_module
             nhat = random_direction(M%nDims) 
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point( nhat, baby_point, loglikelihood_bound,min_max_array, M)
+            baby_point = random_chordal_point( nhat, baby_point,min_max_array, M)
         end do
 
         ! de-scale the unit hypercube so that 0->min, 1->max of min_max_array
@@ -78,7 +76,7 @@ module chordal_module
 
 
 
-    function random_chordal_point(nhat,seed_point,loglikelihood_bound,min_max_array,M) result(baby_point)
+    function random_chordal_point(nhat,seed_point,min_max_array,M) result(baby_point)
         use model_module,  only: model, calculate_point
         use utils_module,  only: logzero, distance
         use random_module, only: random_reals
@@ -90,8 +88,6 @@ module chordal_module
         double precision, intent(in),    dimension(M%nDims)   :: nhat
         !> The start point
         double precision, intent(in),    dimension(M%nTotal)   :: seed_point
-        !> The root value to find
-        double precision, intent(in) :: loglikelihood_bound
         !> The minimum and maximum values from each of the live points
         double precision, intent(in),    dimension(M%nDims,2)   :: min_max_array
 
@@ -111,15 +107,15 @@ module chordal_module
         l_bound(M%d0) = 0
 
         ! set the likelihoods of start bounds so that the loops below are entered
-        u_bound(M%l0) = loglikelihood_bound
-        l_bound(M%l0) = loglikelihood_bound
+        u_bound(M%l0) = seed_point(M%l1)
+        l_bound(M%l0) = seed_point(M%l1)
 
         ! set the trial chord length at half the bound of the old length
         trial_chord_length = seed_point(M%d0+1)/2d0 
 
         ! Expand the region by doubling until u_bound has a loglikelihood less
         ! than the log likelihood bound
-        do while(u_bound(M%l0) >= loglikelihood_bound )
+        do while(u_bound(M%l0) >= seed_point(M%l1) )
             trial_chord_length = 2d0*trial_chord_length
             u_bound(M%h0:M%h1) = seed_point(M%h0:M%h1) + nhat * trial_chord_length
             call de_scale(u_bound(M%h0:M%h1),min_max_array)
@@ -129,7 +125,7 @@ module chordal_module
 
         ! repeat for the l_bound
         trial_chord_length = trial_chord_length/2
-        do while(l_bound(M%l0) >= loglikelihood_bound )
+        do while(l_bound(M%l0) >= seed_point(M%l1) )
             trial_chord_length = 2*trial_chord_length
             l_bound(M%h0:M%h1) = seed_point(M%h0:M%h1) - nhat * trial_chord_length
             call de_scale(l_bound(M%h0:M%h1),min_max_array)
@@ -144,6 +140,9 @@ module chordal_module
             distance(u_bound(M%h0:M%h1),seed_point(M%h0:M%h1)),&
             distance(l_bound(M%h0:M%h1),seed_point(M%h0:M%h1))&
             ) 
+
+        ! Pass on the loglikelihood bound
+        baby_point(M%l1) = seed_point(M%l1)
 
 
         contains
@@ -178,7 +177,7 @@ module chordal_module
             call re_scale(finish_point(M%h0:M%h1),min_max_array)
 
             ! If we're not within the likelihood bound then we need to sample further
-            if( finish_point(M%l0) < loglikelihood_bound ) then
+            if( finish_point(M%l0) < seed_point(M%l1) ) then
 
                 if ( dot_product(finish_point(M%h0:M%h1)-seed_point(M%h0:M%h1),nhat) > 0d0 ) then
                     ! If finish_point is on the u_bound side of seed_point, then

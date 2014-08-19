@@ -86,8 +86,8 @@ module settings_module
         !! The sampling procedure takes the details of the model (M) and the current
         !! set of live points (live_data) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
-        !! loglikelihood_bound
-        function samp(settings, seed_point, loglikelihood_bound, min_max_array, M,feedback) result(baby_point)
+        !! loglikelihood bound contained at the M%l1 index of seed_point
+        function samp(settings, seed_point, min_max_array, M,feedback) result(baby_point)
 
             import :: model
             import :: program_settings
@@ -103,9 +103,6 @@ module settings_module
             !> The seed point
             double precision, intent(in), dimension(M%nTotal)   :: seed_point
 
-            !> The current loglikelihood bound
-            double precision, intent(in) :: loglikelihood_bound
-
             !> The minimum and maximum values from each of the live points
             double precision, intent(in),    dimension(:,:)   :: min_max_array
 
@@ -114,7 +111,7 @@ module settings_module
 
             ! ------- Outputs -------
             !> The newly generated point
-            double precision,    dimension(M%nTotal)   :: baby_point
+            double precision,    dimension(M%nTotal)     :: baby_point
 
 
         end function samp
@@ -132,7 +129,7 @@ module settings_module
         !! * a length 2 vector ( evidence_vec ) with the [evidence, evidence error] in the value of the function
         !! * whether more samples are needed in the logical variable more_samples_needed
         !!
-        function ev(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed) result (evidence_vec)
+        subroutine ev(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed,evidence_vec)
 
             import :: program_settings
 
@@ -151,14 +148,15 @@ module settings_module
             !> number of dead points/ number of iterations
             integer,                intent(in) :: ndead
 
+            ! vector containing [evidence, evidence error]
+            double precision, dimension(6) :: evidence_vec
+
             ! ------- Outputs ------- 
             !> Whether we have obtained enough samples for an accurate evidence
             logical,intent(out) :: more_samples_needed
 
-            ! vector containing [evidence, evidence error]
-            double precision, dimension(2) :: evidence_vec
 
-        end function ev
+        end subroutine ev
     end interface
 
 end module settings_module 

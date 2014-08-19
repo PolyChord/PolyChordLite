@@ -39,8 +39,10 @@ module model_module
 
         !> likelihood index
         !!
-        !! This is the likelihood attached to each live point
+        !! This is the likelihood evaluated at the position of the live point
         integer :: l0          
+        !> This is the likelihood contour which generated the live point
+        integer :: l1          
 
         !==========================================================================
         ! Prior details:
@@ -197,24 +199,25 @@ module model_module
         implicit none
         type(model), intent(inout) :: M
 
-        ! Total number of parameters
-        M%nTotal = 2*M%nDims+M%nDerived+1
 
         ! Hypercube parameter indices
         M%h0=1
-        M%h1=M%nDims
+        M%h1=M%h0+M%nDims-1
 
         ! Physical parameter indices
-        M%p0=M%nDims+1
-        M%p1=2*M%nDims
+        M%p0=M%h1+1
+        M%p1=M%p0+M%nDims-1 
 
         ! Derived parameter indices
-        M%d0=2*M%nDims+1
-        M%d1=2*M%nDims+M%nDerived
+        M%d0=M%p1+1
+        M%d1=M%d0+M%nDerived-1  
 
-        ! Loglikelihood index
-        M%l0=M%nTotal
+        ! Loglikelihood indices
+        M%l0=M%d1+1
+        M%l1=M%l0+1
 
+        ! Total number of parameters
+        M%nTotal = M%l1
     end subroutine allocate_live_indices
 
     subroutine allocate_prior_arrays(M)

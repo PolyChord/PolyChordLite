@@ -7,7 +7,10 @@ module mpi_module
 
     contains
 
+
+
     function mpi_rank
+        implicit none
         integer :: mpi_rank
         call MPI_COMM_RANK(MPI_COMM_WORLD, mpi_rank, mpierror)
     end function mpi_rank
