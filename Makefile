@@ -1,4 +1,5 @@
 DEBUG ?= 0
+PAR   ?= 1
 export DEBUG
 
 default: all

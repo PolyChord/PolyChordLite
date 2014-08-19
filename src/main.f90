@@ -3,19 +3,21 @@ program main
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
-    use nested_sampling_module, only: NestedSampling
     use model_module,           only: model, allocate_live_indices, allocate_prior_arrays, set_up_prior_indices
     
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
     use chordal_module,      only: ChordalSampling
-    use test_sampler_module, only: BruteForceSampling,SphericalCenterSampling,CubicCenterSampling
     use evidence_module
     use example_likelihoods
     use feedback_module
 #ifdef MPI
     use mpi_module
+    use chordal_module,                  only: ChordalSampling
+    use nested_sampling_parallel_module, only: NestedSampling
+#else
+    use nested_sampling_linear_module, only: NestedSampling
 #endif
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
