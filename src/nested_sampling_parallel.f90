@@ -4,7 +4,7 @@ module nested_sampling_parallel_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    subroutine NestedSampling(M,settings)
+    subroutine NestedSamplingP(M,settings)
         use mpi_module
         use model_module,    only: model
         use utils_module,    only: logzero,loginf
@@ -59,7 +59,6 @@ module nested_sampling_parallel_module
         integer :: i_live
         integer :: nslaves
 
-        integer           :: tag
         integer,parameter :: RUNTAG=0
         integer,parameter :: ENDTAG=1
 
@@ -77,6 +76,8 @@ module nested_sampling_parallel_module
 
         nprocs = mpi_size()  ! Get the number of MPI procedures
         myrank = mpi_rank()  ! Get the MPI label of the current processor
+
+
 
         if(myrank==0) then 
             call write_opening_statement(M,settings)
@@ -391,6 +392,16 @@ module nested_sampling_parallel_module
 
                 if(more_samples_needed==.false.) then
                     do i_live=1,nprocs-1
+                        call MPI_RECV(            &
+                            baby_point,           & ! newly generated point to be receieved
+                            M%nTotal,             & ! size of this data
+                            MPI_DOUBLE_PRECISION, & ! type of this data
+                            MPI_ANY_SOURCE,       & ! recieve it from any slave
+                            MPI_ANY_TAG,          & ! tagging information (not important here)
+                            MPI_COMM_WORLD,       & ! communication data
+                            mpi_status,           & ! status - important (tells you where it's been recieved from )
+                            mpierror              & ! error information (from mpi_module)
+                            )
                         call MPI_SEND(              &
                             min_max_array,          & ! seed point to be sent
                             M%nDims*2,              & ! size of this data
@@ -459,7 +470,7 @@ module nested_sampling_parallel_module
 
         end do
 
-    end subroutine NestedSampling
+    end subroutine NestedSamplingP
 
 
 

@@ -15,9 +15,10 @@ program main
 #ifdef MPI
     use mpi_module
     use chordal_module,                  only: ChordalSampling
-    use nested_sampling_parallel_module, only: NestedSampling
+    use nested_sampling_parallel_module, only: NestedSamplingP
+    use nested_sampling_linear_module,   only: NestedSamplingL
 #else
-    use nested_sampling_linear_module, only: NestedSampling
+    use nested_sampling_linear_module, only: NestedSamplingL
 #endif
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
@@ -54,7 +55,7 @@ program main
     M%loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    M%nDims=2                  ! Dimensionality of the space
+    M%nDims=4                  ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the
@@ -93,7 +94,15 @@ program main
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
-    call NestedSampling(M,settings)
+#ifdef MPI
+    if (mpi_size()>1) then
+        call NestedSamplingP(M,settings)
+    else
+        call NestedSamplingL(M,settings) 
+    end if
+#else
+    call NestedSamplingL(M,settings) 
+#endif 
 
 
 

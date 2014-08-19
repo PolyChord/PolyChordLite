@@ -4,7 +4,7 @@ module nested_sampling_linear_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    subroutine NestedSampling(M,settings)
+    subroutine NestedSamplingL(M,settings)
         use model_module,    only: model
         use utils_module,    only: logzero,loginf
         use settings_module, only: program_settings
@@ -141,7 +141,7 @@ module nested_sampling_linear_module
 
         call write_final_results(M,evidence_vec,ndead,settings%feedback)
 
-    end subroutine NestedSampling
+    end subroutine NestedSamplingL
 
 
 

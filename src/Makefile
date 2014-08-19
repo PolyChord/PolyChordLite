@@ -56,7 +56,7 @@ ifeq ($(PAR), 1)
 endif
 
 ifeq ($(PAR), 1)
-NESTED_SAMPLING = nested_sampling_parallel.o
+NESTED_SAMPLING = nested_sampling_parallel.o nested_sampling_linear.o 
 MPI_UTILS = mpi_utils.o
 else
 NESTED_SAMPLING = nested_sampling_linear.o
@@ -76,8 +76,7 @@ likelihoods.o:              $(MPI_UTILS) model.o utils.o
 evidence.o:                 settings.o
 feedback.o:                 model.o settings.o utils.o
 chordal_sampling.o:         model.o utils.o random_utils.o
-$(NESTED_SAMPLING):   		$(MPI_UTILS) feedback.o model.o utils.o random_utils.o settings.o\
-                            chordal_sampling.o
+$(NESTED_SAMPLING):   		$(MPI_UTILS) feedback.o model.o utils.o random_utils.o settings.o chordal_sampling.o
 main.o:                     $(MODULES)
 
 main: $(MODULES) main.o 
