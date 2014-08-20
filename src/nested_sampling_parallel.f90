@@ -7,7 +7,7 @@ module nested_sampling_parallel_module
     subroutine NestedSamplingP(M,settings)
         use mpi_module
         use model_module,      only: model
-        use utils_module,      only: logzero,loginf,DBL_FMT
+        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
         use random_module,     only: random_integers
@@ -112,8 +112,8 @@ module nested_sampling_parallel_module
             if(myrank==0) then
                 ! If there is a resume file present, then load the live points from that
                 write(*,*) "Reading live data"
-                open(1000,file=trim(settings%file_root)//'.resume',action='read')
-                read(1000,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
+                open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
+                read(read_resume_unit,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
             end if
         else
             if(myrank==0) call write_started_generating(settings%feedback)
@@ -177,7 +177,7 @@ module nested_sampling_parallel_module
             if(resume) then
                 ! If resuming, get the accumulated stats to calculate the
                 ! evidence from the resume file
-                read(1000,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
+                read(read_resume_unit,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
             else
                 ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
                 evidence_vec = logzero
@@ -193,7 +193,7 @@ module nested_sampling_parallel_module
             if(resume) then
                 ! If resuming, then get the number of dead points from the resume file
                 write(*,*) "Reading ndead"
-                read(1000,'(I)') ndead
+                read(read_resume_unit,'(I)') ndead
             else
                 ! Otherwise initialise the number of dead points at 1
                 ndead = 1
@@ -201,15 +201,6 @@ module nested_sampling_parallel_module
 
             ! Get the likelihood contour
             late_likelihood = late_point(M%l0)
-
-            ! If we're saving the dead points, open the relevant file
-            if (settings%save_dead) then
-                if(resume) then
-                    open(unit=222, file='dead_points.dat',position='append',action='write')
-                else
-                    open(unit=222, file='dead_points.dat',action='write')
-                end if
-            end if
 
             ! (d) Initialise the incubating stack
             incubating_data = 0d0
@@ -233,9 +224,9 @@ module nested_sampling_parallel_module
             posterior_array(1:2,:) = logzero
             posterior_array(3:,:) = 0d0
             if(resume) then
-                read(1000,'(I)') nposterior
-                read(1000,'(<M%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
-                close(1000)
+                read(read_resume_unit,'(I)') nposterior
+                read(read_resume_unit,'(<M%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+                close(read_resume_unit)
             end if
 
         end if
@@ -456,17 +447,12 @@ module nested_sampling_parallel_module
                         call insert_into_posterior(posterior_point,posterior_array(:,1:nposterior))
                     end if
 
-                    ! Write the dead points to a file if desired
-                    if (settings%save_dead) write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
-
                     ! Feedback to command line every nlive iterations
                     if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
                         write(*,'("ndead     = ", I20                  )') ndead
                         write(*,'("efficiency= ", F20.2                )') mean_likelihood_calls
                         write(*,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
                         write(*,*)
-                        call write_resume_file(settings,M,live_data,evidence_vec,ndead,posterior_array(:,:nposterior),nposterior) 
-                        call write_posterior_file(settings,M,posterior_array,evidence_vec(1),nposterior) 
                     end if
 
                 end do
@@ -481,9 +467,6 @@ module nested_sampling_parallel_module
 
                 ! Halt if we've reached the desired maximum iterations
                 if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
-
-                ! Write the dead points to a file if desired
-                if (settings%save_dead) write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
 
 
                 ! If we're done, then clean up by receiving the last piece of
@@ -511,15 +494,15 @@ module nested_sampling_parallel_module
                             )
                     end do
 
-                    ! close the dead points file if we're done
-                    if (settings%save_dead) close(222)
-
                     call write_final_results(M,evidence_vec,ndead,settings%feedback)
                 end if
 
 
-
-
+                ! Update the resume and posterior files every update_resume iterations, or at program termination
+                if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
+                    call write_resume_file(settings,M,live_data,evidence_vec,ndead,posterior_array(:,:nposterior),nposterior) 
+                    call write_posterior_file(settings,M,posterior_array,evidence_vec(1),nposterior) 
+                end if
 
 
 

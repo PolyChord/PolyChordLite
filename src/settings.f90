@@ -34,10 +34,8 @@ module settings_module
         !> The minimum weight of the posterior points
         double precision :: minimum_weight = 1d-15
 
-        !> Whether or not to save the dead points
-        !! 
-        !! It may not be worth saving them when doing extremely high dimensional problems
-        logical :: save_dead = .false.
+        !> How often to update the resume file
+        integer :: update_resume = 10000
 
         !> The number of chords to draw
         integer :: num_chords = 6
