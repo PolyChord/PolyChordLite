@@ -4,7 +4,7 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,M,live_data,evidence_vec,ndead)
+    subroutine write_resume_file(settings,M,live_data,evidence_vec,ndead,posterior_array,nposterior)
         use utils_module, only: STR_LENGTH,DBL_FMT
         use model_module, only: model
         use settings_module, only: program_settings
@@ -15,6 +15,8 @@ module read_write_module
         type(program_settings), intent(in) :: settings
         type(model),            intent(in) :: M
         double precision, dimension(M%nTotal,settings%nlive) :: live_data
+        integer nposterior
+        double precision, dimension(M%nDims+2,nposterior) :: posterior_array
         double precision, dimension(6)             :: evidence_vec
         integer :: ndead
 
@@ -28,11 +30,41 @@ module read_write_module
         write(100,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         ! number of dead points
         write(100,'(I)') ndead
+        ! number of posterior points
+        write(100,'(I)') nposterior
+        ! posterior points
+        write(100,'(<M%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array
 
         close(100)
 
     end subroutine write_resume_file
 
+    subroutine write_posterior_file(settings,M,posterior_array,evidence,nposterior) 
+        use utils_module, only: STR_LENGTH,DBL_FMT
+        use model_module, only: model
+        use settings_module, only: program_settings
+
+        implicit none
+
+
+        type(program_settings), intent(in) :: settings
+        type(model),            intent(in) :: M
+        double precision, dimension(M%nDims+2,nposterior) :: posterior_array
+        double precision                           :: evidence
+        integer :: nposterior
+        integer :: i_posterior
+
+
+        
+        open(100,file=trim(settings%file_root) // '.txt' ) 
+
+        do i_posterior = 1,nposterior
+            write(100,'(<M%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') exp(posterior_array(1,i_posterior)-evidence),posterior_array(2:,i_posterior)
+        end do
+
+        close(100)
+
+    end subroutine write_posterior_file
 
 
 

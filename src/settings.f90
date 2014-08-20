@@ -12,7 +12,7 @@ module settings_module
         character(STR_LENGTH) :: file_root='chains/test'
 
         !> The number of live points
-        integer :: nlive =512   
+        integer :: nlive =500
 
         !> The degree of feedback to provide
         integer :: feedback = 1
@@ -24,6 +24,15 @@ module settings_module
         !!
         !! Set equal to -1 for no maximum number
         integer :: max_ndead = -1
+
+        !> The maximum number of posterior points
+        !!
+        !! This is for memory allocation purposes, it won't necessarily have
+        !! this many points if they're not 'good enough'
+        integer :: nmax_posterior = 100000
+
+        !> The minimum weight of the posterior points
+        double precision :: minimum_weight = 1d-15
 
         !> Whether or not to save the dead points
         !! 

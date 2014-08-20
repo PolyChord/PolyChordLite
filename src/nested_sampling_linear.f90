@@ -10,7 +10,7 @@ module nested_sampling_linear_module
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
         use random_module,     only: random_integers
-        use read_write_module, only: write_resume_file
+        use read_write_module, only: write_resume_file,write_posterior_file
         use feedback_module
 
         implicit none
@@ -26,6 +26,11 @@ module nested_sampling_linear_module
 
         double precision,    dimension(M%nDims,2)   :: min_max_array
 
+        double precision, allocatable, dimension(:,:) :: posterior_array
+        double precision, dimension(M%nDims+2) :: posterior_point
+        integer :: nposterior
+        integer :: nremove
+
         logical :: more_samples_needed
 
         ! The new-born baby point
@@ -35,6 +40,7 @@ module nested_sampling_linear_module
         ! The recently dead point
         double precision,    dimension(M%nTotal)   :: late_point
         double precision :: late_likelihood
+        double precision :: late_logweight
 
         ! Point to seed a new one from
         double precision,    dimension(M%nTotal)   :: seed_point
@@ -51,6 +57,9 @@ module nested_sampling_linear_module
         double precision :: mean_likelihood_calls
 
         integer :: ndead
+
+        double precision :: lognlive 
+        double precision :: lognlivep1 
 
 
 
@@ -92,6 +101,7 @@ module nested_sampling_linear_module
         !  (b) mean_likelihood_calls  | Mean number of likelihood calls over the past nlive iterations
         !  (c) ndead                  | Number of iterations/number of dead points
         !  (d) min_max_array          | Array of maximums and minimums for each coordinate - allows rescaling
+        !  (e) posterior_array        | Array of weighted posterior points
 
         ! (a)
         if(resume) then
@@ -112,7 +122,6 @@ module nested_sampling_linear_module
             ! If resuming, then get the number of dead points from the resume file
             write(*,*) "Reading ndead"
             read(1000,'(I)') ndead
-            close(1000)
         else
             ! Otherwise no dead points originally
             ndead = 0
@@ -131,6 +140,21 @@ module nested_sampling_linear_module
         min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
         min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
 
+        ! Calculate these global variables so we don't need to again
+        lognlive   = log(settings%nlive+0d0)
+        lognlivep1 = log(settings%nlive+1d0)
+
+        ! (e) Posterior array
+        allocate(posterior_array(M%nDims+2,settings%nmax_posterior))
+        nposterior=0
+        posterior_array(1:2,:) = logzero
+        posterior_array(3:,:) = 0d0
+        if(resume) then
+            read(1000,'(I)') nposterior
+            read(1000,'(<M%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+            close(1000)
+        end if
+
         call write_started_sampling(settings%feedback)
 
         ! definitely more samples needed than this
@@ -145,6 +169,9 @@ module nested_sampling_linear_module
 
             ! Get the likelihood contour
             late_likelihood = late_point(M%l0)
+
+            ! Calculate the late logweight
+            late_logweight = (ndead-1)*lognlive - ndead*lognlivep1 
 
             ! Select a seed point for the generator
             !  -excluding the points which have likelihoods equal to the
@@ -179,13 +206,33 @@ module nested_sampling_linear_module
             ! Write the dead points to a file if desired
             if (settings%save_dead) write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
 
+            ! Update the set of weighted posteriors
+            if(late_point(M%l0) + late_logweight - evidence_vec(1) > log(settings%minimum_weight) ) then
+
+                ! First trim off any points that are now under the minimum_weight limit
+                nremove = count( posterior_array(1,1:nposterior)-evidence_vec(1)<=log(settings%minimum_weight) )
+                posterior_array(1:2,nposterior-nremove+1:nposterior) = logzero
+                posterior_array(3:, nposterior-nremove+1:nposterior) = 0d0
+                nposterior = nposterior-nremove
+                
+
+                ! Now add the new point
+                nposterior=nposterior+1
+                posterior_point(1) = late_point(M%l0) + late_logweight
+                posterior_point(2) = late_point(M%l0)
+                posterior_point(3:) = late_point(M%p0:M%p1)
+                call insert_into_posterior(posterior_point,posterior_array(:,1:nposterior))
+            end if
+
+
             ! Feedback to command line every nlive iterations
             if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
                 write(*,'("ndead     = ", I20                  )') ndead
                 write(*,'("efficiency= ", F20.2                )') mean_likelihood_calls
                 write(*,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
                 write(*,*)
-                call write_resume_file(settings,M,live_data,evidence_vec,ndead) 
+                call write_resume_file(settings,M,live_data,evidence_vec,ndead,posterior_array(:,:nposterior),nposterior) 
+                call write_posterior_file(settings,M,posterior_array,evidence_vec(1),nposterior) 
             end if
 
         end do
@@ -344,11 +391,38 @@ module nested_sampling_linear_module
         baby_position =  binary_search(1,nlive,baby_loglike,loglike_pos,live_data)
 
         ! Delete the lowest likelihood point by shifting the points in the data
-        ! array from baby_position and below down by one and add the new point
+        ! array from baby_position-1 and below down by one and add the new point
+        ! at baby_position-1
         live_data(:,:baby_position-1) = eoshift(live_data(:,:baby_position-1),dim=2,shift=+1,boundary=baby_point)
 
     end subroutine insert_point_into_live_data
 
+    !> Insert the new point into the posterior array (pun very much intended)
+    !!
+    !! Since the data array is already sorted, one can insert a new point using
+    !! binary search insertion algorithm
+    subroutine insert_into_posterior(point,posterior_data)
+        !> The point to be inserted by order of its last value
+        double precision, intent(in),    dimension(:)   :: point
+        !> The live data array to be inserted into
+        double precision, intent(inout), dimension(:,:) :: posterior_data
+        !> The index to sort by (in this case it's M%l0)
+
+        integer          :: nposterior     !number of live points
+        integer          :: point_position !where to insert the baby point in the array
+
+
+        nposterior       = size(posterior_data,2)    ! size of the array
+
+        ! search for the position with a binary search algorithm
+        ! (note the minus signs so as to interface with the binary search, since
+        ! we want the order in terms of highest to lowest)
+        point_position =  binary_search(1,nposterior,-point(1),1,-posterior_data)
+
+        ! shift the points up one (since we are sorting in order of highest to lowest)
+        posterior_data(:,point_position:) = eoshift(posterior_data(:,point_position:),dim=2,shift=-1,boundary=point)
+
+    end subroutine insert_into_posterior
 
     !> Binary search algorithm
     !!
@@ -372,7 +446,7 @@ module nested_sampling_linear_module
         double precision, intent(in) :: value
 
         !> The data array to be consulted
-        double precision, intent(inout), dimension(:,:) :: data_array
+        double precision, intent(in), dimension(:,:) :: data_array
 
         !> The index of the 2D array which we are sorting by
         integer, intent(in) :: array_index

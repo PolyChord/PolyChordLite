@@ -55,7 +55,7 @@ program main
     M%loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    M%nDims=2                  ! Dimensionality of the space
+    M%nDims=6                  ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the

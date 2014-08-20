@@ -84,7 +84,7 @@ module evidence_module
 
 
         ! Get the number of live points (and convert to double precision implicitly)
-        lognlive = log(settings%nlive+0d0)
+        lognlive   = log(settings%nlive+0d0)
         lognlivep1 = log(settings%nlive+1d0)
         lognlivep2 = log(settings%nlive+2d0)
 
