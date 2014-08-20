@@ -20,6 +20,7 @@ program main
 #else
     use nested_sampling_linear_module, only: NestedSamplingL
 #endif
+    use utils_module, only: TwoPi
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
@@ -52,10 +53,10 @@ program main
 
     ! ------- (1c) Initialise the model -------
     ! (i) Assign the likelihood function
-    M%loglikelihood => gaussian_loglikelihood
+    M%loglikelihood => rastrigin_loglikelihood
 
     ! (ii) Set the dimensionality
-    M%nDims=6                  ! Dimensionality of the space
+    M%nDims=2                  ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the
@@ -72,8 +73,8 @@ program main
     call allocate_prior_arrays(M)
 
     !       - settings of priors
-    M%uniform_params(:,1) = 0d0
-    M%uniform_params(:,2) = 1d0
+    M%uniform_params(:,1) = -5.12d0
+    M%uniform_params(:,2) = 5.12d0
 
     call set_up_prior_indices(M)
 
@@ -81,14 +82,16 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%file_root            =  'chains/test'           !file root
-    settings%nlive                =  100*M%nDims             !number of live points
+    settings%file_root            =  'chains/himmelblau_2'   !file root
+    settings%nlive                =  1000 !100*M%nDims             !number of live points
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%num_chords           =  20                      !number of chords to draw        
+    settings%nmax_posterior       = 100000                   !max number of posterior points
+    settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
 
 
     ! ======= (2) Perform Nested Sampling =======

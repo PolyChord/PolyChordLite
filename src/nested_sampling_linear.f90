@@ -205,7 +205,7 @@ module nested_sampling_linear_module
                 
 
                 ! Now add the new point
-                nposterior=nposterior+1
+                nposterior=min(nposterior+1,settings%nmax_posterior)
                 posterior_point(1) = late_point(M%l0) + late_logweight
                 posterior_point(2) = late_point(M%l0)
                 posterior_point(3:) = late_point(M%p0:M%p1)

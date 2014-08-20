@@ -56,6 +56,226 @@ module example_likelihoods
 
     end function gaussian_loglikelihood
 
+
+
+    !> Upside down [Rosenbrock function](http://en.wikipedia.org/wiki/Rosenbrock_function).
+    !!
+    !! \f[ -\log\mathcal{L}(\theta) = \sum_{i=1}^{N-1}   (a-\theta_i)^2+ b (\theta_{i+1} -\theta_i^2 )^2 \f]
+    !!
+    !! This is the industry standard 'Banana'. It useful for testing whether the
+    !! algorithm is capable of navigating a curving degenerate space and able to
+    !! find the global maximum. As is conventional, we choose \f$a=1\f$ and
+    !! \f$b=100\f$
+    !!
+    !! It is only valid in nDims>2.
+    !!
+    !! To be precise, we choose our log likelihood as the negative of the 'true'
+    !! Rosenbrock function, as our algorithm is a maximiser.
+    !!
+    !! In addition, we add an offset to normalise the loglikelihood so that in
+    !! 2D it should integrate to 1. (There is no analytic formula for ND).
+    !! 
+    !! The global maximum is atop a long, narrow, parabolic shaped ridge.
+    !!
+    !! dimension | extrema
+    !! ----------|------
+    !! \f$ 2 \f$ | One maximum at \f$(1,1)\f$
+    !! \f$ 3 \f$ | One maximum at \f$(1,1,1)\f$ 
+    !! \f$4-7\f$ | One global maximum at \f$(1,\ldots,1)\f$, one local near \f$(-1,1,\ldots,1)\f$
+    !!
+    !! \f$(1,\ldots,1)\f$ is always the
+    !! global maximum, but it is unclear analytically how many (if any) local maxima there
+    !! are elsewhere in dimensions higher than 7.
+    !!
+    function rosenbrock_loglikelihood(M,theta,feedback) result(loglikelihood)
+        use utils_module, only: logzero
+        implicit none
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        class(model),intent(in)                    :: M
+        !> The input parameters
+        double precision, intent(in), dimension(:) :: theta
+        !> Optional argument. If provided, then the function simply prints out a few details
+        integer,optional, intent(in)               :: feedback
+
+        double precision, parameter :: a = 1d0
+        double precision, parameter :: b = 1d2
+        double precision, parameter :: pi = 4d0*atan(1d0) ! \pi in double precision
+
+        ! The return value
+        double precision :: loglikelihood
+
+        ! Feedback if requested
+        if(present(feedback)) then
+            if(feedback>=0) then
+                write(*,'( "Likelihood : RosenBrock" )')
+            end if
+            loglikelihood=logzero
+            return
+        end if
+
+        ! Normalisation for 2D
+        loglikelihood = -log(pi/sqrt(b))
+
+        ! Sum expressed with fortran intrinsics
+        loglikelihood =  loglikelihood  - sum( (a-theta(1:M%nDims-1))**2 + b*(theta(2:M%nDims) - theta(1:M%nDims-1)**2)**2 )
+
+    end function rosenbrock_loglikelihood
+
+
+
+    !> Upside down [Himmelblau function](http://en.wikipedia.org/wiki/Himmelblau's_function).
+    !!
+    !! \f[ -\log L(x, y) = (x^2+y-11)^2 + (x+y^2-7)^2 \f]
+    !!
+    !! Himmelblau's function is a multi-modal function, used to test the performance of 
+    !! optimization  algorithms. 
+    !! It has one local maximum at <math>x = -0.270845 \,</math> and <math>y =
+    !! -0.923039 \,</math> where <math>f(x,y) = 181.617 \,</math>, and four
+    !! identical local minima:
+    !! * \f$ f(3.0, 2.0) = 0.0,            \f$
+    !! * \f$ f(-2.805118, 3.131312) = 0.0, \f$
+    !! * \f$ f(-3.779310, -3.283186) = 0.0,\f$
+    !! * \f$ f(3.584428, -1.848126) = 0.0. \f$
+    !!
+    !! The locations of all the Maxima and minima can be found
+    !! analytically. However, because they are roots of cubic polynomials, when
+    !! written in terms of radicals, the expressions are somewhat
+    !! complicated.
+    !!
+    !! The function is named after David Mautner Himmelblau (1924-2011), who
+    !! introduced it. 
+    !! 
+    !! Note that this is a 2D function, and should hence only be used for M%nDims=2
+    !!
+    function himmelblau_loglikelihood(M,theta,feedback) result(loglikelihood)
+        use utils_module, only: logzero
+        implicit none
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        class(model),intent(in)                    :: M
+        !> The input parameters
+        double precision, intent(in), dimension(:) :: theta
+        !> Optional argument. If provided, then the function simply prints out a few details
+        integer,optional, intent(in)               :: feedback
+
+        ! The return value
+        double precision :: loglikelihood
+
+        ! Feedback if requested
+        if(present(feedback)) then
+            if(feedback>=0) then
+                write(*,'( "Likelihood : Himmelblau" )')
+            end if
+            loglikelihood = logzero
+            return
+        end if
+
+        ! Normalisation for 2D
+        loglikelihood = -log(0.1387472391262011d0) 
+
+        ! 
+        loglikelihood =  loglikelihood  -  (theta(1)**2 + theta(2)- 11d0)**2    -   (theta(1)+theta(2)**2-7d0)**2 
+
+    end function himmelblau_loglikelihood
+
+
+    !> Upside down [Rastrigin function](http://en.wikipedia.org/wiki/Rastrigin_function).
+    !!
+    !! \f[ -\log L(\theta) = f(\mathbf{x}) = A n + \sum_{i=1}^n \left[\theta_i^2 - A\cos(2 \pi \theta_i)\right] \f]
+    !!
+    !! where  \f$ A=10\f$  and \f$ \theta_i\in[-5.12,5.12] \f$ . It has a global minimum 
+    !! at \f$ \theta = \mathbf{0}\f$  where \f$ f(\theta)=0\f$ .
+    !!
+    !! In mathematical optimization, the Rastrigin function is a
+    !! non-convex function used as a performance test problem for optimization
+    !! algorithms. It is a typical example of non-linear multimodal function. It
+    !! was first proposed by Rastrigin as a 2-dimensional function and has been generalized
+    !! by Mühlenbein et al. Finding the minimum of this function is a
+    !! fairly difficult problem due to its large search space and its large number
+    !! of local minima.
+    !!
+    function rastrigin_loglikelihood(M,theta,feedback) result(loglikelihood)
+        use utils_module, only: logzero,TwoPi
+        implicit none
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        class(model),intent(in)                    :: M
+        !> The input parameters
+        double precision, intent(in), dimension(:) :: theta
+        !> Optional argument. If provided, then the function simply prints out a few details
+        integer,optional, intent(in)               :: feedback
+
+        double precision, parameter :: A=10d0
+
+        ! The return value
+        double precision :: loglikelihood
+
+        ! Feedback if requested
+        if(present(feedback)) then
+            if(feedback>=0) then
+                write(*,'( "Likelihood : rastrigin" )')
+            end if
+            loglikelihood = logzero
+            return
+        end if
+
+        ! Normalisation for ND
+        loglikelihood = - M%nDims * log(4991.217507308888d0)
+
+        ! 
+        loglikelihood =  loglikelihood  -  sum(theta**2 - A*cos(TwoPi*theta) )
+
+    end function rastrigin_loglikelihood
+
+
+
+
+    !> Eggbox likelihood
+    !!
+    !! \f[ -\log L(x, y) = (2+ \prod_i^n \cos(\theta_i/2) )^5 \f]
+    !!
+    function eggbox_loglikelihood(M,theta,feedback) result(loglikelihood)
+        use utils_module, only: logzero
+        implicit none
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        class(model),intent(in)                    :: M
+        !> The input parameters
+        double precision, intent(in), dimension(:) :: theta
+        !> Optional argument. If provided, then the function simply prints out a few details
+        integer,optional, intent(in)               :: feedback
+
+        ! The return value
+        double precision :: loglikelihood
+
+        ! Feedback if requested
+        if(present(feedback)) then
+            if(feedback>=0) then
+                write(*,'( "Likelihood : Himmelblau" )')
+            end if
+            loglikelihood = logzero
+            return
+        end if
+
+        ! No normalisation implemented yet
+        loglikelihood = 0
+
+        ! 
+        loglikelihood =  loglikelihood  -  (2 + product(cos(theta / 2d0) ) )**5
+
+    end function eggbox_loglikelihood
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !> Correlated gaussian loglikelihood
     !! 
     !! It is normalised so that it should output an evidence of 1.0 for
@@ -357,68 +577,6 @@ module example_likelihoods
         pyramidal_loglikelihood = pyramidal_loglikelihood - maxval(abs(theta-center)/sigma)**2
 
     end function pyramidal_loglikelihood
-
-    !> Upside down [Rosenbrock function](http://en.wikipedia.org/wiki/Rosenbrock_function).
-    !!
-    !! \f[ -\log\mathcal{L}(\theta) = \sum_{i=1}^{N-1}   (a-\theta_i)^2+ b (\theta_{i+1} -\theta_i^2 )^2 \f]
-    !!
-    !! This is the industry standard 'Banana'. It useful for testing whether the
-    !! algorithm is capable of navigating a curving degenerate space and able to
-    !! find the global maximum. As is conventional, we choose \f$a=1\f$ and
-    !! \f$b=100\f$
-    !!
-    !! It is only valid in nDims>2.
-    !!
-    !! To be precise, we choose our log likelihood as the negative of the 'true'
-    !! Rosenbrock function, as our algorithm is a maximiser.
-    !!
-    !! In addition, we add an offset to normalise the loglikelihood so that in
-    !! 2D it should integrate to 1. (There is no analytic formula for ND).
-    !! 
-    !! The global maximum is atop a long, narrow, parabolic shaped ridge.
-    !!
-    !! dimension | extrema
-    !! ----------|------
-    !! \f$ 2 \f$ | One maximum at \f$(1,1)\f$
-    !! \f$ 3 \f$ | One maximum at \f$(1,1,1)\f$ 
-    !! \f$4-7\f$ | One global maximum at \f$(1,\ldots,1)\f$, one local near \f$(-1,1,\ldots,1)\f$
-    !!
-    !! \f$(1,\ldots,1)\f$ is always the
-    !! global maximum, but it is unclear analytically how many (if any) local maxima there
-    !! are elsewhere in dimensions higher than 7.
-    !!
-    function rosenbrock_loglikelihood(M,theta,feedback) result(loglikelihood)
-        implicit none
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        class(model),intent(in)                    :: M
-        !> The input parameters
-        double precision, intent(in), dimension(:) :: theta
-        !> Optional argument. If provided, then the function simply prints out a few details
-        integer,optional, intent(in)               :: feedback
-
-        double precision, parameter :: a = 1d0
-        double precision, parameter :: b = 1d2
-        double precision, parameter :: pi = 4d0*atan(1d0) ! \pi in double precision
-
-        ! The return value
-        double precision :: loglikelihood
-
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(*,'( "Likelihood : RosenBrock" )')
-            end if
-            return
-        end if
-
-        ! Normalisation for 2D
-        loglikelihood = -log(pi/sqrt(b))
-        
-        ! Sum expressed with fortran intrinsics
-        loglikelihood =  loglikelihood  - sum( (a-theta(1:M%nDims-1))**2 + b*(theta(2:M%nDims) - theta(1:M%nDims-1)**2)**2 )
-
-        
-    end function rosenbrock_loglikelihood
 
 
 

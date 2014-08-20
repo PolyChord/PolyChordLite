@@ -440,12 +440,13 @@ module nested_sampling_parallel_module
 
 
                         ! Now add the new point
-                        nposterior=nposterior+1
+                nposterior=min(nposterior+1,settings%nmax_posterior)
                         posterior_point(1) = late_point(M%l0) + late_logweight
                         posterior_point(2) = late_point(M%l0)
                         posterior_point(3:) = late_point(M%p0:M%p1)
                         call insert_into_posterior(posterior_point,posterior_array(:,1:nposterior))
                     end if
+
 
                     ! Feedback to command line every nlive iterations
                     if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
