@@ -45,7 +45,7 @@ module chordal_module
         if(present(feedback)) then
             if(feedback>=0) then
                 write(*,'( "Sampler    : Chordal" )')
-                write(*,'( "  num chords = ",I4 )') settings%num_chords
+                write(*,'( "  num chords = ",I8 )') settings%num_chords
             end if
             return
         end if

@@ -6,11 +6,12 @@ module nested_sampling_parallel_module
     !> Main subroutine for computing a generic nested sampling algorithm
     subroutine NestedSamplingP(M,settings)
         use mpi_module
-        use model_module,    only: model
-        use utils_module,    only: logzero,loginf
-        use settings_module, only: program_settings
-        use utils_module,    only: logsumexp
-        use random_module,   only: random_integers
+        use model_module,      only: model
+        use utils_module,      only: logzero,loginf,DBL_FMT
+        use settings_module,   only: program_settings
+        use utils_module,      only: logsumexp
+        use random_module,     only: random_integers
+        use read_write_module, only: write_resume_file
         use feedback_module
 
         implicit none
@@ -23,35 +24,39 @@ module nested_sampling_parallel_module
         !! information in the ith live point in the unit hypercube:
         !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
         double precision, dimension(M%nTotal,settings%nlive) :: live_data
+        double precision, allocatable, dimension(:,:)        :: live_data_local
 
-        ! The new-born baby point
-        double precision,    dimension(M%nTotal)   :: baby_point
-        ! The recently dead point
-        double precision,    dimension(M%nTotal)   :: late_point
+        double precision, dimension(M%nTotal,settings%nlive) :: incubating_data
+        double precision, allocatable, dimension(:)          :: running_likelihoods
 
-        ! Point to seed a new one from
-        double precision,    dimension(M%nTotal)   :: seed_point
-
-        ! temp variable for getting a random integer
-        integer, dimension(1) :: point_number 
-
-        double precision :: baby_likelihood
-        double precision :: late_likelihood
-
-        double precision, dimension(6) :: evidence_vec
-
-        ! Means to be calculated
-        double precision :: mean_likelihood_calls
+        double precision, dimension(M%nDims,2)               :: min_max_array
 
         logical :: more_samples_needed
 
+        ! The new-born baby point
+        double precision,    dimension(M%nTotal)   :: baby_point
+        double precision                           :: baby_likelihood
+
+        ! The recently dead point
+        double precision,    dimension(M%nTotal)   :: late_point
+        double precision                           :: late_likelihood
+
+        ! Point to seed a new one from
+        double precision,    dimension(M%nTotal)   :: seed_point
+        ! temp variable for getting a random integer
+        integer, dimension(1)                      :: point_number 
+
+
+        ! Evidence info
+        double precision, dimension(6)             :: evidence_vec
+
+
+        logical :: resume=.false.
+        ! Means to be calculated
+        double precision                           :: mean_likelihood_calls
+
         integer :: ndead
 
-        double precision,    dimension(M%nDims,2)   :: min_max_array
-
-        double precision, dimension(M%nTotal,settings%nlive) :: incubating_data
-
-        double precision, allocatable, dimension(:,:) :: live_data_local
         integer :: nprocs
         integer :: myrank
         integer :: nlive_local
@@ -59,16 +64,12 @@ module nested_sampling_parallel_module
         integer :: i_live
         integer :: nslaves
 
-        integer,parameter :: RUNTAG=0
-        integer,parameter :: ENDTAG=1
+        integer, parameter :: RUNTAG=0
+        integer, parameter :: ENDTAG=1
 
-        integer mpi_status(MPI_STATUS_SIZE)
-
-        double precision,allocatable, dimension(:) :: running_likelihoods
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
 
         double precision :: loglikelihood_bound
-
-
 
 
 
@@ -77,11 +78,15 @@ module nested_sampling_parallel_module
         nprocs = mpi_size()  ! Get the number of MPI procedures
         myrank = mpi_rank()  ! Get the MPI label of the current processor
 
+        ! Initialise any likelihood details by calling it
+        loglikelihood_bound = M%loglikelihood(baby_point(M%p0:M%p1),-1)
+
 
 
         if(myrank==0) then 
             call write_opening_statement(M,settings)
-            call write_started_generating(settings%feedback)
+            inquire(file=trim(settings%file_root)//'.resume',exist=resume)
+            if(resume) write(*,*) "Resuming from previous run"
         end if
 
 
@@ -94,40 +99,50 @@ module nested_sampling_parallel_module
 
 
         !~~~ (i) Generate Live Points ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !   Create initial live points on all processors, and then merge them onto
-        !   the root with MPI_GATHER
+        if(resume) then
+            if(myrank==0) then
+                ! If there is a resume file present, then load the live points from that
+                write(*,*) "Reading live data"
+                open(1000,file=trim(settings%file_root)//'.resume',action='read')
+                read(1000,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
+            end if
+        else
+            if(myrank==0) call write_started_generating(settings%feedback)
+            ! Create initial live points on all processors, and then merge them onto
+            ! the root with MPI_GATHER
 
-        ! First allocate a local live_data array which is nlive/nprocs on each
-        ! of the nprocs nodes
-        nlive_local = ceiling(settings%nlive/(nprocs+0d0))
-        allocate(live_data_local(M%nTotal,nlive_local))
+            ! First allocate a local live_data array which is nlive/nprocs on each
+            ! of the nprocs nodes
+            nlive_local = ceiling(settings%nlive/(nprocs+0d0))
+            allocate(live_data_local(M%nTotal,nlive_local))
 
-        ! Generate nlive/nprocs live points on each of the nprocs nodes
-        live_data_local = GenerateLivePoints(M,nlive_local)
+            ! Generate nlive/nprocs live points on each of the nprocs nodes
+            live_data_local = GenerateLivePoints(M,nlive_local)
 
-        ! Sort the live points in order of likelihood, first point lowest, last point highest on every node
-        call quick_sort(live_data_local,M%l0)
+            ! Sort the live points in order of likelihood, first point lowest, last point highest on every node
+            call quick_sort(live_data_local,M%l0)
 
-        ! Gather all of this data onto the root node
-        call MPI_GATHER(          &  
-            live_data_local,      & ! sending array
-            M%nTotal*nlive_local, & ! number of elements to be sent
-            MPI_DOUBLE_PRECISION, & ! type of element to be sent
-            live_data,            & ! recieving array
-            M%nTotal*nlive_local, & ! number of elements to be recieved from each node
-            MPI_DOUBLE_PRECISION, & ! type of element recieved
-            0,                    & ! root node address
-            MPI_COMM_WORLD,       & ! communication info
-            mpierror)               ! error (from module mpi_module)
+            ! Gather all of this data onto the root node
+            call MPI_GATHER(          &  
+                live_data_local,      & ! sending array
+                M%nTotal*nlive_local, & ! number of elements to be sent
+                MPI_DOUBLE_PRECISION, & ! type of element to be sent
+                live_data,            & ! recieving array
+                M%nTotal*nlive_local, & ! number of elements to be recieved from each node
+                MPI_DOUBLE_PRECISION, & ! type of element recieved
+                0,                    & ! root node address
+                MPI_COMM_WORLD,       & ! communication info
+                mpierror)               ! error (from module mpi_module)
 
-        ! deallocate the now unused local live points array to save memory
-        deallocate(live_data_local)
+            ! deallocate the now unused local live points array to save memory
+            deallocate(live_data_local)
 
-        ! Sort the live points in order of likelihood, first point lowest, last point highest on the root node
-        ! (note that this is made easier by the fact that this array is semi-sorted
-        if(myrank==0) call quick_sort(live_data,M%l0)
+            ! Sort the live points in order of likelihood, first point lowest, last point highest on the root node
+            ! (note that this is made easier by the fact that this array is semi-sorted
+            if(myrank==0) call quick_sort(live_data,M%l0)
 
-        if(myrank==0) call write_finished_generating(settings%feedback) 
+            if(myrank==0) call write_finished_generating(settings%feedback) 
+        end if
 
 
 
@@ -144,26 +159,48 @@ module nested_sampling_parallel_module
         !  (d) incubating_data        | Points that have been generated from a higher loglikelihood contour, and are
         !                             |  waiting to be 'born' i.e. become live points
         !  (e) running_likelihoods    | Array of likelihood contours that are running at the moment
-        !  (f) min_max_arrray         | Array of maximums and minimums for each coordinate - allows rescaling
+        !  (f) min_max_array          | Array of maximums and minimums for each coordinate - allows rescaling
 
         if(myrank==0) then 
 
-            ! (a) Compute the average loglikelihood and initialise the evidence vector accordingly
-            evidence_vec = logzero
-            evidence_vec(6) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
+            ! (a) 
+            if(resume) then
+                ! If resuming, get the accumulated stats to calculate the
+                ! evidence from the resume file
+                read(1000,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
+            else
+                ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
+                evidence_vec = logzero
+                evidence_vec(6) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
+            end if
 
             ! (b) initialise the mean number of likelihood calls to 1
-            mean_likelihood_calls = 1d0
+            mean_likelihood_calls = sum(live_data(M%d0,:))/settings%nlive
 
             ! (c) record the first dead point 
             late_point = live_data(:,1)
-            ndead = 1
+
+            if(resume) then
+                ! If resuming, then get the number of dead points from the resume file
+                write(*,*) "Reading ndead"
+                read(1000,'(I)') ndead
+                close(1000)
+            else
+                ! Otherwise initialise the number of dead points at 1
+                ndead = 1
+            end if
 
             ! Get the likelihood contour
             late_likelihood = late_point(M%l0)
 
             ! If we're saving the dead points, open the relevant file
-            if (settings%save_dead) open(unit=222, file='dead_points.dat')
+            if (settings%save_dead) then
+                if(resume) then
+                    open(unit=222, file='dead_points.dat',position='append',action='write')
+                else
+                    open(unit=222, file='dead_points.dat',action='write')
+                end if
+            end if
 
             ! (d) Initialise the incubating stack
             incubating_data = 0d0
@@ -240,17 +277,27 @@ module nested_sampling_parallel_module
 
 
 
+        !======= 2) Main Loop ==========================================
+        !
+        ! This parallelised by splitting it into two parts: Master and Slaves
+        !
+        ! The slaves take the job of generating new points from seed points
+        !
+        ! The master's job is to collate the newly generated points into the
+        ! live points array and to calculate evidence
 
 
 
         ! definitely more samples needed than this
         more_samples_needed = .true.
 
-
         do while ( more_samples_needed )
 
             if(myrank == 0) then
-                ! The master nodes tasks:
+                
+                !================================================================
+                !===================== MASTER NODE ==============================
+                !================================================================
                 !
                 ! (1) Keep track of the lowest loglikelihood contour that hasn't
                 !      yet been sent off for sampling (loglikelihood_bound)
@@ -268,6 +315,7 @@ module nested_sampling_parallel_module
 
 
                 ! (1) Find the lowest likelihood which is neither running nor incubating
+
                 i_live=1
                 loglikelihood_bound = late_likelihood
                 do while( loglikelihood_bound<late_likelihood .or. &
@@ -279,13 +327,9 @@ module nested_sampling_parallel_module
 
                 end do
 
-                !write(*,'("live likelihoods:    ", <settings%nlive>E13.4)') live_data(M%l0,:)
-                !write(*,'("incubating_data:     ", <settings%nlive>E13.4)') incubating_data(M%l1,:)
-                !write(*,'("running_likelihoods: ", <nprocs>E13.4)')         running_likelihoods
-                !write(*,'("loglikelihood_bound: ", E13.4)')                 loglikelihood_bound
-                !write(*,*) '------------------------------------------'
 
-                ! Listen for a signal from any waiting slave
+                ! (2) Recieve newly generated baby point from any slave
+                !
                 call MPI_RECV(            &
                     baby_point,           & ! newly generated point to be receieved
                     M%nTotal,             & ! size of this data
@@ -301,7 +345,7 @@ module nested_sampling_parallel_module
                 ! add the new baby point to the incubation stack
                 call insert_point_into_incubating_data(baby_point,incubating_data,M%l1)
 
-                ! Select a seed point for the generator
+                ! (3) Select a seed point for the generator
                 !  -excluding the points which have likelihoods equal to the
                 !   loglikelihood bound
                 seed_point(M%l0)=loglikelihood_bound
@@ -317,8 +361,6 @@ module nested_sampling_parallel_module
 
                 ! Record that this likelihood is now running
                 running_likelihoods(mpi_status(MPI_SOURCE)) = loglikelihood_bound
-
-
 
                 ! Send a seed point back to that slave
                 call MPI_SEND(              &
@@ -342,7 +384,8 @@ module nested_sampling_parallel_module
                     )
 
 
-                ! transfer from incubating stack to live_data if necessary
+                ! (4) transfer from incubating stack to live_data if necessary
+                !
                 do while( incubating_data(M%l1,1) == late_likelihood )
 
                     ! birth the new point from the incubator
@@ -368,6 +411,8 @@ module nested_sampling_parallel_module
                     ! Get the new likelihood contour
                     late_likelihood = late_point(M%l0)
 
+                    ! Write the dead points to a file if desired
+                    if (settings%save_dead) write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
 
                     ! Feedback to command line every nlive iterations
                     if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
@@ -375,9 +420,18 @@ module nested_sampling_parallel_module
                         write(*,'("efficiency= ", F20.2                )') mean_likelihood_calls
                         write(*,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
                         write(*,*)
+                        call write_resume_file(settings,M,live_data,evidence_vec,ndead) 
                     end if
 
                 end do
+
+                ! update the minimum and maximum values of the live points
+                min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
+                min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
+
+
+
+
 
                 ! Halt if we've reached the desired maximum iterations
                 if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
@@ -385,11 +439,9 @@ module nested_sampling_parallel_module
                 ! Write the dead points to a file if desired
                 if (settings%save_dead) write(222,'(<M%nTotal+1>E17.9)') exp(ndead*log(settings%nlive/(settings%nlive+1d0))), late_point
 
-                ! update the minimum and maximum values of the live points
-                min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
-                min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
 
-
+                ! If we're done, then clean up by receiving the last piece of
+                ! data from each node (and throw it away) and then send a kill signal back to it
                 if(more_samples_needed==.false.) then
                     do i_live=1,nprocs-1
                         call MPI_RECV(            &
@@ -421,7 +473,15 @@ module nested_sampling_parallel_module
 
 
 
+
+
+
+
             else
+                !================================================================
+                !===================== SLAVE NODES ==============================
+                !================================================================
+
                 ! Listen for a signal from the master
                 call MPI_RECV(            &
                     seed_point,           & ! seed point to be recieved
@@ -434,6 +494,7 @@ module nested_sampling_parallel_module
                     mpierror              & ! error information (from mpi_module)
                     )
 
+                ! If we receive a kill signal, then exit the loop
                 if(mpi_status(MPI_TAG)==ENDTAG) then
                     more_samples_needed=.false.
                     exit
@@ -599,7 +660,7 @@ module nested_sampling_parallel_module
         double precision, intent(in),    dimension(:)   :: baby_point
         !> The live data array to be inserted into
         double precision, intent(inout), dimension(:,:) :: live_data
-        !> The index to sort by (in this case its M%l0
+        !> The index to sort by (in this case it's M%l0)
         integer,intent(in)          :: loglike_pos   
 
         double precision :: baby_loglike  !loglikelihood of the baby point
@@ -615,11 +676,9 @@ module nested_sampling_parallel_module
         baby_position =  binary_search(1,nlive,baby_loglike,loglike_pos,live_data)
 
         ! Delete the lowest likelihood point by shifting the points in the data
-        ! array from baby_position and below down by one
-        live_data(:,1:baby_position-2) = live_data(:,2:baby_position-1)
-
-        ! Add the new point
-        live_data(:,baby_position-1) = baby_point(:)
+        ! array from baby_position-1 and below down by one and add the new point
+        ! at baby_position-1
+        live_data(:,:baby_position-1) = eoshift(live_data(:,:baby_position-1),dim=2,shift=+1,boundary=baby_point)
 
     end subroutine insert_point_into_live_data
 
@@ -649,10 +708,7 @@ module nested_sampling_parallel_module
         incubating_position = binary_search(1,nincubating,incubating_loglike,loglike_pos,incubating_data)
 
         ! Shift the stack up 
-        incubating_data(:,incubating_position+1:) = incubating_data(:,incubating_position:)
-
-        ! Add the new point
-        incubating_data(:,incubating_position) = incubating_point(:)
+        incubating_data(:,incubating_position:) = eoshift(incubating_data(:,incubating_position:),dim=2,shift=-1,boundary=incubating_point)
 
     end subroutine insert_point_into_incubating_data
 

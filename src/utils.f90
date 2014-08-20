@@ -5,8 +5,17 @@ module utils_module
     !> The effective value of \f$ log(\inf) \f$
     double precision, parameter :: loginf = +1d300
 
+    !> The maximum character length
+    integer, parameter :: STR_LENGTH = 100
+
     !> \f$ 2\pi \f$ in double precision
     double precision, parameter :: TwoPi = 8d0*atan(1d0)
+
+    !> The default double format
+    !!
+    !! should have write statements along the lines of 
+    !! write(*,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)')
+    integer, parameter, dimension(2) :: DBL_FMT=(/17,8/)
 
 
     contains

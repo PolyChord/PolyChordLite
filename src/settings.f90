@@ -2,10 +2,14 @@
 !! details required to perform a nested sampling run.
 module settings_module
     use model_module,   only: model
+    use utils_module,   only: STR_LENGTH
     implicit none
 
     !> Type to contain all of the parameters involved in a nested sampling run
     Type :: program_settings
+
+        !> The file root for outputs
+        character(STR_LENGTH) :: file_root='chains/test'
 
         !> The number of live points
         integer :: nlive =512   
@@ -24,7 +28,7 @@ module settings_module
         !> Whether or not to save the dead points
         !! 
         !! It may not be worth saving them when doing extremely high dimensional problems
-        logical :: save_dead = .true.
+        logical :: save_dead = .false.
 
         !> The number of chords to draw
         integer :: num_chords = 6

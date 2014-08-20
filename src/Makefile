@@ -62,7 +62,7 @@ else
 NESTED_SAMPLING = nested_sampling_linear.o
 endif
 
-MODULES = $(MPI_UTILS) utils.o model.o settings.o feedback.o random_utils.o evidence.o likelihoods.o chordal_sampling.o $(NESTED_SAMPLING)
+MODULES = $(MPI_UTILS) utils.o model.o settings.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o $(NESTED_SAMPLING)
 
 
 
@@ -75,8 +75,9 @@ settings.o:                 model.o
 likelihoods.o:              $(MPI_UTILS) model.o utils.o 
 evidence.o:                 settings.o
 feedback.o:                 model.o settings.o utils.o
+read_write.o:               model.o settings.o utils.o
 chordal_sampling.o:         model.o utils.o random_utils.o
-$(NESTED_SAMPLING):   		$(MPI_UTILS) feedback.o model.o utils.o random_utils.o settings.o chordal_sampling.o
+$(NESTED_SAMPLING):   		$(MPI_UTILS) read_write.o feedback.o model.o utils.o random_utils.o settings.o chordal_sampling.o
 main.o:                     $(MODULES)
 
 main: $(MODULES) main.o 

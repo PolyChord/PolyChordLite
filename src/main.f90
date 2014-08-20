@@ -55,7 +55,7 @@ program main
     M%loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    M%nDims=4                  ! Dimensionality of the space
+    M%nDims=2                  ! Dimensionality of the space
     M%nDerived = 2             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the
@@ -81,15 +81,16 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
+    settings%file_root            =  'chains/test'           !file root
     settings%nlive                =  100*M%nDims             !number of live points
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
-    settings%save_dead            =  .true.                  !don't save any dead points
+    settings%save_dead            =  .false.                 !don't save any dead points
 
-    settings%num_chords           =  6                       !number of chords to draw        
+    settings%num_chords           =  20                      !number of chords to draw        
 
 
     ! ======= (2) Perform Nested Sampling =======

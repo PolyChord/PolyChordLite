@@ -5,11 +5,12 @@ module nested_sampling_linear_module
 
     !> Main subroutine for computing a generic nested sampling algorithm
     subroutine NestedSamplingL(M,settings)
-        use model_module,    only: model
-        use utils_module,    only: logzero,loginf
-        use settings_module, only: program_settings
-        use utils_module,    only: logsumexp
-        use random_module,   only: random_integers
+        use model_module,      only: model
+        use utils_module,      only: logzero,loginf,DBL_FMT
+        use settings_module,   only: program_settings
+        use utils_module,      only: logsumexp
+        use random_module,     only: random_integers
+        use read_write_module, only: write_resume_file
         use feedback_module
 
         implicit none
@@ -23,56 +24,112 @@ module nested_sampling_linear_module
         !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
         double precision, dimension(M%nTotal,settings%nlive) :: live_data
 
-        ! The new-born baby point
-        double precision,    dimension(M%nTotal)   :: baby_point
-        ! The recently dead point
-        double precision,    dimension(M%nTotal)   :: late_point
-
-        ! Point to seed a new one from
-        double precision,    dimension(M%nTotal)   :: seed_point
-
-        ! temp variable for getting a random integer
-        integer, dimension(1) :: point_number 
-
-        double precision :: baby_likelihood
-        double precision :: late_likelihood
-
-        double precision, dimension(6) :: evidence_vec
-
-        ! Means to be calculated
-        double precision :: mean_likelihood_calls
+        double precision,    dimension(M%nDims,2)   :: min_max_array
 
         logical :: more_samples_needed
 
+        ! The new-born baby point
+        double precision,    dimension(M%nTotal)   :: baby_point
+        double precision :: baby_likelihood
+
+        ! The recently dead point
+        double precision,    dimension(M%nTotal)   :: late_point
+        double precision :: late_likelihood
+
+        ! Point to seed a new one from
+        double precision,    dimension(M%nTotal)   :: seed_point
+        ! temp variable for getting a random integer
+        integer, dimension(1) :: point_number 
+
+
+        ! Evidence info
+        double precision, dimension(6) :: evidence_vec
+
+
+        logical :: resume=.false.
+        ! Means to be calculated
+        double precision :: mean_likelihood_calls
+
         integer :: ndead
 
-        double precision,    dimension(M%nDims,2)   :: min_max_array
 
 
         call write_opening_statement(M,settings) 
-        call write_started_generating(settings%feedback)
+        inquire(file=trim(settings%file_root)//'.resume',exist=resume)
+        if(resume) write(*,*) "Resuming from previous run"
+        !======= 1) Initialisation =====================================
+        ! (i)   generate initial live points by sampling
+        !       randomly from the prior (i.e. unit hypercube)
+        ! (ii)  Initialise all variables
 
         ! Create initial live points
-        live_data = GenerateLivePoints(M,settings%nlive)
+        if(resume) then
+            ! If there is a resume file present, then load the live points from that
+            write(*,*) "Reading live data"
+            open(1000,file=trim(settings%file_root)//'.resume',action='read')
+            read(1000,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
+        else
+            call write_started_generating(settings%feedback)
 
-        ! Sort them in order of likelihood, first point lowest, last point highest
-        call quick_sort(live_data,M%l0)
+            ! Otherwise generate them anew
+            live_data = GenerateLivePoints(M,settings%nlive)
+            ! Sort them in order of likelihood, first point lowest, last point highest
+            call quick_sort(live_data,M%l0)
 
-        call write_finished_generating(settings%feedback)
+            call write_finished_generating(settings%feedback)
+        end if
 
 
-        ! Compute the average loglikelihood and initialise the evidence vector accordingly
-        evidence_vec = logzero
-        evidence_vec(6) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
 
-        ! initialise the mean number of likelihood calls to 1
-        mean_likelihood_calls = 1d0
 
-        ! no dead points originally
-        ndead = 0
+
+        !~~~ (ii) Initialise all variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ! There are several variables used throughout the rest of the
+        ! algorithm that need to be initialised here
+        !  (a) evidence_vec           | Vector containing the evidence, its error, and any other 
+        !                             |  things that need to be accumulated over the run.
+        !                             |  we need to initialise its sixth argument.
+        !  (b) mean_likelihood_calls  | Mean number of likelihood calls over the past nlive iterations
+        !  (c) ndead                  | Number of iterations/number of dead points
+        !  (d) min_max_array          | Array of maximums and minimums for each coordinate - allows rescaling
+
+        ! (a)
+        if(resume) then
+            ! If resuming, get the accumulated stats to calculate the
+            ! evidence from the resume file
+            read(1000,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
+        else
+            ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
+            evidence_vec = logzero
+            evidence_vec(6) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
+        end if
+
+        ! (b) initialise the mean number of likelihood calls to 1
+        mean_likelihood_calls = sum(live_data(M%d0,:))/settings%nlive
+
+        ! (c) get number of dead points
+        if(resume) then
+            ! If resuming, then get the number of dead points from the resume file
+            write(*,*) "Reading ndead"
+            read(1000,'(I)') ndead
+            close(1000)
+        else
+            ! Otherwise no dead points originally
+            ndead = 0
+        end if
 
         ! If we're saving the dead points, open the relevant file
-        if (settings%save_dead) open(unit=222, file='dead_points.dat')
+        if (settings%save_dead) then
+            if(resume) then
+                open(unit=222, file='dead_points.dat',position='append',action='write')
+            else
+                open(unit=222, file='dead_points.dat',action='write')
+            end if
+        end if
+
+        ! (d) calculate the minimums and maximums of the live data
+        min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
+        min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
 
         call write_started_sampling(settings%feedback)
 
@@ -81,9 +138,6 @@ module nested_sampling_linear_module
 
         do while ( more_samples_needed )
 
-            ! update the minimum and maximum values of the live points
-            min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
-            min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
 
             ! Record the point that's just died
             late_point = live_data(:,1)
@@ -131,12 +185,16 @@ module nested_sampling_linear_module
                 write(*,'("efficiency= ", F20.2                )') mean_likelihood_calls
                 write(*,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
                 write(*,*)
+                call write_resume_file(settings,M,live_data,evidence_vec,ndead) 
             end if
 
         end do
 
+        ! update the minimum and maximum values of the live points
+        min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
+        min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
 
-        ! close the dead points file if we're nearly done
+        ! close the dead points file if we're done
         if (settings%save_dead) close(222)
 
         call write_final_results(M,evidence_vec,ndead,settings%feedback)
@@ -270,7 +328,7 @@ module nested_sampling_linear_module
         double precision, intent(in),    dimension(:)   :: baby_point
         !> The live data array to be inserted into
         double precision, intent(inout), dimension(:,:) :: live_data
-        !> The index to sort by (in this case its M%l0
+        !> The index to sort by (in this case it's M%l0)
         integer,intent(in)          :: loglike_pos   
 
         double precision :: baby_loglike  !loglikelihood of the baby point
@@ -286,48 +344,10 @@ module nested_sampling_linear_module
         baby_position =  binary_search(1,nlive,baby_loglike,loglike_pos,live_data)
 
         ! Delete the lowest likelihood point by shifting the points in the data
-        ! array from baby_position and below down by one
-        live_data(:,1:baby_position-2) = live_data(:,2:baby_position-1)
-
-        ! Add the new point
-        live_data(:,baby_position-1) = baby_point(:)
+        ! array from baby_position and below down by one and add the new point
+        live_data(:,:baby_position-1) = eoshift(live_data(:,:baby_position-1),dim=2,shift=+1,boundary=baby_point)
 
     end subroutine insert_point_into_live_data
-
-
-    !> Insert the new point into the incubating stack
-    !!
-    !! Since the data array is already sorted, one can insert a new point using
-    !! binary search insertion algorithm
-    subroutine insert_point_into_incubating_data(incubating_point,incubating_data,loglike_pos)
-        !> The point to be inserted by order of its last value
-        double precision, intent(in),    dimension(:)   :: incubating_point
-        !> The live data array to be inserted into
-        double precision, intent(inout), dimension(:,:) :: incubating_data
-        !> The index to sort by (in this case its the M%l1
-        integer,intent(in)          :: loglike_pos   
-
-        double precision :: incubating_loglike  !loglikelihood of the incubating point
-        integer          :: nincubating         !number of live points
-        integer          :: incubating_position !where to insert the incubating point in the array
-
-
-        nincubating = size(incubating_data,2) ! size of the array
-
-        incubating_loglike = incubating_point(loglike_pos) ! loglikelihood of the incubating point
-
-        ! search for the position with a binary search algorithm
-        incubating_position = binary_search(1,nincubating,incubating_loglike,loglike_pos,incubating_data)
-
-        ! Shift the stack up 
-        incubating_data(:,incubating_position+1:) = incubating_data(:,incubating_position:)
-
-        ! Add the new point
-        incubating_data(:,incubating_position) = incubating_point(:)
-
-    end subroutine insert_point_into_incubating_data
-
-
 
 
     !> Binary search algorithm

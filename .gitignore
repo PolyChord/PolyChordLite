@@ -7,3 +7,4 @@ doc/latex/
 *.o
 *.dat
 main
+chains
