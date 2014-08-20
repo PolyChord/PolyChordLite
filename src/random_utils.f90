@@ -114,17 +114,58 @@ module random_module
         ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
         integer,parameter       :: method=VSL_RNG_METHOD_UNIFORM_STD
 
-        double precision, parameter :: u_bound  = 0.0 ! generate random numbers between 0 and 1
-        double precision, parameter :: l_bound  = 1.0 ! 
+        double precision, parameter :: l_bound  = 0.0 ! generate random numbers between 0 and 1
+        double precision, parameter :: u_bound  = 1.0 ! 
 
         integer :: errcode ! Error code
 
         ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
         ! (v=vector,d=double,rng,uniform)
-        errcode=vdrnguniform( method, rng_stream, nDims, random_reals, u_bound, l_bound)
+        errcode=vdrnguniform( method, rng_stream, nDims, random_reals, l_bound, u_bound)
 
 
     end function random_reals
+
+    ! ===========================================================================================
+
+
+    !>  Single random real number
+    !!
+    !! We use the 
+    !! [VSL_RNG_METHOD_UNIFORM_STD](
+    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
+    !! intel method to generate uniform random numbers using the 
+    !! [vdrnguniform](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-D7AD317E-34EC-4789-8027-01D0E194FAC1.htm)
+    !!
+    !! Note that [VSL_RNG_METHOD_UNIFORM_STD](
+    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm)
+    !! can come in an accurate form.
+
+    function random_real()
+        implicit none
+
+        ! The output nDims coordinate
+        double precision :: random_real
+
+        double precision :: random_reals(1)
+
+        ! Method to generate random numbers 
+        ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
+        integer,parameter       :: method=VSL_RNG_METHOD_UNIFORM_STD
+
+        double precision, parameter :: l_bound  = 0.0 ! generate random numbers between 0 and 1
+        double precision, parameter :: u_bound  = 1.0 ! 
+
+        integer :: errcode ! Error code
+
+        ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
+        ! (v=vector,d=double,rng,uniform)
+        errcode=vdrnguniform( method, rng_stream, 1, random_reals, l_bound, u_bound)
+
+        random_real = random_reals(1)
+
+
+    end function random_real
 
     ! ===========================================================================================
 
@@ -143,33 +184,33 @@ module random_module
     !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm)
     !! can come in an accurate form.
 
-    function random_integers(nDims,nmax)
+    function random_integer(nmax)
         implicit none
-
-        !> Size of coordinate vector
-        integer,intent(in) :: nDims 
 
         !> Maximum integer to generate
         integer,intent(in) :: nmax
 
         ! The output nDims coordinate
-        integer, dimension(nDims) :: random_integers
+        integer :: random_integer
+        integer :: random_integers(1)
 
         ! Method to generate random numbers 
         ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
         integer,parameter       :: method=VSL_RNG_METHOD_UNIFORM_STD
 
-        integer, parameter :: u_bound  = 1 ! generate random numbers between 0 and 1
+        integer, parameter :: l_bound  = 1 ! generate random numbers between 0 and 1
 
         integer :: errcode ! Error code
 
         ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
         ! (v=vector,i=integer,rng,uniform)
         ! This generates a vector of random integers between [1,nmax+1) = [1,nmax]
-        errcode=virnguniform( method, rng_stream, nDims, random_integers, u_bound, nmax+1)
+        errcode=virnguniform( method, rng_stream, 1, random_integers, l_bound, nmax+1)
+
+        random_integer = random_integers(1)
 
 
-    end function random_integers
+    end function random_integer
 
     ! ===========================================================================================
 

@@ -9,7 +9,7 @@ module nested_sampling_linear_module
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
-        use random_module,     only: random_integers
+        use random_module,     only: random_integer
         use read_write_module, only: write_resume_file,write_posterior_file
         use feedback_module
 
@@ -44,8 +44,6 @@ module nested_sampling_linear_module
 
         ! Point to seed a new one from
         double precision,    dimension(M%nTotal)   :: seed_point
-        ! temp variable for getting a random integer
-        integer, dimension(1) :: point_number 
 
 
         ! Evidence info
@@ -170,9 +168,8 @@ module nested_sampling_linear_module
             seed_point(M%l0)=late_likelihood
             do while (seed_point(M%l0)<=late_likelihood)
                 ! get a random number in [1,nlive]
-                point_number = random_integers(1,settings%nlive) 
                 ! get this point from live_data 
-                seed_point = live_data(:,point_number(1))
+                seed_point = live_data(:,random_integer(settings%nlive))
             end do
 
             ! Record the likelihood bound which this seed will generate from
