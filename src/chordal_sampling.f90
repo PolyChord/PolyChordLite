@@ -8,7 +8,7 @@ module chordal_module
         use settings_module, only: program_settings
         use random_module, only: random_direction,random_real
         use model_module,  only: model, calculate_point
-        use utils_module, only: logzero
+        use utils_module, only: logzero,stdout_unit
 
         implicit none
 
@@ -47,8 +47,8 @@ module chordal_module
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
-                write(*,'( "Sampler    : Chordal" )')
-                write(*,'( "  num chords = ",I8 )') settings%num_chords
+                write(stdout_unit,'( "Sampler    : Chordal" )')
+                write(stdout_unit,'( "  num chords = ",I8 )') settings%num_chords
             end if
             return
         end if

@@ -1,6 +1,6 @@
 module example_likelihoods
     use model_module,    only: model
-    use utils_module,    only: logzero,TwoPi
+    use utils_module,    only: logzero,TwoPi,stdout_unit
 #ifdef MPI
     use mpi_module
 #endif
@@ -34,13 +34,13 @@ module example_likelihoods
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
-                write(*,'( "Likelihood : Gaussian" )')
+                write(stdout_unit,'( "Likelihood : Gaussian" )')
             end if
             if(feedback>=2) then
-                write(*,'( "     mean: ")')
-                write(*,'( " [", <M%nDims>F15.9 ,"]")') mu
-                write(*,'( "     sigma: ")')
-                write(*,'( " [", <M%nDims>F15.9 ,"]")') sigma
+                write(stdout_unit,'( "     mean: ")')
+                write(stdout_unit,'( " [", <M%nDims>F15.9 ,"]")') mu
+                write(stdout_unit,'( "     sigma: ")')
+                write(stdout_unit,'( " [", <M%nDims>F15.9 ,"]")') sigma
             end if
             gaussian_loglikelihood = logzero
             return
@@ -107,7 +107,7 @@ module example_likelihoods
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
-                write(*,'( "Likelihood : RosenBrock" )')
+                write(stdout_unit,'( "Likelihood : RosenBrock" )')
             end if
             loglikelihood=logzero
             return
@@ -163,7 +163,7 @@ module example_likelihoods
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
-                write(*,'( "Likelihood : Himmelblau" )')
+                write(stdout_unit,'( "Likelihood : Himmelblau" )')
             end if
             loglikelihood = logzero
             return
@@ -211,7 +211,7 @@ module example_likelihoods
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
-                write(*,'( "Likelihood : rastrigin" )')
+                write(stdout_unit,'( "Likelihood : rastrigin" )')
             end if
             loglikelihood = logzero
             return
@@ -248,7 +248,7 @@ module example_likelihoods
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
-                write(*,'( "Likelihood : Himmelblau" )')
+                write(stdout_unit,'( "Likelihood : Himmelblau" )')
             end if
             loglikelihood = logzero
             return
@@ -302,8 +302,8 @@ module example_likelihoods
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
-                write(*,'( "Likelihood : Correlated Gaussian" )')
-                write(*,'( "  sigma     = ",E15.7 )') sigma
+                write(stdout_unit,'( "Likelihood : Correlated Gaussian" )')
+                write(stdout_unit,'( "  sigma     = ",E15.7 )') sigma
             end if
             gaussian_loglikelihood_corr = logzero
 
@@ -389,9 +389,9 @@ module example_likelihoods
         if(present(feedback)) then
 
             if(feedback>=0) then
-                write(*,'( "Likelihood : Clustered Gaussian" )')
-                write(*,'( "  num_peaks = ",I4 )') num_peaks
-                write(*,'( "  sigma     = ",E15.7 )') sigma
+                write(stdout_unit,'( "Likelihood : Clustered Gaussian" )')
+                write(stdout_unit,'( "  num_peaks = ",I4 )') num_peaks
+                write(stdout_unit,'( "  sigma     = ",E15.7 )') sigma
             end if
 
             gaussian_loglikelihood_cluster = logzero
@@ -559,11 +559,11 @@ module example_likelihoods
         ! Feedback if requested
         if(present(feedback)) then
             if(feedback>=0) then
-                write(*,'( "Likelihood : Pyramidal" )')
+                write(stdout_unit,'( "Likelihood : Pyramidal" )')
             end if
             if(feedback>=2) then
-                write(*,'( "     center: ")')
-                write(*,'( " [", <M%nDims>F15.9 ,"]")') center
+                write(stdout_unit,'( "     center: ")')
+                write(stdout_unit,'( " [", <M%nDims>F15.9 ,"]")') center
             end if
             return
         end if

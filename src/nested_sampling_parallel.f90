@@ -7,7 +7,7 @@ module nested_sampling_parallel_module
     subroutine NestedSamplingP(M,settings)
         use mpi_module
         use model_module,      only: model
-        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,dbleq
+        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,dbleq
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
         use random_module,     only: random_integer
@@ -93,7 +93,7 @@ module nested_sampling_parallel_module
         if(myrank==0) then 
             call write_opening_statement(M,settings)
             inquire(file=trim(settings%file_root)//'.resume',exist=resume)
-            if(resume) write(*,*) "Resuming from previous run"
+            if(resume) write(stdout_unit,'("Resuming from previous run")')
         end if
 
 
@@ -109,7 +109,7 @@ module nested_sampling_parallel_module
         if(resume) then
             if(myrank==0) then
                 ! If there is a resume file present, then load the live points from that
-                write(*,*) "Reading live data"
+                write(stdout_unit,'("Reading live data")')
                 open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
                 read(read_resume_unit,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
             end if
@@ -190,7 +190,7 @@ module nested_sampling_parallel_module
 
             if(resume) then
                 ! If resuming, then get the number of dead points from the resume file
-                write(*,*) "Reading ndead"
+                write(stdout_unit,'("Reading ndead")')
                 read(read_resume_unit,'(I)') ndead
             else
                 ! Otherwise initialise the number of dead points at 1
@@ -337,7 +337,7 @@ module nested_sampling_parallel_module
 
                 end do
 
-                if (i_live==settings%nlive) write(*,*) 'oh no!'
+                if (i_live==settings%nlive) write(stdout_unit,'("oh no!")')
 
                 ! (2) Recieve newly generated baby point from any slave
                 !
@@ -448,10 +448,10 @@ module nested_sampling_parallel_module
 
                     ! Feedback to command line every nlive iterations
                     if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
-                        write(*,'("ndead     = ", I20                  )') ndead
-                        write(*,'("efficiency= ", F20.2                )') mean_likelihood_calls
-                        write(*,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
-                        write(*,*)
+                        write(stdout_unit,'("ndead     = ", I20                  )') ndead
+                        write(stdout_unit,'("efficiency= ", F20.2                )') mean_likelihood_calls
+                        write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
+                        write(stdout_unit,'("")')
                     end if
 
                 end do

@@ -312,7 +312,6 @@ module random_module
         if (modulus /= 0 ) then
             nhat = nhat_temp(:,1)/sqrt(modulus)
         else
-            write(*,*) 'modulus zero'
             nhat = random_direction(nDims)
         end if
 

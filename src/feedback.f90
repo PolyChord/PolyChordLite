@@ -17,7 +17,7 @@ module feedback_module
     !> Called before running the program
     subroutine write_opening_statement(M,settings)
         use model_module,    only: model
-        use utils_module,    only: logzero
+        use utils_module,    only: logzero,stdout_unit
         use settings_module, only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
@@ -28,16 +28,16 @@ module feedback_module
 
 
         if(settings%feedback >=1) then
-            write(*,'("Nested Sampling Algorithm")')
-            write(*,'("  author: Will Handley")')
-            write(*,'("   email: wh260@cam.ac.uk")')
-            write(*,*)
+            write(stdout_unit,'("Nested Sampling Algorithm")')
+            write(stdout_unit,'("  author: Will Handley")')
+            write(stdout_unit,'("   email: wh260@cam.ac.uk")')
+            write(stdout_unit,'("")')
         end if
 
         if(settings%feedback >=0) then
-            write(*,'("nlive      :",I8)')   settings%nlive
-            write(*,'("nDims      :",I8)')   M%nDims
-            write(*,'("nDerived   :",I8)')   M%nDerived
+            write(stdout_unit,'("nlive      :",I8)')   settings%nlive
+            write(stdout_unit,'("nDims      :",I8)')   M%nDims
+            write(stdout_unit,'("nDerived   :",I8)')   M%nDerived
             temp    = M%loglikelihood(temp(M%p0:M%p1),settings%feedback) ! Write out the likelihood
             temp    = settings%sampler(temp,temp2,M,settings%feedback) ! Write out the sampler
         end if
@@ -51,13 +51,14 @@ module feedback_module
 
     !> Called before generating the live points
     subroutine write_started_generating(feedback)
+        use utils_module,    only: stdout_unit
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 
 
         if (feedback>=1) then
-            write(*,*) 'generating live points' 
+            write(stdout_unit,'("generating live points")')
         end if
 
     end subroutine write_started_generating
@@ -83,13 +84,14 @@ module feedback_module
 
     !> Called at the end of generating the live points
     subroutine write_finished_generating(feedback)
+        use utils_module,    only: stdout_unit
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 
 
         if (feedback>=1) then
-            write(*,*) 'all live points generated' 
+            write(stdout_unit,'("all live points generated")')
         end if
 
     end subroutine write_finished_generating
@@ -101,6 +103,7 @@ module feedback_module
     !! Note that you shouldn't put any write statements in between using this
     !! subroutine.
     subroutine progress(frac,brsz)
+        use utils_module,    only: stdout_unit
         implicit none
 
         !> fraction completed
@@ -152,28 +155,29 @@ module feedback_module
         enddo
 
         ! print the progress bar to stdout (unit 6)
-        write(unit=6,fmt="(a1,a<bar_size+7>)",advance="no") char(13), bar
+        write(stdout_unit,fmt="(a1,a<bar_size+7>)",advance="no") char(13), bar
 
         if (percent/=100) then
             ! If we're not at the end, then we should flush the command line so
             ! that we re-start from the beginning next time
-            flush(unit=6)
+            flush(stdout_unit)
         else
             ! Otherwise, we should just write a blank line 
-            write(unit=6,fmt=*)
+            write(stdout_unit,fmt=*)
         endif
         return
     end subroutine progress
 
     !> Called before starting sampling
     subroutine write_started_sampling(feedback)
+        use utils_module,    only: stdout_unit
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 
 
         if (feedback>=1) then
-            write(*,*) 'started sampling' 
+            write(stdout_unit,'("started sampling")')
         end if
 
     end subroutine write_started_sampling
@@ -182,6 +186,7 @@ module feedback_module
     !> Nicely formatted final output statement
     subroutine write_final_results(M,evidence_vec,ndead,total_likelihood_calls,feedback)
         use model_module,    only: model, prior_log_volume
+        use utils_module,    only: stdout_unit
         implicit none
         !> The model details
         type(model), intent(in) :: M
@@ -195,13 +200,13 @@ module feedback_module
         integer,intent(in) :: total_likelihood_calls
 
         if (feedback>=0) then
-            write(*,'(A42)')                                        ' ________________________________________ '
-            write(*,'(A42)')                                        '|                                        |'
-            write(*,'("| ndead  = ", I12, "                  |"  )') ndead
-            write(*,'("| nlike  = ", I12, "                  |"  )') total_likelihood_calls
-            write(*,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1))  
-            write(*,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1)+prior_log_volume(M), exp(0.5*evidence_vec(2)-evidence_vec(1))  
-            write(*,'(A42)')                                        '|________________________________________|'
+            write(stdout_unit,'(A42)')                                        ' ________________________________________ '
+            write(stdout_unit,'(A42)')                                        '|                                        |'
+            write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') ndead
+            write(stdout_unit,'("| nlike  = ", I12, "                  |"  )') total_likelihood_calls
+            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1))  
+            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1)+prior_log_volume(M), exp(0.5*evidence_vec(2)-evidence_vec(1))  
+            write(stdout_unit,'(A42)')                                        '|________________________________________|'
         endif
     end subroutine write_final_results
 

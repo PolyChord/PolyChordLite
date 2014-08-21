@@ -17,6 +17,8 @@ module utils_module
     !! write(*,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)')
     integer, parameter, dimension(2) :: DBL_FMT=(/17,8/)
 
+    !> unit for stdout
+    integer, parameter :: stdout_unit = 6
     !> unit for reading from resume file
     integer, parameter :: read_resume_unit = 10
     !> unit for writing to resum file
