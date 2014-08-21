@@ -170,7 +170,7 @@ module example_likelihoods
         end if
 
         ! Normalisation for 2D
-        loglikelihood = -log(0.1387472391262011d0) 
+        loglikelihood = -log(0.4071069421432255d0) 
 
         ! 
         loglikelihood =  loglikelihood  -  (theta(1)**2 + theta(2)- 11d0)**2    -   (theta(1)+theta(2)**2-7d0)**2 

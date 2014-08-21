@@ -6,7 +6,7 @@ module chordal_module
 
     function ChordalSampling(settings,seed_point,min_max_array, M,feedback)  result(baby_point)
         use settings_module, only: program_settings
-        use random_module, only: random_skewed_direction,random_direction,random_reals,random_integers
+        use random_module, only: random_direction,random_real
         use model_module,  only: model, calculate_point
         use utils_module, only: logzero
 
@@ -37,6 +37,9 @@ module chordal_module
         ! ------- Local Variables -------
         double precision,    dimension(M%nDims)   :: nhat
 
+        double precision  :: max_chord
+
+        double precision :: step_length
         
         integer :: i
 
@@ -60,14 +63,29 @@ module chordal_module
         ! Re-scale the unit hypercube so that min->0, max->1 of min_max_array
         call re_scale(baby_point(M%h0:M%h1),min_max_array)
 
+        ! Record the step length
+        step_length = seed_point(M%d0+1)
+
+        ! Initialise max_chord at 0
+        max_chord = 0
+
         do i=1,settings%num_chords
+            ! Give the baby point the step length
+            baby_point(M%d0+1) = step_length
 
             ! Get a new random direction
             nhat = random_direction(M%nDims) 
 
             ! Generate a new random point along the chord defined by baby_point and nhat
             baby_point = random_chordal_point( nhat, baby_point,min_max_array, M)
+
+            ! keep track of the largest chord
+            max_chord = max(max_chord,baby_point(M%d0+1))
         end do
+
+        ! Hand back the maximum chord this time to be used as the step length
+        ! next time this point is drawn
+        baby_point(M%d0+1) = max_chord
 
         ! de-scale the unit hypercube so that 0->min, 1->max of min_max_array
         call de_scale(baby_point(M%h0:M%h1),min_max_array)
@@ -79,7 +97,7 @@ module chordal_module
     function random_chordal_point(nhat,seed_point,min_max_array,M) result(baby_point)
         use model_module,  only: model, calculate_point
         use utils_module,  only: logzero, distance
-        use random_module, only: random_reals
+        use random_module, only: random_real
         implicit none
 
         !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
@@ -101,49 +119,50 @@ module chordal_module
 
         double precision :: trial_chord_length
 
+        ! estimate at an appropriate chord
+        trial_chord_length = seed_point(M%d0+1)
 
         ! record the number of likelihood calls
         u_bound(M%d0) = seed_point(M%d0)
         l_bound(M%d0) = 0
 
-        ! set the likelihoods of start bounds so that the loops below are entered
-        u_bound(M%l0) = seed_point(M%l1)
-        l_bound(M%l0) = seed_point(M%l1)
 
-        ! set the trial chord length at half the bound of the old length
-        trial_chord_length = seed_point(M%d0+1)/2d0 
+        ! Select initial start and end points
+        l_bound(M%h0:M%h1) = seed_point(M%h0:M%h1) - random_real() * trial_chord_length * nhat 
+        u_bound(M%h0:M%h1) = l_bound(M%h0:M%h1) + trial_chord_length * nhat 
 
-        ! Expand the region by doubling until u_bound has a loglikelihood less
-        ! than the log likelihood bound
+        ! Calculate initial likelihoods
+        call de_scale(u_bound(M%h0:M%h1),min_max_array)
+        call de_scale(l_bound(M%h0:M%h1),min_max_array)
+        call calculate_point(M,u_bound)
+        call calculate_point(M,l_bound)
+        call re_scale(u_bound(M%h0:M%h1),min_max_array)
+        call re_scale(l_bound(M%h0:M%h1),min_max_array)
+
+        ! expand u_bound until it's outside the likelihood region
         do while(u_bound(M%l0) >= seed_point(M%l1) )
-            trial_chord_length = 2d0*trial_chord_length
-            u_bound(M%h0:M%h1) = seed_point(M%h0:M%h1) + nhat * trial_chord_length
+            u_bound(M%h0:M%h1) = u_bound(M%h0:M%h1) + nhat * trial_chord_length
             call de_scale(u_bound(M%h0:M%h1),min_max_array)
             call calculate_point(M,u_bound)
             call re_scale(u_bound(M%h0:M%h1),min_max_array)
         end do
 
-        ! repeat for the l_bound
-        trial_chord_length = trial_chord_length/2
+        ! expand l_bound until it's outside the likelihood region
         do while(l_bound(M%l0) >= seed_point(M%l1) )
-            trial_chord_length = 2*trial_chord_length
-            l_bound(M%h0:M%h1) = seed_point(M%h0:M%h1) - nhat * trial_chord_length
+            l_bound(M%h0:M%h1) = l_bound(M%h0:M%h1) - nhat * trial_chord_length
             call de_scale(l_bound(M%h0:M%h1),min_max_array)
             call calculate_point(M,l_bound)
             call re_scale(l_bound(M%h0:M%h1),min_max_array)
         end do
 
+        ! Sample within this bound
         baby_point = find_positive_within(l_bound,u_bound)
-
-        ! Store the new length
-        baby_point(M%d0+1) = max(&
-            distance(u_bound(M%h0:M%h1),seed_point(M%h0:M%h1)),&
-            distance(l_bound(M%h0:M%h1),seed_point(M%h0:M%h1))&
-            ) 
 
         ! Pass on the loglikelihood bound
         baby_point(M%l1) = seed_point(M%l1)
 
+        ! Estimate the next appropriate chord
+        baby_point(M%d0+1) = distance( u_bound(M%h0:M%h1),l_bound(M%h0:M%h1) )!distance( baby_point(M%h0:M%h1),seed_point(M%h0:M%h1) )
 
         contains
 
@@ -157,11 +176,11 @@ module chordal_module
             ! The output finish point
             double precision,    dimension(M%nTotal)   :: finish_point
 
-            double precision,dimension(1) :: random_temp
+            double precision :: random_temp
 
             ! Draw a random point within l_bound and u_bound
-            random_temp =random_reals(1)
-            finish_point(M%h0:M%h1) = l_bound(M%h0:M%h1)*(1d0-random_temp(1)) + random_temp(1) * u_bound(M%h0:M%h1)
+            random_temp =random_real()
+            finish_point(M%h0:M%h1) = l_bound(M%h0:M%h1)*(1d0-random_temp) + random_temp * u_bound(M%h0:M%h1)
 
             ! Pass on the number of likelihood calls that have been made
             finish_point(M%d0) = l_bound(M%d0) + u_bound(M%d0)
