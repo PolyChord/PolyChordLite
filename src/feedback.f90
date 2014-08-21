@@ -180,7 +180,7 @@ module feedback_module
 
 
     !> Nicely formatted final output statement
-    subroutine write_final_results(M,evidence_vec,ndead,feedback)
+    subroutine write_final_results(M,evidence_vec,ndead,total_likelihood_calls,feedback)
         use model_module,    only: model, prior_log_volume
         implicit none
         !> The model details
@@ -191,11 +191,14 @@ module feedback_module
         double precision, intent(in), dimension(2) :: evidence_vec
         !> the number of dead points
         integer,intent(in) :: ndead
+        !> the total number of likelihood calls
+        integer,intent(in) :: total_likelihood_calls
 
         if (feedback>=0) then
             write(*,'(A42)')                                        ' ________________________________________ '
             write(*,'(A42)')                                        '|                                        |'
             write(*,'("| ndead  = ", I12, "                  |"  )') ndead
+            write(*,'("| nlike  = ", I12, "                  |"  )') total_likelihood_calls
             write(*,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1))  
             write(*,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1)+prior_log_volume(M), exp(0.5*evidence_vec(2)-evidence_vec(1))  
             write(*,'(A42)')                                        '|________________________________________|'

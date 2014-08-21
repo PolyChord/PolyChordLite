@@ -58,6 +58,7 @@ module nested_sampling_parallel_module
         logical :: resume=.false.
         ! Means to be calculated
         double precision                           :: mean_likelihood_calls
+        integer                                    :: total_likelihood_calls
 
         integer :: ndead
 
@@ -184,6 +185,7 @@ module nested_sampling_parallel_module
 
             ! (b) initialise the mean number of likelihood calls to 1
             mean_likelihood_calls = sum(live_data(M%d0,:))/settings%nlive
+            total_likelihood_calls = settings%nlive
 
             ! (c) record the first dead point 
             late_point = live_data(:,1)
@@ -411,6 +413,8 @@ module nested_sampling_parallel_module
                     ! update the mean number of likelihood calls
                     mean_likelihood_calls = mean_likelihood_calls + (baby_point(M%d0) - late_point(M%d0) ) / (settings%nlive + 0d0)
 
+                    ! update the total number of likelihood calls
+                    total_likelihood_calls = total_likelihood_calls + baby_point(M%d0)
 
                     ! record the next point thats about to die
                     late_point = live_data(:,1)
@@ -489,7 +493,7 @@ module nested_sampling_parallel_module
                             )
                     end do
 
-                    call write_final_results(M,evidence_vec,ndead,settings%feedback)
+                    call write_final_results(M,evidence_vec,ndead,total_likelihood_calls,settings%feedback)
                 end if
 
 

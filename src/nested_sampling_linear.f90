@@ -53,6 +53,7 @@ module nested_sampling_linear_module
         logical :: resume=.false.
         ! Means to be calculated
         double precision :: mean_likelihood_calls
+        integer :: total_likelihood_calls
 
         integer :: ndead
 
@@ -114,6 +115,7 @@ module nested_sampling_linear_module
 
         ! (b) initialise the mean number of likelihood calls to 1
         mean_likelihood_calls = sum(live_data(M%d0,:))/settings%nlive
+        total_likelihood_calls = settings%nlive
 
         ! (c) get number of dead points
         if(resume) then
@@ -182,6 +184,9 @@ module nested_sampling_linear_module
             ! update the mean number of likelihood calls
             mean_likelihood_calls = mean_likelihood_calls + (baby_point(M%d0) - late_point(M%d0) ) / (settings%nlive + 0d0)
 
+            ! update the total number of likelihood calls
+            total_likelihood_calls = total_likelihood_calls + baby_point(M%d0)
+
             ! Insert the new point
             call insert_point_into_live_data(baby_point,live_data,M%l0)
 
@@ -231,7 +236,7 @@ module nested_sampling_linear_module
 
         end do
 
-        call write_final_results(M,evidence_vec,ndead,settings%feedback)
+        call write_final_results(M,evidence_vec,ndead,total_likelihood_calls,settings%feedback)
 
     end subroutine NestedSamplingL
 
