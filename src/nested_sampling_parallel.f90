@@ -7,7 +7,7 @@ module nested_sampling_parallel_module
     subroutine NestedSamplingP(M,settings)
         use mpi_module
         use model_module,      only: model
-        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit
+        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,dbleq
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
         use random_module,     only: random_integer
@@ -27,7 +27,6 @@ module nested_sampling_parallel_module
         double precision, allocatable, dimension(:,:)        :: live_data_local
 
         double precision, dimension(M%nTotal,settings%nlive) :: incubating_data
-        double precision, allocatable, dimension(:)          :: running_likelihoods
 
         double precision, dimension(M%nDims,2)               :: min_max_array
 
@@ -166,7 +165,6 @@ module nested_sampling_parallel_module
         !  (c) ndead                  | Number of iterations/number of dead points
         !  (d) incubating_data        | Points that have been generated from a higher loglikelihood contour, and are
         !                             |  waiting to be 'born' i.e. become live points
-        !  (e) running_likelihoods    | Array of likelihood contours that are running at the moment
         !  (f) min_max_array          | Array of maximums and minimums for each coordinate - allows rescaling
         !  (g) posterior_array        | Array of weighted posterior points
 
@@ -205,10 +203,6 @@ module nested_sampling_parallel_module
             ! (d) Initialise the incubating stack
             incubating_data = 0d0
             incubating_data(M%l1,:) = loginf
-
-            ! (e) Initialise the running likelihood stack
-            allocate(running_likelihoods(nprocs-1))
-            running_likelihoods=loginf
 
             ! (f) calculate the minimums and maximums of the live data
             min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
@@ -260,7 +254,7 @@ module nested_sampling_parallel_module
                 seed_point(M%l1) = loglikelihood_bound
 
                 ! Record that this likelihood is now active
-                running_likelihoods(nslaves) = loglikelihood_bound
+                live_data(M%d0+2,nslaves) = 1d0
 
 
                 ! Send a seed point to the nslaves th slave
@@ -329,15 +323,21 @@ module nested_sampling_parallel_module
 
 
 
-                ! (1) Find the lowest likelihood which is neither running nor incubating
+                ! (1) Find the lowest likelihood which hasn't been sent off for
+                ! sampling
                 do i_live=1,settings%nlive
-                    loglikelihood_bound= live_data(M%l0,i_live)
-                    if( all(loglikelihood_bound/=running_likelihoods(:)) .and. all(loglikelihood_bound/=incubating_data(M%l1,:)) ) exit 
+
+                    if( live_data(M%d0+2,i_live) < 0 ) then
+                        loglikelihood_bound= live_data(M%l0,i_live)
+
+                        ! Record that this likelihood is now running
+                        live_data(M%d0+2,i_live) = 1d0
+                        exit
+                    end if
+
                 end do
 
-                !write(*,'("nincubate: ", I8)') count(incubating_data(M%l1,:) <loginf)
-                !write(*,'("running likelihoods: ", <nprocs-1>E17.8)') running_likelihoods
-
+                if (i_live==settings%nlive) write(*,*) 'oh no!'
 
                 ! (2) Recieve newly generated baby point from any slave
                 !
@@ -369,9 +369,6 @@ module nested_sampling_parallel_module
                 ! Record the likelihood bound which this seed will generate from
                 seed_point(M%l1) = loglikelihood_bound
 
-                ! Record that this likelihood is now running
-                running_likelihoods(mpi_status(MPI_SOURCE)) = loglikelihood_bound
-
                 ! Send a seed point back to that slave
                 call MPI_SEND(              &
                     seed_point,             & ! seed point to be sent
@@ -396,13 +393,16 @@ module nested_sampling_parallel_module
 
                 ! (4) transfer from incubating stack to live_data if necessary
                 !
-                do while( incubating_data(M%l1,1) == late_likelihood )
+                do while( dbleq( incubating_data(M%l1,1) , late_likelihood ) )
 
                     ! birth the new point from the incubator
                     baby_point = incubating_data(:,1)             
                     baby_likelihood  = baby_point(M%l0)
                     ! pop the stack
                     incubating_data(:,:settings%nlive-1) = incubating_data(:,2:)
+
+                    ! Record that this likelihood hasn't been set running yet
+                    baby_point(M%d0+2) = -1d0
 
                     ! Insert the new point
                     call insert_point_into_live_data(baby_point,live_data,M%l0)
@@ -602,6 +602,9 @@ module nested_sampling_parallel_module
 
         ! Set the initial trial values of the chords as the diagonal of the hypercube
         live_data(M%d0+1,:) = sqrt(M%nDims+0d0)
+
+        ! Initially, none of the points have been calculated yet
+        live_data(M%d0+2,:) = -1d0
 
         ! Set the likelihood contours to logzero for now
         live_data(M%l1,:) = logzero

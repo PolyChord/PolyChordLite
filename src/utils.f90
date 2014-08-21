@@ -46,6 +46,16 @@ module utils_module
     end function distance
 
 
+    !> Double comparison
+    function dbleq(a,b)
+        implicit none
+        double precision :: a,b
+        logical :: dbleq
+        double precision, parameter :: eps = 1d-7
+
+        dbleq =  abs(a-b) < eps * max(abs(a),abs(b)) 
+
+    end function dbleq
 
 
 
