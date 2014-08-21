@@ -326,18 +326,15 @@ module nested_sampling_parallel_module
                 !      ready from the incubating stack
 
 
+
                 ! (1) Find the lowest likelihood which is neither running nor incubating
-
-                i_live=1
-                loglikelihood_bound = late_likelihood
-                do while( loglikelihood_bound<late_likelihood .or. &
-                        any(loglikelihood_bound==running_likelihoods(:)) .or. &
-                        any(loglikelihood_bound==incubating_data(M%l1,:)) )
-
+                do i_live=1,settings%nlive
                     loglikelihood_bound= live_data(M%l0,i_live)
-                    i_live=i_live+1
-
+                    if( all(loglikelihood_bound/=running_likelihoods(:)) .and. all(loglikelihood_bound/=incubating_data(M%l1,:)) ) exit 
                 end do
+
+                !write(*,'("nincubate: ", I8)') count(incubating_data(M%l1,:) <loginf)
+                !write(*,'("running likelihoods: ", <nprocs-1>E17.8)') running_likelihoods
 
 
                 ! (2) Recieve newly generated baby point from any slave
@@ -426,7 +423,8 @@ module nested_sampling_parallel_module
                     late_logweight = (ndead-1)*lognlive - ndead*lognlivep1 
 
                     ! Update the set of weighted posteriors
-                    if(late_point(M%l0) + late_logweight - evidence_vec(1) > log(settings%minimum_weight) ) then
+                    if(settings%calculate_posterior .and. &
+                        late_point(M%l0) + late_logweight - evidence_vec(1) > log(settings%minimum_weight) ) then
 
                         ! First trim off any points that are now under the minimum_weight limit
                         nremove = count( posterior_array(1,1:nposterior)-evidence_vec(1)<=log(settings%minimum_weight) )
@@ -436,7 +434,7 @@ module nested_sampling_parallel_module
 
 
                         ! Now add the new point
-                nposterior=min(nposterior+1,settings%nmax_posterior)
+                        nposterior=min(nposterior+1,settings%nmax_posterior)
                         posterior_point(1) = late_point(M%l0) + late_logweight
                         posterior_point(2) = late_point(M%l0)
                         posterior_point(3:) = late_point(M%p0:M%p1)

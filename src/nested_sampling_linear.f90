@@ -192,7 +192,8 @@ module nested_sampling_linear_module
             if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
 
             ! Update the set of weighted posteriors
-            if(late_point(M%l0) + late_logweight - evidence_vec(1) > log(settings%minimum_weight) ) then
+            if( settings%calculate_posterior .and. &
+                late_point(M%l0) + late_logweight - evidence_vec(1) > log(settings%minimum_weight) ) then
 
                 ! First trim off any points that are now under the minimum_weight limit
                 nremove = count( posterior_array(1,1:nposterior)-evidence_vec(1)<=log(settings%minimum_weight) )

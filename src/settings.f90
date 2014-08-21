@@ -34,6 +34,9 @@ module settings_module
         !> The minimum weight of the posterior points
         double precision :: minimum_weight = 1d-15
 
+        !> Whether or not to calculate the posterior
+        logical :: calculate_posterior = .true.
+
         !> How often to update the resume file
         integer :: update_resume = 10000
 
