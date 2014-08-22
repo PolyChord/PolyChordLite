@@ -168,6 +168,8 @@ module example_likelihoods
             loglikelihood = logzero
             return
         end if
+        ! (just so the variable M is used, we overwrite it straight away)
+        loglikelihood = M%l0
 
         ! Normalisation for 2D
         loglikelihood = -log(0.4071069421432255d0) 
@@ -253,6 +255,9 @@ module example_likelihoods
             loglikelihood = logzero
             return
         end if
+
+        ! (just so the variable M is used, we overwrite it straight away)
+        loglikelihood = M%l0
 
         ! No normalisation implemented yet
         loglikelihood = 0

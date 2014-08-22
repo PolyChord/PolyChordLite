@@ -41,6 +41,7 @@ module nested_sampling_linear_module
         double precision,    dimension(M%nTotal)   :: late_point
         double precision :: late_likelihood
         double precision :: late_logweight
+        integer :: late_index
 
         ! Point to seed a new one from
         double precision,    dimension(M%nTotal)   :: seed_point
@@ -59,7 +60,6 @@ module nested_sampling_linear_module
 
         double precision :: lognlive 
         double precision :: lognlivep1 
-
 
 
         call write_opening_statement(M,settings) 
@@ -81,11 +81,13 @@ module nested_sampling_linear_module
 
             ! Otherwise generate them anew
             live_data = GenerateLivePoints(M,settings%nlive)
+
             ! Sort them in order of likelihood, first point lowest, last point highest
-            call quick_sort(live_data,M%l0)
+            late_index = create_linked_list(M,live_data,settings%nlive)
 
             call write_finished_generating(settings%feedback)
         end if
+
 
 
 
@@ -146,6 +148,20 @@ module nested_sampling_linear_module
             close(read_resume_unit)
         end if
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         call write_started_sampling(settings%feedback)
 
         ! definitely more samples needed than this
@@ -155,7 +171,7 @@ module nested_sampling_linear_module
 
 
             ! Record the point that's just died
-            late_point = live_data(:,1)
+            late_point = live_data(:,late_index)
             ndead = ndead + 1
 
             ! Get the likelihood contour
@@ -188,7 +204,8 @@ module nested_sampling_linear_module
             total_likelihood_calls = total_likelihood_calls + baby_point(M%d0)
 
             ! Insert the new point
-            call insert_point_into_live_data(baby_point,live_data,M%l0)
+
+            call insert_into_linked_list(M,settings%nlive,baby_point,live_data,late_index)
 
             ! Calculate the new evidence (and check to see if we're accurate enough)
             call settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed,evidence_vec)
@@ -282,112 +299,184 @@ module nested_sampling_linear_module
         ! Set the initial trial values of the chords as the diagonal of the hypercube
         live_data(M%d0+1,:) = sqrt(M%nDims+0d0)
 
-        ! Set the likelihood contours to logzero for now
-        live_data(M%l1,:) = logzero
-
 
     end function GenerateLivePoints
 
 
 
-    !> Sort nlive vectors in data_array(:,nlive) by the second to last element of each
-    !! vector
-    recursive subroutine quick_sort(data_array,colnum)
+    function create_linked_list(M,live_data,nlive)  result(lowest_index)
+        use model_module,      only: model
+        implicit none
 
-        !> an array of nlive  (coord,derived,like) to be sorted by the
-        !! likelihood value at the end of each vector
-        double precision, dimension(:,:), intent(inout) :: data_array
-
-        !> The column with which to sort by
-        integer, intent(in) :: colnum
-
-        integer :: iq
-
-        if( size(data_array, 2 ) > 1) then
-            call partition(data_array,iq)
-            call quick_sort( data_array(:,:iq-1), colnum )
-            call quick_sort( data_array(:,iq:),   colnum )
-        endif
-        contains
-
-        !> @todo comment this quick_sort partition
-        subroutine partition(data_array, marker)
-
-            double precision, intent(inout), dimension(:,:) :: data_array
-            integer, intent(out) :: marker
-            integer :: i, j
-            double precision, dimension(size(data_array,1)) :: temp,x
-
-            x(:) = data_array(:,1)
-            i= 0
-            j= size( data_array, 2 ) + 1
-
-            do
-                j = j-1
-                do
-                    if (data_array(colnum,j) <= x(colnum)) exit
-                    j = j-1
-                end do
-
-                i = i+1
-                do
-                    if (data_array(colnum,i) >= x(colnum)) exit
-                    i = i+1
-                end do
-
-                if (i < j) then
-                    ! exchange data_array(:,i) and data_array(:,j)
-                    temp(:)         = data_array(:,i)
-                    data_array(:,i) = data_array(:,j)
-                    data_array(:,j) = temp(:)
-
-                    elseif (i == j) then
-                    marker = i+1
-                    return
-                else
-                    marker = i
-                    return
-                endif
-            end do
-
-        end subroutine partition
-
-    end subroutine quick_sort
+        !> The model details 
+        type(model),            intent(in) :: M
+        !> The number of live points
+        integer, intent(in) :: nlive
+        !> The live_data array
+        double precision, intent(inout), dimension(M%nTotal,nlive) :: live_data
 
 
 
+        double precision, dimension(nlive) :: loglikes
+
+        ! The lowest index point
+        integer :: lowest_index
+
+        ! Temporary variables
+        integer :: prev_index(1)
+        integer :: next_index(1)
+        double precision :: prev_loglike
+        double precision :: next_loglike
+        
+        ! Loop variable
+        integer :: i_live
 
 
-    !> Insert the new point into the live data array
-    !!
-    !! Since the data array is already sorted, one can insert a new point using
-    !! binary search insertion algorithm
-    subroutine insert_point_into_live_data(baby_point,live_data,loglike_pos)
-        !> The point to be inserted by order of its last value
-        double precision, intent(in),    dimension(:)   :: baby_point
+
+        loglikes=live_data(M%l0,:)
+
+        ! (1) Initialise the first point
+
+        ! Find the lowest loglikelihood in live_data...
+        next_loglike = minval(loglikes) 
+        ! ... and its index (note that this is the function output)
+        next_index   = minloc(loglikes)
+        lowest_index = next_index(1)
+
+        ! The pointer to the previous point for the lowest index points to nothing
+        live_data(M%prevlive,lowest_index) = 0d0
+
+
+        ! (2) Loop over the remaining live points.
+        ! At each stage, we assign the previous point the address of the next
+        ! point, and the next point the address of the previous point
+        do i_live=2,nlive
+
+            ! Catch the case of equal loglikelihoods (only really occurs for
+            ! logzero i.e. unphysical points)
+            ! In the event of several lowest values, minloc returns the lowest
+            ! index. We can therefore check to see if there are multiple points
+            ! with the same contour by searching in the index above the last
+            ! one.
+            if(count(loglikes(next_index(1)+1:)==next_loglike)>0) then
+
+                ! find the index of the next loglikelihood
+                prev_index   = next_index
+                next_index   = minloc(loglikes(next_index(1)+1:),loglikes(next_index(1)+1:)==next_loglike)+next_index(1)
+
+                ! Give the previous point the address of the next point
+                live_data(M%nextlive,prev_index(1)) = next_index(1)
+                ! Give the next point the address of the previous point
+                live_data(M%prevlive,next_index(1)) = prev_index(1)
+
+
+            else
+                ! Find the next loglikelihood...
+                prev_loglike = next_loglike
+                next_loglike = minval(loglikes,loglikes>prev_loglike) 
+
+                ! ... and the index of that likelihood
+                prev_index   = next_index
+                next_index   = minloc(loglikes,loglikes>prev_loglike) 
+
+                ! Give the previous point the address of the next point
+                live_data(M%nextlive,prev_index(1)) = next_index(1)
+                ! Give the next point the address of the previous point
+                live_data(M%prevlive,next_index(1)) = prev_index(1)
+            end if
+            
+        end do
+
+        ! Assign the highest point a pointer to say that it is at the end
+        live_data(M%nextlive,next_index) = -1d0
+
+    end function create_linked_list
+
+
+    subroutine insert_into_linked_list(M,nlive,baby_point,live_data,lowest_index)
+        use model_module,      only: model
+        implicit none
+        !> The model details
+        type(model),            intent(in) :: M
+        !> The number of live points
+        integer,intent(in) :: nlive
+        !> The point to be inserted 
+        double precision, intent(in),    dimension(M%nTotal)   :: baby_point
         !> The live data array to be inserted into
-        double precision, intent(inout), dimension(:,:) :: live_data
+        double precision, intent(inout), dimension(M%nTotal,nlive) :: live_data
         !> The index to sort by (in this case it's M%l0)
-        integer,intent(in)          :: loglike_pos   
+        integer,intent(inout)          :: lowest_index
 
-        double precision :: baby_loglike  !loglikelihood of the baby point
-        integer          :: nlive         !number of live points
-        integer          :: baby_position !where to insert the baby point in the array
+        ! The index of baby_point (set to be the old lowest_index)
+        integer :: baby_index
+
+        ! The index directly above baby_point
+        integer :: next_index
+        ! The index directly below baby_point
+        integer :: prev_index
+
+        ! The new lowest index once the dead point has been deleted
+        integer :: new_lowest_index
+
+        ! The position of baby_index in live_data will be the position of the
+        ! late point, since we're about to delete it
+        baby_index = lowest_index
+
+        ! Initialise the insert index at the start point
+        next_index = lowest_index
+
+        ! Find the position to insert the baby_point by searching sequentially through the array
+        do while( live_data(M%l0,next_index) < baby_point(M%l0) )
+            prev_index = next_index
+            next_index = nint(live_data(M%nextlive,next_index)) 
+            if(next_index==-1) exit
+        end do
+        ! We have now returned the indices of the points surrounding baby_point
 
 
-        nlive       = size(live_data,2)    ! size of the array
+        if(prev_index/=lowest_index) then
+            ! If the baby point is above the lowest index:
 
-        baby_loglike = baby_point(loglike_pos) ! loglikelihood of the baby point
+            ! Find the new lowest_index
+            new_lowest_index=nint(live_data(M%nextlive,lowest_index))
 
-        ! search for the position with a binary search algorithm
-        baby_position =  binary_search(1,nlive,baby_loglike,loglike_pos,live_data)
+            ! 'Delete' the late point by re-pointing the new lowest_index point to 0
+            live_data( M%prevlive , new_lowest_index ) = 0d0
 
-        ! Delete the lowest likelihood point by shifting the points in the data
-        ! array from baby_position-1 and below down by one and add the new point
-        ! at baby_position-1
-        live_data(:,:baby_position-1) = eoshift(live_data(:,:baby_position-1),dim=2,shift=+1,boundary=baby_point)
+            ! Pass on the new lowest index
+            lowest_index=new_lowest_index
 
-    end subroutine insert_point_into_live_data
+        else
+            ! Point the previous index at 0
+            prev_index = 0d0
+            ! tell the algorithm that the new lowest index is the baby index
+            lowest_index=baby_index
+        end if
+
+        ! Insert baby_point at the same place as the late point
+        live_data(:,baby_index) = baby_point
+
+
+        ! Update the links of baby point
+        live_data(M%nextlive,baby_index) = next_index
+        live_data(M%prevlive,baby_index) = prev_index
+
+        ! Update the links of the two points surrounding baby_point
+        !  - point the point above baby_point to baby_point if baby_index is not
+        !    the highest
+        if(next_index/=-1) live_data(M%prevlive, next_index ) = baby_index
+        !  - point the point below baby_point to baby_point if baby_index is not
+        !    the lowest
+        if(prev_index/=0) live_data(M%nextlive, prev_index) = baby_index
+
+
+    end subroutine insert_into_linked_list
+        
+
+
+
+
+
 
     !> Insert the new point into the posterior array (pun very much intended)
     !!

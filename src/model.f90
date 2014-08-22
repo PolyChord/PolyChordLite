@@ -44,6 +44,13 @@ module model_module
         !> This is the likelihood contour which generated the live point
         integer :: l1          
 
+        ! 'Pointers'
+        !> Index of the pointer to the previous live point
+        integer :: prevlive
+        !> Index of the pointer to the next live point
+        integer :: nextlive
+
+
         !==========================================================================
         ! Prior details:
         !
@@ -212,12 +219,17 @@ module model_module
         M%d0=M%p1+1
         M%d1=M%d0+M%nDerived-1  
 
+        ! Pointers
+        M%prevlive = M%d1+1
+        M%nextlive = M%d1+2
+
         ! Loglikelihood indices
-        M%l0=M%d1+1
+        M%l0=M%nextlive+1
         M%l1=M%l0+1
 
         ! Total number of parameters
         M%nTotal = M%l1
+
     end subroutine allocate_live_indices
 
     subroutine allocate_prior_arrays(M)

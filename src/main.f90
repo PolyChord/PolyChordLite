@@ -90,7 +90,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%file_root            =  'chains/test'           !file root
-    settings%nlive                =  1000!100*M%nDims             !number of live points
+    settings%nlive                =  100*M%nDims             !number of live points
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
@@ -99,7 +99,7 @@ program main
     settings%num_chords           =  2                       !number of chords to draw        
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
 
 
     ! ======= (2) Perform Nested Sampling =======
