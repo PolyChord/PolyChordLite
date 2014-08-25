@@ -61,7 +61,7 @@ program main
     
 
     ! (ii) Set the dimensionality
-    M%nDims=2                  ! Dimensionality of the space
+    M%nDims=20                 ! Dimensionality of the space
     M%nDerived = 3             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the
@@ -100,6 +100,8 @@ program main
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%write_resume         = .true.                   !whether or not to write resume files
+    settings%update_resume        = settings%nlive*100       !How often to update the resume files
 
 
     ! ======= (2) Perform Nested Sampling =======

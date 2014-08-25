@@ -37,6 +37,9 @@ module settings_module
         !> Whether or not to calculate the posterior
         logical :: calculate_posterior = .true.
 
+        !> Whether or not to write resume files
+        logical :: write_resume = .true.
+
         !> How often to update the resume file
         integer :: update_resume = 10000
 
