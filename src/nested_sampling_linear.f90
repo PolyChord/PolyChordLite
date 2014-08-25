@@ -272,7 +272,7 @@ module nested_sampling_linear_module
             min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
             min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
 
-            ! Update the resume and posterior files every update_resume iterations
+            ! Update the resume and posterior files every update_resume iterations, or at program termination
             if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
                 if(settings%write_resume) call write_resume_file(settings,M,late_index,live_data,evidence_vec,ndead,nposterior,posterior_array) 
                 if(settings%calculate_posterior) call write_posterior_file(settings,M,posterior_array,evidence_vec(1),nposterior)  
