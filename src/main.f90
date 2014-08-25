@@ -53,8 +53,8 @@ program main
 
     ! ------- (1c) Initialise the model -------
     ! (i) Assign the likelihood function
-    !M%loglikelihood => gaussian_loglikelihood
-    M%loglikelihood => himmelblau_loglikelihood
+    M%loglikelihood => gaussian_loglikelihood
+    !M%loglikelihood => himmelblau_loglikelihood
     !M%loglikelihood => rastrigin_loglikelihood
     !M%loglikelihood => rosenbrock_loglikelihood
     !M%loglikelihood => eggbox_loglikelihood
@@ -96,10 +96,10 @@ program main
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
-    settings%num_chords           =  2                       !number of chords to draw        
+    settings%num_chords           =  6                       !number of chords to draw        
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
 
 
     ! ======= (2) Perform Nested Sampling =======
