@@ -37,18 +37,23 @@ module model_module
         !! d0 indicates the starting index, d1 the finishing index
         integer :: d0,d1       
 
+        ! Algorithm indices
+        !> The number of likelihood evaluations required to calculate this point
+        integer :: nlike
+        !> The last chord length used in calculating this point
+        integer :: last_chord
+#ifdef MPI
+        !> Pointer to the incubation stack
+        integer :: incubator
+#endif
+       
+
         !> likelihood index
         !!
         !! This is the likelihood evaluated at the position of the live point
         integer :: l0          
         !> This is the likelihood contour which generated the live point
         integer :: l1          
-
-        ! 'Pointers'
-        !> Index of the pointer to the previous live point
-        integer :: prevlive
-        !> Index of the pointer to the next live point
-        integer :: nextlive
 
 
         !==========================================================================
@@ -219,12 +224,19 @@ module model_module
         M%d0=M%p1+1
         M%d1=M%d0+M%nDerived-1  
 
-        ! Pointers
-        M%prevlive = M%d1+1
-        M%nextlive = M%d1+2
+        ! Algorithm indices
+        M%nlike=M%d1+1
+        M%last_chord=M%nlike+1
+#ifdef MPI
+        M%incubator=M%last_chord+1
+#endif
 
         ! Loglikelihood indices
-        M%l0=M%nextlive+1
+#ifdef MPI
+        M%l0=M%incubator+1
+#else
+        M%l0=M%last_chord+1
+#endif
         M%l1=M%l0+1
 
         ! Total number of parameters
@@ -295,6 +307,9 @@ module model_module
 
             ! Calculate the likelihood and store it in the last index
             live_data(M%l0) = M%loglikelihood( live_data(M%p0:M%p1))
+
+            ! accumulate the number of likelihood calls that we've made
+            live_data(M%nlike) = live_data(M%nlike)+1
 
             ! Calculate the derived parameters
             call calculate_derived_parameters( M, live_data(:) )
@@ -373,9 +388,6 @@ module model_module
         loglike            = live_data(M%l0) 
 
         derived_parameters = live_data(M%d0:M%d1)
-
-        ! accumulate the number of likelihood calls that we've made
-        derived_parameters(1) = derived_parameters(1) + 1
 
         ! transfer the derived parameter back to live_data
         live_data(M%d0:M%d1) = derived_parameters

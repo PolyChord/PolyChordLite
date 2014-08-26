@@ -1,9 +1,9 @@
 module utils_module
 
     !> The effective value of \f$ log(0) \f$
-    double precision, parameter :: logzero = -1d300
+    double precision, parameter :: logzero = -huge(0d0)
     !> The effective value of \f$ log(\inf) \f$
-    double precision, parameter :: loginf = +1d300
+    double precision, parameter :: loginf = +huge(0d0) 
 
     !> The maximum character length
     integer, parameter :: STR_LENGTH = 100

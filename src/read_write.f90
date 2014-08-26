@@ -4,7 +4,7 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,M,first_index_live,live_data,evidence_vec,ndead,nposterior,posterior_array)
+    subroutine write_resume_file(settings,M,live_data,evidence_vec,ndead,nposterior,posterior_array)
         use utils_module, only: DBL_FMT,write_resume_unit
         use model_module, only: model
         use settings_module, only: program_settings
@@ -14,7 +14,6 @@ module read_write_module
 
         type(program_settings), intent(in) :: settings
         type(model),            intent(in) :: M
-        integer :: first_index_live
         double precision, dimension(M%nTotal,settings%nlive) :: live_data
         integer :: nposterior
         double precision, dimension(M%nDims+2,settings%nmax_posterior) :: posterior_array
@@ -29,15 +28,13 @@ module read_write_module
         ! termination during this write
         open(write_resume_unit,file=trim(settings%file_root) // '.resume', action='write', iostat=i_err) 
 
-        ! First index of the live points
-        write(write_resume_unit,'(I)') first_index_live
         ! Live points
         write(write_resume_unit,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
         ! Evidence vector
         write(write_resume_unit,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         ! number of dead points
         write(write_resume_unit,'(I)') ndead
-        ! First index of the posterior_points
+        ! Number of saved posterior points
         write(write_resume_unit,'(I)') nposterior
         ! posterior points
         write(write_resume_unit,'(<M%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)

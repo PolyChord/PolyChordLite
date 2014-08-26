@@ -58,20 +58,20 @@ module chordal_module
         baby_point = seed_point
 
         ! Set the number of likelihood evaluations to zero
-        baby_point(M%d0) = 0
+        baby_point(M%nlike) = 0
 
         ! Re-scale the unit hypercube so that min->0, max->1 of min_max_array
         call re_scale(baby_point(M%h0:M%h1),min_max_array)
 
         ! Record the step length
-        step_length = seed_point(M%d0+1)
+        step_length = seed_point(M%last_chord)
 
         ! Initialise max_chord at 0
         max_chord = 0
 
         do i=1,settings%num_chords
             ! Give the baby point the step length
-            baby_point(M%d0+1) = step_length
+            baby_point(M%last_chord) = step_length
 
             ! Get a new random direction
             nhat = random_direction(M%nDims) 
@@ -80,12 +80,12 @@ module chordal_module
             baby_point = random_chordal_point( nhat, baby_point,min_max_array, M)
 
             ! keep track of the largest chord
-            max_chord = max(max_chord,baby_point(M%d0+1))
+            max_chord = max(max_chord,baby_point(M%last_chord))
         end do
 
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
-        baby_point(M%d0+1) = max_chord
+        baby_point(M%last_chord) = max_chord
 
         ! de-scale the unit hypercube so that 0->min, 1->max of min_max_array
         call de_scale(baby_point(M%h0:M%h1),min_max_array)
@@ -120,11 +120,11 @@ module chordal_module
         double precision :: trial_chord_length
 
         ! estimate at an appropriate chord
-        trial_chord_length = seed_point(M%d0+1)
+        trial_chord_length = seed_point(M%last_chord)
 
         ! record the number of likelihood calls
-        u_bound(M%d0) = seed_point(M%d0)
-        l_bound(M%d0) = 0
+        u_bound(M%nlike) = seed_point(M%nlike)
+        l_bound(M%nlike) = 0
 
 
         ! Select initial start and end points
@@ -162,7 +162,7 @@ module chordal_module
         baby_point(M%l1) = seed_point(M%l1)
 
         ! Estimate the next appropriate chord
-        baby_point(M%d0+1) = distance( u_bound(M%h0:M%h1),l_bound(M%h0:M%h1) )!distance( baby_point(M%h0:M%h1),seed_point(M%h0:M%h1) )
+        baby_point(M%last_chord) = distance( u_bound(M%h0:M%h1),l_bound(M%h0:M%h1) )!distance( baby_point(M%h0:M%h1),seed_point(M%h0:M%h1) )
 
         contains
 
@@ -183,11 +183,11 @@ module chordal_module
             finish_point(M%h0:M%h1) = l_bound(M%h0:M%h1)*(1d0-random_temp) + random_temp * u_bound(M%h0:M%h1)
 
             ! Pass on the number of likelihood calls that have been made
-            finish_point(M%d0) = l_bound(M%d0) + u_bound(M%d0)
+            finish_point(M%nlike) = l_bound(M%nlike) + u_bound(M%nlike)
             ! zero the likelihood calls for l_bound and u_bound, as these are
             ! now stored in point
-            l_bound(M%d0) = 0
-            u_bound(M%d0) = 0
+            l_bound(M%nlike) = 0
+            u_bound(M%nlike) = 0
 
 
             ! calculate the likelihood 
