@@ -9,9 +9,9 @@ module nested_sampling_linear_module
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
-        use random_module,     only: random_integer
         use read_write_module, only: write_resume_file,write_posterior_file
         use feedback_module
+        use random_module,     only: random_integer
 
         implicit none
         type(model),            intent(in) :: M

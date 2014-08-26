@@ -1,6 +1,10 @@
 module nested_sampling_parallel_module
     implicit none
 
+    integer,parameter :: flag_live_waiting = 0
+    integer,parameter :: flag_incubator_running = -1
+    integer,parameter :: flag_incubator_blank   = -2
+
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
@@ -10,7 +14,6 @@ module nested_sampling_parallel_module
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
-        use random_module,     only: random_integer
         use read_write_module, only: write_resume_file,write_posterior_file
         use feedback_module
 
@@ -28,10 +31,8 @@ module nested_sampling_parallel_module
 
         double precision, dimension(M%nTotal,settings%nlive) :: incubating_data
         integer :: incubator_index(1)
-        integer :: live_index(1)
-        integer,parameter :: flag_live_waiting = 0
-        integer,parameter :: flag_incubator_running = -1
-        integer,parameter :: flag_incubator_blank   = -2
+
+        integer :: late_successor_index(1)
 
         integer :: nprocs
         integer :: myrank
@@ -45,8 +46,6 @@ module nested_sampling_parallel_module
 
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status
 
-        double precision :: loglikelihood_bound
-
         double precision, dimension(M%nDims,2)               :: min_max_array
 
         double precision, allocatable, dimension(:,:) :: posterior_array
@@ -54,6 +53,8 @@ module nested_sampling_parallel_module
         integer :: nposterior
         integer :: insertion_index(1)
         integer :: late_index(1)
+
+        logical :: waiting
 
         logical :: more_samples_needed
 
@@ -91,7 +92,7 @@ module nested_sampling_parallel_module
         myrank = mpi_rank()  ! Get the MPI label of the current processor
 
         ! Initialise any likelihood details by calling it
-        loglikelihood_bound = M%loglikelihood(baby_point(M%p0:M%p1),-1)
+        evidence_vec(1) = M%loglikelihood(baby_point(M%p0:M%p1),-1)
 
 
 
@@ -110,7 +111,7 @@ module nested_sampling_parallel_module
         ! (i)   On all nodes generate initial live points in parallel by sampling
         !       randomly from the prior (i.e. unit hypercube)
         ! (ii)  Initialise all variables for the master node
-        ! (iii) Send out the first nprocs-1 messages to the slaves
+        ! (iii) Send out the first nprocs-1 tasks to the slaves
 
         !~~~ (i) Generate Live Points ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         if(resume) then
@@ -226,7 +227,7 @@ module nested_sampling_parallel_module
 
             ! (f) Initialise the incubating stack
             incubating_data = 0d0
-            incubating_data(M%incubator) = flag_incubator_blank
+            incubating_data(M%incubator,:) = flag_incubator_blank
 
 
         end if
@@ -241,39 +242,9 @@ module nested_sampling_parallel_module
         if(myrank==0) then
             do i_slaves=1,nprocs-1
 
-                ! Find the lowest likelihood point whose contour is waiting to
-                ! be generated from
-                live_index = minloc(live_data(M%l0,:),mask=nint(live_data(M%incubator,:))==flag_live_waiting) 
-
-                ! Find a place in the incubator stack for the generated point
-                ! We search through the incubator stack to find the first index 
-                incubator_index = minloc(incubating_data(M%incubator,:),mask=nint(incubating_data(M%incubator,:))==flag_incubator_blank) 
-
-                ! Give this place to the point that generated the contour
-                live_data(M%incubator,live_index(1)) = incubator_index(1)
-
-                ! Note at this place in the incubator that we're waiting on a
-                ! point to be generated
-                incubating_data(M%incubator,incubator_index(1))=flag_incubator_running
-
-                ! Select a seed point for the generator
-                !  -excluding the points which have likelihoods equal to the
-                !   loglikelihood bound
-                loglikelihood_bound = live_data(M%l0,live_index(1))
-                seed_point(M%l0)=loglikelihood_bound
-
-                do while (seed_point(M%l0)<=loglikelihood_bound )
-                    ! get a random integer in [1,nlive]
-                    ! get this point from live_data 
-                    seed_point = live_data(:,random_integer(settings%nlive))
-                end do
-
-                ! Record the likelihood bound which this seed will generate from
-                seed_point(M%l1) = loglikelihood_bound
-
-                ! Record the eventual position in the incubator stack
-                seed_point(M%incubator) = incubator_index(1)
-
+                ! Generate a seed point from live_data and incubating_data, and
+                ! update the data arrays accordingly
+                seed_point = GenerateSeed(M,settings%nlive,live_data,incubating_data)
 
                 ! Send a seed point to the i_slaves th slave
                 call MPI_SEND(            &
@@ -296,6 +267,7 @@ module nested_sampling_parallel_module
                     mpierror                & ! error information (from mpi_module)
                     )
             end do
+
 
         end if
 
@@ -341,141 +313,95 @@ module nested_sampling_parallel_module
                 !      ready from the incubating stack
 
 
-                ! Incubation stack:
-                ! This consists of the set of points which have been generated
-                ! from a loglikelihood contour, but aren't ready to be inserted
-                ! into the live data, since the point defining the contour
-                ! hasn't died yet.
-                !
-                ! We keep track of which incubating point belongs to which
-                ! contour by a 'pointer' variable stored after 
-                !
-                ! Meaning of pointer stored at M%incubator
-                !
-                ! live_data:
-                ! 0  Contour defined by point hasn't been sent off yet
-                ! >0 index of position in incubator stack (whether its been
-                !    generated or not
-                !
-                ! seed/baby_point:
-                ! >0 index of position in incubator stack
-                !
-                ! incubating_data:
-                ! -2  blank slot
-                ! -1  Waiting on running point to be inserted here
-                ! >-1 Same as live_data
-                ! (1) Get the late point 
 
-                ! Find the point with the lowest likelihood...
-                late_index = minloc(live_data(M%l0,:))
-                ! ...and save it.
-                late_point = live_data(:,late_index(1))
-                ! Get the likelihood contour
-                late_likelihood = late_point(M%l0)
-                ! Calculate the late logweight
-                late_logweight = (ndead-1)*lognlive - ndead*lognlivep1 
+                do i_slaves=1,nprocs-1
 
-                ! Find the position of the successor to the late point within
-                ! the incubation stack
-                late_successor_index = nint( late_point(M%incubator) )
+                    call MPI_IPROBE(    &  
+                        i_slaves,       & !
+                        MPI_ANY_TAG,    & !
+                        MPI_COMM_WORLD, & !
+                        waiting,        & !
+                        mpi_status,     & !
+                        mpierror        & !
+                        )
+
+                    if (waiting) then
+
+                        ! (2) Recieve newly generated baby point from any slave
+                        !
+                        call MPI_RECV(            &
+                            baby_point,           & ! newly generated point to be receieved
+                            M%nTotal,             & ! size of this data
+                            MPI_DOUBLE_PRECISION, & ! type of this data
+                            i_slaves,             & ! recieve it from any slave
+                            MPI_ANY_TAG,          & ! tagging information (not important here)
+                            MPI_COMM_WORLD,       & ! communication data
+                            mpi_status,           & ! status - important (tells you where it's been recieved from )
+                            mpierror              & ! error information (from mpi_module)
+                            )
+
+                        ! (2) Insert into incubator
+                        !
+                        ! get the place in the incubator stack for this point
+                        incubator_index = nint(baby_point(M%incubator))
+                        ! note that this point hasn't launched any new ones
+                        baby_point(M%incubator)=flag_live_waiting
+                        ! Insert this into the incubator
+                        incubating_data(:,incubator_index(1)) = baby_point
 
 
+                        ! Generate a seed point from live_data and incubating_data, and
+                        ! update the data arrays accordingly
+                        seed_point = GenerateSeed(M,settings%nlive,live_data,incubating_data) 
 
-
-
-
-                ! (2) Recieve newly generated baby point from any slave
-                !
-                call MPI_RECV(            &
-                    baby_point,           & ! newly generated point to be receieved
-                    M%nTotal,             & ! size of this data
-                    MPI_DOUBLE_PRECISION, & ! type of this data
-                    MPI_ANY_SOURCE,       & ! recieve it from any slave
-                    MPI_ANY_TAG,          & ! tagging information (not important here)
-                    MPI_COMM_WORLD,       & ! communication data
-                    mpi_status,           & ! status - important (tells you where it's been recieved from )
-                    mpierror              & ! error information (from mpi_module)
-                    )
-
-                ! (2) Insert into incubator
-                !
-                ! get the place in the incubator stack for this point
-                incubator_index = nint(baby_point(M%incubator))
-                ! note that this point hasn't launched any new ones
-                baby_point(M%incubator)=flag_live_waiting
-                ! Insert this into the incubator
-                incubating_data(:,inucubator_index(1)) = baby_point
-
-
-                ! (2) Send a new point off for generation
-
-                ! Find the lowest likelihood point which isn't currently running.
-                ! We use the mask that the live point incubator point is 0, as
-                ! this indicates that it's currently waiting to generate a point
-                live_index = minloc(live_data(M%l0,:),mask=nint(live_data(M%incubator,:))==flag_live_waiting) 
-
-                ! Find a place in the incubator stack for the generated point
-                ! We search through the incubator stack to find the first blank index 
-                incubator_index = minloc(incubating_data(M%incubator,:),mask=nint(incubating_data(M%incubator,:))==flag_incubator_blank) 
-
-                ! Give this place to the point that generated the contour
-                live_data(M%incubator,live_index(1)) = incubator_index(1)
-
-                ! Note at this place in the incubator that we're waiting on a
-                ! point to be generated
-                incubation_data(M%incubator,incubator_index(1))=flag_incubator_running
-
-                ! Select a seed point for the generator
-                !  -excluding the points which have likelihoods equal to the
-                !   loglikelihood bound
-                loglikelihood_bound = live_data(M%l0,live_index(1))
-                seed_point(M%l0)=loglikelihood_bound
-                do while ( seed_point(M%l0)<=loglikelihood_bound )
-                    ! get a random number in [1,nlive]
-                    ! get this point from live_data 
-                    seed_point = live_data(:,random_integer(settings%nlive))
+                        ! Send a seed point back to that slave
+                        call MPI_SEND(              &
+                            seed_point,             & ! seed point to be sent
+                            M%nTotal,               & ! size of this data
+                            MPI_DOUBLE_PRECISION,   & ! type of this data
+                            i_slaves,               & ! send it to the point we just recieved from
+                            RUNTAG,                 & ! tagging information (not important here)
+                            MPI_COMM_WORLD,         & ! communication data
+                            mpierror                & ! error information (from mpi_module)
+                            )
+                        ! Send the arrays of minimums and maximums
+                        call MPI_SEND(              &
+                            min_max_array,          & ! seed point to be sent
+                            M%nDims*2,              & ! size of this data
+                            MPI_DOUBLE_PRECISION,   & ! type of this data
+                            i_slaves,               & ! send it to the point we just recieved from
+                            RUNTAG,                 & ! tagging information (not important here)
+                            MPI_COMM_WORLD,         & ! communication data
+                            mpierror                & ! error information (from mpi_module)
+                            )
+                    end if
                 end do
 
-                ! Record the likelihood bound which this seed will generate from
-                seed_point(M%l1) = loglikelihood_bound
 
-                ! Record the eventual position in the incubator stack
-                seed_point(M%incubator) = incubator_index(1)
+                ! Transfer from incubating stack to live_data if necessary
+                do while(.true.)
+                    ! Find the point with the lowest likelihood...
+                    late_index = minloc(live_data(M%l0,:))
+                    ! ...and save it.
+                    late_point = live_data(:,late_index(1))
+                    ! Get the likelihood contour
+                    late_likelihood = late_point(M%l0)
+                    ! Calculate the late logweight
+                    late_logweight = (ndead-1)*lognlive - ndead*lognlivep1 
 
-                ! Send a seed point back to that slave
-                call MPI_SEND(              &
-                    seed_point,             & ! seed point to be sent
-                    M%nTotal,               & ! size of this data
-                    MPI_DOUBLE_PRECISION,   & ! type of this data
-                    mpi_status(MPI_SOURCE), & ! send it to the point we just recieved from
-                    RUNTAG,                 & ! tagging information (not important here)
-                    MPI_COMM_WORLD,         & ! communication data
-                    mpierror                & ! error information (from mpi_module)
-                    )
-                ! Send the arrays of minimums and maximums
-                call MPI_SEND(              &
-                    min_max_array,          & ! seed point to be sent
-                    M%nDims*2,              & ! size of this data
-                    MPI_DOUBLE_PRECISION,   & ! type of this data
-                    mpi_status(MPI_SOURCE), & ! send it to the point we just recieved from
-                    RUNTAG,                 & ! tagging information (not important here)
-                    MPI_COMM_WORLD,         & ! communication data
-                    mpierror                & ! error information (from mpi_module)
-                    )
+                    ! Find the position of the successor to the late point within
+                    ! the incubation stack
+                    late_successor_index = nint( late_point(M%incubator) )
 
+                    ! Check to see if the late point has a generated index
+                    if(late_successor_index(1)==flag_live_waiting) exit
+                    if(incubating_data( M%incubator, late_successor_index(1) )<flag_live_waiting ) exit
 
-                ! (2) transfer from incubating stack to live_data if necessary
-                !
-                do while( late_successor_index>0  .and. incubation_data( M%incubator, late_successor_index )>=0 )
-
-                    ! birth the new point from the incubator
-                    baby_point = incubating_data(:,late_successor_index) 
+                    ! Birth the new point from the incubator
+                    baby_point = incubating_data(:,late_successor_index(1)) 
                     baby_likelihood  = baby_point(M%l0)
-                    ! Delete the point from the stack
-                    incubating_data(M%incubator,late_successor_index)=flag_incubator_blank
-
-                    ! Record that this likelihood hasn't been set running yet
-                    baby_point(M%incubator) = flag_live_waiting
+                    ! Delete the point from the incubator
+                    incubating_data(M%incubator,late_successor_index(1))=flag_incubator_blank
 
                     ! (3) Insert the baby point into the set of live points (over the
                     !     old position of the dead points
@@ -697,13 +623,67 @@ module nested_sampling_parallel_module
         live_data(M%last_chord,:) = sqrt(M%nDims+0d0)
 
         ! Initially, none of the points have been calculated yet
-        live_data(M%incubator,:) = -1
+        live_data(M%incubator,:) = flag_live_waiting
 
         ! Set the likelihood contours to logzero for now
         live_data(M%l1,:) = logzero
 
 
     end function GenerateLivePoints
+
+    function GenerateSeed(M,nlive,live_data,incubating_data) result(seed_point)
+        use model_module,      only: model
+        use random_module,     only: random_integer
+        implicit none
+        type(model),      intent(in) :: M
+        integer,          intent(in) :: nlive
+        double precision, intent(inout), dimension(M%nTotal,nlive) :: live_data
+        double precision, intent(inout), dimension(M%nTotal,nlive) :: incubating_data
+
+        ! Point to seed a new one from
+        double precision,    dimension(M%nTotal)   :: seed_point
+
+
+        integer :: incubator_index(1)
+        integer :: live_index(1)
+
+        double precision :: loglikelihood_bound
+
+
+        ! Find the lowest likelihood point whose contour is waiting to
+        ! be generated from
+        live_index = minloc(live_data(M%l0,:),mask=nint(live_data(M%incubator,:))==flag_live_waiting) 
+
+        ! Find a place in the incubator stack for the generated point
+        ! We search through the incubator stack to find the first index 
+        incubator_index = minloc(incubating_data(M%incubator,:),mask=nint(incubating_data(M%incubator,:))==flag_incubator_blank) 
+
+        ! Give this place to the point that generated the contour
+        live_data(M%incubator,live_index(1)) = incubator_index(1)
+
+        ! Note at this place in the incubator that we're waiting on a
+        ! point to be generated
+        incubating_data(M%incubator,incubator_index(1))=flag_incubator_running
+             
+        ! Select a seed point for the generator
+        !  -excluding the points which have likelihoods equal to the
+        !   loglikelihood bound
+        loglikelihood_bound = live_data(M%l0,live_index(1))
+        seed_point(M%l0)=loglikelihood_bound
+
+        do while (seed_point(M%l0)<=loglikelihood_bound )
+            ! get a random integer in [1,nlive]
+            ! get this point from live_data 
+            seed_point = live_data(:,random_integer(nlive))
+        end do
+
+        ! Record the likelihood bound which this seed will generate from
+        seed_point(M%l1) = loglikelihood_bound
+
+        ! Record the eventual position in the incubator stack
+        seed_point(M%incubator) = incubator_index(1)
+
+    end function GenerateSeed
 
 
 

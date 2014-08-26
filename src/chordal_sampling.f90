@@ -83,6 +83,12 @@ module chordal_module
             max_chord = max(max_chord,baby_point(M%last_chord))
         end do
 
+#ifdef MPI
+        ! Make sure to hand back any incubator information which has likely been
+        ! overwritten
+        baby_point(M%incubator) = seed_point(M%incubator)
+#endif
+
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
         baby_point(M%last_chord) = max_chord

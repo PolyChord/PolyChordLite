@@ -61,7 +61,7 @@ program main
     
 
     ! (ii) Set the dimensionality
-    M%nDims=20                 ! Dimensionality of the space
+    M%nDims=6                  ! Dimensionality of the space
     M%nDerived = 0             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the
@@ -96,7 +96,7 @@ program main
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
-    settings%num_chords           =  6                       !number of chords to draw        
+    settings%num_chords           =  1000                    !number of chords to draw        
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
