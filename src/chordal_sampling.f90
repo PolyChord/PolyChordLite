@@ -6,7 +6,7 @@ module chordal_module
 
     function ChordalSampling(settings,seed_point,min_max_array, M,feedback)  result(baby_point)
         use settings_module, only: program_settings
-        use random_module, only: random_direction,random_real
+        use random_module, only: random_gaussian
         use model_module,  only: model, calculate_point
         use utils_module, only: logzero,stdout_unit
 
@@ -35,12 +35,12 @@ module chordal_module
 
 
         ! ------- Local Variables -------
-        double precision,    dimension(M%nDims)   :: nhat
+        double precision,    dimension(M%nDims,product(settings%num_chords))   :: nhats
 
         double precision  :: max_chord
 
         double precision :: step_length
-        
+
         integer :: i
 
 
@@ -48,7 +48,9 @@ module chordal_module
         if(present(feedback)) then
             if(feedback>=0) then
                 write(stdout_unit,'( "Sampler    : Chordal" )')
-                write(stdout_unit,'( "  num chords = ",I8 )') settings%num_chords
+                do i=1,maxval(M%grade)
+                    write(stdout_unit,'( "  num chords(",I4,") = ",I8 )') i, settings%num_chords(i)
+                end do
             end if
             return
         end if
@@ -69,15 +71,22 @@ module chordal_module
         ! Initialise max_chord at 0
         max_chord = 0
 
-        do i=1,settings%num_chords
+        ! Generate the set of nhats to use
+        nhats=0
+        do i=1,M%nDims
+            nhats(i,: product(settings%num_chords) : product(settings%num_chords)/product(settings%num_chords(:M%grade(i))) ) &
+                = random_gaussian(product(settings%num_chords(:M%grade(i))))
+        end do
+        do i=1,product(settings%num_chords)
+            nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i)))
+        end do
+
+        do i=1,product(settings%num_chords)
             ! Give the baby point the step length
             baby_point(M%last_chord) = step_length
 
-            ! Get a new random direction
-            nhat = random_direction(M%nDims) 
-
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point( nhat, baby_point,min_max_array, M)
+            baby_point = random_chordal_point( nhats(:,i), baby_point,min_max_array, M)
 
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(M%last_chord))

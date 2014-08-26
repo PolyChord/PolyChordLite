@@ -44,7 +44,7 @@ module settings_module
         integer :: update_resume = 10000
 
         !> The number of chords to draw
-        integer :: num_chords = 6
+        integer, dimension(:), allocatable :: num_chords
 
         !> Pointer to the sampling procedure.
         !!

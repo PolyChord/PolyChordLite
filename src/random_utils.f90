@@ -214,28 +214,23 @@ module random_module
 
     ! ===========================================================================================
 
-
-    !>  Random direction vector
+    !>  Random Gaussian vector
     !!
-    !! Generate a randomly directed unit vector in nDims dimensional space
-    !!
-    !! This is done by generating nDims gaussian random numbers with mean 0 and
-    !! variance 1. These are spherically symetrically distributed, so
-    !! normalising this give a random direction.
+    !! Generate nDims random gausian numbers with mean 0 and variance 1
     !!
     !! We use the 
     !! [VSL_RNG_METHOD_GAUSSIAN_ICDF](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_4_Gaussian_VSL_RNG_METHOD_GAUSSIAN_ICDF.htm) 
     !! intel method to generate Gaussian random numbers using the
     !! [vdrnggaussian](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-63196F25-5013-4038-8BCD-2613C4EF3DE4.htm) function.
 
-    function random_direction(nDims)
+    function random_gaussian(nDims)
         implicit none
 
         !> Size of vector to be generated
         integer,intent(in) :: nDims
 
         ! The output unit vector
-        double precision, dimension(nDims) :: random_direction
+        double precision, dimension(nDims) :: random_gaussian
 
         ! Method to generate random numbers 
         integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIAN_ICDF
@@ -247,11 +242,35 @@ module random_module
 
 
         ! Generate nDims gaussian random numbers, stored in a vector
-        ! random_direction
+        ! random_gaussian
         ! with mean=0 variance=1
         ! (v=vector,d=double,rng,gaussian)
-        errcode=vdrnggaussian( method, rng_stream, nDims, random_direction, mean, sigma)
+        errcode=vdrnggaussian( method, rng_stream, nDims, random_gaussian, mean, sigma)
 
+    end function random_gaussian
+
+    ! ===========================================================================================
+
+
+    !>  Random direction vector
+    !!
+    !! Generate a randomly directed unit vector in nDims dimensional space
+    !!
+    !! This is done by generating nDims gaussian random numbers with mean 0 and
+    !! variance 1. These are spherically symetrically distributed, so
+    !! normalising this give a random direction.
+
+    function random_direction(nDims)
+        implicit none
+
+        !> Size of vector to be generated
+        integer,intent(in) :: nDims
+
+        ! The output unit vector
+        double precision, dimension(nDims) :: random_direction
+
+        ! Generate nDims gaussian random numbers
+        random_direction = random_gaussian(nDims)
         ! normalise the vector
         random_direction = random_direction / sqrt( dot_product(random_direction,random_direction) )
 

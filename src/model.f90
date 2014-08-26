@@ -55,6 +55,12 @@ module model_module
         !> This is the likelihood contour which generated the live point
         integer :: l1          
 
+        !> Grades of parameters
+        !!
+        !! In the case of 'fast-slow' parameters, these indicate the 'grade' of
+        !! parameter. grade=1 is slowest, 
+        integer, dimension(:), allocatable :: grade
+
 
         !==========================================================================
         ! Prior details:
@@ -241,6 +247,9 @@ module model_module
 
         ! Total number of parameters
         M%nTotal = M%l1
+
+        ! grades
+        if(.not. allocated(M%grade)) allocate(M%grade(M%nDims))
 
     end subroutine allocate_live_indices
 
