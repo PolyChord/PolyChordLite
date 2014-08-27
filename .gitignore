@@ -8,3 +8,4 @@ doc/latex/
 *.dat
 main
 chains
+*.a

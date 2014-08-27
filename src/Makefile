@@ -1,18 +1,7 @@
-# A simple hand-made makefile for a package including applications
-# built from Fortran 90 sources, taking into account the usual
-# dependency cases.
-
-# This makefile works with the GNU make command, the one find on
-# GNU/Linux systems and often called gmake on non-GNU systems, if you
-# are using an old style make command, please see the file
-# Makefile_oldstyle provided with the package.
-
-# ======================================================================
-# Let's start with the declarations
-# ======================================================================
-
 # whether its linear or parallel
 PAR ?= 1
+# Whether to run in debugging mode
+DEBUG ?= 0
 
 # The compiler
 ifeq ($(PAR), 1)
@@ -20,72 +9,68 @@ ifeq ($(PAR), 1)
 else
 	FC = ifort
 endif
-# flags for debugging or for maximum performance, comment as necessary
-DEBUG ?= 0
+
+# flags
+# mkl  : use the mkl library
+# fpp  : perform preprocessing
+FCFLAGS = -mkl -fpp
+
 ifeq ($(DEBUG), 1)
-FCFLAGS = -g -traceback -fp-stack-check -check all -fpe0 -warn all -mkl -fpp
+# Debugging mode
+# --------------
+# g              : 
+# traceback      : create a backtrace on system failure
+# fp-stack-check :
+# check all      : all checks (whilst compiling)
+# fpe0           :
+# warn all       : all warnings (whilst running)
+FCFLAGS += -g -traceback -fp-stack-check -check all -fpe0 -warn all
 else
-FCFLAGS = -O3 -mkl -fpp -xHost
-# O3  : maximum optimisation
-# mkl : use the mkl library
-# fpp : perform preprocessing
+# Optimised mode
+# --------------
+# O3   : maximum optimisation
+# xHost: maximise architecture usage
+FCFLAGS += -O3 -xHost
 endif
+
 
 ifeq ($(PAR), 1)
-	FCFLAGS += -DMPI
+# Parallel mode, define MPI for use in preprocessing
+FCFLAGS += -DMPI
 endif
 
 
-# flags forall (e.g. look for system .mod files, required in gfortran)
-#FCFLAGS += -I/usr/include
 
 # libraries needed for linking, unused in the examples
-LDFLAGS = #-lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lmkl_lapack -lmkl_blas95 -lmkl_vml
+LDFLAGS =
 
 # List of executables to be built within the package
-PROGRAMS = main
+PROGRAMS = libchord.a main
 
 # "make" builds all
 all: $(PROGRAMS)
 
-# ======================================================================
-# Here comes the most interesting part: the rules for prog1, prog2,
-# prog3 and prog4, modify to suit your needs
-# ======================================================================
 ifeq ($(PAR), 1)
-endif
-
-ifeq ($(PAR), 1)
+# Parallel mode
 NESTED_SAMPLING = nested_sampling_parallel.o nested_sampling_linear.o 
 MPI_UTILS = mpi_utils.o
 else
+# Serial mode
 NESTED_SAMPLING = nested_sampling_linear.o
 endif
 
-MODULES = $(MPI_UTILS) utils.o model.o settings.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o $(NESTED_SAMPLING)
+OBJECTS = $(MPI_UTILS) utils.o model.o settings.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o $(NESTED_SAMPLING)
+
+AR = ar r
 
 
 
+libchord.a: $(OBJECTS)
+	$(AR) $@ $^
 
-$(MPI_UTILS):
-utils.o:
-model.o:                    utils.o
-random_utils.o:             $(MPI_UTILS) utils.o
-settings.o:                 model.o 
-likelihoods.o:              $(MPI_UTILS) model.o utils.o 
-evidence.o:                 settings.o
-feedback.o:                 model.o settings.o utils.o
-read_write.o:               model.o settings.o utils.o
-chordal_sampling.o:         model.o utils.o random_utils.o
-$(NESTED_SAMPLING):   		$(MPI_UTILS) read_write.o feedback.o model.o utils.o random_utils.o settings.o chordal_sampling.o
-main.o:                     $(MODULES)
+main: main.o
+	$(FC) $(FCFLAGS) -o ../main main.o -L. -lchord
 
-main: $(MODULES) main.o 
-
-
-# ======================================================================
-# And now the general rules, these should not require modification
-# ======================================================================
 
 # General rule for building prog from prog.o; $^ (GNU extension) is
 # used in order to list additional object files on which the
@@ -101,6 +86,9 @@ main: $(MODULES) main.o
 
 %.o: %.F90
 	$(FC) $(FCFLAGS) -c $<
+
+
+
 
 # Utility targets
 .PHONY: clean veryclean
