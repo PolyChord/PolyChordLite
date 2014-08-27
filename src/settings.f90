@@ -46,6 +46,9 @@ module settings_module
         !> The number of chords to draw
         integer, dimension(:), allocatable :: num_chords
 
+        !> Whether or not to resume from file
+        logical :: read_resume = .true.
+
         !> Pointer to the sampling procedure.
         !!
         !! e.g: MultiNest, Galilean Sampling, Hamiltonian sampling ...

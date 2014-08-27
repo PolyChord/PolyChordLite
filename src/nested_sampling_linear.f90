@@ -70,6 +70,9 @@ module nested_sampling_linear_module
         ! variable 'resume'
         inquire(file=trim(settings%file_root)//'.resume',exist=resume)
 
+        ! Check if we actually want to resume
+        resume = settings%read_resume .and. resume
+
         if(resume .and. settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
 
 
@@ -114,11 +117,11 @@ module nested_sampling_linear_module
             ! If resuming, get the accumulated stats to calculate the
             ! evidence from the resume file
             read(read_resume_unit,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
-        else
+        else !(not resume) 
             ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
             evidence_vec = logzero
             evidence_vec(6) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
-        end if
+        end if !(resume) 
 
         ! (b) initialise the mean number of likelihood calls to 1
         mean_likelihood_calls = sum(live_data(M%nlike,:))/settings%nlive
@@ -128,10 +131,10 @@ module nested_sampling_linear_module
         if(resume) then
             ! If resuming, then get the number of dead points from the resume file
             read(read_resume_unit,'(I)') ndead
-        else
+        else !(not resume) 
             ! Otherwise no dead points originally
             ndead = 0
-        end if
+        end if !(resume) 
 
         ! (d) calculate the minimums and maximums of the live data
         min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
@@ -152,7 +155,7 @@ module nested_sampling_linear_module
             read(read_resume_unit,'(I)') nposterior
             !...followed by the posterior array itself
             read(read_resume_unit,'(<M%nDims+M%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
-        end if
+        end if !(resume) 
 
         ! Close the resume file if we've openend it
         if(resume) close(read_resume_unit)
