@@ -58,6 +58,8 @@ program main
     !M%loglikelihood => rastrigin_loglikelihood
     !M%loglikelihood => rosenbrock_loglikelihood
     !M%loglikelihood => eggbox_loglikelihood
+
+    M%calc_derived => zero_derived
     
 
     ! (ii) Set the dimensionality

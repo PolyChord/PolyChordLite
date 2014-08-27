@@ -193,6 +193,7 @@ module model_module
 
         procedure(loglike), pass(M), pointer :: loglikelihood 
 
+        procedure(calcd), pass(M), pointer   :: calc_derived
 
 
     end type model
@@ -207,6 +208,15 @@ module model_module
 
             double precision :: loglike
         end function
+    end interface
+
+    interface
+        subroutine calcd(M,theta,derived)
+            import :: model
+            class(model),     intent(in)                :: M
+            double precision, intent(in),  dimension(:) :: theta
+            double precision, intent(out), dimension(:) :: derived
+        end subroutine
     end interface
 
 
@@ -321,7 +331,7 @@ module model_module
             live_data(M%nlike) = live_data(M%nlike)+1
 
             ! Calculate the derived parameters
-            call calculate_derived_parameters( M, live_data(:) )
+            call M%calc_derived( live_data(M%p0:M%p1),live_data(M%d0:M%d1))
         end if
 
     end subroutine calculate_point
@@ -383,25 +393,6 @@ module model_module
 
 
 
-    subroutine calculate_derived_parameters(M, live_data)
-        implicit none
-        type(model),      intent(in)                   :: M
-        double precision, intent(inout) , dimension(:) :: live_data
-
-        double precision, dimension(M%nDims)    :: physical_coords
-        double precision                        :: loglike
-        double precision, dimension(M%nDerived) :: derived_parameters
-
-        ! Copy the physical coordinates and loglike to temporary variables
-        physical_coords    = live_data(M%p0:M%p1)
-        loglike            = live_data(M%l0) 
-
-        derived_parameters = live_data(M%d0:M%d1)
-
-        ! transfer the derived parameter back to live_data
-        live_data(M%d0:M%d1) = derived_parameters
-
-    end subroutine calculate_derived_parameters
 
     function prior_log_volume(M) result(log_volume)
         use utils_module, only: TwoPi

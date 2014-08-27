@@ -585,5 +585,20 @@ module example_likelihoods
 
 
 
+    subroutine zero_derived(M, theta,derived_params)
+        implicit none
+        type(model),      intent(in)                :: M
+        double precision, intent(in),  dimension(:) :: theta
+        double precision, intent(out), dimension(:) :: derived_params
+
+        ! Don't do anything for now
+        derived_params = 0
+
+    end subroutine zero_derived
+
+
+
+
+
 
 end module example_likelihoods
