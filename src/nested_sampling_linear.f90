@@ -27,7 +27,7 @@ module nested_sampling_linear_module
         double precision,    dimension(M%nDims,2)   :: min_max_array
 
         double precision, allocatable, dimension(:,:) :: posterior_array
-        double precision, dimension(M%nDims+2) :: posterior_point
+        double precision, dimension(M%nDims+M%nDerived+2) :: posterior_point
         integer :: nposterior
         integer :: insertion_index(1)
         integer :: late_index(1)
@@ -151,7 +151,7 @@ module nested_sampling_linear_module
             ! Read the actual number we've used so far
             read(read_resume_unit,'(I)') nposterior
             !...followed by the posterior array itself
-            read(read_resume_unit,'(<M%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+            read(read_resume_unit,'(<M%nDims+M%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
         end if
 
         ! Close the resume file if we've openend it
@@ -240,7 +240,7 @@ module nested_sampling_linear_module
                 ! calculate a new point for insertion
                 posterior_point(1)  = late_point(M%l0) + late_logweight
                 posterior_point(2)  = late_point(M%l0)
-                posterior_point(3:) = late_point(M%p0:M%p1)
+                posterior_point(3:) = late_point(M%p0:M%d1)
 
                 if(nposterior<settings%nmax_posterior) then
                     ! If we're still able to use a restricted array,

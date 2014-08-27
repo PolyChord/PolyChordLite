@@ -54,7 +54,7 @@ module read_write_module
         integer :: nposterior
         type(program_settings), intent(in) :: settings
         type(model),            intent(in) :: M
-        double precision, dimension(M%nDims+2,nposterior) :: posterior_array
+        double precision, dimension(M%nDims+M%nDerived+2,nposterior) :: posterior_array
         double precision                           :: evidence
 
         integer :: i_err
@@ -71,8 +71,8 @@ module read_write_module
 
         do i_posterior=1,nposterior
 
-            if (posterior_array(1,i_posterior)-evidence > logminimum_weight)                &
-                write(write_txt_unit,'(<M%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')            &
+            if (posterior_array(1,i_posterior)-evidence > logminimum_weight)                 &
+                write(write_txt_unit,'(<M%nDims+M%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')   &
                 exp(posterior_array(1,i_posterior)-evidence),posterior_array(2:,i_posterior)
         end do
 

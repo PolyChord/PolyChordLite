@@ -88,8 +88,8 @@ program main
     call allocate_prior_arrays(M)
 
     !       - settings of priors
-    M%uniform_params(:,1) = 0.45
-    M%uniform_params(:,2) = 0.55
+    M%uniform_params(:,1) = 0.5-1d-2*10
+    M%uniform_params(:,2) = 0.5+1d-2*10 
     !M%uniform_params(:,1) = -5d0
     !M%uniform_params(:,2) =  5d0
 
@@ -100,7 +100,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%file_root            =  'chains/test'           !file root
-    settings%nlive                =  100*M%nDims             !number of live points
+    settings%nlive                =  500                     !number of live points
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
