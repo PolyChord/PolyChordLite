@@ -64,7 +64,7 @@ program main
 
     ! (ii) Set the dimensionality
     M%nDims=20                 ! Dimensionality of the space
-    M%nDerived = 0             ! Assign the number of derived parameters
+    M%nDerived = 2             ! Assign the number of derived parameters
     ! There are two derived parameters:
     ! 1) the number of likelihood evaluations required for the calculation of the
     ! new point

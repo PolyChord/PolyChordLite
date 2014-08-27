@@ -592,6 +592,8 @@ module example_likelihoods
         double precision, intent(out), dimension(:) :: derived_params
 
         ! Don't do anything for now
+        derived_params = M%d0
+        derived_params = theta
         derived_params = 0
 
     end subroutine zero_derived

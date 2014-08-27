@@ -47,6 +47,7 @@ module nested_sampling_parallel_module
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status
 
         logical :: waiting
+        logical, allocatable, dimension(:) :: waiting_list
 
         double precision, dimension(M%nDims,2)               :: min_max_array
 
@@ -232,6 +233,9 @@ module nested_sampling_parallel_module
             incubating_data = 0d0
             incubating_data(M%incubator,:) = flag_incubator_blank
 
+            allocate(waiting_list(nprocs-1))
+            waiting_list = .false.
+
 
         end if
 
@@ -319,6 +323,7 @@ module nested_sampling_parallel_module
 
                 do i_slaves=1,nprocs-1
 
+                    ! Listen for any waiting nodes
                     call MPI_IPROBE(    &  
                         i_slaves,       & !
                         MPI_ANY_TAG,    & !
@@ -352,7 +357,13 @@ module nested_sampling_parallel_module
                         ! Insert this into the incubator
                         incubating_data(:,incubator_index(1)) = baby_point
 
+                        waiting_list(i_slaves) = .true.
 
+                    end if
+                end do
+
+                do i_slaves=1,nprocs-1
+                    if(waiting_list(i_slaves) .and. count(live_data(M%incubator,:)>flag_live_waiting) < settings%nlive/2 ) then
                         ! Generate a seed point from live_data and incubating_data, and
                         ! update the data arrays accordingly
                         seed_point = GenerateSeed(M,settings%nlive,live_data,incubating_data) 
@@ -377,6 +388,8 @@ module nested_sampling_parallel_module
                             MPI_COMM_WORLD,         & ! communication data
                             mpierror                & ! error information (from mpi_module)
                             )
+
+                        waiting_list(i_slaves)=.false.
                     end if
                 end do
 
@@ -551,21 +564,23 @@ module nested_sampling_parallel_module
             ! data from each node (and throw it away) and then send a kill signal back to it
             if(more_samples_needed==.false.) then
                 do i_live=1,nprocs-1
-                    call MPI_RECV(            &
-                        baby_point,           & ! newly generated point to be receieved
-                        M%nTotal,             & ! size of this data
-                        MPI_DOUBLE_PRECISION, & ! type of this data
-                        MPI_ANY_SOURCE,       & ! recieve it from any slave
-                        MPI_ANY_TAG,          & ! tagging information (not important here)
-                        MPI_COMM_WORLD,       & ! communication data
-                        mpi_status,           & ! status - important (tells you where it's been recieved from )
-                        mpierror              & ! error information (from mpi_module)
-                        )
+                    if( .not. waiting_list(i_live) ) then
+                        call MPI_RECV(            &
+                            baby_point,           & ! newly generated point to be receieved
+                            M%nTotal,             & ! size of this data
+                            MPI_DOUBLE_PRECISION, & ! type of this data
+                            i_live,               & ! recieve it from any slave
+                            MPI_ANY_TAG,          & ! tagging information (not important here)
+                            MPI_COMM_WORLD,       & ! communication data
+                            mpi_status,           & ! status - important (tells you where it's been recieved from )
+                            mpierror              & ! error information (from mpi_module)
+                            )
+                    end if
                     call MPI_SEND(              &
                         min_max_array,          & ! seed point to be sent
                         M%nDims*2,              & ! size of this data
                         MPI_DOUBLE_PRECISION,   & ! type of this data
-                        mpi_status(MPI_SOURCE), & ! send it to the point we just recieved from
+                        i_live,                 & ! send it to the point we just recieved from
                         ENDTAG,                 & ! tagging information (not important here)
                         MPI_COMM_WORLD,         & ! communication data
                         mpierror                & ! error information (from mpi_module)
