@@ -205,7 +205,7 @@ module nested_sampling_parallel_module
 
             ! (e) Posterior array
 
-            allocate(posterior_array(M%nDims+2,settings%nmax_posterior))
+            allocate(posterior_array(M%nDims+M%nDerived+2,settings%nmax_posterior))
             nposterior = 0
             ! set all of the loglikelihoods and logweights to be zero initially
             posterior_array(1:2,:) = logzero

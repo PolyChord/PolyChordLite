@@ -142,7 +142,7 @@ module nested_sampling_linear_module
 
         ! (e) Posterior array
 
-        allocate(posterior_array(M%nDims+2,settings%nmax_posterior))
+        allocate(posterior_array(M%nDims+M%nDerived+2,settings%nmax_posterior))
         nposterior = 0
         ! set all of the loglikelihoods and logweights to be zero initially
         posterior_array(1:2,:) = logzero
@@ -243,7 +243,8 @@ module nested_sampling_linear_module
                 ! calculate a new point for insertion
                 posterior_point(1)  = late_point(M%l0) + late_logweight
                 posterior_point(2)  = late_point(M%l0)
-                posterior_point(3:) = late_point(M%p0:M%d1)
+                posterior_point(3:3+M%nDims) = late_point(M%p0:M%p1)
+                posterior_point(4+M%nDims:) = late_point(M%d0:M%d1)
 
                 if(nposterior<settings%nmax_posterior) then
                     ! If we're still able to use a restricted array,
