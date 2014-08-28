@@ -97,18 +97,16 @@ module nested_sampling_parallel_module
 
 
 
-        if(myrank==0) then 
-            call write_opening_statement(M,settings)
+        if(myrank==0) call write_opening_statement(M,settings)
 
-            ! Check to see whether there's a resume file present, and record in the
-            ! variable 'resume'
-            inquire(file=trim(settings%file_root)//'.resume',exist=resume)
+        ! Check to see whether there's a resume file present, and record in the
+        ! variable 'resume'
+        inquire(file=trim(settings%file_root)//'.resume',exist=resume)
 
-            ! Check if we actually want to resume
-            resume = settings%read_resume .and. resume
+        ! Check if we actually want to resume
+        resume = settings%read_resume .and. resume
 
-            if(resume .and. settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
-        end if
+        if(resume .and. settings%feedback>=0 .and. myrank==0 ) write(stdout_unit,'("Resuming from previous run")')
 
 
         !======= 1) Initialisation =====================================
@@ -124,6 +122,8 @@ module nested_sampling_parallel_module
                 open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
                 ! Read the live data
                 read(read_resume_unit,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
+                ! Set all the points as waiting
+                live_data(M%incubator,:) = flag_live_waiting
             end if
         else !(not resume)
             if(myrank==0) call write_started_generating(settings%feedback)
@@ -275,6 +275,8 @@ module nested_sampling_parallel_module
                     )
             end do
 
+            ! Write a resume file before we start
+            if(settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,nposterior,posterior_array) 
 
         end if
 
@@ -648,6 +650,8 @@ module nested_sampling_parallel_module
 
 
     end function GenerateLivePoints
+
+
 
     function GenerateSeed(M,nlive,live_data,incubating_data) result(seed_point)
         use model_module,      only: model

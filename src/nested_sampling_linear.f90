@@ -167,6 +167,8 @@ module nested_sampling_linear_module
 
 
 
+        ! Write a resume file before we start
+        if(settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,nposterior,posterior_array) 
 
 
 
