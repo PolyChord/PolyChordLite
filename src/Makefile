@@ -28,9 +28,10 @@ FCFLAGS += -g -traceback -fp-stack-check -check all -fpe0 -warn all
 else
 # Optimised mode
 # --------------
-# O3   : maximum optimisation
-# xHost: maximise architecture usage
-FCFLAGS += -O3 -xHost
+# O3         : maximum optimisation
+# xHost      : maximise architecture usage
+# heap-arrays: reduce number of temporary arrays
+FCFLAGS += -O3 -xHost -heap-arrays 
 endif
 
 
