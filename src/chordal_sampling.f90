@@ -249,7 +249,7 @@ module chordal_module
         call re_scale(l_bound(M%h0:M%h1),min_max_array)
 
         ! expand u_bound until it's outside the likelihood region
-        do while(u_bound(M%l0) >= seed_point(M%l1) )
+        do while(u_bound(M%l0) > seed_point(M%l1) )
             u_bound(M%h0:M%h1) = u_bound(M%h0:M%h1) + nhat * trial_chord_length
             call de_scale(u_bound(M%h0:M%h1),min_max_array)
             call calculate_point(M,u_bound)
@@ -257,7 +257,7 @@ module chordal_module
         end do
 
         ! expand l_bound until it's outside the likelihood region
-        do while(l_bound(M%l0) >= seed_point(M%l1) )
+        do while(l_bound(M%l0) > seed_point(M%l1) )
             l_bound(M%h0:M%h1) = l_bound(M%h0:M%h1) - nhat * trial_chord_length
             call de_scale(l_bound(M%h0:M%h1),min_max_array)
             call calculate_point(M,l_bound)
@@ -305,7 +305,7 @@ module chordal_module
             call re_scale(finish_point(M%h0:M%h1),min_max_array)
 
             ! If we're not within the likelihood bound then we need to sample further
-            if( finish_point(M%l0) < seed_point(M%l1) ) then
+            if( finish_point(M%l0) <= seed_point(M%l1) ) then
 
                 if ( dot_product(finish_point(M%h0:M%h1)-seed_point(M%h0:M%h1),nhat) > 0d0 ) then
                     ! If finish_point is on the u_bound side of seed_point, then

@@ -364,38 +364,6 @@ module nested_sampling_parallel_module
                     end if
                 end do
 
-                do i_slaves=1,nprocs-1
-                    if(waiting_list(i_slaves) .and. count(live_data(M%incubator,:)>flag_live_waiting) < settings%nlive/2 ) then
-                        ! Generate a seed point from live_data and incubating_data, and
-                        ! update the data arrays accordingly
-                        seed_point = GenerateSeed(M,settings%nlive,live_data,incubating_data) 
-
-                        ! Send a seed point back to that slave
-                        call MPI_SEND(              &
-                            seed_point,             & ! seed point to be sent
-                            M%nTotal,               & ! size of this data
-                            MPI_DOUBLE_PRECISION,   & ! type of this data
-                            i_slaves,               & ! send it to the point we just recieved from
-                            RUNTAG,                 & ! tagging information (not important here)
-                            MPI_COMM_WORLD,         & ! communication data
-                            mpierror                & ! error information (from mpi_module)
-                            )
-                        ! Send the arrays of minimums and maximums
-                        call MPI_SEND(              &
-                            min_max_array,          & ! seed point to be sent
-                            M%nDims*2,              & ! size of this data
-                            MPI_DOUBLE_PRECISION,   & ! type of this data
-                            i_slaves,               & ! send it to the point we just recieved from
-                            RUNTAG,                 & ! tagging information (not important here)
-                            MPI_COMM_WORLD,         & ! communication data
-                            mpierror                & ! error information (from mpi_module)
-                            )
-
-                        waiting_list(i_slaves)=.false.
-                    end if
-                end do
-
-
                 ! Transfer from incubating stack to live_data if necessary
                 do while(.true.)
                     ! Find the point with the lowest likelihood...
@@ -506,6 +474,42 @@ module nested_sampling_parallel_module
                     end if
 
                 end do
+
+
+
+
+                do i_slaves=1,nprocs-1
+                    if(waiting_list(i_slaves) .and. count(live_data(M%incubator,:)>flag_live_waiting) < settings%nlive/2 ) then
+                        ! Generate a seed point from live_data and incubating_data, and
+                        ! update the data arrays accordingly
+                        seed_point = GenerateSeed(M,settings%nlive,live_data,incubating_data) 
+
+                        ! Send a seed point back to that slave
+                        call MPI_SEND(              &
+                            seed_point,             & ! seed point to be sent
+                            M%nTotal,               & ! size of this data
+                            MPI_DOUBLE_PRECISION,   & ! type of this data
+                            i_slaves,               & ! send it to the point we just recieved from
+                            RUNTAG,                 & ! tagging information (not important here)
+                            MPI_COMM_WORLD,         & ! communication data
+                            mpierror                & ! error information (from mpi_module)
+                            )
+                        ! Send the arrays of minimums and maximums
+                        call MPI_SEND(              &
+                            min_max_array,          & ! seed point to be sent
+                            M%nDims*2,              & ! size of this data
+                            MPI_DOUBLE_PRECISION,   & ! type of this data
+                            i_slaves,               & ! send it to the point we just recieved from
+                            RUNTAG,                 & ! tagging information (not important here)
+                            MPI_COMM_WORLD,         & ! communication data
+                            mpierror                & ! error information (from mpi_module)
+                            )
+
+                        waiting_list(i_slaves)=.false.
+                    end if
+                end do
+
+
 
             else
                 !================================================================
