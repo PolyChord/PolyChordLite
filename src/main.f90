@@ -64,25 +64,12 @@ program main
 
     ! (ii) Set the dimensionality
     M%nDims=20                 ! Dimensionality of the space
-    M%nDerived = 2             ! Assign the number of derived parameters
-    ! There are two derived parameters:
-    ! 1) the number of likelihood evaluations required for the calculation of the
-    ! new point
-    ! 2) the smallest plausible chord length
-        
+    M%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
-    !       
     M%uniform_num = M%nDims
 
     call allocate_live_indices(M)
-
-    ! (iv) Assign the grades
-
-    !M%grade=1
-    M%grade(:4) = 1
-    M%grade(5:6) = 2
-    M%grade(7:) = 3
 
     ! (v) Set up prior arrays
     call allocate_prior_arrays(M)
@@ -90,8 +77,6 @@ program main
     !       - settings of priors
     M%uniform_params(:,1) = 0.5-1d-2*10
     M%uniform_params(:,2) = 0.5+1d-2*10 
-    !M%uniform_params(:,1) = -5d0
-    !M%uniform_params(:,2) =  5d0
 
     call set_up_prior_indices(M)
 
@@ -99,8 +84,13 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%file_root            =  'chains/test'           !file root
     settings%nlive                =  500                     !number of live points
+    settings%num_chords           = 6                        !Number of chords to draw
+
+    settings%read_resume          = .true.                   !whether or not to resume from file
+
+
+    settings%file_root            =  'chains/test'           !file root
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
@@ -109,16 +99,8 @@ program main
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
-    settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .true.                   !whether or not to write resume files
     settings%update_resume        = settings%nlive*100       !How often to update the resume files
-
-    allocate(settings%num_chords(3))
-    settings%num_chords(1) = count(M%grade==1)
-    settings%num_chords(2) = count(M%grade==2)
-    settings%num_chords(3) = count(M%grade==3)
-    !allocate(settings%num_chords(1))
-    !settings%num_chords=20
 
 
     ! ======= (2) Perform Nested Sampling =======

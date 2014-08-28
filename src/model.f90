@@ -9,9 +9,9 @@ module model_module
     !> Type to encode all of the information about the priors.
     type :: model
         !> Dimensionality of the space
-        integer :: nDims       
+        integer :: nDims = 1
         !> Number of derived parameters
-        integer :: nDerived    
+        integer :: nDerived = 0   
         !> 2*ndims + nDerived + 1
         integer :: nTotal      
 
@@ -46,7 +46,6 @@ module model_module
         !> Pointer to the incubation stack
         integer :: incubator
 #endif
-       
 
         !> likelihood index
         !!

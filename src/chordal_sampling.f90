@@ -6,6 +6,101 @@ module chordal_module
 
     function ChordalSampling(settings,seed_point,min_max_array, M,feedback)  result(baby_point)
         use settings_module, only: program_settings
+        use random_module, only: random_direction
+        use model_module,  only: model, calculate_point
+        use utils_module, only: logzero,stdout_unit
+
+        implicit none
+
+        ! ------- Inputs -------
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        type(model),            intent(in) :: M
+
+        !> The seed point
+        double precision, intent(in), dimension(M%nTotal)   :: seed_point
+
+        !> The minimum and maximum values from each of the live points
+        double precision, intent(in),    dimension(:,:)   :: min_max_array
+
+        !> Optional argument to cause the sampler to print out relevent information
+        integer, intent(in), optional :: feedback
+
+        ! ------- Outputs -------
+        !> The newly generated point, plus the loglikelihood bound that
+        !! generated it
+        double precision,    dimension(M%nTotal)   :: baby_point
+
+
+        ! ------- Local Variables -------
+        double precision,    dimension(M%nDims)   :: nhat
+
+        double precision  :: max_chord
+
+        double precision :: step_length
+
+        integer :: i
+
+
+        ! Feedback if requested
+        if(present(feedback)) then
+            if(feedback>=0) then
+                write(stdout_unit,'( "Sampler    : Chordal" )')
+                write(stdout_unit,'( "  num chords = ",I8 )') settings%num_chords
+            end if
+            return
+        end if
+
+
+        ! Start the baby point at the seed point
+        baby_point = seed_point
+
+        ! Set the number of likelihood evaluations to zero
+        baby_point(M%nlike) = 0
+
+        ! Re-scale the unit hypercube so that min->0, max->1 of min_max_array
+        call re_scale(baby_point(M%h0:M%h1),min_max_array)
+
+        ! Record the step length
+        step_length = seed_point(M%last_chord)
+
+        ! Initialise max_chord at 0
+        max_chord = 0
+
+        do i=1,settings%num_chords
+            ! Give the baby point the step length
+            baby_point(M%last_chord) = step_length
+
+            ! Get a new random direction
+            nhat = random_direction(M%nDims) 
+
+            ! Generate a new random point along the chord defined by baby_point and nhat
+            baby_point = random_chordal_point( nhat, baby_point,min_max_array, M)
+
+            ! keep track of the largest chord
+            max_chord = max(max_chord,baby_point(M%last_chord))
+        end do
+
+#ifdef MPI
+        ! Make sure to hand back any incubator information which has likely been
+        ! overwritten
+        baby_point(M%incubator) = seed_point(M%incubator)
+#endif
+
+        ! Hand back the maximum chord this time to be used as the step length
+        ! next time this point is drawn
+        baby_point(M%last_chord) = max_chord
+
+        ! de-scale the unit hypercube so that 0->min, 1->max of min_max_array
+        call de_scale(baby_point(M%h0:M%h1),min_max_array)
+
+    end function ChordalSampling
+
+
+    function ChordalSamplingFastSlow(settings,seed_point,min_max_array, M,feedback)  result(baby_point)
+        use settings_module, only: program_settings
         use random_module, only: random_gaussian
         use model_module,  only: model, calculate_point
         use utils_module, only: logzero,stdout_unit
@@ -35,7 +130,7 @@ module chordal_module
 
 
         ! ------- Local Variables -------
-        double precision,    dimension(M%nDims,product(settings%num_chords))   :: nhats
+        double precision,    dimension(M%nDims,product(settings%nums_chords))   :: nhats
 
         double precision  :: max_chord
 
@@ -49,7 +144,7 @@ module chordal_module
             if(feedback>=0) then
                 write(stdout_unit,'( "Sampler    : Chordal" )')
                 do i=1,maxval(M%grade)
-                    write(stdout_unit,'( "  num chords(",I4,") = ",I8 )') i, settings%num_chords(i)
+                    write(stdout_unit,'( "  num chords(",I4,") = ",I8 )') i, settings%nums_chords(i)
                 end do
             end if
             return
@@ -74,14 +169,14 @@ module chordal_module
         ! Generate the set of nhats to use
         nhats=0
         do i=1,M%nDims
-            nhats(i,: product(settings%num_chords) : product(settings%num_chords)/product(settings%num_chords(:M%grade(i))) ) &
-                = random_gaussian(product(settings%num_chords(:M%grade(i))))
+            nhats(i,: product(settings%nums_chords) : product(settings%nums_chords)/product(settings%nums_chords(:M%grade(i))) ) &
+                = random_gaussian(product(settings%nums_chords(:M%grade(i))))
         end do
-        do i=1,product(settings%num_chords)
+        do i=1,product(settings%nums_chords)
             nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i)))
         end do
 
-        do i=1,product(settings%num_chords)
+        do i=1,product(settings%nums_chords)
             ! Give the baby point the step length
             baby_point(M%last_chord) = step_length
 
@@ -105,8 +200,7 @@ module chordal_module
         ! de-scale the unit hypercube so that 0->min, 1->max of min_max_array
         call de_scale(baby_point(M%h0:M%h1),min_max_array)
 
-    end function ChordalSampling
-
+    end function ChordalSamplingFastSlow
 
 
     function random_chordal_point(nhat,seed_point,min_max_array,M) result(baby_point)
