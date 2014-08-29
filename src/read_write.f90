@@ -14,7 +14,7 @@ module read_write_module
 
         type(program_settings), intent(in) :: settings
         type(model),            intent(in) :: M
-        double precision, dimension(M%nTotal,settings%nlive) :: live_data
+        double precision, dimension(:,:) :: live_data
         integer :: nposterior
         double precision, dimension(M%nDims+2,settings%nmax_posterior) :: posterior_array
         double precision, dimension(6)             :: evidence_vec

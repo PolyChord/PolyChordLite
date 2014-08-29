@@ -86,7 +86,7 @@ module chordal_module
 #ifdef MPI
         ! Make sure to hand back any incubator information which has likely been
         ! overwritten
-        baby_point(M%incubator) = seed_point(M%incubator)
+        baby_point(M%daughter) = seed_point(M%daughter)
 #endif
 
         ! Hand back the maximum chord this time to be used as the step length
@@ -190,7 +190,7 @@ module chordal_module
 #ifdef MPI
         ! Make sure to hand back any incubator information which has likely been
         ! overwritten
-        baby_point(M%incubator) = seed_point(M%incubator)
+        baby_point(M%daughter) = seed_point(M%daughter)
 #endif
 
         ! Hand back the maximum chord this time to be used as the step length

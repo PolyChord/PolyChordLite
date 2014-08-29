@@ -43,8 +43,8 @@ module model_module
         !> The last chord length used in calculating this point
         integer :: last_chord
 #ifdef MPI
-        !> Pointer to the incubation stack
-        integer :: incubator
+        !> Pointer to any daughter points
+        integer :: daughter
 #endif
 
         !> likelihood index
@@ -243,12 +243,12 @@ module model_module
         M%nlike=M%d1+1
         M%last_chord=M%nlike+1
 #ifdef MPI
-        M%incubator=M%last_chord+1
+        M%daughter=M%last_chord+1
 #endif
 
         ! Loglikelihood indices
 #ifdef MPI
-        M%l0=M%incubator+1
+        M%l0=M%daughter+1
 #else
         M%l0=M%last_chord+1
 #endif

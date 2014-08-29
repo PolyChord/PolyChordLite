@@ -90,6 +90,7 @@ program main
     settings%read_resume          = .true.                   !whether or not to resume from file
 
 
+    settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator

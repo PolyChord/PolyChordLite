@@ -14,6 +14,9 @@ module settings_module
         !> The number of live points
         integer :: nlive =500
 
+        !> The number of live points
+        integer :: nstack =500*10
+
         !> The degree of feedback to provide
         integer :: feedback = 1
 
