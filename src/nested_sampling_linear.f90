@@ -137,8 +137,8 @@ module nested_sampling_linear_module
         end if !(resume) 
 
         ! (d) calculate the minimums and maximums of the live data
-        min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
-        min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
+        min_max_array(:,1) = 0!minval(live_data(M%h0:M%h1,:),2)
+        min_max_array(:,2) = 1!maxval(live_data(M%h0:M%h1,:),2)
 
         ! (e) Posterior array
 
@@ -226,8 +226,8 @@ module nested_sampling_linear_module
             if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
 
             ! update the minimum and maximum values of the live points
-            min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
-            min_max_array(:,2) = maxval(live_data(M%h0:M%h1,:),2)
+            min_max_array(:,1) = 0!minval(live_data(M%h0:M%h1,:),2)
+            min_max_array(:,2) = 1!maxval(live_data(M%h0:M%h1,:),2)
 
 
 

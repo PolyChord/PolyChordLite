@@ -8,13 +8,12 @@ program main
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,      only: ChordalSampling
+    use chordal_module,      only: ChordalSampling,ChordalSamplingReflective
     use evidence_module
     use example_likelihoods
     use feedback_module
 #ifdef MPI
     use mpi_module
-    use chordal_module,                  only: ChordalSampling
     use nested_sampling_parallel_module, only: NestedSamplingP
     use nested_sampling_linear_module,   only: NestedSamplingL
 #else
@@ -53,7 +52,7 @@ program main
 
     ! ------- (1c) Initialise the model -------
     ! (i) Assign the likelihood function
-    M%loglikelihood => gaussian_loglikelihood
+    M%loglikelihood => gaussian_loglikelihood_corr
     !M%loglikelihood => himmelblau_loglikelihood
     !M%loglikelihood => rastrigin_loglikelihood
     !M%loglikelihood => rosenbrock_loglikelihood
@@ -63,7 +62,7 @@ program main
     
 
     ! (ii) Set the dimensionality
-    M%nDims=20                 ! Dimensionality of the space
+    M%nDims=3                  ! Dimensionality of the space
     M%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -92,7 +91,7 @@ program main
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => ChordalSampling         !Sampler choice
+    settings%sampler              => ChordalSamplingReflective         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-1                    !degree of precision in answer

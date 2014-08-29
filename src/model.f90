@@ -413,6 +413,28 @@ module model_module
     end function prior_log_volume
 
 
+    function gradloglike(M,theta,loglike)
+        implicit none
+        type(model),      intent(in)                     :: M
+        double precision, intent(in), dimension(M%nDims) :: theta
+        double precision, intent(in)                     :: loglike
+
+        double precision, dimension(M%nDims)             :: gradloglike
+
+        double precision, parameter :: delta = 1d-3
+        double precision, dimension(M%nDims) :: delta_vec
+
+        integer i
+
+        do i=1,M%nDims
+            delta_vec = 0
+            delta_vec(i) = delta
+            gradloglike(i) = ( M%loglikelihood(theta+delta_vec) - loglike )/ delta
+        end do
+
+    end function gradloglike
+
+
 
 
 end module model_module 
