@@ -268,13 +268,61 @@ module random_module
 
         ! The output unit vector
         double precision, dimension(nDims) :: random_direction
+        double precision :: random_direction2
 
-        ! Generate nDims gaussian random numbers
-        random_direction = random_gaussian(nDims)
+        random_direction2=0
+        do while(random_direction2==0)
+
+            ! Generate nDims gaussian random numbers
+            random_direction = random_gaussian(nDims)
+            ! Calculate the modulus squared
+            random_direction2 = dot_product(random_direction,random_direction)
+        end do
+
         ! normalise the vector
-        random_direction = random_direction / sqrt( dot_product(random_direction,random_direction) )
+        random_direction = random_direction / sqrt(random_direction2)
 
     end function random_direction
+
+    ! ===========================================================================================
+
+
+    !>  Random subspace vector
+    !!
+    !! Generate a randomly directed unit vector in the nDims-1 dimensional subspace defined by rhat
+    !!
+    !! This is done by generating nDims gaussian random numbers with mean 0 and
+    !! variance 1. These are spherically symetrically distributed, so
+    !! normalising this give a random direction.
+
+    function random_subdirection(nDims,rhat)
+        implicit none
+
+        !> Size of vector to be generated
+        integer,intent(in) :: nDims
+        double precision, dimension(nDims),intent(in) :: rhat
+
+        ! The output unit vector
+        double precision, dimension(nDims) :: random_subdirection
+        double precision :: random_subdirection2
+
+        random_subdirection2=0
+        do while (random_subdirection2==0)
+
+            ! Generate nDims gaussian random numbers
+            random_subdirection = random_gaussian(nDims)
+
+            ! Project into the rhat space
+            random_subdirection = random_subdirection - rhat * dot_product(rhat,random_subdirection) / dot_product(rhat,rhat)
+
+            ! Find the modulus squared
+            random_subdirection2 = dot_product(random_subdirection,random_subdirection)
+
+        end do
+            ! normalise the vector
+            random_subdirection = random_subdirection / sqrt(random_subdirection2)
+
+    end function random_subdirection
 
     ! ===========================================================================================
 

@@ -205,7 +205,7 @@ module chordal_module
 
     function ChordalSamplingReflective(settings,seed_point,min_max_array, M,feedback)  result(baby_point)
         use settings_module, only: program_settings
-        use random_module, only: random_direction
+        use random_module, only: random_direction,random_subdirection
         use model_module,  only: model, calculate_point,gradloglike
         use utils_module, only: logzero,stdout_unit
 
@@ -236,6 +236,7 @@ module chordal_module
         ! ------- Local Variables -------
         double precision,    dimension(M%nDims)   :: nhat
         double precision,    dimension(M%nDims)   :: gradL
+        double precision,    dimension(M%nDims)   :: gradLperp
         double precision                          :: gradL2
         double precision,    dimension(M%nDims)   :: zero_vec
 
@@ -298,7 +299,8 @@ module chordal_module
                 gradL2 = dot_product(gradL,gradL)
 
                 if (gradL2 /= 0d0 ) then
-                    nhat = nhat - 2*gradL *dot_product(gradL,nhat)/gradL2
+                    gradLperp = random_subdirection(M%nDims,gradL)
+                    nhat = sqrt(1-(dot_product(gradL,nhat))**2/gradL2 )* gradLperp + dot_product(gradL,nhat)/gradL2 * gradL
                 else
                     nhat = random_direction(M%nDims)
                 end if

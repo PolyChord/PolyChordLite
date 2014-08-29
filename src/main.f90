@@ -52,7 +52,7 @@ program main
 
     ! ------- (1c) Initialise the model -------
     ! (i) Assign the likelihood function
-    M%loglikelihood => gaussian_loglikelihood_corr
+    M%loglikelihood => gaussian_loglikelihood
     !M%loglikelihood => himmelblau_loglikelihood
     !M%loglikelihood => rastrigin_loglikelihood
     !M%loglikelihood => rosenbrock_loglikelihood
@@ -62,7 +62,7 @@ program main
     
 
     ! (ii) Set the dimensionality
-    M%nDims=3                  ! Dimensionality of the space
+    M%nDims=20                 ! Dimensionality of the space
     M%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
