@@ -30,6 +30,7 @@ module nested_sampling_parallel_module
         double precision, allocatable, dimension(:,:)        :: live_data_local
 
         integer :: daughter_index
+        integer :: mother_index(1)
 
         integer :: nprocs
         integer :: myrank
@@ -119,11 +120,17 @@ module nested_sampling_parallel_module
                 open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
                 ! Read the live data
                 read(read_resume_unit,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
+                ! Cancel any points that were recorded as gestating
+                do i_live = 1,settings%nstack
+                    if( nint(live_data(M%daughter,i_live))==flag_gestating ) then
+                        ! abort the gestating point
+                        live_data(M%daughter,:) = blank_point(M)
+                        ! find the mother and make her childless
+                        mother_index = minloc(live_data(M%daughter,:),mask = nint(live_data(M%daughter,:))==live_data(M%daughter,i_live))
+                        live_data(M%daughter,mother_index(1)) = flag_waiting
+                    end if
+                end do
             end if
-            ! Cancel any points that were recorded as gestating
-            do i_live = 1,settings%nstack
-                if(nint(live_data(M%daughter,i_live))==flag_gestating) live_data(M%daughter,i_live) = flag_waiting
-            end do
         else !(not resume)
             if(myrank==0) call write_started_generating(settings%feedback)
 
