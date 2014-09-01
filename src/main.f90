@@ -101,7 +101,7 @@ program main
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
     settings%write_resume         = .true.                   !whether or not to write resume files
-    settings%update_resume        = settings%nlive*100       !How often to update the resume files
+    settings%update_resume        = settings%nlive           !How often to update the resume files
 
 
     ! ======= (2) Perform Nested Sampling =======

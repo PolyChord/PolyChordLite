@@ -4,7 +4,7 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,M,live_data,evidence_vec,ndead,nposterior,posterior_array)
+    subroutine write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)
         use utils_module, only: DBL_FMT,write_resume_unit
         use model_module, only: model
         use settings_module, only: program_settings
@@ -16,6 +16,8 @@ module read_write_module
         type(model),            intent(in) :: M
         double precision, dimension(:,:) :: live_data
         integer :: nposterior
+        double precision :: mean_likelihood_calls
+        integer :: total_likelihood_calls
         double precision, dimension(M%nDims+2,settings%nmax_posterior) :: posterior_array
         double precision, dimension(6)             :: evidence_vec
         integer :: ndead
@@ -34,6 +36,10 @@ module read_write_module
         write(write_resume_unit,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         ! number of dead points
         write(write_resume_unit,'(I)') ndead
+        ! mean likelihood calls
+        write(write_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)') mean_likelihood_calls
+        ! total likelihood calls
+        write(write_resume_unit,'(I)') total_likelihood_calls
         ! Number of saved posterior points
         write(write_resume_unit,'(I)') nposterior
         ! posterior points

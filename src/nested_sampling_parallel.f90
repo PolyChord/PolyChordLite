@@ -121,7 +121,9 @@ module nested_sampling_parallel_module
                 read(read_resume_unit,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
             end if
             ! Cancel any points that were recorded as gestating
-            where(nint(live_data(M%daughter,:))==flag_gestating) live_data(M%daughter,:)= flag_waiting
+            do i_live = 1,settings%nstack
+                if(nint(live_data(M%daughter,i_live))==flag_gestating) live_data(M%daughter,i_live) = flag_waiting
+            end do
         else !(not resume)
             if(myrank==0) call write_started_generating(settings%feedback)
 
@@ -190,11 +192,7 @@ module nested_sampling_parallel_module
                 evidence_vec(6) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
             end if !(resume) 
 
-            ! (b) initialise the mean number of likelihood calls to 1
-            mean_likelihood_calls = sum(live_data(M%nlike,:))/settings%nlive
-            total_likelihood_calls = settings%nlive
-
-            ! (c) get number of dead points
+            ! (b) get number of dead points
             if(resume) then
                 ! If resuming, then get the number of dead points from the resume file
                 read(read_resume_unit,'(I)') ndead
@@ -202,6 +200,18 @@ module nested_sampling_parallel_module
                 ! Otherwise no dead points originally
                 ndead = 0
             end if !(resume) 
+
+            ! (c) initialise the mean and total number of likelihood calls
+            if(resume) then
+                ! If resuming, then get the mean likelihood calls from the resume file
+                read(read_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)') mean_likelihood_calls
+                ! Also get the total likelihood calls
+                read(read_resume_unit,'(I)') total_likelihood_calls
+            else
+                mean_likelihood_calls = 1d0
+                total_likelihood_calls = settings%nlive
+            end if
+
 
             ! (d) calculate the minimums and maximums of the live data
             min_max_array(:,1) = minval(live_data(M%h0:M%h1,:),2)
@@ -240,7 +250,7 @@ module nested_sampling_parallel_module
         end if
 
         ! Write a resume file before we start
-        if(myrank==0 .and. settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,nposterior,posterior_array) 
+        if(myrank==0 .and. settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
 
 
 
@@ -460,7 +470,7 @@ module nested_sampling_parallel_module
 
                     ! (7) Update the resume and posterior files every update_resume iterations, or at program termination
                     if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-                        if(settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,nposterior,posterior_array) 
+                        if(settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
                         if(settings%calculate_posterior) call write_posterior_file(settings,M,posterior_array,evidence_vec(1),nposterior)  
                     end if
 
