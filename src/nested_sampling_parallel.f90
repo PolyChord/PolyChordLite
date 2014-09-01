@@ -8,7 +8,7 @@ module nested_sampling_parallel_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    subroutine NestedSamplingP(M,settings)
+    subroutine NestedSamplingP(loglikelihood,M,settings)
         use mpi_module
         use model_module,      only: model
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit
@@ -18,6 +18,16 @@ module nested_sampling_parallel_module
         use feedback_module
 
         implicit none
+
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
         type(model),            intent(in) :: M
         type(program_settings), intent(in) :: settings
 
@@ -92,11 +102,6 @@ module nested_sampling_parallel_module
         nprocs = mpi_size()  ! Get the number of MPI procedures
         myrank = mpi_rank()  ! Get the MPI label of the current processor
 
-        ! Initialise any likelihood details by calling it
-        evidence_vec(1) = M%loglikelihood(baby_point(M%p0:M%p1),-1)
-
-
-
         if(myrank==0) call write_opening_statement(M,settings)
 
         ! Check to see whether there's a resume file present, and record in the
@@ -150,7 +155,7 @@ module nested_sampling_parallel_module
             allocate(live_data_local(M%nTotal,nlive_local))
 
             ! Generate nlive/nprocs live points on each of the nprocs nodes
-            live_data_local = GenerateLivePoints(M,nlive_local)
+            live_data_local = GenerateLivePoints(loglikelihood,M,nlive_local)
 
             ! Gather all of this data onto the root node
             call MPI_GATHER(          &  
@@ -566,7 +571,7 @@ module nested_sampling_parallel_module
                     )
 
                 ! Calculate a new baby point from the seed point
-                baby_point = settings%sampler(seed_point, min_max_array, M)
+                baby_point = settings%sampler(loglikelihood,seed_point, min_max_array, M)
 
                 ! Send the baby point back
                 call MPI_SEND(            &
@@ -629,11 +634,21 @@ module nested_sampling_parallel_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(M,nlive) result(live_data)
+    function GenerateLivePoints(loglikelihood,M,nlive) result(live_data)
         use model_module,    only: model, calculate_point
         use random_module,   only: random_reals
         use utils_module,    only: logzero
+
         implicit none
+        
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
 
         !> The model details (loglikelihood, priors, ndims etc...)
         type(model), intent(in) :: M
@@ -657,7 +672,7 @@ module nested_sampling_parallel_module
             live_data(:,i_live) = random_reals(M%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point( M, live_data(:,i_live) )
+            call calculate_point(loglikelihood, M, live_data(:,i_live) )
 
         end do
 

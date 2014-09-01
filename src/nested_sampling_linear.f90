@@ -4,7 +4,7 @@ module nested_sampling_linear_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    subroutine NestedSamplingL(M,settings)
+    subroutine NestedSamplingL(loglikelihood,M,settings)
         use model_module,      only: model
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit
         use settings_module,   only: program_settings
@@ -14,6 +14,16 @@ module nested_sampling_linear_module
         use random_module,     only: random_integer
 
         implicit none
+
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
         type(model),            intent(in) :: M
         type(program_settings), intent(in) :: settings
 
@@ -91,7 +101,7 @@ module nested_sampling_linear_module
             call write_started_generating(settings%feedback)
 
             ! Otherwise generate them anew:
-            live_data = GenerateLivePoints(M,settings%nlive)
+            live_data = GenerateLivePoints(loglikelihood,M,settings%nlive)
 
             call write_finished_generating(settings%feedback) !Flag to note that we're done generating
         end if !(resume)
@@ -216,7 +226,7 @@ module nested_sampling_linear_module
             seed_point(M%l1) = late_likelihood
 
             ! Generate a new point within the likelihood bound of the late point
-            baby_point = settings%sampler(seed_point, min_max_array, M)
+            baby_point = settings%sampler(loglikelihood,seed_point, min_max_array, M)
             baby_likelihood  = baby_point(M%l0)
 
 
@@ -314,11 +324,20 @@ module nested_sampling_linear_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(M,nlive) result(live_data)
+    function GenerateLivePoints(loglikelihood,M,nlive) result(live_data)
         use model_module,    only: model, calculate_point
         use random_module,   only: random_reals
         use utils_module,    only: logzero
         implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
 
         !> The model details (loglikelihood, priors, ndims etc...)
         type(model), intent(in) :: M
@@ -342,7 +361,7 @@ module nested_sampling_linear_module
             live_data(:,i_live) = random_reals(M%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point( M, live_data(:,i_live) )
+            call calculate_point( loglikelihood, M, live_data(:,i_live) )
 
         end do
 

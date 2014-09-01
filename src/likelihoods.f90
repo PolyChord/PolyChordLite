@@ -14,44 +14,36 @@ module example_likelihoods
     !!
     !! The mean is set at 0.5 by default, and all sigmas at 0.01
 
-    function gaussian_loglikelihood(M,theta,feedback)
+    function gaussian_loglikelihood(theta,phi,context) result(loglikelihood)
         implicit none
-        class(model),     intent(in)               :: M
-        double precision, intent(in), dimension(:) :: theta
-        integer,optional, intent(in)               :: feedback
+        !> Input parameters
+        double precision, intent(in), dimension(:)   :: theta
+        !> Output derived parameters
+        double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
+        double precision :: loglikelihood
 
-        double precision :: gaussian_loglikelihood
-
-        double precision, dimension(M%nDims) :: sigma ! Standard deviation (uncorrelated) 
-        double precision, dimension(M%nDims) :: mu    ! Mean
+        double precision, dimension(size(theta)) :: sigma ! Standard deviation (uncorrelated) 
+        double precision, dimension(size(theta)) :: mu    ! Mean
 
         
         ! Initialise the mean and standard deviation
         mu    = 5d-1   ! mean in the center
         sigma = 1d-2  ! all sigma set relatively small
 
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Likelihood : Gaussian" )')
-            end if
-            if(feedback>=2) then
-                write(stdout_unit,'( "     mean: ")')
-                write(stdout_unit,'( " [", <M%nDims>F15.9 ,"]")') mu
-                write(stdout_unit,'( "     sigma: ")')
-                write(stdout_unit,'( " [", <M%nDims>F15.9 ,"]")') sigma
-            end if
-            gaussian_loglikelihood = logzero
-            return
-        end if
-
-
         ! Gaussian normalisation
-        gaussian_loglikelihood = - M%nDims/2d0 * log( TwoPi ) - sum( log( sigma ) ) 
+        loglikelihood = - sum( log( sigma ) + log( TwoPi )/2d0 ) 
 
         ! theta dependence
-        gaussian_loglikelihood = gaussian_loglikelihood - sum( ( ( theta - mu ) / sigma ) ** 2d0 ) / 2d0
+        loglikelihood = loglikelihood - sum( ( ( theta - mu ) / sigma ) ** 2d0 ) / 2d0
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
 
 
     end function gaussian_loglikelihood
@@ -87,37 +79,41 @@ module example_likelihoods
     !! global maximum, but it is unclear analytically how many (if any) local maxima there
     !! are elsewhere in dimensions higher than 7.
     !!
-    function rosenbrock_loglikelihood(M,theta,feedback) result(loglikelihood)
+    function rosenbrock_loglikelihood(theta,phi,context) result(loglikelihood)
         use utils_module, only: logzero
         implicit none
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        class(model),intent(in)                    :: M
-        !> The input parameters
-        double precision, intent(in), dimension(:) :: theta
-        !> Optional argument. If provided, then the function simply prints out a few details
-        integer,optional, intent(in)               :: feedback
-
-        double precision, parameter :: a = 1d0
-        double precision, parameter :: b = 1d2
-        double precision, parameter :: pi = 4d0*atan(1d0) ! \pi in double precision
+        !> Input parameters
+        double precision, intent(in), dimension(:)   :: theta
+        !> Output derived parameters
+        double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
         ! The return value
         double precision :: loglikelihood
 
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Likelihood : RosenBrock" )')
-            end if
-            loglikelihood=logzero
-            return
-        end if
+        ! Parameters of the rosenbrock function
+        double precision, parameter :: a = 1d0
+        double precision, parameter :: b = 1d2
+        double precision, parameter :: pi = 4d0*atan(1d0) ! \pi in double precision
+
+        ! number of dimensions
+        integer :: nDims
+
+        ! Get the number of dimensions
+        nDims = size(theta)
 
         ! Normalisation for 2D
         loglikelihood = -log(pi/sqrt(b))
 
         ! Sum expressed with fortran intrinsics
-        loglikelihood =  loglikelihood  - sum( (a-theta(1:M%nDims-1))**2 + b*(theta(2:M%nDims) - theta(1:M%nDims-1)**2)**2 )
+        loglikelihood =  loglikelihood  - sum( (a-theta(1:nDims-1))**2 + b*(theta(2:nDims) - theta(1:nDims-1)**2)**2 )
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
 
     end function rosenbrock_loglikelihood
 
@@ -147,35 +143,30 @@ module example_likelihoods
     !! 
     !! Note that this is a 2D function, and should hence only be used for M%nDims=2
     !!
-    function himmelblau_loglikelihood(M,theta,feedback) result(loglikelihood)
+    function himmelblau_loglikelihood(theta,phi,context) result(loglikelihood)
         use utils_module, only: logzero
         implicit none
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        class(model),intent(in)                    :: M
-        !> The input parameters
-        double precision, intent(in), dimension(:) :: theta
-        !> Optional argument. If provided, then the function simply prints out a few details
-        integer,optional, intent(in)               :: feedback
+        !> Input parameters
+        double precision, intent(in), dimension(:)   :: theta
+        !> Output derived parameters
+        double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
         ! The return value
         double precision :: loglikelihood
 
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Likelihood : Himmelblau" )')
-            end if
-            loglikelihood = logzero
-            return
-        end if
-        ! (just so the variable M is used, we overwrite it straight away)
-        loglikelihood = M%l0
-
-        ! Normalisation for 2D
+        ! Normalisation
         loglikelihood = -log(0.4071069421432255d0) 
 
-        ! 
+        ! Evaluate
         loglikelihood =  loglikelihood  -  (theta(1)**2 + theta(2)- 11d0)**2    -   (theta(1)+theta(2)**2-7d0)**2 
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
 
     end function himmelblau_loglikelihood
 
@@ -195,35 +186,28 @@ module example_likelihoods
     !! fairly difficult problem due to its large search space and its large number
     !! of local minima.
     !!
-    function rastrigin_loglikelihood(M,theta,feedback) result(loglikelihood)
+    function rastrigin_loglikelihood(theta,phi,context) result(loglikelihood)
         use utils_module, only: logzero,TwoPi
         implicit none
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        class(model),intent(in)                    :: M
-        !> The input parameters
-        double precision, intent(in), dimension(:) :: theta
-        !> Optional argument. If provided, then the function simply prints out a few details
-        integer,optional, intent(in)               :: feedback
+        !> Input parameters
+        double precision, intent(in), dimension(:)   :: theta
+        !> Output derived parameters
+        double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
         double precision, parameter :: A=10d0
 
         ! The return value
         double precision :: loglikelihood
 
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Likelihood : rastrigin" )')
-            end if
-            loglikelihood = logzero
-            return
+        loglikelihood =  loglikelihood  -  sum( log(4991.217507308888d0) + theta**2 - A*cos(TwoPi*theta) )
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
         end if
-
-        ! Normalisation for ND
-        loglikelihood = - M%nDims * log(4991.217507308888d0)
-
-        ! 
-        loglikelihood =  loglikelihood  -  sum(theta**2 - A*cos(TwoPi*theta) )
 
     end function rastrigin_loglikelihood
 
@@ -234,36 +218,30 @@ module example_likelihoods
     !!
     !! \f[ -\log L(x, y) = (2+ \prod_i^n \cos(\theta_i/2) )^5 \f]
     !!
-    function eggbox_loglikelihood(M,theta,feedback) result(loglikelihood)
+    function eggbox_loglikelihood(theta,phi,context) result(loglikelihood)
         use utils_module, only: logzero
         implicit none
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        class(model),intent(in)                    :: M
-        !> The input parameters
-        double precision, intent(in), dimension(:) :: theta
-        !> Optional argument. If provided, then the function simply prints out a few details
-        integer,optional, intent(in)               :: feedback
+        !> Input parameters
+        double precision, intent(in), dimension(:)   :: theta
+        !> Output derived parameters
+        double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
         ! The return value
         double precision :: loglikelihood
 
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Likelihood : Himmelblau" )')
-            end if
-            loglikelihood = logzero
-            return
-        end if
-
-        ! (just so the variable M is used, we overwrite it straight away)
-        loglikelihood = M%l0
-
         ! No normalisation implemented yet
         loglikelihood = 0
 
-        ! 
+        ! calculate
         loglikelihood =  loglikelihood  -  (2 + product(cos(theta / 2d0) ) )**5
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
 
     end function eggbox_loglikelihood
 
@@ -286,15 +264,20 @@ module example_likelihoods
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function gaussian_loglikelihood_corr(M,theta,feedback)
-        use random_module, only: random_reals, random_skewed_direction
+    function gaussian_loglikelihood_corr(theta,phi,context)
+        use random_module, only: random_reals
         implicit none
-        class(model),     intent(in)               :: M
-        double precision, intent(in), dimension(:) :: theta
-        integer,optional, intent(in)               :: feedback
+        !> Input parameters
+        double precision, intent(in), dimension(:)   :: theta
+        !> Output derived parameters
+        double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
 
         double precision :: gaussian_loglikelihood_corr
+
+        integer :: nDims
 
         double precision, allocatable, dimension(:,:), save :: invcovmat ! covariance matrix
         double precision, allocatable, dimension(:),   save :: mu    ! Mean
@@ -304,32 +287,24 @@ module example_likelihoods
 
         double precision, parameter :: sigma = 0.01 ! width of peak
 
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Likelihood : Correlated Gaussian" )')
-                write(stdout_unit,'( "  sigma     = ",E15.7 )') sigma
-            end if
-            gaussian_loglikelihood_corr = logzero
 
-            return
-        end if
+        nDims = size(theta)
 
         if(.not. initialised) then
-            allocate(invcovmat(M%nDims,M%nDims), &
-                mu(M%nDims))
+            allocate(invcovmat(nDims,nDims), &
+                mu(nDims))
 
             ! Create a mean vector at the center of the space
             mu = 0.5d0
 #ifdef MPI
             ! Generate a random covariance matrix, its inverse and logdet on the root node
-            if(mpi_rank()==0) call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims)
+            if(mpi_rank()==0) call generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
             ! Broadcast the covariance matrix and normalisation data to the
             ! rest of the nodes
             ! Covariance matrix:
             call MPI_BCAST(           &
                 invcovmat,            & ! inverse covariance matrix data to be broadcast
-                M%nDims*M%nDims,      & ! size of the data
+                nDims*nDims,      & ! size of the data
                 MPI_DOUBLE_PRECISION, & ! type of data
                 0,                    & ! root node id
                 MPI_COMM_WORLD,       & ! communication info
@@ -344,7 +319,7 @@ module example_likelihoods
                 mpierror)               ! error (from mpiutils)
 #else
             ! Generate a random covariance matrix, its inverse and logdet
-            call generate_covariance(invcovmat,logdetcovmat,sigma,M%nDims)
+            call generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
 #endif
 
             initialised=.true.
@@ -356,6 +331,12 @@ module example_likelihoods
         gaussian_loglikelihood_corr = log_gauss(theta,mu,invcovmat,logdetcovmat)
 
 
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
+
     end function gaussian_loglikelihood_corr
 
     !> Cluster of correlated gaussians
@@ -363,19 +344,24 @@ module example_likelihoods
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function gaussian_loglikelihood_cluster(M,theta,feedback)
+    function gaussian_loglikelihood_cluster(theta,phi,context)
         use random_module, only: random_reals
         use utils_module,  only: logsumexp
 #ifdef MPI
         use mpi_module
 #endif
         implicit none
-        class(model),     intent(in)               :: M
-        double precision, intent(in), dimension(:) :: theta
-        integer,optional, intent(in)               :: feedback
+        !> Input parameters
+        double precision, intent(in), dimension(:)   :: theta
+        !> Output derived parameters
+        double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
 
         double precision :: gaussian_loglikelihood_cluster
+
+        integer :: nDims
 
         double precision, allocatable, dimension(:,:,:), save :: invcovmat ! list of covariance matrices
         double precision, allocatable, dimension(:,:),   save :: mu    ! list of means
@@ -389,23 +375,11 @@ module example_likelihoods
         integer, parameter :: num_peaks = 10
         integer :: i !iterator
 
-
-        ! Feedback if requested
-        if(present(feedback)) then
-
-            if(feedback>=0) then
-                write(stdout_unit,'( "Likelihood : Clustered Gaussian" )')
-                write(stdout_unit,'( "  num_peaks = ",I4 )') num_peaks
-                write(stdout_unit,'( "  sigma     = ",E15.7 )') sigma
-            end if
-
-            gaussian_loglikelihood_cluster = logzero
-            return
-        end if
+        nDims=size(theta)
 
         if(.not. initialised) then
-            allocate(invcovmat(M%nDims,M%nDims,num_peaks),&
-                mu(M%nDims,num_peaks),               &
+            allocate(invcovmat(nDims,nDims,num_peaks),&
+                mu(nDims,num_peaks),               &
                 logdetcovmat(num_peaks),             &
                 log_likelihoods(num_peaks)           &
                 )
@@ -415,11 +389,11 @@ module example_likelihoods
             if(mpi_rank()==0) then
                 ! Generate num_peaks random mean vectors, localised around the center on the root node
                 do i=1,num_peaks
-                    mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(M%nDims) -1d0)
+                    mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(nDims) -1d0)
                 end do
                 ! Generate num_peaks random covariance matrices, their inverses and logdets on the root node
                 do i=1,num_peaks
-                    call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims)
+                    call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,nDims)
                 end do
             end if
             ! Broadcast the means, covariances and normalisation data to the
@@ -427,7 +401,7 @@ module example_likelihoods
             ! Means:
             call MPI_BCAST(                &
                 mu,                        & ! inverse covariance matrix data to be broadcast
-                M%nDims*num_peaks,         & ! size of the data
+                nDims*num_peaks,         & ! size of the data
                 MPI_DOUBLE_PRECISION,      & ! type of data
                 0,                         & ! root node id
                 MPI_COMM_WORLD,            & ! communication info
@@ -436,7 +410,7 @@ module example_likelihoods
             ! Inverse Covariance matrices
             call MPI_BCAST(                &
                 invcovmat,                 & ! inverse covariance matrix data to be broadcast
-                M%nDims*M%nDims*num_peaks, & ! size of the data
+                nDims*nDims*num_peaks, & ! size of the data
                 MPI_DOUBLE_PRECISION,      & ! type of data
                 0,                         & ! root node id
                 MPI_COMM_WORLD,            & ! communication info
@@ -453,12 +427,12 @@ module example_likelihoods
 #else
             ! Generate num_peaks random mean vectors, localised around the center 
             do i=1,num_peaks
-                mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(M%nDims) -1d0)
+                mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(nDims) -1d0)
             end do
 
             ! Generate num_peaks random covariance matrices, their inverses and logdets
             do i=1,num_peaks
-                call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,M%nDims)
+                call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,nDims)
             end do
 #endif
 
@@ -474,6 +448,12 @@ module example_likelihoods
         gaussian_loglikelihood_cluster = logsumexp(log_likelihoods)
         gaussian_loglikelihood_cluster = gaussian_loglikelihood_cluster - log(num_peaks+0d0)
 
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
 
     end function gaussian_loglikelihood_cluster
 
@@ -536,71 +516,6 @@ module example_likelihoods
         log_gauss = log_gauss - dot_product(theta-mean,matmul(invcovmat,theta-mean))/2d0
 
     end function log_gauss
-
-
-
-
-
-    !> Pyramidal likelihood centered on 0.5.
-    !! 
-    !! It is normalised so that it should output an evidence of 1.0 for
-    !! effectively infinite priors.
-
-    function pyramidal_loglikelihood(M,theta,feedback)
-        implicit none
-        class(model),intent(in)                    :: M
-        double precision, intent(in), dimension(:) :: theta
-        integer,optional, intent(in)               :: feedback
-
-
-        double precision :: pyramidal_loglikelihood
-
-        double precision, dimension(M%nDims) :: sigma ! Standard deviation (uncorrelated) 
-        double precision, dimension(M%nDims) :: center    ! Mean
-        
-        center    = 5d-1   ! mean in the center
-        sigma = 1d-2 
-
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Likelihood : Pyramidal" )')
-            end if
-            if(feedback>=2) then
-                write(stdout_unit,'( "     center: ")')
-                write(stdout_unit,'( " [", <M%nDims>F15.9 ,"]")') center
-            end if
-            return
-        end if
-
-
-
-        ! normalisation
-        pyramidal_loglikelihood =   -(M%nDims)*log(2d0) - log(gamma(1d0+M%nDims/2d0)) -sum(log(sigma))
-
-        ! theta dependence
-        pyramidal_loglikelihood = pyramidal_loglikelihood - maxval(abs(theta-center)/sigma)**2
-
-    end function pyramidal_loglikelihood
-
-
-
-    subroutine zero_derived(M, theta,derived_params)
-        implicit none
-        type(model),      intent(in)                :: M
-        double precision, intent(in),  dimension(:) :: theta
-        double precision, intent(out), dimension(:) :: derived_params
-
-        ! Don't do anything for now
-        derived_params = M%d0
-        derived_params = theta
-        derived_params = 0
-
-    end subroutine zero_derived
-
-
-
-
 
 
 end module example_likelihoods

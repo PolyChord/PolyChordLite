@@ -52,7 +52,6 @@ module settings_module
         !> The number of chords to draw if we're doing a fast-slow algorithm
         integer, dimension(:), allocatable :: nums_chords
 
-
         !> Whether or not to resume from file
         logical :: read_resume = .true.
 
@@ -114,11 +113,19 @@ module settings_module
         !! set of live points (live_data) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood bound contained at the M%l1 index of seed_point
-        function samp(settings, seed_point, min_max_array, M,feedback) result(baby_point)
+        function samp(loglikelihood,settings, seed_point, min_max_array, M) result(baby_point)
 
             import :: model
             import :: program_settings
             implicit none
+            interface
+                function loglikelihood(theta,phi,context)
+                    double precision, intent(in),  dimension(:) :: theta
+                    double precision, intent(out),  dimension(:) :: phi
+                    integer,          intent(in)                 :: context
+                    double precision :: loglikelihood
+                end function
+            end interface
 
             ! ------- Inputs -------
             !> program settings (mostly useful to pass on the number of live points)
@@ -132,9 +139,6 @@ module settings_module
 
             !> The minimum and maximum values from each of the live points
             double precision, intent(in),    dimension(:,:)   :: min_max_array
-
-            !> Optional argument to cause the sampler to print out relevent information
-            integer, intent(in), optional :: feedback
 
             ! ------- Outputs -------
             !> The newly generated point

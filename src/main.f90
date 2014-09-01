@@ -4,23 +4,18 @@ program main
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
     use model_module,           only: model, allocate_live_indices, allocate_prior_arrays, set_up_prior_indices
-    
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
-
-    use chordal_module,      only: ChordalSampling
-    use evidence_module
+    use chordal_module,         only: ChordalSampling
+    use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
 #ifdef MPI
     use mpi_module
-    use chordal_module,                  only: ChordalSampling
     use nested_sampling_parallel_module, only: NestedSamplingP
-    use nested_sampling_linear_module,   only: NestedSamplingL
 #else
-    use nested_sampling_linear_module, only: NestedSamplingL
 #endif
-    use utils_module, only: TwoPi
+    use nested_sampling_linear_module,   only: NestedSamplingL
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
@@ -52,15 +47,6 @@ program main
 
 
     ! ------- (1c) Initialise the model -------
-    ! (i) Assign the likelihood function
-    M%loglikelihood => gaussian_loglikelihood
-    !M%loglikelihood => himmelblau_loglikelihood
-    !M%loglikelihood => rastrigin_loglikelihood
-    !M%loglikelihood => rosenbrock_loglikelihood
-    !M%loglikelihood => eggbox_loglikelihood
-
-    M%calc_derived => zero_derived
-    
 
     ! (ii) Set the dimensionality
     M%nDims=20                 ! Dimensionality of the space
@@ -106,14 +92,23 @@ program main
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
+    ! Possible example likelihoods:
+    !  - gaussian_loglikelihood
+    !  - rosenbrock_loglikelihood
+    !  - himmelblau_loglikelihood
+    !  - rastrigin_loglikelihood
+    !  - eggbox_loglikelihood
+    !  - gaussian_loglikelihood_corr
+    !  - gaussian_loglikelihood_cluster
+
 #ifdef MPI
     if (mpi_size()>1) then
-        call NestedSamplingP(M,settings)
+        call NestedSamplingP(gaussian_loglikelihood,M,settings)
     else
-        call NestedSamplingL(M,settings) 
+        call NestedSamplingL(gaussian_loglikelihood,M,settings) 
     end if
 #else
-    call NestedSamplingL(M,settings) 
+    call NestedSamplingL(gaussian_loglikelihood,M,settings) 
 #endif 
 
 
