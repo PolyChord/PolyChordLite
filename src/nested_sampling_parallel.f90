@@ -56,8 +56,8 @@ module nested_sampling_parallel_module
 
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status
 
-        logical :: waiting
-        logical, allocatable, dimension(:) :: waiting_list
+        logical :: sending
+        logical, allocatable, dimension(:) :: waiting_slave
 
         double precision, dimension(M%nDims,2)               :: min_max_array
 
@@ -257,8 +257,8 @@ module nested_sampling_parallel_module
             logminimumweight = log(settings%minimum_weight)
 
 
-            allocate(waiting_list(nprocs-1))
-            waiting_list = .false.
+            allocate(waiting_slave(nprocs-1))
+            waiting_slave = .false.
 
             last_wait = -1
 
@@ -280,6 +280,16 @@ module nested_sampling_parallel_module
 
                 ! Generate a seed point from live_data, and update accordingly
                 seed_point = GenerateSeed(M,settings%nstack,live_data)
+
+                ! If it's a 'blank' seed then we need to wait until a
+                ! good seed can be generated
+                if(nint(seed_point(M%daughter))==flag_blank) then
+                    write(stdout_unit,'(" Error: nprocs =", I8, " is too large for nlive = ", I8)') nprocs, settings%nlive
+                    call abort()
+
+                    return
+                end if
+
 
                 ! Send a seed point to the i_slaves th slave
                 call MPI_SEND(            &
@@ -348,17 +358,17 @@ module nested_sampling_parallel_module
 
                 do i_slaves=1,nprocs-1
 
-                    ! Listen for any waiting nodes
+                    ! Listen for any sending nodes
                     call MPI_IPROBE(    &  
                         i_slaves,       & !
                         MPI_ANY_TAG,    & !
                         MPI_COMM_WORLD, & !
-                        waiting,        & !
+                        sending,        & !
                         mpi_status,     & !
                         mpierror        & !
                         )
 
-                    if (waiting) then
+                    if (sending) then
 
                         ! (2) Recieve newly generated baby point from any slave
                         !
@@ -383,7 +393,7 @@ module nested_sampling_parallel_module
                         live_data(:,daughter_index) = baby_point
 
                         ! Mark this node as waiting for a new point
-                        waiting_list(i_slaves) = .true.
+                        waiting_slave(i_slaves) = .true.
 
                     end if
                 end do
@@ -393,6 +403,10 @@ module nested_sampling_parallel_module
                 do while(.true.)
                     ! Find the point with the lowest likelihood...
                     late_index = minloc(live_data(M%l0,:),mask=live_data(M%daughter,:)>=flag_waiting)
+
+                    ! If there is no such point, then all live points are gestating
+                    if(late_index(1)==0) exit
+
                     ! ...and save it.
                     late_point = live_data(:,late_index(1))
                     ! Get the likelihood contour
@@ -405,7 +419,9 @@ module nested_sampling_parallel_module
 
                     ! Check to see if the late point has a daughter
                     if(daughter_index<=flag_waiting) exit
-                    if(live_data( M%daughter, daughter_index )<flag_waiting ) exit
+
+                    ! Check to see if that daughter has been born yet
+                    if(live_data( M%daughter, daughter_index )<=flag_gestating ) exit
 
                     ! Kill the late point
                     live_data(:,late_index(1)) = blank_point(M)
@@ -496,7 +512,7 @@ module nested_sampling_parallel_module
 
 
                 slave_loop: do i_slaves=1,nprocs-1
-                    if( waiting_list(i_slaves) ) then
+                    if( waiting_slave(i_slaves) ) then
 
                         ! Generate a seed point from live_data, and update accordingly
                         seed_point = GenerateSeed(M,settings%nstack,live_data) 
@@ -504,7 +520,7 @@ module nested_sampling_parallel_module
                         ! If it's a 'blank' seed then we need to wait until a
                         ! good seed can be generated
                         if(nint(seed_point(M%daughter))==flag_blank) then
-                            if(last_wait>ndead) write(stdout_unit,'(" Warning: no valid seeds at ndead =", I8 " - Consider reducing nprocs")') ndead
+                            if(last_wait>ndead) write(stdout_unit,'(" Warning: no valid seeds at ndead =", I8 " - Consider reducing nprocs to avoid CPU waste")') ndead
                             last_wait = ndead
                             exit slave_loop
                         end if
@@ -530,7 +546,7 @@ module nested_sampling_parallel_module
                             mpierror                & ! error information (from mpi_module)
                             )
 
-                        waiting_list(i_slaves)=.false.
+                        waiting_slave(i_slaves)=.false.
                     end if
                 end do slave_loop
 
@@ -596,7 +612,7 @@ module nested_sampling_parallel_module
             ! data from each node (and throw it away) and then send a kill signal back to it
             if(more_samples_needed==.false.) then
                 do i_live=1,nprocs-1
-                    if( .not. waiting_list(i_live) ) then
+                    if( .not. waiting_slave(i_live) ) then
                         call MPI_RECV(            &
                             baby_point,           & ! newly generated point to be receieved
                             M%nTotal,             & ! size of this data
@@ -749,7 +765,7 @@ module nested_sampling_parallel_module
             ! get this point from live_data 
             seed_point = live_data(:,random_integer(nstack))
             counter = counter+1
-            if(counter>nstack*2) then
+            if(counter>nstack*10) then
                 seed_point=blank_point(M)
                 return
             end if
