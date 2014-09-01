@@ -121,7 +121,7 @@ module nested_sampling_parallel_module
                 read(read_resume_unit,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
             end if
             ! Cancel any points that were recorded as gestating
-            where(live_data(M%daughter,:)==flag_gestating) live_data(M%daughter,:)= flag_waiting
+            where(nint(live_data(M%daughter,:))==flag_gestating) live_data(M%daughter,:)= flag_waiting
         else !(not resume)
             if(myrank==0) call write_started_generating(settings%feedback)
 
@@ -473,6 +473,9 @@ module nested_sampling_parallel_module
                     if( waiting_list(i_slaves) ) then
                         ! Generate a seed point from live_data, and update accordingly
                         seed_point = GenerateSeed(M,settings%nstack,live_data) 
+                        if(seed_point(M%l1)==flag_blank) then
+                            exit
+                        end if
 
                         ! Send a seed point back to that slave
                         call MPI_SEND(              &
@@ -660,6 +663,7 @@ module nested_sampling_parallel_module
         double precision,    dimension(M%nTotal)   :: seed_point
 
 
+        integer :: counter
         integer :: daughter_index(1)
         integer :: live_index(1)
 
@@ -668,11 +672,19 @@ module nested_sampling_parallel_module
         ! Find the lowest likelihood point whose contour is waiting to
         ! be generated from                  
         live_index = minloc(live_data(M%l0,:),mask=nint(live_data(M%daughter,:))==flag_waiting) 
+        if(live_index(1)==0) then
+            seed_point = blank_point(M)
+            return
+        end if
 
         ! Find a place stack for the generated point
         ! We search through the stack to find the first index which indicates
         ! the point is 'blank'
         daughter_index = minloc(live_data(M%daughter,:),mask=nint(live_data(M%daughter,:))==flag_blank) 
+        if(daughter_index(1)==0) then
+            seed_point = blank_point(M)
+            return
+        end if
 
         ! Give this place to the point that generated the contour
         live_data(M%daughter,live_index(1)) = daughter_index(1)
@@ -689,10 +701,16 @@ module nested_sampling_parallel_module
         loglikelihood_bound = live_data(M%l0,live_index(1))
         seed_point(M%l0)=loglikelihood_bound
 
+        counter = 0
         do while (seed_point(M%l0)<=loglikelihood_bound .or. seed_point(M%l1)>loglikelihood_bound .or. nint(seed_point(M%daughter))==flag_blank )
             ! get a random integer in [1,nstack]
             ! get this point from live_data 
             seed_point = live_data(:,random_integer(nstack))
+            counter = counter+1
+            if(counter>nstack*2) then
+                seed_point=blank_point(M)
+                return
+            end if
         end do
 
         ! Record the likelihood bound which this seed will generate from
