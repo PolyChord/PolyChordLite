@@ -36,6 +36,8 @@ module nested_sampling_parallel_module
         integer :: myrank
         integer :: nlive_local
 
+        integer :: last_wait
+
         integer :: i_live
         integer :: i_slaves
 
@@ -124,9 +126,9 @@ module nested_sampling_parallel_module
                 do i_live = 1,settings%nstack
                     if( nint(live_data(M%daughter,i_live))==flag_gestating ) then
                         ! abort the gestating point
-                        live_data(M%daughter,:) = blank_point(M)
+                        live_data(:,i_live) = blank_point(M)
                         ! find the mother and make her childless
-                        mother_index = minloc(live_data(M%daughter,:),mask = nint(live_data(M%daughter,:))==live_data(M%daughter,i_live))
+                        mother_index = minloc(live_data(M%daughter,:),mask = nint(live_data(M%daughter,:))==i_live)
                         live_data(M%daughter,mother_index(1)) = flag_waiting
                     end if
                 end do
@@ -252,6 +254,8 @@ module nested_sampling_parallel_module
 
             allocate(waiting_list(nprocs-1))
             waiting_list = .false.
+
+            last_wait = -1
 
 
         end if
@@ -486,12 +490,18 @@ module nested_sampling_parallel_module
 
 
 
-                do i_slaves=1,nprocs-1
+                slave_loop: do i_slaves=1,nprocs-1
                     if( waiting_list(i_slaves) ) then
+
                         ! Generate a seed point from live_data, and update accordingly
                         seed_point = GenerateSeed(M,settings%nstack,live_data) 
-                        if(seed_point(M%l1)==flag_blank) then
-                            exit
+
+                        ! If it's a 'blank' seed then we need to wait until a
+                        ! good seed can be generated
+                        if(nint(seed_point(M%daughter))==flag_blank) then
+                            if(last_wait>ndead) write(stdout_unit,'(" Warning: no valid seeds at ndead =", I8 " - Consider reducing nprocs")') ndead
+                            last_wait = ndead
+                            exit slave_loop
                         end if
 
                         ! Send a seed point back to that slave
@@ -517,7 +527,7 @@ module nested_sampling_parallel_module
 
                         waiting_list(i_slaves)=.false.
                     end if
-                end do
+                end do slave_loop
 
 
 
