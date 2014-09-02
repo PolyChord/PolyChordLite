@@ -1,3 +1,5 @@
+!> This file contains various likelihoods ready to be used in main.f90
+
 module example_likelihoods
     use model_module,    only: model
     use utils_module,    only: logzero,TwoPi,stdout_unit
@@ -119,7 +121,7 @@ module example_likelihoods
 
 
 
-    !> Upside down [Himmelblau function](http://en.wikipedia.org/wiki/Himmelblau's_function).
+    !> Upside down [Himmelblau function](http://en.wikipedia.org/wiki/Himmelblaus_function).
     !!
     !! \f[ -\log L(x, y) = (x^2+y-11)^2 + (x+y^2-7)^2 \f]
     !!
