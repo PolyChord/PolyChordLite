@@ -242,7 +242,7 @@ module chordal_module
                 nhat = random_direction(M%nDims)
             else
                 ! Get the grad loglikelihood
-                gradL = gradloglike(loglikelihood,M,baby_point(M%p0:M%p1),baby_point(M%l0))
+                gradL = gradloglike(loglikelihood,M,baby_point(M%p0:M%p1),baby_point(M%l0),step_length*1d-3)
                 baby_point(M%nlike) = baby_point(M%nlike)+M%nDims
 
                 ! Normalise the grad loglikelihood
