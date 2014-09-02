@@ -13,6 +13,8 @@ module nested_sampling_linear_module
         use feedback_module
         use random_module,     only: random_integer
 
+        use chordal_module, only: nhats_global
+
         implicit none
 
         interface
@@ -69,6 +71,9 @@ module nested_sampling_linear_module
         double precision :: lognlive 
         double precision :: lognlivep1 
         double precision :: logminimumweight
+
+        integer i_nhat
+        double precision nhat2
 
 
 
@@ -184,6 +189,7 @@ module nested_sampling_linear_module
         ! Open a dead points file if desired
         if(settings%save_all) open(write_dead_unit,file=trim(settings%file_root)//'_dead.dat',action='write') 
 
+        allocate(nhats_global(M%nDims,settings%num_chords))
 
 
         !======= 2) Main loop body =====================================
@@ -220,6 +226,19 @@ module nested_sampling_linear_module
 
             ! Record the likelihood bound which this seed will generate from
             seed_point(M%l1) = late_likelihood
+
+            ! Generate a set of directions
+            do i_nhat=1,settings%num_chords
+                
+                nhat2=0
+                do while(nhat2==0)
+                    nhats_global(:,i_nhat) = live_data(M%h0:M%h1,random_integer(settings%nlive)) - live_data(M%h0:M%h1,random_integer(settings%nlive))
+                    nhat2 = dot_product(nhats_global(:,i_nhat),nhats_global(:,i_nhat))
+                end do
+                nhats_global(:,i_nhat) = nhats_global(:,i_nhat)/sqrt(nhat2)
+
+            end do
+
 
             ! Generate a new point within the likelihood bound of the late point
             baby_point = settings%sampler(loglikelihood,seed_point, M)

@@ -7,7 +7,7 @@ program main
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective
+    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective,ChordalSamplingBiased
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -68,7 +68,7 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood
+    loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
     M%nDims=8                  ! Dimensionality of the space
@@ -96,20 +96,20 @@ program main
     settings%num_chords           = 5                        !Number of chords to draw (after each randomisation)
     settings%num_randomisations   = 4                        !Number of randomisations to choose, 4 seems fine in most cases
 
-    settings%read_resume          = .true.                   !whether or not to resume from file
+    settings%read_resume          = .false.                  !whether or not to resume from file
 
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => ChordalSamplingReflective         !Sampler choice
+    settings%sampler              => ChordalSamplingBiased         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-1                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
-    settings%write_resume         = .true.                   !whether or not to write resume files
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%save_all             = .false.                  !Save all the dead points?
 

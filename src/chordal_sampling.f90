@@ -1,6 +1,8 @@
 module chordal_module
     implicit none
 
+    double precision, allocatable, dimension(:,:) ::  nhats_global
+
 
     contains
 
@@ -82,6 +84,85 @@ module chordal_module
         baby_point(M%last_chord) = max_chord
 
     end function ChordalSampling
+
+    function ChordalSamplingBiased(loglikelihood,settings,seed_point, M)  result(baby_point)
+        use settings_module, only: program_settings
+        use random_module, only: random_direction
+        use model_module,  only: model, calculate_point
+        use utils_module, only: logzero,stdout_unit
+
+        implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
+        ! ------- Inputs -------
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        type(model),            intent(in) :: M
+
+        !> The seed point
+        double precision, intent(in), dimension(M%nTotal)   :: seed_point
+
+        ! ------- Outputs -------
+        !> The newly generated point, plus the loglikelihood bound that
+        !! generated it
+        double precision,    dimension(M%nTotal)   :: baby_point
+
+
+        ! ------- Local Variables -------
+        double precision,    dimension(M%nDims)   :: nhat
+
+        double precision  :: max_chord
+
+        double precision :: step_length
+
+        integer :: i
+
+        ! Start the baby point at the seed point
+        baby_point = seed_point
+
+        ! Set the number of likelihood evaluations to zero
+        baby_point(M%nlike) = 0
+
+        ! Record the step length
+        step_length = seed_point(M%last_chord)
+
+        ! Initialise max_chord at 0
+        max_chord = 0
+
+        do i=1,settings%num_chords
+            ! Give the baby point the step length
+            baby_point(M%last_chord) = step_length
+
+            ! Get a new random direction
+            nhat = nhats_global(:,i)
+
+            ! Generate a new random point along the chord defined by baby_point and nhat
+            baby_point = random_chordal_point(loglikelihood, nhat, baby_point, M)
+
+            ! keep track of the largest chord
+            max_chord = max(max_chord,baby_point(M%last_chord))
+        end do
+
+#ifdef MPI
+        ! Make sure to hand back any incubator information which has likely been
+        ! overwritten
+        baby_point(M%daughter) = seed_point(M%daughter)
+#endif
+
+        ! Hand back the maximum chord this time to be used as the step length
+        ! next time this point is drawn
+        baby_point(M%last_chord) = max_chord
+
+    end function ChordalSamplingBiased
 
 
     function ChordalSamplingFastSlow(loglikelihood,settings,seed_point, M)  result(baby_point)
