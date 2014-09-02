@@ -25,6 +25,8 @@ module utils_module
     integer, parameter :: write_resume_unit = 11
     !> unit for writing to txt file
     integer, parameter :: write_txt_unit = 12
+    !> unit for writing dead file
+    integer, parameter :: write_dead_unit = 13
 
 
     contains

@@ -316,7 +316,7 @@ module chordal_module
         double precision :: trial_chord_length
 
         ! estimate at an appropriate chord
-        trial_chord_length = seed_point(M%last_chord)
+        trial_chord_length = seed_point(M%last_chord)/2d0
 
         ! record the number of likelihood calls
         u_bound(M%nlike) = seed_point(M%nlike)

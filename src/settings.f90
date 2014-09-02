@@ -58,6 +58,9 @@ module settings_module
         !> Randomisation frequency for reflective sampler
         integer :: num_randomisations = 4
 
+        !> Save all dead points (can be very expensive in high dimensions)
+        logical :: save_all = .false.
+
         !> Pointer to the sampling procedure.
         !!
         !! e.g: MultiNest, Galilean Sampling, Hamiltonian sampling ...

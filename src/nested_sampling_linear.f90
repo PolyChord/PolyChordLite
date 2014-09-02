@@ -6,7 +6,7 @@ module nested_sampling_linear_module
     !> Main subroutine for computing a generic nested sampling algorithm
     subroutine NestedSamplingL(loglikelihood,M,settings)
         use model_module,      only: model
-        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit
+        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file
@@ -181,6 +181,9 @@ module nested_sampling_linear_module
         ! Write a resume file before we start
         if(settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
 
+        ! Open a dead points file if desired
+        if(settings%save_all) open(write_dead_unit,file=trim(settings%file_root)//'_dead.dat',action='write') 
+
 
 
         !======= 2) Main loop body =====================================
@@ -278,6 +281,8 @@ module nested_sampling_linear_module
 
             end if
 
+            live_data(M%last_chord,:) = live_data(M%last_chord,:)* exp( -1d0/(M%nDims*settings%nlive) )
+
 
             ! (6) Command line feedback
 
@@ -286,6 +291,9 @@ module nested_sampling_linear_module
 
             ! update the total number of likelihood calls
             total_likelihood_calls = total_likelihood_calls + baby_point(M%nlike)
+
+            ! update ndead file if we're that way inclined
+            if(settings%save_all) write(write_dead_unit,'(<2*M%nDims+M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>,I8,3E<DBL_FMT(1)>.<DBL_FMT(2)>)')  late_point(M%h0:M%h1), late_point(M%p0:M%p1), late_point(M%d0:M%d1), late_point(M%nlike),late_point(M%last_chord), late_point(M%l0:M%l1)
 
 
             ! Feedback to command line every nlive iterations
@@ -303,6 +311,9 @@ module nested_sampling_linear_module
             end if
 
         end do ! End main loop
+
+
+        if(settings%save_all) close(write_dead_unit) 
 
         call write_final_results(M,evidence_vec,ndead,total_likelihood_calls,settings%feedback)
 

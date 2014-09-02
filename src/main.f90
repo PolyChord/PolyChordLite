@@ -68,7 +68,7 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood_corr
+    loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
     M%nDims=8                  ! Dimensionality of the space
@@ -83,8 +83,8 @@ program main
     call allocate_prior_arrays(M)
 
     !       - settings of priors
-    M%uniform_params(:,1) = 0.5-1d-2*5 
-    M%uniform_params(:,2) = 0.5+1d-2*5  
+    M%uniform_params(:,1) = 0.5-1d-2*5
+    M%uniform_params(:,2) = 0.5+1d-2*5
 
     call set_up_prior_indices(M)
 
@@ -111,6 +111,7 @@ program main
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
     settings%write_resume         = .true.                   !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
+    settings%save_all             = .false.                  !Save all the dead points?
 
 
     ! ======= (2) Perform Nested Sampling =======
