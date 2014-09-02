@@ -1,7 +1,3 @@
-!include 'mkl_vml.f90'   ! include the vector mathematical library, in order to
-                        ! use the vector functions for the priors
-
-
 module model_module
     use utils_module, only: logzero
     implicit none
@@ -53,6 +49,11 @@ module model_module
         integer :: l0          
         !> This is the likelihood contour which generated the live point
         integer :: l1          
+
+        !> Pointer to any additional files that need to be stored in between
+        !! evaluations (only really important for C likelihoods)
+        integer :: context
+
 
         !> Grades of parameters
         !!
@@ -190,33 +191,7 @@ module model_module
         !==========================================================================
 
 
-        procedure(loglike), pass(M), pointer :: loglikelihood 
-
-        procedure(calcd), pass(M), pointer   :: calc_derived
-
-
     end type model
-
-
-    interface
-        function loglike(M,theta,feedback)
-            import :: model
-            class(model),     intent(in)                :: M
-            double precision, intent(in),  dimension(:) :: theta
-            integer,          intent(in),  optional     :: feedback
-
-            double precision :: loglike
-        end function
-    end interface
-
-    interface
-        subroutine calcd(M,theta,derived)
-            import :: model
-            class(model),     intent(in)                :: M
-            double precision, intent(in),  dimension(:) :: theta
-            double precision, intent(out), dimension(:) :: derived
-        end subroutine
-    end interface
 
 
     contains
@@ -244,14 +219,12 @@ module model_module
         M%last_chord=M%nlike+1
 #ifdef MPI
         M%daughter=M%last_chord+1
-#endif
-
         ! Loglikelihood indices
-#ifdef MPI
         M%l0=M%daughter+1
 #else
         M%l0=M%last_chord+1
 #endif
+
         M%l1=M%l0+1
 
         ! Total number of parameters
@@ -312,7 +285,17 @@ module model_module
 
 
 
-    subroutine calculate_point(M, live_data)
+    subroutine calculate_point(loglikelihood, M, live_data)
+        implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
         type(model),     intent(in)                   :: M
         double precision, intent(inout) , dimension(:) :: live_data
 
@@ -324,13 +307,10 @@ module model_module
             call hypercube_to_physical( M, live_data(:) )
 
             ! Calculate the likelihood and store it in the last index
-            live_data(M%l0) = M%loglikelihood( live_data(M%p0:M%p1))
+            live_data(M%l0) = loglikelihood( live_data(M%p0:M%p1), live_data(M%d0:M%d1),M%context)
 
             ! accumulate the number of likelihood calls that we've made
             live_data(M%nlike) = live_data(M%nlike)+1
-
-            ! Calculate the derived parameters
-            call M%calc_derived( live_data(M%p0:M%p1),live_data(M%d0:M%d1))
         end if
 
     end subroutine calculate_point
@@ -413,13 +393,25 @@ module model_module
     end function prior_log_volume
 
 
-    function gradloglike(M,theta,loglike)
+    function gradloglike(loglikelihood,M,theta,loglike)
         implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
         type(model),      intent(in)                     :: M
         double precision, intent(in), dimension(M%nDims) :: theta
         double precision, intent(in)                     :: loglike
 
         double precision, dimension(M%nDims)             :: gradloglike
+
+
+        double precision, dimension(M%nDerived)               :: derived
+        integer :: context
 
         double precision, parameter :: delta = 1d-3
         double precision, dimension(M%nDims) :: delta_vec
@@ -429,7 +421,7 @@ module model_module
         do i=1,M%nDims
             delta_vec = 0
             delta_vec(i) = delta
-            gradloglike(i) = ( M%loglikelihood(theta+delta_vec) - loglike )/ delta
+            gradloglike(i) = ( loglikelihood(theta+delta_vec,derived,context) - loglike )/ delta
         end do
 
     end function gradloglike

@@ -4,13 +4,21 @@ module chordal_module
 
     contains
 
-    function ChordalSampling(settings,seed_point,min_max_array, M,feedback)  result(baby_point)
+    function ChordalSampling(loglikelihood,settings,seed_point, M)  result(baby_point)
         use settings_module, only: program_settings
         use random_module, only: random_direction
         use model_module,  only: model, calculate_point
         use utils_module, only: logzero,stdout_unit
 
         implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
 
         ! ------- Inputs -------
         !> program settings (mostly useful to pass on the number of live points)
@@ -21,12 +29,6 @@ module chordal_module
 
         !> The seed point
         double precision, intent(in), dimension(M%nTotal)   :: seed_point
-
-        !> The minimum and maximum values from each of the live points
-        double precision, intent(in),    dimension(:,:)   :: min_max_array
-
-        !> Optional argument to cause the sampler to print out relevent information
-        integer, intent(in), optional :: feedback
 
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
@@ -43,25 +45,11 @@ module chordal_module
 
         integer :: i
 
-
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Sampler    : Chordal" )')
-                write(stdout_unit,'( "  num chords = ",I8 )') settings%num_chords
-            end if
-            return
-        end if
-
-
         ! Start the baby point at the seed point
         baby_point = seed_point
 
         ! Set the number of likelihood evaluations to zero
         baby_point(M%nlike) = 0
-
-        ! Re-scale the unit hypercube so that min->0, max->1 of min_max_array
-        call re_scale(baby_point(M%h0:M%h1),min_max_array)
 
         ! Record the step length
         step_length = seed_point(M%last_chord)
@@ -77,7 +65,7 @@ module chordal_module
             nhat = random_direction(M%nDims) 
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point( nhat, baby_point,min_max_array, M)
+            baby_point = random_chordal_point(loglikelihood, nhat, baby_point, M)
 
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(M%last_chord))
@@ -93,19 +81,24 @@ module chordal_module
         ! next time this point is drawn
         baby_point(M%last_chord) = max_chord
 
-        ! de-scale the unit hypercube so that 0->min, 1->max of min_max_array
-        call de_scale(baby_point(M%h0:M%h1),min_max_array)
-
     end function ChordalSampling
 
 
-    function ChordalSamplingFastSlow(settings,seed_point,min_max_array, M,feedback)  result(baby_point)
+    function ChordalSamplingFastSlow(loglikelihood,settings,seed_point, M)  result(baby_point)
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
         use model_module,  only: model, calculate_point
         use utils_module, only: logzero,stdout_unit
 
         implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
 
         ! ------- Inputs -------
         !> program settings (mostly useful to pass on the number of live points)
@@ -116,12 +109,6 @@ module chordal_module
 
         !> The seed point
         double precision, intent(in), dimension(M%nTotal)   :: seed_point
-
-        !> The minimum and maximum values from each of the live points
-        double precision, intent(in),    dimension(:,:)   :: min_max_array
-
-        !> Optional argument to cause the sampler to print out relevent information
-        integer, intent(in), optional :: feedback
 
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
@@ -139,26 +126,11 @@ module chordal_module
         integer :: i
 
 
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Sampler    : Chordal" )')
-                do i=1,maxval(M%grade)
-                    write(stdout_unit,'( "  num chords(",I4,") = ",I8 )') i, settings%nums_chords(i)
-                end do
-            end if
-            return
-        end if
-
-
         ! Start the baby point at the seed point
         baby_point = seed_point
 
         ! Set the number of likelihood evaluations to zero
         baby_point(M%nlike) = 0
-
-        ! Re-scale the unit hypercube so that min->0, max->1 of min_max_array
-        call re_scale(baby_point(M%h0:M%h1),min_max_array)
 
         ! Record the step length
         step_length = seed_point(M%last_chord)
@@ -181,7 +153,7 @@ module chordal_module
             baby_point(M%last_chord) = step_length
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point( nhats(:,i), baby_point,min_max_array, M)
+            baby_point = random_chordal_point(loglikelihood, nhats(:,i), baby_point, M)
 
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(M%last_chord))
@@ -197,19 +169,24 @@ module chordal_module
         ! next time this point is drawn
         baby_point(M%last_chord) = max_chord
 
-        ! de-scale the unit hypercube so that 0->min, 1->max of min_max_array
-        call de_scale(baby_point(M%h0:M%h1),min_max_array)
-
     end function ChordalSamplingFastSlow
 
 
-    function ChordalSamplingReflective(settings,seed_point,min_max_array, M,feedback)  result(baby_point)
+    function ChordalSamplingReflective(loglikelihood,settings,seed_point, M)  result(baby_point)
         use settings_module, only: program_settings
         use random_module, only: random_direction,random_subdirection
         use model_module,  only: model, calculate_point,gradloglike
         use utils_module, only: logzero,stdout_unit
 
         implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
 
         ! ------- Inputs -------
         !> program settings (mostly useful to pass on the number of live points)
@@ -220,12 +197,6 @@ module chordal_module
 
         !> The seed point
         double precision, intent(in), dimension(M%nTotal)   :: seed_point
-
-        !> The minimum and maximum values from each of the live points
-        double precision, intent(in),    dimension(:,:)   :: min_max_array
-
-        !> Optional argument to cause the sampler to print out relevent information
-        integer, intent(in), optional :: feedback
 
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
@@ -238,7 +209,6 @@ module chordal_module
         double precision,    dimension(M%nDims)   :: gradL
         double precision,    dimension(M%nDims)   :: gradLperp
         double precision                          :: gradL2
-        double precision,    dimension(M%nDims)   :: zero_vec
 
         double precision  :: max_chord
 
@@ -246,29 +216,12 @@ module chordal_module
 
         integer :: i
 
-
-        ! Feedback if requested
-        if(present(feedback)) then
-            if(feedback>=0) then
-                write(stdout_unit,'( "Sampler    : Chordal Reflective" )')
-                write(stdout_unit,'( "  num chords = ",I8 )') settings%num_chords
-            end if
-            return
-        end if
-
-
         ! Start the baby point at the seed point
         baby_point = seed_point
 
         ! Set the number of likelihood evaluations to zero
         baby_point(M%nlike) = 0
 
-        ! Create a 're-scaled' zero vector
-        zero_vec = 0d0
-        call re_scale(zero_vec,min_max_array)
-
-        ! Re-scale the unit hypercube so that min->0, max->1 of min_max_array
-        call re_scale(baby_point(M%h0:M%h1),min_max_array)
 
         ! Record the step length
         step_length = seed_point(M%last_chord)
@@ -280,27 +233,25 @@ module chordal_module
         nhat = random_direction(M%nDims) 
 
 
-        do i=1,settings%num_chords!1000000000
+        do i=1,settings%num_chords*settings%num_randomisations
             ! Give the baby point the step length
             baby_point(M%last_chord) = step_length
 
             ! Generate a new nhat by reflecting the old one
-            if(i==1) then
+            if(mod(i,settings%num_chords)==1) then
                 nhat = random_direction(M%nDims)
             else
                 ! Get the grad loglikelihood
-                call de_scale(baby_point(M%h0:M%h1),min_max_array)
-                gradL = gradloglike(M,baby_point(M%p0:M%p1),baby_point(M%l0))
-                call re_scale(baby_point(M%h0:M%h1),min_max_array)
-                call re_scale(gradL,min_max_array)
-                gradL = gradL-zero_vec
+                gradL = gradloglike(loglikelihood,M,baby_point(M%p0:M%p1),baby_point(M%l0))
+                baby_point(M%nlike) = baby_point(M%nlike)+M%nDims
 
                 ! Normalise the grad loglikelihood
                 gradL2 = dot_product(gradL,gradL)
 
                 if (gradL2 /= 0d0 ) then
-                    gradLperp = random_subdirection(M%nDims,gradL)
-                    nhat = sqrt(1-(dot_product(gradL,nhat))**2/gradL2 )* gradLperp + dot_product(gradL,nhat)/gradL2 * gradL
+                    !gradLperp = random_subdirection(M%nDims,gradL)
+                    !nhat = sqrt(1-(dot_product(gradL,nhat))**2/gradL2 )* gradLperp + dot_product(gradL,nhat)/gradL2 * gradL
+                    nhat = nhat - 2d0* dot_product(gradL,nhat)/gradL2 * gradL
                 else
                     nhat = random_direction(M%nDims)
                 end if
@@ -310,7 +261,7 @@ module chordal_module
             end if
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point( nhat, baby_point,min_max_array, M)
+            baby_point = random_chordal_point(loglikelihood, nhat, baby_point, M)
 
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(M%last_chord))
@@ -326,9 +277,6 @@ module chordal_module
         ! next time this point is drawn
         baby_point(M%last_chord) = max_chord
 
-        ! de-scale the unit hypercube so that 0->min, 1->max of min_max_array
-        call de_scale(baby_point(M%h0:M%h1),min_max_array)
-
     end function ChordalSamplingReflective
 
 
@@ -336,11 +284,19 @@ module chordal_module
 
 
 
-    function random_chordal_point(nhat,seed_point,min_max_array,M) result(baby_point)
+    function random_chordal_point(loglikelihood,nhat,seed_point,M) result(baby_point)
         use model_module,  only: model, calculate_point
         use utils_module,  only: logzero, distance
         use random_module, only: random_real
         implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
 
         !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
         type(model),            intent(in) :: M
@@ -348,8 +304,6 @@ module chordal_module
         double precision, intent(in),    dimension(M%nDims)   :: nhat
         !> The start point
         double precision, intent(in),    dimension(M%nTotal)   :: seed_point
-        !> The minimum and maximum values from each of the live points
-        double precision, intent(in),    dimension(M%nDims,2)   :: min_max_array
 
         ! The output finish point
         double precision,    dimension(M%nTotal)   :: baby_point
@@ -374,27 +328,19 @@ module chordal_module
         u_bound(M%h0:M%h1) = l_bound(M%h0:M%h1) + trial_chord_length * nhat 
 
         ! Calculate initial likelihoods
-        call de_scale(u_bound(M%h0:M%h1),min_max_array)
-        call de_scale(l_bound(M%h0:M%h1),min_max_array)
-        call calculate_point(M,u_bound)
-        call calculate_point(M,l_bound)
-        call re_scale(u_bound(M%h0:M%h1),min_max_array)
-        call re_scale(l_bound(M%h0:M%h1),min_max_array)
+        call calculate_point(loglikelihood,M,u_bound)
+        call calculate_point(loglikelihood,M,l_bound)
 
         ! expand u_bound until it's outside the likelihood region
         do while(u_bound(M%l0) > seed_point(M%l1) )
             u_bound(M%h0:M%h1) = u_bound(M%h0:M%h1) + nhat * trial_chord_length
-            call de_scale(u_bound(M%h0:M%h1),min_max_array)
-            call calculate_point(M,u_bound)
-            call re_scale(u_bound(M%h0:M%h1),min_max_array)
+            call calculate_point(loglikelihood,M,u_bound)
         end do
 
         ! expand l_bound until it's outside the likelihood region
         do while(l_bound(M%l0) > seed_point(M%l1) )
             l_bound(M%h0:M%h1) = l_bound(M%h0:M%h1) - nhat * trial_chord_length
-            call de_scale(l_bound(M%h0:M%h1),min_max_array)
-            call calculate_point(M,l_bound)
-            call re_scale(l_bound(M%h0:M%h1),min_max_array)
+            call calculate_point(loglikelihood,M,l_bound)
         end do
 
         ! Sample within this bound
@@ -433,9 +379,7 @@ module chordal_module
 
 
             ! calculate the likelihood 
-            call de_scale(finish_point(M%h0:M%h1),min_max_array)
-            call calculate_point(M,finish_point)
-            call re_scale(finish_point(M%h0:M%h1),min_max_array)
+            call calculate_point(loglikelihood,M,finish_point)
 
             ! If we're not within the likelihood bound then we need to sample further
             if( finish_point(M%l0) <= seed_point(M%l1) ) then
@@ -462,26 +406,6 @@ module chordal_module
     end function random_chordal_point
 
 
-    !> [min,max] -> [0,1]
-    subroutine re_scale(hypercube_coord,min_max_array)
-        implicit none
-        !> The hypercube coordinate to scale down by min_max_array
-        double precision, intent(inout),    dimension(:)   :: hypercube_coord
-        !> The minimum and maximum values from each of the live points
-        double precision, intent(in),    dimension(:,:)   :: min_max_array
-
-        hypercube_coord(:) = (hypercube_coord(:)- min_max_array(:,1)) / (min_max_array(:,2)-min_max_array(:,1))
-    end subroutine re_scale
-
-    subroutine de_scale(re_scaled_hypercube_coord,min_max_array)
-        implicit none
-        !> The hypercube coordinate to scale down by min_max_array
-        double precision, intent(inout),    dimension(:)   :: re_scaled_hypercube_coord
-        !> The minimum and maximum values from each of the live points
-        double precision, intent(in),    dimension(:,:)   :: min_max_array
-
-        re_scaled_hypercube_coord(:) = min_max_array(:,1) + (min_max_array(:,2)-min_max_array(:,1))*re_scaled_hypercube_coord(:)
-    end subroutine de_scale
 
 end module chordal_module
 

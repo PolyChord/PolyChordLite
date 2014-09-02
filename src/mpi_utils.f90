@@ -7,6 +7,11 @@ module mpi_module
 
     contains
 
+    subroutine abort()
+        implicit none
+        integer :: i
+        call MPI_ABORT(MPI_COMM_WORLD,i,mpierror)
+    end subroutine abort
 
 
     function mpi_rank

@@ -4,28 +4,36 @@ program main
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
     use model_module,           only: model, allocate_live_indices, allocate_prior_arrays, set_up_prior_indices
-    
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,      only: ChordalSampling,ChordalSamplingReflective
-    use evidence_module
+    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective
+    use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
 #ifdef MPI
     use mpi_module
     use nested_sampling_parallel_module, only: NestedSamplingP
-    use nested_sampling_linear_module,   only: NestedSamplingL
 #else
-    use nested_sampling_linear_module, only: NestedSamplingL
 #endif
-    use utils_module, only: TwoPi
+    use nested_sampling_linear_module,   only: NestedSamplingL
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
 
     type(program_settings) :: settings  ! The program settings 
     type(model)            :: M         ! The model details
+
+    pointer loglikelihood
+    interface
+        function loglikelihood(theta,phi,context)
+            double precision, intent(in),  dimension(:) :: theta
+            double precision, intent(out),  dimension(:) :: phi
+            integer,          intent(in)                 :: context
+            double precision :: loglikelihood
+        end function
+    end interface
+
 
 
 
@@ -51,18 +59,19 @@ program main
 
 
     ! ------- (1c) Initialise the model -------
-    ! (i) Assign the likelihood function
-    M%loglikelihood => gaussian_loglikelihood
-    !M%loglikelihood => himmelblau_loglikelihood
-    !M%loglikelihood => rastrigin_loglikelihood
-    !M%loglikelihood => rosenbrock_loglikelihood
-    !M%loglikelihood => eggbox_loglikelihood
-
-    M%calc_derived => zero_derived
-    
+    ! (i) Choose the loglikelihood
+    !       Possible example likelihoods:
+    !       - gaussian_loglikelihood
+    !       - rosenbrock_loglikelihood
+    !       - himmelblau_loglikelihood
+    !       - rastrigin_loglikelihood
+    !       - eggbox_loglikelihood
+    !       - gaussian_loglikelihood_corr
+    !       - gaussian_loglikelihood_cluster
+    loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    M%nDims=20                 ! Dimensionality of the space
+    M%nDims=8                  ! Dimensionality of the space
     M%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -74,8 +83,8 @@ program main
     call allocate_prior_arrays(M)
 
     !       - settings of priors
-    M%uniform_params(:,1) = 0.5-1d-2*10
-    M%uniform_params(:,2) = 0.5+1d-2*10 
+    M%uniform_params(:,1) = 0.5-1d-2*5 
+    M%uniform_params(:,2) = 0.5+1d-2*5  
 
     call set_up_prior_indices(M)
 
@@ -83,8 +92,9 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                =  500                     !number of live points
-    settings%num_chords           = 6                        !Number of chords to draw
+    settings%nlive                = 500                      !number of live points
+    settings%num_chords           = 5                        !Number of chords to draw (after each randomisation)
+    settings%num_randomisations   = 4                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .true.                   !whether or not to resume from file
 
@@ -100,19 +110,20 @@ program main
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
     settings%write_resume         = .true.                   !whether or not to write resume files
-    settings%update_resume        = settings%nlive*100       !How often to update the resume files
+    settings%update_resume        = settings%nlive           !How often to update the resume files
 
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
+
 #ifdef MPI
     if (mpi_size()>1) then
-        call NestedSamplingP(M,settings)
+        call NestedSamplingP(loglikelihood,M,settings)
     else
-        call NestedSamplingL(M,settings) 
+        call NestedSamplingL(loglikelihood,M,settings) 
     end if
 #else
-    call NestedSamplingL(M,settings) 
+    call NestedSamplingL(loglikelihood,M,settings) 
 #endif 
 
 

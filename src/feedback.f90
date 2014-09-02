@@ -23,9 +23,6 @@ module feedback_module
         type(program_settings), intent(in) :: settings  ! The program settings 
         type(model),            intent(in) :: M         ! The model details
 
-        double precision, dimension(M%nTotal) :: temp
-        double precision, dimension(M%nDims,2) :: temp2
-
 
         if(settings%feedback >=1) then
             write(stdout_unit,'("Nested Sampling Algorithm")')
@@ -38,8 +35,6 @@ module feedback_module
             write(stdout_unit,'("nlive      :",I8)')   settings%nlive
             write(stdout_unit,'("nDims      :",I8)')   M%nDims
             write(stdout_unit,'("nDerived   :",I8)')   M%nDerived
-            temp    = M%loglikelihood(temp(M%p0:M%p1),settings%feedback) ! Write out the likelihood
-            temp    = settings%sampler(temp,temp2,M,settings%feedback) ! Write out the sampler
         end if
        
 
