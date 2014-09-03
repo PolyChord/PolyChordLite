@@ -56,7 +56,7 @@ module example_likelihoods
     !!
     !! \f[ -\log\mathcal{L}(\theta) = \sum_{i=1}^{N-1}   (a-\theta_i)^2+ b (\theta_{i+1} -\theta_i^2 )^2 \f]
     !!
-    !! This is the industry standard 'Banana'. It useful for testing whether the
+    !! This is the industry standard 'Banana'. It is useful for testing whether the
     !! algorithm is capable of navigating a curving degenerate space and able to
     !! find the global maximum. As is conventional, we choose \f$a=1\f$ and
     !! \f$b=100\f$
