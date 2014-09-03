@@ -200,7 +200,7 @@ module nested_sampling_parallel_module
             else !(not resume) 
                 ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
                 evidence_vec = logzero
-                evidence_vec(6) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
+                evidence_vec(4) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
             end if !(resume) 
 
             ! (b) get number of dead points

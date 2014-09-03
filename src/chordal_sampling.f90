@@ -6,7 +6,7 @@ module chordal_module
 
     contains
 
-    function ChordalSampling(loglikelihood,settings,seed_point, M)  result(baby_point)
+    function ChordalSampling(loglikelihood,settings,seed_point,nhats,M)  result(baby_point)
         use settings_module, only: program_settings
         use random_module, only: random_direction
         use model_module,  only: model, calculate_point
@@ -30,7 +30,10 @@ module chordal_module
         type(model),            intent(in) :: M
 
         !> The seed point
-        double precision, intent(in), dimension(M%nTotal)   :: seed_point
+        double precision, intent(in), dimension(:)   :: seed_point
+
+        !> The directions of the chords
+        double precision, intent(in), dimension(:,:) :: nhats
 
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
@@ -45,7 +48,7 @@ module chordal_module
 
         double precision :: step_length
 
-        integer :: i
+        integer :: i_chords
 
         ! Start the baby point at the seed point
         baby_point = seed_point
@@ -59,12 +62,12 @@ module chordal_module
         ! Initialise max_chord at 0
         max_chord = 0
 
-        do i=1,settings%num_chords
+        do i_chords=1,settings%num_chords
             ! Give the baby point the step length
             baby_point(M%last_chord) = step_length
 
             ! Get a new random direction
-            nhat = random_direction(M%nDims) 
+            nhat = nhats(:,i_chords)
 
             ! Generate a new random point along the chord defined by baby_point and nhat
             baby_point = random_chordal_point(loglikelihood, nhat, baby_point, M)
@@ -288,7 +291,6 @@ module chordal_module
         ! ------- Local Variables -------
         double precision,    dimension(M%nDims)   :: nhat
         double precision,    dimension(M%nDims)   :: gradL
-        double precision,    dimension(M%nDims)   :: gradLperp
         double precision                          :: gradL2
 
         double precision  :: max_chord
@@ -486,6 +488,69 @@ module chordal_module
 
     end function random_chordal_point
 
+    function SphericalSampling(loglikelihood,settings,seed_point,nhats,M)  result(baby_point)
+        use settings_module, only: program_settings
+        use random_module, only: random_point_in_sphere
+        use model_module,  only: model, calculate_point
+        use utils_module, only: logzero,stdout_unit
+
+        implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
+        ! ------- Inputs -------
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        type(model),            intent(in) :: M
+
+        !> The seed point
+        double precision, intent(in), dimension(:)   :: seed_point
+
+        !> The directions of the chords
+        double precision, intent(in), dimension(:,:) :: nhats
+
+        ! ------- Outputs -------
+        !> The newly generated point, plus the loglikelihood bound that
+        !! generated it
+        double precision,    dimension(M%nTotal)   :: baby_point
+
+
+        ! ------- Local Variables -------
+        double precision,    dimension(M%nDims)   :: nhat
+
+        double precision  :: max_chord
+
+        double precision :: step_length
+
+        integer :: i_chords
+
+        ! Start the baby point at the seed point
+        baby_point = seed_point
+
+        ! Set the number of likelihood evaluations to zero
+        baby_point(M%nlike) = 0
+
+        ! Record the step length
+        step_length = seed_point(M%last_chord)
+
+        ! Generate a new point within a sphere centered on 0.5
+        baby_point(M%l0)=seed_point(M%l1)
+        do while (baby_point(M%l0) <= seed_point(M%l1) )
+            baby_point(M%h0:M%h1) = random_point_in_sphere(M%nDims)*step_length + 0.5d0
+            call calculate_point(loglikelihood,M,baby_point)
+        end do
+
+
+
+    end function SphericalSampling
 
 
 end module chordal_module

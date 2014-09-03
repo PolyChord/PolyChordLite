@@ -119,7 +119,7 @@ module settings_module
         !! set of live points (live_data) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood bound contained at the M%l1 index of seed_point
-        function samp(loglikelihood,settings, seed_point,M) result(baby_point)
+        function samp(loglikelihood,settings, seed_point,nhats,M) result(baby_point)
 
             import :: model
             import :: program_settings
@@ -141,7 +141,10 @@ module settings_module
             type(model),            intent(in) :: M
 
             !> The seed point
-            double precision, intent(in), dimension(M%nTotal)   :: seed_point
+            double precision, intent(in), dimension(:)   :: seed_point
+
+            !> The directions of the chords
+            double precision, intent(in), dimension(:,:) :: nhats
 
             ! ------- Outputs -------
             !> The newly generated point
