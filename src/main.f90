@@ -7,7 +7,7 @@ program main
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective,ChordalSamplingBiased,SphericalSampling
+    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective,ChordalSamplingBiased
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -68,7 +68,7 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood
+    loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
     M%nDims=8                  ! Dimensionality of the space
@@ -83,8 +83,8 @@ program main
     call allocate_prior_arrays(M)
 
     !       - settings of priors
-    M%uniform_params(:,1) = 0!0.5-1d-2*10
-    M%uniform_params(:,2) = 1!0.5+1d-2*10
+    M%uniform_params(:,1) = 0.5-1d-2*10
+    M%uniform_params(:,2) = 0.5+1d-2*10
 
     call set_up_prior_indices(M)
 
@@ -92,7 +92,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 50                       !number of live points
+    settings%nlive                = 500                      !number of live points
     settings%num_chords           = 8                        !Number of chords to draw (after each randomisation)
     settings%num_randomisations   = 4                        !Number of randomisations to choose, 4 seems fine in most cases
 
@@ -101,7 +101,7 @@ program main
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => SphericalSampling       !Sampler choice
+    settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-8                    !degree of precision in answer

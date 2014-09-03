@@ -71,10 +71,20 @@ module nested_sampling_linear_module
         double precision :: logminimumweight
 
         integer i_nhat
+        integer j
+        integer i_dim
         double precision nhat2
 
+        double precision :: nhats_temp(M%nDims,settings%num_chords)
         double precision :: nhats(M%nDims,settings%num_chords)
+        double precision :: lengths(settings%num_chords)
         double precision :: mean(M%nDims)
+        double precision :: min_point(M%nDims)
+        double precision :: max_point(M%nDims)
+        integer :: min_pos(1)
+        integer :: max_pos(1)
+        double precision :: max_val
+        double precision :: min_val
 
 
 
@@ -212,11 +222,6 @@ module nested_sampling_linear_module
             late_logweight = (ndead-1)*lognlive - ndead*lognlivep1 
 
             ! (2) Generate a new baby point
-        if(.true.) then
-            seed_point(M%l1) = late_likelihood
-            seed_point(M%last_chord) = 1.0*sqrt(dot_product(late_point(M%h0:M%h1)-0.5,late_point(M%h0:M%h1)-0.5 ))
-        else
-
             ! Select a seed point for the generator
             !  -excluding the points which have likelihoods equal to the
             !   loglikelihood bound
@@ -231,22 +236,53 @@ module nested_sampling_linear_module
             seed_point(M%l1) = late_likelihood
 
             ! Generate a set of directions
-            mean = sum(live_data(M%h0:M%h1,:))/settings%nlive
+            ! do i_dim=1,M%nDims
+            !     nhat2 = 0
+            !     do while(nhat2==0)
+            !         transformation_matrix(:,i_dim) = live_data(M%h0:M%h1,random_integer(settings%nlive)) - live_data(M%h0:M%h1,random_integer(settings%nlive))
+            !         nhat2 = dot_product(transformation_matrix(:,i_dim),transformation_matrix(:,i_dim))
+            !     end do
+            !     transformation_matrix(:,i_dim) = transformation_matrix(:,i_dim) / sqrt(nhat2)
+            ! end do
+
+
+            ! Find the mean vector
+            mean=sum(live_data(M%h0:M%h1,:),dim=2)/settings%nlive
+
+            ! initialise the smallest likelihood
+            min_val=logzero
+
+            ! Find the outward facing vectors
             do i_nhat=1,settings%num_chords
-                if(.false.) then
-                    nhat2=0
-                    do while(nhat2==0)
-                        !nhats(:,i_nhat) = live_data(M%h0:M%h1,random_integer(settings%nlive)) - live_data(M%h0:M%h1,random_integer(settings%nlive))
-                        nhats(:,i_nhat) = live_data(M%h0:M%h1,random_integer(settings%nlive)) - mean
-                        nhat2 = dot_product(nhats(:,i_nhat),nhats(:,i_nhat))
-                    end do
-                    nhats(:,i_nhat) = nhats(:,i_nhat)/sqrt(nhat2)
-                else
-                    nhats(:,i_nhat) = random_direction(M%nDims)
-                end if
+
+                ! find the smallest position
+                min_pos=minloc(live_data(M%l0,:),mask=live_data(M%l0,:)>min_val)
+                min_val = live_data(M%l0,min_pos(1))
+
+                ! define nhat
+                nhats(:,i_nhat) = live_data(M%h0:M%h1,min_pos(1)) - mean
+                ! get the length
+                lengths(i_nhat) = sqrt(dot_product(nhats(:,i_nhat),nhats(:,i_nhat)))
+                !normalise
+                nhats(:,i_nhat) = nhats(:,i_nhat)/lengths(i_nhat)
 
             end do
-        end if
+            ! orthogonalise, starting with the largest length
+            nhats_temp=nhats
+            nhats=0
+            max_val=loginf
+
+            do i_nhat=1,settings%num_chords
+                max_pos = maxloc(lengths,lengths<max_val)
+                max_val = lengths(max_pos(1))
+                nhats(:,i_nhat) = nhats_temp(:,max_pos(1))
+            end do
+            do i_nhat=1,settings%num_chords
+                do j= 1,i_nhat-1
+                    nhats(:,i_nhat) = nhats(:,i_nhat)- dot_product(nhats(:,i_nhat),nhats(:,j)) * nhats(:,j)
+                end do
+                nhats(:,i_nhat) = nhats(:,i_nhat) / sqrt(dot_product(nhats(:,i_nhat),nhats(:,i_nhat))) 
+            end do
 
 
             ! Generate a new point within the likelihood bound of the late point
