@@ -96,6 +96,8 @@ module nested_sampling_parallel_module
         double precision :: logminimumweight
 
 
+        double precision :: nhats(M%nDims,settings%num_chords)
+
 
         nprocs = mpi_size()  ! Get the number of MPI procedures
         myrank = mpi_rank()  ! Get the MPI label of the current processor
@@ -251,7 +253,7 @@ module nested_sampling_parallel_module
 
 
             allocate(waiting_slave(nprocs-1))
-            waiting_slave = .false.
+            waiting_slave = .true.
 
             last_wait = -1
 
@@ -260,43 +262,6 @@ module nested_sampling_parallel_module
 
         ! Write a resume file before we start
         if(myrank==0 .and. settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
-
-
-
-        !~~~ (iii) Send out first tasks ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        ! We hand over the first nprocs-1 jobs from the master to the slaves
-        ! Note that this is slightly less involved than the manner in which we
-        ! hand out tasks later, since these tasks are handed out in sequential
-        ! order
-        if(myrank==0) then
-            do i_slaves=1,nprocs-1
-
-                ! Generate a seed point from live_data, and update accordingly
-                seed_point = GenerateSeed(M,settings%nstack,live_data)
-
-                ! If it's a 'blank' seed then we need to wait until a
-                ! good seed can be generated
-                if(nint(seed_point(M%daughter))==flag_blank) then
-                    write(stdout_unit,'(" Error: nprocs =", I8, " is too large for nlive = ", I8)') nprocs, settings%nlive
-                    call abort()
-
-                    return
-                end if
-
-
-                ! Send a seed point to the i_slaves th slave
-                call MPI_SEND(            &
-                    seed_point,           & ! seed point to be sent
-                    M%nTotal,             & ! size of this data
-                    MPI_DOUBLE_PRECISION, & ! type of this data
-                    i_slaves,             & ! send it to the i_slaves point
-                    RUNTAG,               & ! tagging information (not important here)
-                    MPI_COMM_WORLD,       & ! communication data
-                    mpierror              & ! error information (from mpi_module)
-                    )
-            end do
-
-        end if
 
         ! Open a dead points file if desired
         if(myrank==0 .and. settings%save_all) open(write_dead_unit,file=trim(settings%file_root)//'_dead.dat',action='write') 
@@ -338,7 +303,6 @@ module nested_sampling_parallel_module
                 !
                 ! (4) Update the live points by birthing any points that are now
                 !      ready from the stack
-
 
 
                 do i_slaves=1,nprocs-1
@@ -463,6 +427,8 @@ module nested_sampling_parallel_module
 
                     end if
 
+            live_data(M%last_chord,:) = live_data(M%last_chord,:)/  (1d0+1d0/(M%nDims*settings%nlive) ) 
+
 
                     ! (6) Command line feedback
 
@@ -501,11 +467,20 @@ module nested_sampling_parallel_module
                         ! Generate a seed point from live_data, and update accordingly
                         seed_point = GenerateSeed(M,settings%nstack,live_data) 
 
-                        ! If it's a 'blank' seed then we need to wait until a
-                        ! good seed can be generated
                         if(nint(seed_point(M%daughter))==flag_blank) then
-                            if(last_wait>ndead) write(stdout_unit,'(" Warning: no valid seeds at ndead =", I8 " - Consider reducing nprocs to avoid CPU waste")') ndead
-                            last_wait = ndead
+                            ! If we've generated a blank seed, then there aren't
+                            ! enough slots 
+                            if(all(waiting_slave)) then
+                                ! If they're all waiting, then we should abort
+                                write(stdout_unit,'(" Error: Too many processors")')
+                                call abort()
+                            else if(last_wait<ndead) then
+                                ! If it's a 'blank' seed then we need to wait until a
+                                ! good seed can be generated
+                                ! Send out a warning if we haven't already
+                                write(stdout_unit,'(" Warning: no valid seeds at ndead =", I8 " - Consider reducing nprocs to avoid CPU waste")') ndead
+                                last_wait = ndead
+                            end if
                             exit slave_loop
                         end if
 
@@ -518,6 +493,20 @@ module nested_sampling_parallel_module
                             RUNTAG,                 & ! tagging information (not important here)
                             MPI_COMM_WORLD,         & ! communication data
                             mpierror                & ! error information (from mpi_module)
+                            )
+
+                        ! Generate a set of directions
+                        call settings%generate_directions(M,live_data,nhats)
+
+                        ! Send the directions
+                        call MPI_SEND(                   &
+                            nhats,                       & ! seed point to be sent
+                            M%nDims*settings%num_chords, & ! size of this data
+                            MPI_DOUBLE_PRECISION,        & ! type of this data
+                            i_slaves,                    & ! send it to the point we just recieved from
+                            RUNTAG,                      & ! tagging information (not important here)
+                            MPI_COMM_WORLD,              & ! communication data
+                            mpierror                     & ! error information (from mpi_module)
                             )
 
                         waiting_slave(i_slaves)=.false.
@@ -549,8 +538,20 @@ module nested_sampling_parallel_module
                     exit
                 end if
 
+                ! Recieve the nhats as well
+                call MPI_RECV(                   &
+                    nhats,                       & ! seed point to be recieved
+                    M%nDims*settings%num_chords, & ! size of this data
+                    MPI_DOUBLE_PRECISION,        & ! type of this data
+                    0,                           & ! recieve it from the master
+                    MPI_ANY_TAG,                 & ! recieve any tagging information
+                    MPI_COMM_WORLD,              & ! communication data
+                    mpi_status,                  & ! status (not important here)
+                    mpierror                     & ! error information (from mpi_module)
+                    )
+
                 ! Calculate a new baby point from the seed point
-                baby_point = settings%sampler(loglikelihood,seed_point, M)
+                baby_point = settings%sampler(loglikelihood,seed_point,nhats,M)
 
                 ! Send the baby point back
                 call MPI_SEND(            &
@@ -630,6 +631,7 @@ module nested_sampling_parallel_module
             end function
         end interface
 
+        
         !> The model details (loglikelihood, priors, ndims etc...)
         type(model), intent(in) :: M
 
@@ -652,7 +654,7 @@ module nested_sampling_parallel_module
             live_data(:,i_live) = random_reals(M%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point(loglikelihood, M, live_data(:,i_live) )
+            call calculate_point( loglikelihood, M, live_data(:,i_live) )
 
         end do
 

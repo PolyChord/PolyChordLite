@@ -339,8 +339,6 @@ module chordal_module
                     nhat = random_direction(M%nDims)
                 end if
 
-                !write(*,'(6E17.5)') baby_point(M%p0:M%p1), gradL/sqrt(gradL2)
-
             end if
 
             ! Generate a new random point along the chord defined by baby_point and nhat
@@ -524,13 +522,7 @@ module chordal_module
 
 
         ! ------- Local Variables -------
-        double precision,    dimension(M%nDims)   :: nhat
-
-        double precision  :: max_chord
-
         double precision :: step_length
-
-        integer :: i_chords
 
         ! Start the baby point at the seed point
         baby_point = seed_point
@@ -552,6 +544,144 @@ module chordal_module
 
     end function SphericalSampling
 
+
+    ! Direction generators
+
+    !> Generate a set of isotropic nhats
+    subroutine isotropic_nhats(settings,M,live_data,nhats)
+        use settings_module, only: program_settings
+        use random_module, only: random_direction
+        use model_module,  only: model, calculate_point
+        use utils_module, only: logzero,stdout_unit
+        implicit none
+
+        ! ------- Inputs -------
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        type(model),            intent(in) :: M
+
+        !> The live points
+        double precision, intent(in), dimension(:,:) :: live_data
+
+        !> The set of nhats to be generated
+        double precision, intent(out), dimension(:,:) :: nhats
+
+
+        integer i_nhat
+
+        do i_nhat=1,settings%num_chords 
+            nhats(:,i_nhat) = random_direction(M%nDims)
+        end do
+
+    end subroutine isotropic_nhats
+
+    !> Generate a set of nhats that roughly agree with the longest directions of
+    !! a uni-modal distribution
+    subroutine unimodal_nhats(settings,M,live_data,nhats)
+        use settings_module, only: program_settings
+        use random_module, only: random_gaussian
+        use model_module,  only: model, calculate_point
+        use utils_module, only: logzero,stdout_unit,loginf
+        implicit none
+
+        ! ------- Inputs -------
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
+        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+        type(model),            intent(in) :: M
+
+        !> The live points
+        double precision, intent(in), dimension(:,:) :: live_data
+
+        !> The set of nhats to be generated
+        double precision, intent(out), dimension(:,:) :: nhats
+
+        double precision :: temp_basis(M%nDims,M%nDims)
+        double precision :: basis(M%nDims,M%nDims)
+        double precision :: temp_lengths(M%nDims)
+        double precision :: lengths(M%nDims)
+        double precision :: mean(M%nDims)
+        integer :: min_pos(1)
+        integer :: max_pos(1)
+        double precision :: max_val
+        double precision :: min_val
+
+        integer :: i,j
+
+
+        ! Find the mean vector
+        mean=sum(live_data(M%h0:M%h1,:),dim=2)/settings%nlive
+
+        ! initialise the smallest likelihood
+        min_val=logzero
+
+        ! Find the outward facing vectors
+        do i=1,M%nDims
+
+            ! find the smallest position
+            min_pos=minloc(live_data(M%l0,:),mask=live_data(M%l0,:)>min_val)
+            min_val = live_data(M%l0,min_pos(1))
+
+            ! define the basis vector as extending from the mean to this
+            ! position
+            basis(:,i) = live_data(M%h0:M%h1,min_pos(1)) - mean
+
+            ! get the length
+            lengths(i) = sqrt(dot_product(basis(:,i),basis(:,i)))
+
+            !normalise
+            !basis(:,i) = basis(:,i)!/lengths(i)
+
+        end do
+!       ! orthogonalise the basis, starting with the largest length
+!       temp_basis=basis
+!       temp_lengths=lengths
+!       basis=0
+!       lengths=0
+!
+!       max_val=loginf
+!
+!       ! Order the basis by chord length
+!       do i=1,M%nDims
+!           max_pos = maxloc(temp_lengths,temp_lengths<max_val)
+!           max_val = temp_lengths(max_pos(1))
+!           basis(:,i) = temp_basis(:,max_pos(1))
+!           !lengths(i) = temp_lengths(max_pos(1))
+!       end do
+!
+!       ! Orthogonalise the basis, starting with the longest length
+!       do i=1,M%nDims
+!           do j= 1,i-1
+!               basis(:,i) = basis(:,i)- dot_product(basis(:,i),basis(:,j))/dot_product(basis(:,j),basis(:,j)) * basis(:,j)
+!           end do
+!           !basis(:,i) = basis(:,i) !/ sqrt(dot_product(basis(:,i),basis(:,i))) 
+!       end do
+
+        ! Rescale the basis
+        !do i=1,M%nDims
+        !    basis(:,i) = basis(:,i) * lengths(new_pos(i))
+        !end do
+
+        ! Choose a selection of nhats transformed by the basis
+        do i=1,settings%num_chords
+            ! generate a random direction
+            nhats(:,i) = random_gaussian(M%nDims)
+            ! linearly rescale it
+            !nhats(:,i) = nhats(:,i)* lengths(:)
+            ! transform using the basis
+            nhats(:,i) = matmul(basis,nhats(:,i))
+            ! normalise
+            nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i)))
+            !nhats(:,i) = basis(:,1+mod(i,M%nDims))
+            !nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i))) 
+        end do
+
+
+
+    end subroutine unimodal_nhats
 
 end module chordal_module
 

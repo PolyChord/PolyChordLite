@@ -110,6 +110,9 @@ module settings_module
         !!
         procedure(ev),   pass(settings), pointer :: evidence_calculator
 
+        !> Pointer to the generator of nhats for the chordal sampling procedure
+        procedure(dir),   pass(settings), pointer :: generate_directions
+
     end type program_settings
 
     interface
@@ -195,5 +198,29 @@ module settings_module
 
         end subroutine ev
     end interface
+
+
+    interface
+        subroutine dir(settings,M,live_data,nhats)
+            import :: model
+            import :: program_settings
+            implicit none
+
+            ! ------- Inputs -------
+            !> program settings (mostly useful to pass on the number of live points)
+            class(program_settings), intent(in) :: settings
+
+            !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
+            type(model),            intent(in) :: M
+
+            !> The live points
+            double precision, intent(in), dimension(:,:) :: live_data
+
+            !> The set of nhats to be generated
+            double precision, intent(out) , dimension(:,:) :: nhats
+
+        end subroutine dir
+    end interface
+
 
 end module settings_module 

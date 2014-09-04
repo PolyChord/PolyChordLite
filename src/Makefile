@@ -30,8 +30,7 @@ else
 # --------------
 # O3         : maximum optimisation
 # xHost      : maximise architecture usage
-# heap-arrays: reduce number of temporary arrays
-FCFLAGS += -O3 -xHost -heap-arrays 
+FCFLAGS += -O3 -xHost
 endif
 
 

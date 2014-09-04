@@ -70,21 +70,8 @@ module nested_sampling_linear_module
         double precision :: lognlivep1 
         double precision :: logminimumweight
 
-        integer i_nhat
-        integer j
-        integer i_dim
-        double precision nhat2
 
-        double precision :: nhats_temp(M%nDims,settings%num_chords)
         double precision :: nhats(M%nDims,settings%num_chords)
-        double precision :: lengths(settings%num_chords)
-        double precision :: mean(M%nDims)
-        double precision :: min_point(M%nDims)
-        double precision :: max_point(M%nDims)
-        integer :: min_pos(1)
-        integer :: max_pos(1)
-        double precision :: max_val
-        double precision :: min_val
 
 
 
@@ -245,45 +232,7 @@ module nested_sampling_linear_module
             !     transformation_matrix(:,i_dim) = transformation_matrix(:,i_dim) / sqrt(nhat2)
             ! end do
 
-
-            ! Find the mean vector
-            mean=sum(live_data(M%h0:M%h1,:),dim=2)/settings%nlive
-
-            ! initialise the smallest likelihood
-            min_val=logzero
-
-            ! Find the outward facing vectors
-            do i_nhat=1,settings%num_chords
-
-                ! find the smallest position
-                min_pos=minloc(live_data(M%l0,:),mask=live_data(M%l0,:)>min_val)
-                min_val = live_data(M%l0,min_pos(1))
-
-                ! define nhat
-                nhats(:,i_nhat) = live_data(M%h0:M%h1,min_pos(1)) - mean
-                ! get the length
-                lengths(i_nhat) = sqrt(dot_product(nhats(:,i_nhat),nhats(:,i_nhat)))
-                !normalise
-                nhats(:,i_nhat) = nhats(:,i_nhat)/lengths(i_nhat)
-
-            end do
-            ! orthogonalise, starting with the largest length
-            nhats_temp=nhats
-            nhats=0
-            max_val=loginf
-
-            do i_nhat=1,settings%num_chords
-                max_pos = maxloc(lengths,lengths<max_val)
-                max_val = lengths(max_pos(1))
-                nhats(:,i_nhat) = nhats_temp(:,max_pos(1))
-            end do
-            do i_nhat=1,settings%num_chords
-                do j= 1,i_nhat-1
-                    nhats(:,i_nhat) = nhats(:,i_nhat)- dot_product(nhats(:,i_nhat),nhats(:,j)) * nhats(:,j)
-                end do
-                nhats(:,i_nhat) = nhats(:,i_nhat) / sqrt(dot_product(nhats(:,i_nhat),nhats(:,i_nhat))) 
-            end do
-
+            call settings%generate_directions(M,live_data,nhats)
 
             ! Generate a new point within the likelihood bound of the late point
             baby_point = settings%sampler(loglikelihood,seed_point,nhats,M)
@@ -302,7 +251,6 @@ module nested_sampling_linear_module
             ! If we've put a limit on the maximum number of iterations, then
             ! check to see if we've reached this
             if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
-
 
             ! (4) Calculate the new evidence (and check to see if we're accurate enough)
             call settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed,evidence_vec)
@@ -345,7 +293,7 @@ module nested_sampling_linear_module
 
             end if
 
-            live_data(M%last_chord,:) = live_data(M%last_chord,:)* exp( -1d0/(M%nDims*settings%nlive) )
+            live_data(M%last_chord,:) = live_data(M%last_chord,:)/  (1d0+1d0/(M%nDims*settings%nlive) )
 
 
             ! (6) Command line feedback
@@ -391,7 +339,9 @@ module nested_sampling_linear_module
         use model_module,    only: model, calculate_point
         use random_module,   only: random_reals
         use utils_module,    only: logzero
+
         implicit none
+
         interface
             function loglikelihood(theta,phi,context)
                 double precision, intent(in),  dimension(:) :: theta
