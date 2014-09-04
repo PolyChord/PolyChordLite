@@ -117,6 +117,53 @@ module utils_module
     end function logsubexp
 
 
+    !> Hypergeometric function 
+    function Hypergeometric2F1(a,b,c,z)
+        implicit none
+        double precision, intent(in)  :: a,b,c,z
+        double precision              :: Hypergeometric2F1
+        integer n
+        double precision change
+
+        ! This computes the hypergeometric 2F1 function using a
+        ! truncated power series, stopping when the relative change
+        ! due to higher terms is less than epsilon
+
+        ! http://en.wikipedia.org/wiki/Hypergeometric_function#The_hypergeometric_series
+
+        Hypergeometric2F1=0d0
+        n=0
+
+        do while( abovetol(change,Hypergeometric2F1) )
+           change = Pochhammer(a,n) * Pochhammer(b,n) / Pochhammer(c,n) * z**n / gamma(1d0+n)
+
+           Hypergeometric2F1 = Hypergeometric2F1 + change
+           n=n+1
+        enddo
+
+    end function Hypergeometric2F1
+
+
+
+
+    recursive function Pochhammer (x,n) result (xn)
+        ! This function computes the rising factorial x^(n):
+        ! for a non-negative integer n and real x
+        !
+        ! http://en.wikipedia.org/wiki/Pochhammer_symbol
+
+        implicit none
+        double precision, intent(in)  :: x
+        integer,          intent(in)  :: n
+        double precision              :: xn
+
+        if (n<=0) then
+            xn = 1
+        else
+            xn = Pochhammer(x,n-1)*(x+n-1)
+        endif
+
+    end function Pochhammer
 
 
 

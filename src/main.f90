@@ -68,10 +68,11 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood_corr
+    !     loglikelihood => gaussian_loglikelihood_corr
+    loglikelihood => gaussian_shell
 
     ! (ii) Set the dimensionality
-    M%nDims=8                  ! Dimensionality of the space
+    M%nDims=2                  ! Dimensionality of the space
     M%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -83,8 +84,10 @@ program main
     call allocate_prior_arrays(M)
 
     !       - settings of priors
-    M%uniform_params(:,1) = 0.5-1d-2*5 
-    M%uniform_params(:,2) = 0.5+1d-2*5  
+    !M%uniform_params(:,1) = 0.5-1d-2*5 
+    !M%uniform_params(:,2) = 0.5+1d-2*5  
+    M%uniform_params(:,1) = 0.0-2d0
+    M%uniform_params(:,2) = 0.0+2d0
 
     call set_up_prior_indices(M)
 
@@ -93,7 +96,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 500                      !number of live points
-    settings%num_chords           = 5                        !Number of chords to draw (after each randomisation)
+    settings%num_chords           = 500                        !Number of chords to draw (after each randomisation)
     settings%num_randomisations   = 4                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .true.                   !whether or not to resume from file
