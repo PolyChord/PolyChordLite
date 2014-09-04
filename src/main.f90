@@ -7,7 +7,7 @@ program main
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective,ChordalSamplingBiased, &
+    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective, &
                                       isotropic_nhats,unimodal_nhats
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
