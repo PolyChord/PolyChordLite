@@ -72,7 +72,7 @@ program main
     loglikelihood => gaussian_shell
 
     ! (ii) Set the dimensionality
-    M%nDims=2                  ! Dimensionality of the space
+    M%nDims=6                  ! Dimensionality of the space
     M%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -96,7 +96,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 500                      !number of live points
-    settings%num_chords           = 500                        !Number of chords to draw (after each randomisation)
+    settings%num_chords           = 6                        !Number of chords to draw (after each randomisation)
     settings%num_randomisations   = 4                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .true.                   !whether or not to resume from file

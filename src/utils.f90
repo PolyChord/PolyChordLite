@@ -26,6 +26,12 @@ module utils_module
     !> unit for writing to txt file
     integer, parameter :: write_txt_unit = 12
 
+    ! All series used to approximate F are computed with relative
+    ! tolerance:
+    double precision eps
+    parameter( eps = 1d-15 )
+    ! which means that we neglect all terms smaller than eps times the
+    ! current sum
 
     contains
 
@@ -117,6 +123,39 @@ module utils_module
     end function logsubexp
 
 
+    !> Hypergeometric function 1F1
+    !!
+    !!
+    function Hypergeometric1F1(a,b,z)
+        implicit none
+        double precision, intent(in)  :: a,b,z
+        double precision              :: Hypergeometric1F1
+        integer n
+        double precision change
+
+        ! This computes the hypergeometric 1F1 function using a
+        ! truncated power series, stopping when the relative change
+        ! due to higher terms is less than epsilon
+        !
+        ! (note that this is very similar to 2F1, but without the c)
+
+        ! http://en.wikipedia.org/wiki/Hypergeometric_function#The_hypergeometric_series
+
+        Hypergeometric1F1=0d0
+        n=0
+
+        do while( abovetol(change,Hypergeometric1F1) )
+           change = Pochhammer(a,n) * Pochhammer(b,n) * z**n / gamma(1d0+n)
+
+           Hypergeometric1F1 = Hypergeometric1F1 + change
+           n=n+1
+        enddo
+
+    end function Hypergeometric1F1
+
+
+
+
     !> Hypergeometric function 
     function Hypergeometric2F1(a,b,c,z)
         implicit none
@@ -164,6 +203,22 @@ module utils_module
         endif
 
     end function Pochhammer
+
+    function abovetol (change,current_sum)
+        ! This function outputs true if change is outside of the
+        ! tolerance epsilon from current_sum
+        implicit none
+        double precision, intent(in) :: change,current_sum
+        logical abovetol
+
+        if (current_sum == 0d0) then
+            ! this check is useful for entering loops
+            abovetol = .true.
+        else
+            abovetol = abs( change/current_sum ) > eps
+        endif
+
+    end function abovetol
 
 
 

@@ -2,14 +2,21 @@
 
 module example_likelihoods
     use model_module,    only: model
-    use utils_module,    only: logzero,TwoPi,stdout_unit,Hypergeometric2F1,Pochhammer 
+    use utils_module,    only: logzero,TwoPi,stdout_unit,Hypergeometric1F1,Hypergeometric2F1,Pochhammer 
 #ifdef MPI
     use mpi_module
 #endif
 
     contains
 
-    
+    !> Gaussian shell defined as,
+    !!
+    !!  \f$ latex here \f$
+    !!
+    !! where the parameters used are,
+    !!      - w = width of the guassian shell 
+    !!      - R = Radius of the gaussian shell (ie: distance from the center)
+    !!      - in progress...
     function gaussian_shell(theta,phi,context) result(loglikelihood)
         implicit none
         !> Input parameters
@@ -28,6 +35,12 @@ module example_likelihoods
         double precision, parameter :: radius   = 1d0
         double precision                            :: distance
         double precision, dimension(size(theta))    :: center 
+        integer                     :: dim
+        
+        !setting the dimension
+        dim      = size(theta)
+
+        !
 
         !Define the center of the gaussian shell
         center = 0d0
@@ -35,8 +48,21 @@ module example_likelihoods
         distance = sqrt( sum( (center-theta)**2 ) )
 
         !normalise the like
-        loglikelihood = 0
+        !loglikelihood = 0
 
+        !Mathematica normalisation:
+        !loglikelihood = - (width**dim)*( ((2*pi)**(dim/2d0)) * Hypergeometric1F1( (1d0-dim)/2d0,1d0/2d0,-(radius*radius)/(2d0*width*width) ) + ( (2**((1d0+dim)/2d0)) * (pi**(dim/2d0)) * radius * GAMMA( (1d0+dim)/2d0 ) * Hypergeometric1F1( 1d0-(dim/2d0),3d0/2d0,-(radius*radius)/(2d0*width*width) ))/(width * GAMMA( dim/2d0 )) )
+
+        !Temporary normalisation:
+        !loglikelihood = -0.45
+
+        !Will's approximate normalisation based on assumptions,
+        !   1.
+        !   2.
+        !loglikelihood = -log(sqrt(2d0)*dim*(pi**((1d0+dim))/2d0)*(radius**(-1d0+dim)) * width) + LOG_GAMMA(1d0+(dim/2d0))
+        loglikelihood = log_gamma(1d0+(dim/2d0)) - (1d0/2d0)*log(2d0) - log(dim+0d0) - ((1d0+dim)/2d0)*log(pi) - (dim-1d0)*log(radius) - log(width)
+
+        !Calculating the loglikelihood dependant on theta here:
         loglikelihood = loglikelihood - ( (distance-radius)**2d0 /(2d0*width*width) )
 
         ! Use up these parameters to stop irritating warnings
