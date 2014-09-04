@@ -266,8 +266,8 @@ module nested_sampling_linear_module
                 ! calculate a new point for insertion
                 posterior_point(1)  = late_point(M%l0) + late_logweight
                 posterior_point(2)  = late_point(M%l0)
-                posterior_point(3:3+M%nDims-1) = late_point(M%p0:M%p1)
-                posterior_point(4+M%nDims:4+M%nDerived-1) = late_point(M%d0:M%d1)
+                posterior_point(2+1:2+M%nDims) = late_point(M%p0:M%p1)
+                posterior_point(2+M%nDims+1:2+M%nDims+M%nDerived) = late_point(M%d0:M%d1)
 
                 if(nposterior<settings%nmax_posterior) then
                     ! If we're still able to use a restricted array,
