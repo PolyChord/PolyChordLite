@@ -18,11 +18,11 @@ FCFLAGS = -mkl -fpp
 ifeq ($(DEBUG), 1)
 # Debugging mode
 # --------------
-# g              : 
+# g              : enable gnu debugger compatibility
 # traceback      : create a backtrace on system failure
-# fp-stack-check :
+# fp-stack-check : check for floating point errors from stack overflow, etc
 # check all      : all checks (whilst compiling)
-# fpe0           :
+# fpe0           : halts program if dividing by zero, etc
 # warn all       : all warnings (whilst running)
 FCFLAGS += -g -traceback -fp-stack-check -check all -fpe0 -warn all
 else

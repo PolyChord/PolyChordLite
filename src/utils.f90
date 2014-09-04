@@ -28,6 +28,12 @@ module utils_module
     !> unit for writing dead file
     integer, parameter :: write_dead_unit = 13
 
+    ! All series used to approximate F are computed with relative
+    ! tolerance:
+    double precision eps
+    parameter( eps = 1d-15 )
+    ! which means that we neglect all terms smaller than eps times the
+    ! current sum
 
     contains
 
@@ -119,6 +125,102 @@ module utils_module
     end function logsubexp
 
 
+    !> Hypergeometric function 1F1
+    !!
+    !!
+    function Hypergeometric1F1(a,b,z)
+        implicit none
+        double precision, intent(in)  :: a,b,z
+        double precision              :: Hypergeometric1F1
+        integer n
+        double precision change
+
+        ! This computes the hypergeometric 1F1 function using a
+        ! truncated power series, stopping when the relative change
+        ! due to higher terms is less than epsilon
+        !
+        ! (note that this is very similar to 2F1, but without the c)
+
+        ! http://en.wikipedia.org/wiki/Hypergeometric_function#The_hypergeometric_series
+
+        Hypergeometric1F1=0d0
+        n=0
+
+        do while( abovetol(change,Hypergeometric1F1) )
+           change = Pochhammer(a,n) * Pochhammer(b,n) * z**n / gamma(1d0+n)
+
+           Hypergeometric1F1 = Hypergeometric1F1 + change
+           n=n+1
+        enddo
+
+    end function Hypergeometric1F1
+
+
+
+
+    !> Hypergeometric function 
+    function Hypergeometric2F1(a,b,c,z)
+        implicit none
+        double precision, intent(in)  :: a,b,c,z
+        double precision              :: Hypergeometric2F1
+        integer n
+        double precision change
+
+        ! This computes the hypergeometric 2F1 function using a
+        ! truncated power series, stopping when the relative change
+        ! due to higher terms is less than epsilon
+
+        ! http://en.wikipedia.org/wiki/Hypergeometric_function#The_hypergeometric_series
+
+        Hypergeometric2F1=0d0
+        n=0
+
+        do while( abovetol(change,Hypergeometric2F1) )
+           change = Pochhammer(a,n) * Pochhammer(b,n) / Pochhammer(c,n) * z**n / gamma(1d0+n)
+
+           Hypergeometric2F1 = Hypergeometric2F1 + change
+           n=n+1
+        enddo
+
+    end function Hypergeometric2F1
+
+
+
+
+    recursive function Pochhammer (x,n) result (xn)
+        ! This function computes the rising factorial x^(n):
+        ! for a non-negative integer n and real x
+        !
+        ! http://en.wikipedia.org/wiki/Pochhammer_symbol
+
+        implicit none
+        double precision, intent(in)  :: x
+        integer,          intent(in)  :: n
+        double precision              :: xn
+
+        if (n<=0) then
+            xn = 1
+        else
+            xn = Pochhammer(x,n-1)*(x+n-1)
+        endif
+
+    end function Pochhammer
+
+    function abovetol (change,current_sum)
+        ! This function outputs true if change is outside of the
+        ! tolerance epsilon from current_sum
+        implicit none
+        double precision, intent(in) :: change,current_sum
+        logical abovetol
+
+        if (current_sum == 0d0) then
+            ! this check is useful for entering loops
+            abovetol = .true.
+        else
+            abovetol = abs( change/current_sum ) > eps
+        endif
+
+    end function abovetol
 
 
 

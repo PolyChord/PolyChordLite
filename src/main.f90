@@ -63,6 +63,7 @@ program main
     ! (i) Choose the loglikelihood
     !       Possible example likelihoods:
     !       - gaussian_loglikelihood
+    !       - gaussian_shell
     !       - rosenbrock_loglikelihood
     !       - himmelblau_loglikelihood
     !       - rastrigin_loglikelihood
