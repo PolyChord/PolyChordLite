@@ -68,11 +68,11 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    !     loglikelihood => gaussian_loglikelihood_corr
+    !     loglikelihood => <choice>
     loglikelihood => gaussian_shell
 
     ! (ii) Set the dimensionality
-    M%nDims=6                  ! Dimensionality of the space
+    M%nDims=2                  ! Dimensionality of the space
     M%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
