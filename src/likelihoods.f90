@@ -31,36 +31,51 @@ module example_likelihoods
 
         !Additional parameters that are needed
         double precision, parameter :: pi       = 4d0*atan(1d0) ! \pi in double precision
-        double precision, parameter :: width    = 0.1
-        double precision, parameter :: radius   = 1d0
-        double precision                            :: distance
-        double precision, dimension(size(theta))    :: center 
-        integer                     :: dim
+        double precision, parameter :: width    = 0.1           ! width of shell peak
+        double precision, parameter :: radius   = 1d0           ! radius to the shell
+        double precision            :: distance                 ! storing distance to center of theta
+        double precision, dimension(size(theta))    :: center   ! center of the gaussian shell
+        integer                     :: dim                      ! dimensions of theta/the space
+
+        !For reducing the computational load by storing the normalisation:
+        logical, save               :: stored   = .false.
+        double precision, save      :: normalisation
         
-        !setting the dimension
+        !Getting the dimension and storing in dim
         dim      = size(theta)
-
-        !
-
-        !Define the center of the gaussian shell
+        !Define where the center of the gaussian shell is
         center = 0d0
-        !calculate the distance between the parameter points theta and center
+        !Calculate the distance between the parameter space points theta and center
         distance = sqrt( sum( (center-theta)**2 ) )
 
-        !normalise the like
-        !loglikelihood = 0
+        !Computing the normalisation upon first call to this function:
+        if(.NOT. stored) then
+            !For the first call to this function, we calculate the normalisation
+            !and change the flag to say this is completed:
+            !   choose from the options below 
+            !   (Mathematic normalisation is most exact)
 
-        !Mathematica normalisation:
-        !loglikelihood = - (width**dim)*( ((2*pi)**(dim/2d0)) * Hypergeometric1F1( (1d0-dim)/2d0,1d0/2d0,-(radius*radius)/(2d0*width*width) ) + ( (2**((1d0+dim)/2d0)) * (pi**(dim/2d0)) * radius * GAMMA( (1d0+dim)/2d0 ) * Hypergeometric1F1( 1d0-(dim/2d0),3d0/2d0,-(radius*radius)/(2d0*width*width) ))/(width * GAMMA( dim/2d0 )) )
+            !No normalisation:
+            !normalisation = 0
 
-        !Temporary normalisation:
-        !loglikelihood = -0.45
+            !Mathematica normalisation:
+            !normalisation = - (width**dim)*( ((2*pi)**(dim/2d0)) * Hypergeometric1F1( (1d0-dim)/2d0,1d0/2d0,-(radius*radius)/(2d0*width*width) ) + ( (2**((1d0+dim)/2d0)) * (pi**(dim/2d0)) * radius * GAMMA( (1d0+dim)/2d0 ) * Hypergeometric1F1( 1d0-(dim/2d0),3d0/2d0,-(radius*radius)/(2d0*width*width) ))/(width * GAMMA( dim/2d0 )) )
 
-        !Will's approximate normalisation based on assumptions,
-        !   1.
-        !   2.
-        !loglikelihood = -log(sqrt(2d0)*dim*(pi**((1d0+dim))/2d0)*(radius**(-1d0+dim)) * width) + LOG_GAMMA(1d0+(dim/2d0))
-        loglikelihood = log_gamma(1d0+(dim/2d0)) - (1d0/2d0)*log(2d0) - log(dim+0d0) - ((1d0+dim)/2d0)*log(pi) - (dim-1d0)*log(radius) - log(width)
+            !Temporary normalisation (when you know the numerical value):
+            !normalisation = -0.45
+
+            !Will's approximate normalisation based on assumptions,
+            !   1. width*dimension << radius 
+            !Basically, over the region of interest the integral in polar coords (a gaussian and the nD volume element) 
+            !simplify nicely and allow the limits of the integral to go to -inf. 
+            normalisation = log_gamma(1d0+(dim/2d0)) - (1d0/2d0)*log(2d0) - log(dim+0d0) - ((1d0+dim)/2d0)*log(pi) - (dim-1d0)*log(radius) - log(width)
+
+            !Change the flag:
+            stored = .true.
+        end if
+
+        !Use the stored value as the normalisation:
+        loglikelihood = normalisation
 
         !Calculating the loglikelihood dependant on theta here:
         loglikelihood = loglikelihood - ( (distance-radius)**2d0 /(2d0*width*width) )
@@ -95,7 +110,7 @@ module example_likelihoods
         double precision, dimension(size(theta)) :: sigma ! Standard deviation (uncorrelated) 
         double precision, dimension(size(theta)) :: mu    ! Mean
 
-        
+
         ! Initialise the mean and standard deviation
         mu    = 5d-1   ! mean in the center
         sigma = 1d-2  ! all sigma set relatively small
@@ -393,7 +408,7 @@ module example_likelihoods
         end if
 
 
-        
+
         ! Compute log likelihood
         gaussian_loglikelihood_corr = log_gauss(theta,mu,invcovmat,logdetcovmat)
 
@@ -456,11 +471,11 @@ module example_likelihoods
             if(mpi_rank()==0) then
                 ! Generate num_peaks random mean vectors, localised around the center on the root node
                 do i=1,num_peaks
-                    mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(nDims) -1d0)
+                mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(nDims) -1d0)
                 end do
                 ! Generate num_peaks random covariance matrices, their inverses and logdets on the root node
                 do i=1,num_peaks
-                    call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,nDims)
+                call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,nDims)
                 end do
             end if
             ! Broadcast the means, covariances and normalisation data to the
@@ -494,12 +509,12 @@ module example_likelihoods
 #else
             ! Generate num_peaks random mean vectors, localised around the center 
             do i=1,num_peaks
-                mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(nDims) -1d0)
+            mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(nDims) -1d0)
             end do
 
             ! Generate num_peaks random covariance matrices, their inverses and logdets
             do i=1,num_peaks
-                call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,nDims)
+            call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,nDims)
             end do
 #endif
 
@@ -510,7 +525,7 @@ module example_likelihoods
         ! Compute log likelihood
         gaussian_loglikelihood_cluster = logzero
         do i =1,num_peaks
-            log_likelihoods(i) = log_gauss(theta(:),mu(:,i),invcovmat(:,:,i),logdetcovmat(i))
+        log_likelihoods(i) = log_gauss(theta(:),mu(:,i),invcovmat(:,:,i),logdetcovmat(i))
         end do
         gaussian_loglikelihood_cluster = logsumexp(log_likelihoods)
         gaussian_loglikelihood_cluster = gaussian_loglikelihood_cluster - log(num_peaks+0d0)
@@ -549,7 +564,7 @@ module example_likelihoods
         ! Create the inverse covariance matrix in the eigenbasis
         invcovmat = 0d0
         do j=1,nDims
-            invcovmat(j,j) = 1d0/eigenvalues(j)**2
+        invcovmat(j,j) = 1d0/eigenvalues(j)**2
         end do
 
         ! Rotate the matrix into the coordinate basis
