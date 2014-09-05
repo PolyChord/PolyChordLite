@@ -1,6 +1,7 @@
 !> This module encodes the type 'program_settings' which contains all of the
 !! details required to perform a nested sampling run.
 module settings_module
+    use priors_module,   only: prior
     use model_module,   only: model
     use utils_module,   only: STR_LENGTH
     implicit none
@@ -116,10 +117,11 @@ module settings_module
         !! set of live points (live_data) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood bound contained at the M%l1 index of seed_point
-        function samp(loglikelihood,settings, seed_point,M) result(baby_point)
+        function samp(loglikelihood,priors,settings, seed_point,M) result(baby_point)
 
             import :: model
-            import :: program_settings
+            import :: program_settings   
+            import :: prior
             implicit none
             interface
                 function loglikelihood(theta,phi,context)
@@ -131,6 +133,9 @@ module settings_module
             end interface
 
             ! ------- Inputs -------
+            !> The prior information
+            type(prior), dimension(:), intent(in) :: priors
+
             !> program settings (mostly useful to pass on the number of live points)
             class(program_settings), intent(in) :: settings
 

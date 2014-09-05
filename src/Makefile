@@ -60,7 +60,7 @@ else
 NESTED_SAMPLING = nested_sampling_linear.o
 endif
 
-OBJECTS = $(MPI_UTILS) utils.o model.o settings.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o $(NESTED_SAMPLING)
+OBJECTS = $(MPI_UTILS) utils.o priors.o model.o settings.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o $(NESTED_SAMPLING)
 
 AR = ar r
 

@@ -4,7 +4,8 @@ module nested_sampling_linear_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    subroutine NestedSamplingL(loglikelihood,M,settings)
+    subroutine NestedSamplingL(loglikelihood,priors,M,settings)
+        use priors_module,     only: prior
         use model_module,      only: model
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit
         use settings_module,   only: program_settings
@@ -26,6 +27,7 @@ module nested_sampling_linear_module
 
         type(model),            intent(in) :: M
         type(program_settings), intent(in) :: settings
+        type(prior), dimension(:), intent(in) :: priors
 
 
 
@@ -99,7 +101,7 @@ module nested_sampling_linear_module
             call write_started_generating(settings%feedback)
 
             ! Otherwise generate them anew:
-            live_data = GenerateLivePoints(loglikelihood,M,settings%nlive)
+            live_data = GenerateLivePoints(loglikelihood,priors,M,settings%nlive)
 
             call write_finished_generating(settings%feedback) !Flag to note that we're done generating
         end if !(resume)
@@ -219,7 +221,7 @@ module nested_sampling_linear_module
             seed_point(M%l1) = late_likelihood
 
             ! Generate a new point within the likelihood bound of the late point
-            baby_point = settings%sampler(loglikelihood,seed_point, M)
+            baby_point = settings%sampler(loglikelihood,priors,seed_point, M)
             baby_likelihood  = baby_point(M%l0)
 
 
@@ -312,7 +314,8 @@ module nested_sampling_linear_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(loglikelihood,M,nlive) result(live_data)
+    function GenerateLivePoints(loglikelihood,priors,M,nlive) result(live_data)
+        use priors_module,   only: prior
         use model_module,    only: model, calculate_point
         use random_module,   only: random_reals
         use utils_module,    only: logzero
@@ -329,6 +332,9 @@ module nested_sampling_linear_module
 
         !> The model details (loglikelihood, priors, ndims etc...)
         type(model), intent(in) :: M
+
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
 
         !> The number of points to be generated
         integer, intent(in) :: nlive
@@ -349,7 +355,7 @@ module nested_sampling_linear_module
             live_data(:,i_live) = random_reals(M%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point( loglikelihood, M, live_data(:,i_live) )
+            call calculate_point( loglikelihood, priors,M, live_data(:,i_live) )
 
         end do
 

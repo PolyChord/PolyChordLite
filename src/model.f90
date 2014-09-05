@@ -1,9 +1,11 @@
 module model_module
     use utils_module, only: logzero
+    use priors_module
     implicit none
 
     !> Type to encode all of the information about the priors.
     type :: model
+
         !> Dimensionality of the space
         integer :: nDims = 1
         !> Number of derived parameters
@@ -61,6 +63,8 @@ module model_module
         !! parameter. grade=1 is slowest, 
         integer, dimension(:), allocatable :: grade
 
+
+        type(prior) uniform_prior
 
         !==========================================================================
         ! Prior details:
@@ -285,7 +289,7 @@ module model_module
 
 
 
-    subroutine calculate_point(loglikelihood, M, live_data)
+    subroutine calculate_point(loglikelihood,priors,M,live_data)
         implicit none
         interface
             function loglikelihood(theta,phi,context)
@@ -296,6 +300,7 @@ module model_module
             end function
         end interface
 
+        type(prior), dimension(:), intent(in) :: priors
         type(model),     intent(in)                   :: M
         double precision, intent(inout) , dimension(:) :: live_data
 
@@ -304,7 +309,7 @@ module model_module
             live_data(M%l0) = logzero
         else
             ! Transform the the hypercube coordinates to the physical coordinates
-            call hypercube_to_physical( M, live_data(:) )
+            live_data(M%p0:M%p1) = hypercube_to_physical( live_data(M%h0:M%h1),priors )
 
             ! Calculate the likelihood and store it in the last index
             live_data(M%l0) = loglikelihood( live_data(M%p0:M%p1), live_data(M%d0:M%d1),M%context)
@@ -316,59 +321,58 @@ module model_module
     end subroutine calculate_point
 
 
-
-    subroutine hypercube_to_physical(M, live_data)
-        type(model),     intent(in)                   :: M
-        double precision, intent(inout) , dimension(:) :: live_data
-
-        double precision, dimension(M%nDims) :: hypercube_coords
-        double precision, dimension(M%nDims) :: physical_coords
-
-        ! copy the hypercube coordinates to a temporary variable
-        hypercube_coords = live_data(M%h0:M%h1)
-
-        ! Transform to physical coordinates
-
-        ! Uniform priors:
-        ! This is a fairly simple transformation, each parameter is transformed as
-        ! hypercube_coord -> min + hypercube_coord * (max-min)
-        ! Param 1 is the minimum bound, Param 2 is the maximum
-        if(M%uniform_num>0) then
-            physical_coords(M%uniform_index:) = M%uniform_params(:,1) &
-                + (M%uniform_params(:,2) - M%uniform_params(:,1) ) * hypercube_coords(M%uniform_index:)
-        end if
-
-        ! log-uniform priors:
-        ! hypercube_coord -> min * (max/min)**hypercube_coord
-        ! Param 1 is the minimum bound, Param 2 is the maximum
-        if(M%log_uniform_num>0) then
-            physical_coords(M%log_uniform_index:) = M%log_uniform_params(:,1) &
-                * (M%log_uniform_params(:,2)/M%log_uniform_params(:,1) ) ** hypercube_coords(M%log_uniform_index:)
-        end if
-
-        ! Gaussian priors:
-        ! We use the intel function vcdfnorminv to transform from [0,1]->[-inf,inf] via a variant of the error function
-        ! We then scale by the gaussian standard deviations in gaussian_params(:,2) and shift by the mean in gaussian_params(:,1).
-        if(M%gaussian_num>0) then
-
-            ! Transform via the intel function cdfnorm inverse (v=vector, d=double)
-            ! https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-67369FA5-ABFD-4B5D-82D4-E6A5E4AB565B.htm#GUID-67369FA5-ABFD-4B5D-82D4-E6A5E4AB565B
-            call vdcdfnorminv(M%gaussian_num,hypercube_coords(M%gaussian_index:),physical_coords(M%gaussian_index:) )
-
-            ! Scale by the standard deviation and shift by the mean
-            physical_coords(M%gaussian_index:) = M%gaussian_params(:,1) + M%gaussian_params(:,2) * physical_coords(M%gaussian_index:)
-
-        end if
-
-        ! Sorted uniform priors:
-        ! 
-
-
-
-        ! copy the physical coordinates back to live_data
-        live_data(M%p0:M%p1) = physical_coords
-
-    end subroutine hypercube_to_physical
+!    subroutine hypercube_to_physical(M, live_data)
+!        type(model),     intent(in)                   :: M
+!        double precision, intent(inout) , dimension(:) :: live_data
+!
+!        double precision, dimension(M%nDims) :: hypercube_coords
+!        double precision, dimension(M%nDims) :: physical_coords
+!
+!        ! copy the hypercube coordinates to a temporary variable
+!        hypercube_coords = live_data(M%h0:M%h1)
+!
+!        ! Transform to physical coordinates
+!
+!        ! Uniform priors:
+!        ! This is a fairly simple transformation, each parameter is transformed as
+!        ! hypercube_coord -> min + hypercube_coord * (max-min)
+!        ! Param 1 is the minimum bound, Param 2 is the maximum
+!        if(M%uniform_num>0) then
+!            physical_coords(M%uniform_index:) = M%uniform_params(:,1) &
+!                + (M%uniform_params(:,2) - M%uniform_params(:,1) ) * hypercube_coords(M%uniform_index:)
+!        end if
+!
+!        ! log-uniform priors:
+!        ! hypercube_coord -> min * (max/min)**hypercube_coord
+!        ! Param 1 is the minimum bound, Param 2 is the maximum
+!        if(M%log_uniform_num>0) then
+!            physical_coords(M%log_uniform_index:) = M%log_uniform_params(:,1) &
+!                * (M%log_uniform_params(:,2)/M%log_uniform_params(:,1) ) ** hypercube_coords(M%log_uniform_index:)
+!        end if
+!
+!        ! Gaussian priors:
+!        ! We use the intel function vcdfnorminv to transform from [0,1]->[-inf,inf] via a variant of the error function
+!        ! We then scale by the gaussian standard deviations in gaussian_params(:,2) and shift by the mean in gaussian_params(:,1).
+!        if(M%gaussian_num>0) then
+!
+!            ! Transform via the intel function cdfnorm inverse (v=vector, d=double)
+!            ! https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-67369FA5-ABFD-4B5D-82D4-E6A5E4AB565B.htm#GUID-67369FA5-ABFD-4B5D-82D4-E6A5E4AB565B
+!            call vdcdfnorminv(M%gaussian_num,hypercube_coords(M%gaussian_index:),physical_coords(M%gaussian_index:) )
+!
+!            ! Scale by the standard deviation and shift by the mean
+!            physical_coords(M%gaussian_index:) = M%gaussian_params(:,1) + M%gaussian_params(:,2) * physical_coords(M%gaussian_index:)
+!
+!        end if
+!
+!        ! Sorted uniform priors:
+!        ! 
+!
+!
+!
+!        ! copy the physical coordinates back to live_data
+!        live_data(M%p0:M%p1) = physical_coords
+!
+!    end subroutine hypercube_to_physical
 
 
 

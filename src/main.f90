@@ -3,6 +3,7 @@ program main
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
+    use priors_module
     use model_module,           only: model, allocate_live_indices, allocate_prior_arrays, set_up_prior_indices
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
@@ -21,10 +22,20 @@ program main
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
 
-    type(program_settings) :: settings  ! The program settings 
-    type(model)            :: M         ! The model details
+    type(program_settings)    :: settings  ! The program settings 
+    type(model)               :: M         ! The model details
+    type(prior), dimension(1) :: priors
 
     pointer loglikelihood
+
+    double precision, allocatable, dimension(:) :: minimums 
+    double precision, allocatable, dimension(:) :: maximums
+    integer, allocatable, dimension(:) :: hypercube_indices
+    integer, allocatable, dimension(:) :: physical_indices
+    integer :: i
+
+
+
     interface
         function loglikelihood(theta,phi,context)
             double precision, intent(in),  dimension(:) :: theta
@@ -69,10 +80,10 @@ program main
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
     !     loglikelihood => <choice>
-    loglikelihood => gaussian_shell
+    loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    M%nDims=2                  ! Dimensionality of the space
+    M%nDims=8                  ! Dimensionality of the space
     M%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -80,14 +91,31 @@ program main
 
     call allocate_live_indices(M)
 
-    ! (v) Set up prior arrays
-    call allocate_prior_arrays(M)
+    ! (v) Set up priors
+    allocate(minimums(M%nDims))
+    allocate(maximums(M%nDims))
+    allocate(physical_indices(M%nDims))
+    allocate(hypercube_indices(M%nDims))
+
+    minimums=0.5-1d-2*5   
+    maximums=0.5+1d-2*5    
+
+    do i=1,M%nDims
+        physical_indices(i)  = i
+        hypercube_indices(i) = i
+    end do
+
+    call initialise_uniform(priors(1),hypercube_indices,physical_indices,maximums,minimums)
+
+
+
+
+    !call allocate_prior_arrays(M)
 
     !       - settings of priors
-    !M%uniform_params(:,1) = 0.5-1d-2*5 
-    !M%uniform_params(:,2) = 0.5+1d-2*5  
-    M%uniform_params(:,1) = 0.0-2d0
-    M%uniform_params(:,2) = 0.0+2d0
+    call allocate_prior_arrays(M)
+    M%uniform_params(:,1) = 0.5-1d-2*5  
+    M%uniform_params(:,2) = 0.5+1d-2*5   
 
     call set_up_prior_indices(M)
 
@@ -96,7 +124,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 500                      !number of live points
-    settings%num_chords           = 6                        !Number of chords to draw (after each randomisation)
+    settings%num_chords           = M%nDims*5                !Number of chords to draw (after each randomisation)
     settings%num_randomisations   = 4                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .true.                   !whether or not to resume from file
@@ -123,10 +151,10 @@ program main
     if (mpi_size()>1) then
         call NestedSamplingP(loglikelihood,M,settings)
     else
-        call NestedSamplingL(loglikelihood,M,settings) 
+        !call NestedSamplingL(loglikelihood,M,settings) 
     end if
 #else
-    call NestedSamplingL(loglikelihood,M,settings) 
+    call NestedSamplingL(loglikelihood,priors,M,settings) 
 #endif 
 
 

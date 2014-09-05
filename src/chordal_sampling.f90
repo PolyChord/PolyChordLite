@@ -4,7 +4,8 @@ module chordal_module
 
     contains
 
-    function ChordalSampling(loglikelihood,settings,seed_point, M)  result(baby_point)
+    function ChordalSampling(loglikelihood,priors,settings,seed_point, M)  result(baby_point)
+        use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_direction
         use model_module,  only: model, calculate_point
@@ -21,6 +22,9 @@ module chordal_module
         end interface
 
         ! ------- Inputs -------
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
+
         !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
 
@@ -65,7 +69,7 @@ module chordal_module
             nhat = random_direction(M%nDims) 
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point(loglikelihood, nhat, baby_point, M)
+            baby_point = random_chordal_point(loglikelihood,priors, nhat, baby_point, M)
 
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(M%last_chord))
@@ -84,7 +88,8 @@ module chordal_module
     end function ChordalSampling
 
 
-    function ChordalSamplingFastSlow(loglikelihood,settings,seed_point, M)  result(baby_point)
+    function ChordalSamplingFastSlow(loglikelihood,priors,settings,seed_point, M)  result(baby_point)
+        use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
         use model_module,  only: model, calculate_point
@@ -101,6 +106,8 @@ module chordal_module
         end interface
 
         ! ------- Inputs -------
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
         !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
 
@@ -153,7 +160,7 @@ module chordal_module
             baby_point(M%last_chord) = step_length
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point(loglikelihood, nhats(:,i), baby_point, M)
+            baby_point = random_chordal_point(loglikelihood,priors, nhats(:,i), baby_point, M)
 
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(M%last_chord))
@@ -172,7 +179,8 @@ module chordal_module
     end function ChordalSamplingFastSlow
 
 
-    function ChordalSamplingReflective(loglikelihood,settings,seed_point, M)  result(baby_point)
+    function ChordalSamplingReflective(loglikelihood,priors,settings,seed_point, M)  result(baby_point)
+        use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_direction,random_subdirection
         use model_module,  only: model, calculate_point,gradloglike
@@ -189,6 +197,8 @@ module chordal_module
         end interface
 
         ! ------- Inputs -------
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
         !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
 
@@ -261,7 +271,7 @@ module chordal_module
             end if
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point(loglikelihood, nhat, baby_point, M)
+            baby_point = random_chordal_point(loglikelihood,priors, nhat, baby_point, M)
 
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(M%last_chord))
@@ -284,7 +294,8 @@ module chordal_module
 
 
 
-    function random_chordal_point(loglikelihood,nhat,seed_point,M) result(baby_point)
+    function random_chordal_point(loglikelihood,priors,nhat,seed_point,M) result(baby_point)
+        use priors_module, only: prior
         use model_module,  only: model, calculate_point
         use utils_module,  only: logzero, distance
         use random_module, only: random_real
@@ -298,6 +309,8 @@ module chordal_module
             end function
         end interface
 
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
         !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
         type(model),            intent(in) :: M
         !> The direction to search for the root in
@@ -328,19 +341,19 @@ module chordal_module
         u_bound(M%h0:M%h1) = l_bound(M%h0:M%h1) + trial_chord_length * nhat 
 
         ! Calculate initial likelihoods
-        call calculate_point(loglikelihood,M,u_bound)
-        call calculate_point(loglikelihood,M,l_bound)
+        call calculate_point(loglikelihood,priors,M,u_bound)
+        call calculate_point(loglikelihood,priors,M,l_bound)
 
         ! expand u_bound until it's outside the likelihood region
         do while(u_bound(M%l0) > seed_point(M%l1) )
             u_bound(M%h0:M%h1) = u_bound(M%h0:M%h1) + nhat * trial_chord_length
-            call calculate_point(loglikelihood,M,u_bound)
+            call calculate_point(loglikelihood,priors,M,u_bound)
         end do
 
         ! expand l_bound until it's outside the likelihood region
         do while(l_bound(M%l0) > seed_point(M%l1) )
             l_bound(M%h0:M%h1) = l_bound(M%h0:M%h1) - nhat * trial_chord_length
-            call calculate_point(loglikelihood,M,l_bound)
+            call calculate_point(loglikelihood,priors,M,l_bound)
         end do
 
         ! Sample within this bound
@@ -379,7 +392,7 @@ module chordal_module
 
 
             ! calculate the likelihood 
-            call calculate_point(loglikelihood,M,finish_point)
+            call calculate_point(loglikelihood,priors,M,finish_point)
 
             ! If we're not within the likelihood bound then we need to sample further
             if( finish_point(M%l0) <= seed_point(M%l1) ) then
