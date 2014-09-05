@@ -4,9 +4,8 @@ module nested_sampling_linear_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    subroutine NestedSamplingL(loglikelihood,priors,M,settings)
+    subroutine NestedSamplingL(loglikelihood,priors,settings)
         use priors_module,     only: prior
-        use model_module,      only: model
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
@@ -25,9 +24,8 @@ module nested_sampling_linear_module
             end function
         end interface
 
-        type(model),            intent(in) :: M
-        type(program_settings), intent(in) :: settings
         type(prior), dimension(:), intent(in) :: priors
+        type(program_settings), intent(in) :: settings
 
 
 
@@ -73,11 +71,11 @@ module nested_sampling_linear_module
         double precision :: logminimumweight
 
 
-        double precision :: nhats(M%nDims,settings%num_chords)
+        double precision :: nhats(settings%nDims,settings%num_chords)
 
 
 
-        call write_opening_statement(M,settings) 
+        call write_opening_statement(settings) 
 
         ! Check to see whether there's a resume file present, and record in the
         ! variable 'resume'
@@ -104,7 +102,7 @@ module nested_sampling_linear_module
             call write_started_generating(settings%feedback)
 
             ! Otherwise generate them anew:
-            live_data = GenerateLivePoints(loglikelihood,priors,M,settings%nlive)
+            live_data = GenerateLivePoints(loglikelihood,priors,settings,settings%nlive)
 
             call write_finished_generating(settings%feedback) !Flag to note that we're done generating
         end if !(resume)
@@ -132,7 +130,7 @@ module nested_sampling_linear_module
         else !(not resume) 
             ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
             evidence_vec = logzero
-            evidence_vec(4) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
+            evidence_vec(4) = logsumexp(live_data(settings%l0,:)) - log(settings%nlive+0d0)
         end if !(resume) 
 
         ! (b) get number of dead points
@@ -184,7 +182,7 @@ module nested_sampling_linear_module
 
 
         ! Write a resume file before we start
-        if(settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
+        if(settings%write_resume) call write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
 
         ! Open a dead points file if desired
         if(settings%save_all) open(write_dead_unit,file=trim(settings%file_root)//'_dead.dat',action='write') 
@@ -224,20 +222,10 @@ module nested_sampling_linear_module
             ! Record the likelihood bound which this seed will generate from
             seed_point(settings%l1) = late_likelihood
 
-            ! Generate a set of directions
-            ! do i_dim=1,M%nDims
-            !     nhat2 = 0
-            !     do while(nhat2==0)
-            !         transformation_matrix(:,i_dim) = live_data(M%h0:M%h1,random_integer(settings%nlive)) - live_data(M%h0:M%h1,random_integer(settings%nlive))
-            !         nhat2 = dot_product(transformation_matrix(:,i_dim),transformation_matrix(:,i_dim))
-            !     end do
-            !     transformation_matrix(:,i_dim) = transformation_matrix(:,i_dim) / sqrt(nhat2)
-            ! end do
-
-            call settings%generate_directions(M,live_data,nhats)
+            call settings%generate_directions(live_data,nhats)
 
             ! Generate a new point within the likelihood bound of the late point
-            baby_point = settings%sampler(loglikelihood,priors,seed_point, M)
+            baby_point = settings%sampler(loglikelihood,priors,nhats,seed_point)
             baby_likelihood  = baby_point(settings%l0)
 
 
@@ -266,10 +254,10 @@ module nested_sampling_linear_module
                 ! should add it to the set of saved posterior points
 
                 ! calculate a new point for insertion
-                posterior_point(1)  = late_point(M%l0) + late_logweight
-                posterior_point(2)  = late_point(M%l0)
-                posterior_point(2+1:2+M%nDims) = late_point(M%p0:M%p1)
-                posterior_point(2+M%nDims+1:2+M%nDims+M%nDerived) = late_point(M%d0:M%d1)
+                posterior_point(1)  = late_point(settings%l0) + late_logweight
+                posterior_point(2)  = late_point(settings%l0)
+                posterior_point(2+1:2+settings%nDims) = late_point(settings%p0:settings%p1)
+                posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = late_point(settings%d0:settings%d1)
 
                 if(nposterior<settings%nmax_posterior) then
                     ! If we're still able to use a restricted array,
@@ -295,7 +283,7 @@ module nested_sampling_linear_module
 
             end if
 
-            live_data(M%last_chord,:) = live_data(M%last_chord,:)/  (1d0+1d0/(M%nDims*settings%nlive) )
+            live_data(settings%last_chord,:) = live_data(settings%last_chord,:)/  (1d0+1d0/(settings%nDims*settings%nlive) )
 
 
             ! (6) Command line feedback
@@ -307,7 +295,7 @@ module nested_sampling_linear_module
             total_likelihood_calls = total_likelihood_calls + baby_point(settings%nlike)
 
             ! update ndead file if we're that way inclined
-            if(settings%save_all) write(write_dead_unit,'(<2*M%nDims+M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>,I8,3E<DBL_FMT(1)>.<DBL_FMT(2)>)')  late_point(M%h0:M%h1), late_point(M%p0:M%p1), late_point(M%d0:M%d1), late_point(M%nlike),late_point(M%last_chord), late_point(M%l0:M%l1)
+            if(settings%save_all) write(write_dead_unit,'(<2*settings%nDims+settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>,I8,3E<DBL_FMT(1)>.<DBL_FMT(2)>)')  late_point(settings%h0:settings%h1), late_point(settings%p0:settings%p1), late_point(settings%d0:settings%d1), late_point(settings%nlike),late_point(settings%last_chord), late_point(settings%l0:settings%l1)
 
 
             ! Feedback to command line every nlive iterations
@@ -320,8 +308,8 @@ module nested_sampling_linear_module
 
             ! (7) Update the resume and posterior files every update_resume iterations, or at program termination
             if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-                if(settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
-                if(settings%calculate_posterior) call write_posterior_file(settings,M,posterior_array,evidence_vec(1),nposterior)  
+                if(settings%write_resume) call write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
+                if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
             end if
 
         end do ! End main loop
@@ -329,7 +317,7 @@ module nested_sampling_linear_module
 
         if(settings%save_all) close(write_dead_unit) 
 
-        call write_final_results(M,evidence_vec,ndead,total_likelihood_calls,settings%feedback)
+        call write_final_results(evidence_vec,ndead,total_likelihood_calls,settings%feedback,priors)
 
     end subroutine NestedSamplingL
 
@@ -337,11 +325,12 @@ module nested_sampling_linear_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(loglikelihood,priors,M,nlive) result(live_data)
-        use priors_module,   only: prior
-        use model_module,    only: model, calculate_point
-        use random_module,   only: random_reals
-        use utils_module,    only: logzero
+    function GenerateLivePoints(loglikelihood,priors,settings,nlive) result(live_data)
+        use priors_module,    only: prior
+        use settings_module,  only: program_settings
+        use random_module,    only: random_reals
+        use utils_module,     only: logzero
+        use calculate_module, only: calculate_point
 
         implicit none
 
@@ -354,12 +343,11 @@ module nested_sampling_linear_module
             end function
         end interface
 
-
-        !> The model details (loglikelihood, priors, ndims etc...)
-        type(model), intent(in) :: M
-
         !> The prior information
         type(prior), dimension(:), intent(in) :: priors
+
+        !> Program settings
+        type(program_settings), intent(in) :: settings
 
         !> The number of points to be generated
         integer, intent(in) :: nlive
@@ -380,7 +368,7 @@ module nested_sampling_linear_module
             live_data(:,i_live) = random_reals(settings%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point( loglikelihood, priors,M, live_data(:,i_live) )
+            call calculate_point( loglikelihood, priors, live_data(:,i_live), settings )
 
         end do
 

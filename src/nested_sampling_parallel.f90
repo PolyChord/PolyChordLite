@@ -8,9 +8,9 @@ module nested_sampling_parallel_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    subroutine NestedSamplingP(loglikelihood,M,settings)
+    subroutine NestedSamplingP(loglikelihood,priors,settings)
         use mpi_module
-        use model_module,      only: model
+        use priors_module,     only: prior
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
@@ -28,7 +28,7 @@ module nested_sampling_parallel_module
             end function
         end interface
 
-        type(model),            intent(in) :: M
+        type(prior), dimension(:), intent(in) :: priors
         type(program_settings), intent(in) :: settings
 
 
@@ -96,13 +96,13 @@ module nested_sampling_parallel_module
         double precision :: logminimumweight
 
 
-        double precision :: nhats(M%nDims,settings%num_chords)
+        double precision :: nhats(settings%nDims,settings%num_chords)
 
 
         nprocs = mpi_size()  ! Get the number of MPI procedures
         myrank = mpi_rank()  ! Get the MPI label of the current processor
 
-        if(myrank==0) call write_opening_statement(M,settings)
+        if(myrank==0) call write_opening_statement(settings)
 
         ! Check to see whether there's a resume file present, and record in the
         ! variable 'resume'
@@ -131,7 +131,7 @@ module nested_sampling_parallel_module
                 do i_live = 1,settings%nstack
                     if( nint(live_data(settings%daughter,i_live))==flag_gestating ) then
                         ! abort the gestating point
-                        live_data(:,i_live) = blank_point(M)
+                        live_data(:,i_live) = blank_point(settings)
                         ! find the mother and make her childless
                         mother_index = minloc(live_data(settings%daughter,:),mask = nint(live_data(settings%daughter,:))==i_live)
                         live_data(settings%daughter,mother_index(1)) = flag_waiting
@@ -155,25 +155,25 @@ module nested_sampling_parallel_module
             allocate(live_data_local(settings%nTotal,nlive_local))
 
             ! Generate nlive/nprocs live points on each of the nprocs nodes
-            live_data_local = GenerateLivePoints(loglikelihood,M,nlive_local)
+            live_data_local = GenerateLivePoints(loglikelihood,priors,settings,nlive_local)
 
             ! Gather all of this data onto the root node
-            call MPI_GATHER(          &  
-                live_data_local,      & ! sending array
+            call MPI_GATHER(                 &  
+                live_data_local,             & ! sending array
                 settings%nTotal*nlive_local, & ! number of elements to be sent
-                MPI_DOUBLE_PRECISION, & ! type of element to be sent
-                live_data,            & ! recieving array
+                MPI_DOUBLE_PRECISION,        & ! type of element to be sent
+                live_data,                   & ! recieving array
                 settings%nTotal*nlive_local, & ! number of elements to be recieved from each node
-                MPI_DOUBLE_PRECISION, & ! type of element recieved
-                0,                    & ! root node address
-                MPI_COMM_WORLD,       & ! communication info
-                mpierror)               ! error (from module mpi_module)
+                MPI_DOUBLE_PRECISION,        & ! type of element recieved
+                0,                           & ! root node address
+                MPI_COMM_WORLD,              & ! communication info
+                mpierror)                      ! error (from module mpi_module)
 
             ! deallocate the now unused local live points array to save memory
             deallocate(live_data_local)
 
             do i_live=settings%nlive+1,settings%nstack
-                live_data(:,i_live) = blank_point(M)
+                live_data(:,i_live) = blank_point(settings)
             end do
 
 
@@ -202,7 +202,7 @@ module nested_sampling_parallel_module
             else !(not resume) 
                 ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
                 evidence_vec = logzero
-                evidence_vec(4) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
+                evidence_vec(4) = logsumexp(live_data(settings%l0,:)) - log(settings%nlive+0d0)
             end if !(resume) 
 
             ! (b) get number of dead points
@@ -261,7 +261,7 @@ module nested_sampling_parallel_module
         end if
 
         ! Write a resume file before we start
-        if(myrank==0 .and. settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
+        if(myrank==0 .and. settings%write_resume) call write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
 
         ! Open a dead points file if desired
         if(myrank==0 .and. settings%save_all) open(write_dead_unit,file=trim(settings%file_root)//'_dead.dat',action='write') 
@@ -373,7 +373,7 @@ module nested_sampling_parallel_module
                     if(live_data( settings%daughter, daughter_index )<=flag_gestating ) exit
 
                     ! Kill the late point
-                    live_data(:,late_index(1)) = blank_point(M)
+                    live_data(:,late_index(1)) = blank_point(settings)
 
                     ! Promote the daughter to a live point
                     baby_point = live_data(:,daughter_index) 
@@ -398,10 +398,10 @@ module nested_sampling_parallel_module
                         ! should add it to the set of saved posterior points
 
                         ! calculate a new point for insertion
-                        posterior_point(1)  = late_point(M%l0) + late_logweight
-                        posterior_point(2)  = late_point(M%l0)
-                        posterior_point(2+1:2+M%nDims) = late_point(M%p0:M%p1)
-                        posterior_point(2+M%nDims+1:2+M%nDims+M%nDerived) = late_point(M%d0:M%d1)
+                        posterior_point(1)  = late_point(settings%l0) + late_logweight
+                        posterior_point(2)  = late_point(settings%l0)
+                        posterior_point(2+1:2+settings%nDims) = late_point(settings%p0:settings%p1)
+                        posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = late_point(settings%d0:settings%d1)
 
                         if(nposterior<settings%nmax_posterior) then
                             ! If we're still able to use a restricted array,
@@ -427,7 +427,7 @@ module nested_sampling_parallel_module
 
                     end if
 
-            live_data(M%last_chord,:) = live_data(M%last_chord,:)/  (1d0+1d0/(M%nDims*settings%nlive) ) 
+            live_data(settings%last_chord,:) = live_data(settings%last_chord,:)/  (1d0+1d0/(settings%nDims*settings%nlive) ) 
 
 
                     ! (6) Command line feedback
@@ -439,7 +439,7 @@ module nested_sampling_parallel_module
                     total_likelihood_calls = total_likelihood_calls + baby_point(settings%nlike)
 
                     ! update ndead file if we're that way inclined
-                    if(settings%save_all) write(write_dead_unit,'(<2*M%nDims+M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>,I8,3E<DBL_FMT(1)>.<DBL_FMT(2)>)')  late_point(M%h0:M%h1), late_point(M%p0:M%p1), late_point(M%d0:M%d1), late_point(M%nlike),late_point(M%last_chord), late_point(M%l0:M%l1)
+                    if(settings%save_all) write(write_dead_unit,'(<2*settings%nDims+settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>,I8,3E<DBL_FMT(1)>.<DBL_FMT(2)>)')  late_point(settings%h0:settings%h1), late_point(settings%p0:settings%p1), late_point(settings%d0:settings%d1), late_point(settings%nlike),late_point(settings%last_chord), late_point(settings%l0:settings%l1)
 
 
                     ! Feedback to command line every nlive iterations
@@ -452,8 +452,8 @@ module nested_sampling_parallel_module
 
                     ! (7) Update the resume and posterior files every update_resume iterations, or at program termination
                     if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-                        if(settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
-                        if(settings%calculate_posterior) call write_posterior_file(settings,M,posterior_array,evidence_vec(1),nposterior)  
+                        if(settings%write_resume) call write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
+                        if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
                     end if
 
                 end do
@@ -465,9 +465,9 @@ module nested_sampling_parallel_module
                     if( waiting_slave(i_slaves) ) then
 
                         ! Generate a seed point from live_data, and update accordingly
-                        seed_point = GenerateSeed(M,settings%nstack,live_data) 
+                        seed_point = GenerateSeed(settings,live_data) 
 
-                        if(nint(seed_point(M%daughter))==flag_blank) then
+                        if(nint(seed_point(settings%daughter))==flag_blank) then
                             ! If we've generated a blank seed, then there aren't
                             ! enough slots 
                             if(all(waiting_slave)) then
@@ -496,17 +496,17 @@ module nested_sampling_parallel_module
                             )
 
                         ! Generate a set of directions
-                        call settings%generate_directions(M,live_data,nhats)
+                        call settings%generate_directions(live_data,nhats)
 
                         ! Send the directions
-                        call MPI_SEND(                   &
-                            nhats,                       & ! seed point to be sent
-                            M%nDims*settings%num_chords, & ! size of this data
-                            MPI_DOUBLE_PRECISION,        & ! type of this data
-                            i_slaves,                    & ! send it to the point we just recieved from
-                            RUNTAG,                      & ! tagging information (not important here)
-                            MPI_COMM_WORLD,              & ! communication data
-                            mpierror                     & ! error information (from mpi_module)
+                        call MPI_SEND(                          &
+                            nhats,                              & ! seed point to be sent
+                            settings%nDims*settings%num_chords, & ! size of this data
+                            MPI_DOUBLE_PRECISION,               & ! type of this data
+                            i_slaves,                           & ! send it to the point we just recieved from
+                            RUNTAG,                             & ! tagging information (not important here)
+                            MPI_COMM_WORLD,                     & ! communication data
+                            mpierror                            & ! error information (from mpi_module)
                             )
 
                         waiting_slave(i_slaves)=.false.
@@ -523,7 +523,7 @@ module nested_sampling_parallel_module
                 ! Listen for a signal from the master
                 call MPI_RECV(            &
                     seed_point,           & ! seed point to be recieved
-                    settings%nTotal,             & ! size of this data
+                    settings%nTotal,      & ! size of this data
                     MPI_DOUBLE_PRECISION, & ! type of this data
                     0,                    & ! recieve it from the master
                     MPI_ANY_TAG,          & ! recieve any tagging information
@@ -539,24 +539,24 @@ module nested_sampling_parallel_module
                 end if
 
                 ! Recieve the nhats as well
-                call MPI_RECV(                   &
-                    nhats,                       & ! seed point to be recieved
-                    M%nDims*settings%num_chords, & ! size of this data
-                    MPI_DOUBLE_PRECISION,        & ! type of this data
-                    0,                           & ! recieve it from the master
-                    MPI_ANY_TAG,                 & ! recieve any tagging information
-                    MPI_COMM_WORLD,              & ! communication data
-                    mpi_status,                  & ! status (not important here)
-                    mpierror                     & ! error information (from mpi_module)
+                call MPI_RECV(                          &
+                    nhats,                              & ! seed point to be recieved
+                    settings%nDims*settings%num_chords, & ! size of this data
+                    MPI_DOUBLE_PRECISION,               & ! type of this data
+                    0,                                  & ! recieve it from the master
+                    MPI_ANY_TAG,                        & ! recieve any tagging information
+                    MPI_COMM_WORLD,                     & ! communication data
+                    mpi_status,                         & ! status (not important here)
+                    mpierror                            & ! error information (from mpi_module)
                     )
 
                 ! Calculate a new baby point from the seed point
-                baby_point = settings%sampler(loglikelihood,seed_point,nhats,M)
+                baby_point = settings%sampler(loglikelihood,priors,nhats,seed_point)
 
                 ! Send the baby point back
                 call MPI_SEND(            &
                     baby_point,           & ! baby point to be sent
-                    settings%nTotal,             & ! size of this data
+                    settings%nTotal,      & ! size of this data
                     MPI_DOUBLE_PRECISION, & ! type of this data
                     0,                    & ! send it to the master
                     RUNTAG,               & ! tagging information (not important here)
@@ -606,7 +606,7 @@ module nested_sampling_parallel_module
 
             if(settings%save_all) close(write_dead_unit) 
 
-            call write_final_results(M,evidence_vec,ndead,total_likelihood_calls,settings%feedback)  
+            call write_final_results(evidence_vec,ndead,total_likelihood_calls,settings%feedback,priors)
         end if
 
     end subroutine NestedSamplingP
@@ -615,10 +615,12 @@ module nested_sampling_parallel_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(loglikelihood,M,nlive) result(live_data)
-        use model_module,    only: model, calculate_point
+    function GenerateLivePoints(loglikelihood,priors,settings,nlive) result(live_data)
+        use priors_module,    only: prior
+        use settings_module,  only: program_settings
         use random_module,   only: random_reals
         use utils_module,    only: logzero
+        use calculate_module, only: calculate_point
 
         implicit none
         
@@ -631,9 +633,11 @@ module nested_sampling_parallel_module
             end function
         end interface
 
-        
-        !> The model details (loglikelihood, priors, ndims etc...)
-        type(model), intent(in) :: M
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
+
+        !> Program settings
+        type(program_settings), intent(in) :: settings
 
         !> The number of points to be generated
         integer, intent(in) :: nlive
@@ -654,7 +658,7 @@ module nested_sampling_parallel_module
             live_data(:,i_live) = random_reals(settings%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point( loglikelihood, M, live_data(:,i_live) )
+            call calculate_point( loglikelihood, priors, live_data(:,i_live), settings )
 
         end do
 
@@ -675,13 +679,12 @@ module nested_sampling_parallel_module
 
 
 
-    function GenerateSeed(M,nstack,live_data) result(seed_point)
-        use model_module,      only: model
+    function GenerateSeed(settings,live_data) result(seed_point)
+        use settings_module,   only: program_settings
         use random_module,     only: random_integer
         implicit none
-        type(model),      intent(in) :: M
-        integer, intent(in) :: nstack
-        double precision, intent(inout), dimension(settings%nTotal,nstack) :: live_data
+        type(program_settings), intent(in) :: settings
+        double precision, intent(inout), dimension(settings%nTotal,settings%nstack) :: live_data
 
         ! Point to seed a new one from
         double precision,    dimension(settings%nTotal)   :: seed_point
@@ -697,7 +700,7 @@ module nested_sampling_parallel_module
         ! be generated from                  
         live_index = minloc(live_data(settings%l0,:),mask=nint(live_data(settings%daughter,:))==flag_waiting) 
         if(live_index(1)==0) then
-            seed_point = blank_point(M)
+            seed_point = blank_point(settings)
             return
         end if
 
@@ -706,7 +709,7 @@ module nested_sampling_parallel_module
         ! the point is 'blank'
         daughter_index = minloc(live_data(settings%daughter,:),mask=nint(live_data(settings%daughter,:))==flag_blank) 
         if(daughter_index(1)==0) then
-            seed_point = blank_point(M)
+            seed_point = blank_point(settings)
             return
         end if
 
@@ -729,10 +732,10 @@ module nested_sampling_parallel_module
         do while (seed_point(settings%l0)<=loglikelihood_bound .or. seed_point(settings%l1)>loglikelihood_bound .or. nint(seed_point(settings%daughter))==flag_blank )
             ! get a random integer in [1,nstack]
             ! get this point from live_data 
-            seed_point = live_data(:,random_integer(nstack))
+            seed_point = live_data(:,random_integer(settings%nstack))
             counter = counter+1
-            if(counter>nstack*10) then
-                seed_point=blank_point(M)
+            if(counter>settings%nstack*10) then
+                seed_point=blank_point(settings)
                 return
             end if
         end do
@@ -745,11 +748,13 @@ module nested_sampling_parallel_module
 
     end function GenerateSeed
 
-    function blank_point(M)
+    function blank_point(settings)
         use utils_module, only: logzero,loginf
-        use model_module, only: model
+        use settings_module,  only: program_settings
         implicit none
-        type(model),            intent(in) :: M
+
+        type(program_settings), intent(in) :: settings
+
         double precision, dimension(settings%nTotal) :: blank_point
 
             blank_point = 0d0

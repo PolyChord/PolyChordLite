@@ -4,16 +4,14 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)
+    subroutine write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)
         use utils_module, only: DBL_FMT,write_resume_unit
-        use model_module, only: model
         use settings_module, only: program_settings
 
         implicit none
 
 
         type(program_settings), intent(in) :: settings
-        type(model),            intent(in) :: M
         double precision, dimension(:,:) :: live_data
         integer :: nposterior
         double precision :: mean_likelihood_calls
@@ -43,15 +41,14 @@ module read_write_module
         ! Number of saved posterior points
         write(write_resume_unit,'(I)') nposterior
         ! posterior points
-        write(write_resume_unit,'(<M%nDims+M%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+        write(write_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
 
         close(write_resume_unit)
 
     end subroutine write_resume_file
 
-    subroutine write_posterior_file(settings,M,posterior_array,evidence,nposterior) 
+    subroutine write_posterior_file(settings,posterior_array,evidence,nposterior) 
         use utils_module, only: DBL_FMT,write_txt_unit,logzero
-        use model_module, only: model
         use settings_module, only: program_settings
 
         implicit none
@@ -59,7 +56,6 @@ module read_write_module
 
         integer :: nposterior
         type(program_settings), intent(in) :: settings
-        type(model),            intent(in) :: M
         double precision, dimension(settings%nDims+settings%nDerived+2,nposterior) :: posterior_array
         double precision                           :: evidence
 

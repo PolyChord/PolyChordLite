@@ -122,4 +122,35 @@ module priors_module
 
     end function uniform_htp
 
+
+
+    function prior_log_volume(priors) result(log_volume)
+        use utils_module, only: TwoPi
+        implicit none
+        type(prior), dimension(:), intent(in) :: priors
+
+        double precision :: log_volume
+        integer :: i
+
+        log_volume = 0
+
+        do i=1,size(priors)
+            select case(priors(i)%prior_type)
+            case(uniform_type)
+                log_volume = log_volume + sum( log(priors(i)%parameters(:priors(i)%npars)- priors(i)%parameters(priors(i)%npars+1:) )) 
+            end select
+        end do
+
+        ! Uniform contribution
+        !if (M%uniform_num >0 ) &
+        !    log_volume = log_volume + sum(log(M%uniform_params(:,2)-M%uniform_params(:,1) ))
+        !if (M%log_uniform_num >0 ) &
+        !    log_volume = log_volume + sum( log(log(M%log_uniform_params(:,2)/M%log_uniform_params(:,1))) )
+        !if (M%gaussian_num >0 ) &
+        !    log_volume = log_volume + sum( 0.5d0*log(TwoPi) + log(M%gaussian_params(:,2)) )
+        
+    end function prior_log_volume
+
+
+
 end module priors_module

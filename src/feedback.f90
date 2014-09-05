@@ -15,13 +15,11 @@ module feedback_module
     contains
 
     !> Called before running the program
-    subroutine write_opening_statement(M,settings)
-        use model_module,    only: model
+    subroutine write_opening_statement(settings)
         use utils_module,    only: logzero,stdout_unit
         use settings_module, only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
-        type(model),            intent(in) :: M         ! The model details
 
 
         if(settings%feedback >=1) then
@@ -179,12 +177,10 @@ module feedback_module
 
 
     !> Nicely formatted final output statement
-    subroutine write_final_results(M,evidence_vec,ndead,total_likelihood_calls,feedback)
-        use model_module,    only: model, prior_log_volume
+    subroutine write_final_results(evidence_vec,ndead,total_likelihood_calls,feedback,priors)
         use utils_module,    only: stdout_unit
+        use priors_module,   only: prior,prior_log_volume
         implicit none
-        !> The model details
-        type(model), intent(in) :: M
         !> The degree of feedback required
         integer, intent(in) :: feedback 
         !> the evidence information
@@ -193,6 +189,8 @@ module feedback_module
         integer,intent(in) :: ndead
         !> the total number of likelihood calls
         integer,intent(in) :: total_likelihood_calls
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
 
         if (feedback>=0) then
             write(stdout_unit,'(A42)')                                        ' ________________________________________ '
@@ -200,7 +198,7 @@ module feedback_module
             write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') ndead
             write(stdout_unit,'("| nlike  = ", I12, "                  |"  )') total_likelihood_calls
             write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1))  
-            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1)+prior_log_volume(M), exp(0.5*evidence_vec(2)-evidence_vec(1))  
+            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1)+prior_log_volume(priors), exp(0.5*evidence_vec(2)-evidence_vec(1))  
             write(stdout_unit,'(A42)')                                        '|________________________________________|'
         endif
     end subroutine write_final_results

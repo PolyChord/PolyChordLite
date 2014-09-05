@@ -3,11 +3,10 @@ module chordal_module
 
     contains
 
-    function ChordalSampling(loglikelihood,priors,settings,seed_point, M)  result(baby_point)
+    function ChordalSampling(loglikelihood,priors,settings,nhats,seed_point)  result(baby_point)
         use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_direction
-        use model_module,  only: model, calculate_point
         use utils_module, only: logzero,stdout_unit
 
         implicit none
@@ -27,9 +26,6 @@ module chordal_module
         !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
 
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        type(model),            intent(in) :: M
-
         !> The seed point
         double precision, intent(in), dimension(:)   :: seed_point
 
@@ -39,7 +35,7 @@ module chordal_module
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(settings%nTotal)   :: baby_point
+        double precision,    dimension(size(seed_point))   :: baby_point
 
 
         ! ------- Local Variables -------
@@ -92,12 +88,12 @@ module chordal_module
 
 
 
-    function ChordalSamplingReflective(loglikelihood,priors,settings,seed_point, M)  result(baby_point)
+    function ChordalSamplingReflective(loglikelihood,priors,settings,nhats,seed_point)  result(baby_point)
         use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_direction,random_subdirection
-        use model_module,  only: model, calculate_point,gradloglike
         use utils_module, only: logzero,stdout_unit
+        use calculate_module, only: gradloglike
 
         implicit none
         interface
@@ -115,16 +111,16 @@ module chordal_module
         !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
 
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        type(model),            intent(in) :: M
-
         !> The seed point
-        double precision, intent(in), dimension(settings%nTotal)   :: seed_point
+        double precision, intent(in), dimension(:)   :: seed_point
+
+        !> The directions of the chords
+        double precision, intent(in), dimension(:,:) :: nhats
 
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(settings%nTotal)   :: baby_point
+        double precision,    dimension(size(seed_point))   :: baby_point
 
 
         ! ------- Local Variables -------
@@ -164,7 +160,7 @@ module chordal_module
                 nhat = random_direction(settings%nDims)
             else
                 ! Get the grad loglikelihood
-                gradL = gradloglike(loglikelihood,M,baby_point(settings%p0:settings%p1),baby_point(settings%l0),step_length*1d-3)
+                gradL = gradloglike(loglikelihood,settings,baby_point(settings%p0:settings%p1),baby_point(settings%l0),step_length*1d-3)
                 baby_point(settings%nlike) = baby_point(settings%nlike)+settings%nDims
 
                 ! Normalise the grad loglikelihood
@@ -198,6 +194,65 @@ module chordal_module
     end function ChordalSamplingReflective
 
 
+    function SphericalSampling(loglikelihood,priors,settings,seed_point,nhats)  result(baby_point)
+        use priors_module, only: prior
+        use settings_module, only: program_settings
+        use random_module, only: random_point_in_sphere
+        use utils_module, only: logzero,stdout_unit
+        use calculate_module, only: calculate_point
+
+        implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
+        ! ------- Inputs -------
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
+        !> The seed point
+        double precision, intent(in), dimension(:)   :: seed_point
+
+        !> The directions of the chords
+        double precision, intent(in), dimension(:,:) :: nhats
+
+        ! ------- Outputs -------
+        !> The newly generated point, plus the loglikelihood bound that
+        !! generated it
+        double precision,    dimension(size(seed_point))   :: baby_point
+
+
+        ! ------- Local Variables -------
+        double precision :: step_length
+
+        ! Start the baby point at the seed point
+        baby_point = seed_point
+
+        ! Set the number of likelihood evaluations to zero
+        baby_point(settings%nlike) = 0
+
+        ! Record the step length
+        step_length = seed_point(settings%last_chord)
+
+        ! Generate a new point within a sphere centered on 0.5
+        baby_point(settings%l0)=seed_point(settings%l1)
+        do while (baby_point(settings%l0) <= seed_point(settings%l1) )
+            baby_point(settings%h0:settings%h1) = random_point_in_sphere(settings%nDims)*step_length + 0.5d0
+            call calculate_point(loglikelihood,priors,baby_point,settings)
+        end do
+
+
+
+    end function SphericalSampling
+
+
 
 
 
@@ -205,9 +260,9 @@ module chordal_module
     function random_chordal_point(loglikelihood,priors,nhat,seed_point,settings) result(baby_point)
         use settings_module, only: program_settings
         use priors_module, only: prior
-        use model_module,  only: model, calculate_point
         use utils_module,  only: logzero, distance
         use random_module, only: random_real
+        use calculate_module, only: calculate_point
         implicit none
         interface
             function loglikelihood(theta,phi,context)
@@ -250,19 +305,19 @@ module chordal_module
         u_bound(settings%h0:settings%h1) = l_bound(settings%h0:settings%h1) + trial_chord_length * nhat 
 
         ! Calculate initial likelihoods
-        call calculate_point(loglikelihood,priors,M,u_bound)
-        call calculate_point(loglikelihood,priors,M,l_bound)
+        call calculate_point(loglikelihood,priors,u_bound,settings)
+        call calculate_point(loglikelihood,priors,l_bound,settings)
 
         ! expand u_bound until it's outside the likelihood region
         do while(u_bound(settings%l0) > seed_point(settings%l1) )
             u_bound(settings%h0:settings%h1) = u_bound(settings%h0:settings%h1) + nhat * trial_chord_length
-            call calculate_point(loglikelihood,priors,M,u_bound)
+            call calculate_point(loglikelihood,priors,u_bound,settings)
         end do
 
         ! expand l_bound until it's outside the likelihood region
         do while(l_bound(settings%l0) > seed_point(settings%l1) )
             l_bound(settings%h0:settings%h1) = l_bound(settings%h0:settings%h1) - nhat * trial_chord_length
-            call calculate_point(loglikelihood,priors,M,l_bound)
+            call calculate_point(loglikelihood,priors,l_bound,settings)
         end do
 
         ! Sample within this bound
@@ -301,7 +356,7 @@ module chordal_module
 
 
             ! calculate the likelihood 
-            call calculate_point(loglikelihood,priors,M,finish_point)
+            call calculate_point(loglikelihood,priors,finish_point,settings)
 
             ! If we're not within the likelihood bound then we need to sample further
             if( finish_point(settings%l0) <= seed_point(settings%l1) ) then
@@ -327,81 +382,18 @@ module chordal_module
 
     end function random_chordal_point
 
-    function SphericalSampling(loglikelihood,settings,seed_point,nhats,M)  result(baby_point)
-        use settings_module, only: program_settings
-        use random_module, only: random_point_in_sphere
-        use model_module,  only: model, calculate_point
-        use utils_module, only: logzero,stdout_unit
-
-        implicit none
-        interface
-            function loglikelihood(theta,phi,context)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
-                double precision :: loglikelihood
-            end function
-        end interface
-
-        ! ------- Inputs -------
-        !> program settings (mostly useful to pass on the number of live points)
-        class(program_settings), intent(in) :: settings
-
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        type(model),            intent(in) :: M
-
-        !> The seed point
-        double precision, intent(in), dimension(:)   :: seed_point
-
-        !> The directions of the chords
-        double precision, intent(in), dimension(:,:) :: nhats
-
-        ! ------- Outputs -------
-        !> The newly generated point, plus the loglikelihood bound that
-        !! generated it
-        double precision,    dimension(M%nTotal)   :: baby_point
-
-
-        ! ------- Local Variables -------
-        double precision :: step_length
-
-        ! Start the baby point at the seed point
-        baby_point = seed_point
-
-        ! Set the number of likelihood evaluations to zero
-        baby_point(M%nlike) = 0
-
-        ! Record the step length
-        step_length = seed_point(M%last_chord)
-
-        ! Generate a new point within a sphere centered on 0.5
-        baby_point(M%l0)=seed_point(M%l1)
-        do while (baby_point(M%l0) <= seed_point(M%l1) )
-            baby_point(M%h0:M%h1) = random_point_in_sphere(M%nDims)*step_length + 0.5d0
-            call calculate_point(loglikelihood,M,baby_point)
-        end do
-
-
-
-    end function SphericalSampling
-
-
     ! Direction generators
 
     !> Generate a set of isotropic nhats
-    subroutine isotropic_nhats(settings,M,live_data,nhats)
+    subroutine isotropic_nhats(settings,live_data,nhats)
         use settings_module, only: program_settings
         use random_module, only: random_direction
-        use model_module,  only: model, calculate_point
         use utils_module, only: logzero,stdout_unit
         implicit none
 
         ! ------- Inputs -------
         !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
-
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        type(model),            intent(in) :: M
 
         !> The live points
         double precision, intent(in), dimension(:,:) :: live_data
@@ -413,17 +405,16 @@ module chordal_module
         integer i_nhat
 
         do i_nhat=1,settings%num_chords 
-            nhats(:,i_nhat) = random_direction(M%nDims)
+            nhats(:,i_nhat) = random_direction(settings%nDims)
         end do
 
     end subroutine isotropic_nhats
 
     !> Generate a set of nhats that roughly agree with the longest directions of
     !! a uni-modal distribution
-    subroutine unimodal_nhats(settings,M,live_data,nhats)
+    subroutine unimodal_nhats(settings,live_data,nhats)
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
-        use model_module,  only: model, calculate_point
         use utils_module, only: logzero,stdout_unit,loginf
         implicit none
 
@@ -431,20 +422,17 @@ module chordal_module
         !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
 
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        type(model),            intent(in) :: M
-
         !> The live points
         double precision, intent(in), dimension(:,:) :: live_data
 
         !> The set of nhats to be generated
         double precision, intent(out), dimension(:,:) :: nhats
 
-        double precision :: temp_basis(M%nDims,M%nDims)
-        double precision :: basis(M%nDims,M%nDims)
-        double precision :: temp_lengths(M%nDims)
-        double precision :: lengths(M%nDims)
-        double precision :: mean(M%nDims)
+        double precision :: temp_basis(settings%nDims,settings%nDims)
+        double precision :: basis(settings%nDims,settings%nDims)
+        double precision :: temp_lengths(settings%nDims)
+        double precision :: lengths(settings%nDims)
+        double precision :: mean(settings%nDims)
         integer :: min_pos(1)
         integer :: max_pos(1)
         double precision :: max_val
@@ -454,21 +442,21 @@ module chordal_module
 
 
         ! Find the mean vector
-        mean=sum(live_data(M%h0:M%h1,:),dim=2)/settings%nlive
+        mean=sum(live_data(settings%h0:settings%h1,:),dim=2)/settings%nlive
 
         ! initialise the smallest likelihood
         min_val=logzero
 
         ! Find the outward facing vectors
-        do i=1,M%nDims
+        do i=1,settings%nDims
 
             ! find the smallest position
-            min_pos=minloc(live_data(M%l0,:),mask=live_data(M%l0,:)>min_val)
-            min_val = live_data(M%l0,min_pos(1))
+            min_pos=minloc(live_data(settings%l0,:),mask=live_data(settings%l0,:)>min_val)
+            min_val = live_data(settings%l0,min_pos(1))
 
             ! define the basis vector as extending from the mean to this
             ! position
-            basis(:,i) = live_data(M%h0:M%h1,min_pos(1)) - mean
+            basis(:,i) = live_data(settings%h0:settings%h1,min_pos(1)) - mean
 
             ! get the length
             lengths(i) = sqrt(dot_product(basis(:,i),basis(:,i)))
@@ -486,7 +474,7 @@ module chordal_module
 !       max_val=loginf
 !
 !       ! Order the basis by chord length
-!       do i=1,M%nDims
+!       do i=1,settings%nDims
 !           max_pos = maxloc(temp_lengths,temp_lengths<max_val)
 !           max_val = temp_lengths(max_pos(1))
 !           basis(:,i) = temp_basis(:,max_pos(1))
@@ -494,7 +482,7 @@ module chordal_module
 !       end do
 !
 !       ! Orthogonalise the basis, starting with the longest length
-!       do i=1,M%nDims
+!       do i=1,settings%nDims
 !           do j= 1,i-1
 !               basis(:,i) = basis(:,i)- dot_product(basis(:,i),basis(:,j))/dot_product(basis(:,j),basis(:,j)) * basis(:,j)
 !           end do
@@ -502,21 +490,21 @@ module chordal_module
 !       end do
 
         ! Rescale the basis
-        !do i=1,M%nDims
+        !do i=1,settings%nDims
         !    basis(:,i) = basis(:,i) * lengths(new_pos(i))
         !end do
 
         ! Choose a selection of nhats transformed by the basis
         do i=1,settings%num_chords
             ! generate a random direction
-            nhats(:,i) = random_gaussian(M%nDims)
+            nhats(:,i) = random_gaussian(settings%nDims)
             ! linearly rescale it
             !nhats(:,i) = nhats(:,i)* lengths(:)
             ! transform using the basis
             nhats(:,i) = matmul(basis,nhats(:,i))
             ! normalise
             nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i)))
-            !nhats(:,i) = basis(:,1+mod(i,M%nDims))
+            !nhats(:,i) = basis(:,1+mod(i,settings%nDims))
             !nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i))) 
         end do
 
@@ -524,19 +512,15 @@ module chordal_module
 
     end subroutine unimodal_nhats
 
-    subroutine fast_slow_nhats(settings,M,live_data,nhats)
+    subroutine fast_slow_nhats(settings,live_data,nhats)
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
-        use model_module,  only: model, calculate_point
         use utils_module, only: logzero,stdout_unit,loginf
         implicit none
 
         ! ------- Inputs -------
         !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
-
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        type(model),            intent(in) :: M
 
         !> The live points
         double precision, intent(in), dimension(:,:) :: live_data
@@ -551,9 +535,9 @@ module chordal_module
         nhats=0
 
         ! Generate according to the variable nums_chords
-        do i=1,M%nDims
-            nhats(i,: product(settings%nums_chords) : product(settings%nums_chords)/product(settings%nums_chords(:M%grade(i))) ) &
-                = random_gaussian(product(settings%nums_chords(:M%grade(i))))
+        do i=1,settings%nDims
+            nhats(i,: product(settings%nums_chords) : product(settings%nums_chords)/product(settings%nums_chords(:settings%grade(i))) ) &
+                = random_gaussian(product(settings%nums_chords(:settings%grade(i))))
         end do
 
         ! normalise

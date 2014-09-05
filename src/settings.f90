@@ -179,7 +179,7 @@ module settings_module
         !! set of live points (live_data) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood bound contained at the settings%l1 index of seed_point
-        function samp(loglikelihood,priors,settings,seed_point) result(baby_point)
+        function samp(loglikelihood,priors,settings,nhats,seed_point) result(baby_point)
 
             import :: program_settings   
             import :: prior
@@ -208,7 +208,7 @@ module settings_module
 
             ! ------- Outputs -------
             !> The newly generated point
-            double precision,    dimension(settings%nTotal)     :: baby_point
+            double precision,    dimension(size(seed_point))     :: baby_point
 
 
         end function samp
@@ -258,17 +258,13 @@ module settings_module
 
 
     interface
-        subroutine dir(settings,M,live_data,nhats)
-            import :: model
+        subroutine dir(settings,live_data,nhats)
             import :: program_settings
             implicit none
 
             ! ------- Inputs -------
             !> program settings (mostly useful to pass on the number of live points)
             class(program_settings), intent(in) :: settings
-
-            !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-            type(model),            intent(in) :: M
 
             !> The live points
             double precision, intent(in), dimension(:,:) :: live_data
@@ -278,6 +274,49 @@ module settings_module
 
         end subroutine dir
     end interface
+
+
+    contains
+
+
+
+    subroutine allocate_indices(settings)
+        implicit none
+        type(program_settings), intent(inout) :: settings
+
+
+        ! Hypercube parameter indices
+        settings%h0=1
+        settings%h1=settings%h0+settings%nDims-1
+
+        ! Physical parameter indices
+        settings%p0=settings%h1+1
+        settings%p1=settings%p0+settings%nDims-1 
+
+        ! Derived parameter indices
+        settings%d0=settings%p1+1
+        settings%d1=settings%d0+settings%nDerived-1  
+
+        ! Algorithm indices
+        settings%nlike=settings%d1+1
+        settings%last_chord=settings%nlike+1
+#ifdef MPI
+        settings%daughter=settings%last_chord+1
+        ! Loglikelihood indices
+        settings%l0=settings%daughter+1
+#else
+        settings%l0=settings%last_chord+1
+#endif
+
+        settings%l1=settings%l0+1
+
+        ! Total number of parameters
+        settings%nTotal = settings%l1
+
+        ! grades
+        if(.not. allocated(settings%grade)) allocate(settings%grade(settings%nDims))
+
+    end subroutine allocate_indices
 
 
 end module settings_module 

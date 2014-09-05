@@ -3,7 +3,7 @@ module calculate_module
     contains
 
     subroutine calculate_point(loglikelihood,priors,live_data,settings)
-        use priors_module, only: prior
+        use priors_module, only: prior, hypercube_to_physical
         use settings_module, only: program_settings
         use utils_module, only: logzero
         implicit none
@@ -36,6 +36,39 @@ module calculate_module
 
     end subroutine calculate_point
 
+    function gradloglike(loglikelihood,settings,theta,loglike,delta)
+        use settings_module, only: program_settings
+        implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+        type(program_settings), intent(in) :: settings
+        double precision, intent(in), dimension(settings%nDims) :: theta
+        double precision, intent(in)                     :: loglike
+        double precision, intent(in)                     :: delta
+
+        double precision, dimension(settings%nDims)             :: gradloglike
+
+
+        double precision, dimension(settings%nDerived)               :: derived
+        integer :: context
+
+        double precision, dimension(settings%nDims) :: delta_vec
+
+        integer i
+
+        do i=1,settings%nDims
+            delta_vec = 0
+            delta_vec(i) = delta
+            gradloglike(i) = ( loglikelihood(theta+delta_vec,derived,context) - loglike )/ delta
+        end do
+
+    end function gradloglike
 
 
 end module calculate_module

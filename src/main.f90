@@ -4,8 +4,7 @@ program main
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
     use priors_module
-    use model_module,           only: model, allocate_live_indices, allocate_prior_arrays, set_up_prior_indices
-    use settings_module,        only: program_settings
+    use settings_module,        only: program_settings,allocate_indices
     use random_module,          only: initialise_random, deinitialise_random
 
     use chordal_module,         only: ChordalSampling,ChordalSamplingReflective, &
@@ -24,7 +23,6 @@ program main
     implicit none
 
     type(program_settings)    :: settings  ! The program settings 
-    type(model)               :: M         ! The model details
     type(prior), dimension(1) :: priors
 
     pointer loglikelihood
@@ -88,9 +86,7 @@ program main
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
-    settings%uniform_num = settings%nDims
-
-    call allocate_live_indices(M)
+    call allocate_indices(settings)
 
     ! (v) Set up priors
     allocate(minimums(settings%nDims))
@@ -107,11 +103,6 @@ program main
     end do
 
     call initialise_uniform(priors(1),hypercube_indices,physical_indices,maximums,minimums)
-
-
-
-
-    call set_up_prior_indices(M)
 
 
 
@@ -145,12 +136,12 @@ program main
 
 #ifdef MPI
     if (mpi_size()>1) then
-        call NestedSamplingP(loglikelihood,M,settings)
+        call NestedSamplingP(loglikelihood,priors,settings)
     else
-        !call NestedSamplingL(loglikelihood,M,settings) 
+        call NestedSamplingL(loglikelihood,priors,settings) 
     end if
 #else
-    call NestedSamplingL(loglikelihood,priors,M,settings) 
+    call NestedSamplingL(loglikelihood,priors,settings) 
 #endif 
 
 
