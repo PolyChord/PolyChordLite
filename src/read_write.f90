@@ -43,7 +43,7 @@ module read_write_module
         ! Number of saved posterior points
         write(write_resume_unit,'(I)') nposterior
         ! posterior points
-        write(write_resume_unit,'(<settings%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+        write(write_resume_unit,'(<M%nDims+M%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
 
         close(write_resume_unit)
 

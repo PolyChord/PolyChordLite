@@ -8,7 +8,8 @@ program main
     use settings_module,        only: program_settings
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective
+    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective, &
+                                      isotropic_nhats,unimodal_nhats
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -73,13 +74,13 @@ program main
     ! (i) Choose the loglikelihood
     !       Possible example likelihoods:
     !       - gaussian_loglikelihood
+    !       - gaussian_shell
     !       - rosenbrock_loglikelihood
     !       - himmelblau_loglikelihood
     !       - rastrigin_loglikelihood
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    !     loglikelihood => <choice>
     loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
@@ -110,13 +111,6 @@ program main
 
 
 
-    !call allocate_prior_arrays(M)
-
-    !       - settings of priors
-    call allocate_prior_arrays(M)
-    settings%uniform_params(:,1) = 0.5-1d-2*5  
-    settings%uniform_params(:,2) = 0.5+1d-2*5   
-
     call set_up_prior_indices(M)
 
 
@@ -124,24 +118,26 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 500                      !number of live points
-    settings%num_chords           = 6                        !Number of chords to draw (after each randomisation)
+    settings%num_chords           = 8                        !Number of chords to draw (after each randomisation)
     settings%num_randomisations   = 4                        !Number of randomisations to choose, 4 seems fine in most cases
 
-    settings%read_resume          = .true.                   !whether or not to resume from file
+    settings%read_resume          = .false.                  !whether or not to resume from file
 
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
+    settings%generate_directions  => isotropic_nhats         !evidence calculator
     settings%feedback             =  1                       !degree of feedback
-    settings%precision_criterion  =  1d-1                    !degree of precision in answer
-    settings%max_ndead            =  -1                      !maximum number of samples
+    settings%precision_criterion  =  1d-8                    !degree of precision in answer
+    settings%max_ndead            =  4800                    !maximum number of samples
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
     settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
+    settings%save_all             = .false.                  !Save all the dead points?
 
 
     ! ======= (2) Perform Nested Sampling =======

@@ -5,7 +5,7 @@ module evidence_module
     contains
 
 
-    !> Evidence calculator based on Keeton's paper ([arXiv:1102.0996](http://arxiv.org/abs/1102.0996))
+    !> Moments-based Evidence calculator based on Keeton's paper ([arXiv:1102.0996](http://arxiv.org/abs/1102.0996))
     !!
     !! The evidence calculator recieves the relevent information, namely 
     !! * the loglikelihood of the newly created point ( new_loglikelihood )
@@ -13,14 +13,49 @@ module evidence_module
     !! * number of iterations/dead points ( ndead )
     !!
     !! It ouputs 
-    !! * a length 2 vector ( evidence_vec ) with the [evidence, evidence error] in the value of the function
+    !! * a length 6 vector ( evidence_vec ) with the [logevidence, logevidence error] in the value of the first two positions
+    !!   (the remainder of the vector contains data which needs to be accumulated in order to make the calculation)
     !! * whether more samples are needed in the logical variable more_samples_needed
     !!
     !! The Keeton evidence calculates using the algorithm outlined in ([arXiv:1102.0996](http://arxiv.org/abs/1102.0996)),
     !! using a moment-based error analysis.
     !!
-    !! The algorithm terminates when the contribution from the live evidence is
-    !! less than a fraction of the contribution from the dead evidence
+    !! Let \f$M\f$ be the number of live points and \f$N\f$ be the number of dead points.
+    !! Effectively we wish to evaluate the evidence composed of two contributions:
+    !! \f[ Z = Z_\mathrm{dead} + Z_\mathrm{live}\f]
+    !!
+    !! where:
+    !!
+    !! \f[ Z_\mathrm{dead} = \frac{1}{M} \sum_{i=1}^{N} L_i\left(\frac{M}{M+1}\right)^{i} \qquad
+    !!     Z_\mathrm{live} = \frac{1}{M} \left(\frac{M}{M+1}\right)^{N}\sum_{i=1}^{M} L_i^\mathrm{live} = X_N\langle L^\mathrm{live}\rangle \f]
+    !!
+    !! In addition, we wish to calculate the error, which can be expressed as:
+    !! \f[ \sigma_Z^2 =  \sigma_\mathrm{dead}^2 +\sigma_\mathrm{cross}^2 + \sigma_\mathrm{live}^2 \f]
+    !! where
+    !! \f[ \sigma_\mathrm{dead}^2 = \frac{2}{M(M+1)} \sum_{k=1}^{N} L_k \left(\frac{M}{M+1}\right)^{k} \sum_{i=1}^{k} L_i \left(\frac{M+1}{M+2}\right)^{i} - \frac{1}{M^2} \left[\sum_{i=1}^{N} L_i \left(\frac{M}{M+1}\right)^{i}\right]^2 \f]
+    !! \f[ \sigma_\mathrm{cross}^2 = 2 \langle L^\mathrm{live}\rangle \left(\frac{M}{M+1}\right)^N \sum_{i=1}^{N} L_i \left[ \frac{1}{M+1}\left(\frac{M+1}{M+2}\right)^i - \frac{1}{M}\left(\frac{M}{M+1}\right)^i \right]  \f]
+    !! \f[ \sigma_\mathrm{live}^2 = \langle L^\mathrm{live}\rangle^2 \left(\frac{M}{M+1}\right)^N \left[ \left(\frac{M+1}{M+2}\right)^N - \left(\frac{M}{M+1}\right)^N \right]  \f]
+    !!
+    !! These rather impenetrable expressions may be simplified by defining:
+    !! \f[ X_k = \left(\frac{M}{M+1}\right)^k \qquad
+    !!  Y_k = \left(\frac{M+1}{M+2}\right)^k \qquad
+    !!  Z_\mathrm{dead}^\prime  = \frac{1}{M+1} \sum_{i=1}^{N} L_i Y_i \qquad
+    !!  \hat{Z}_\mathrm{dead} = \sum_{k=1}^{N} \frac{1}{M}L_k X_k \sum_{i=1}^{k} \frac{1}{M+1}L_i Y_i \f]
+    !! so that they become
+    !! \f[ \sigma_\mathrm{dead}^2 = 2\hat{Z}_\mathrm{dead} - Z_\mathrm{dead}^2 \f]
+    !! \f[ \sigma_\mathrm{cross}^2 = 2 \langle L^\mathrm{live}\rangle X_N (Z_\mathrm{dead}^\prime-Z_\mathrm{dead}) \f]
+    !! \f[ \sigma_\mathrm{live}^2 = \langle L^\mathrm{live}\rangle^2 X_N \left[ Y_N - X_N \right]  \f]
+    !! 
+    !! We can update these accordingly at each iteration:
+    !! \f[ Z_\mathrm{live} \rightarrow Z_\mathrm{live} + X_M\frac{L_\mathrm{new}}{M} - X_M\frac{L_\mathrm{old}}{M} \f]
+    !! \f[ Z_\mathrm{dead} \rightarrow Z_\mathrm{dead} + \frac{1}{M}L_\mathrm{old}X_N \f]
+    !! \f[ Z_\mathrm{dead}^\prime \rightarrow Z_\mathrm{dead}^\prime + \frac{1}{M+1}L_\mathrm{old}Y_N \f]
+    !! \f[ \hat{Z}_\mathrm{dead} \rightarrow \hat{Z}_\mathrm{dead} + \frac{1}{M}L_\mathrm{old}X_N Z_\mathrm{dead}^\prime\f]
+    !! and ensure that we save both the dead and live evidences for future use. The dead evidence is stored in 
+    !! evidence_vec(3), and the live evidence is stored in evidence_vec(6)
+    !!
+    !! Also note that in order to prevent floating point errors, all of these are done with the logarithmic values
+    !!
     subroutine KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed, evidence_vec)
         use settings_module
         use utils_module, only: logzero,logaddexp,logsubexp
@@ -40,7 +75,7 @@ module evidence_module
         !> number of dead points/ number of iterations
         integer,                intent(in) :: ndead
 
-        !> vector containing [logevidence, logevidence error,logZ_dead,logZ2_dead,logZ2_deadp,logmean_loglike_live]
+        !> vector containing [logevidence, logevidence error,logZ_dead,logZhat_dead,logZp_dead,logmean_loglike_live]
         double precision, intent(inout), dimension(6) :: evidence_vec
 
         ! ------- Outputs ------- 
@@ -57,11 +92,11 @@ module evidence_module
 
         ! The accumulated evidence squared Z^2
         ! Z2_dead = 1/nlive  sum_k L_k  (nlive/(nlive+1))^k * Z2_deadp_k
-        double precision :: logZ2_dead = logzero
+        double precision :: logZhat_dead = logzero
 
         ! part of the accumulated evidence squared
         ! Z2_deadp = 1/(nlive+1)  sum_k L_k  ((nlive+1)/(nlive+2))^k
-        double precision :: logZ2_deadp = logzero
+        double precision :: logZp_dead = logzero
 
         ! the mean log likelihood of the live points
         ! mean_log_like_live = 1/nlive * sum(L_live)
@@ -95,18 +130,18 @@ module evidence_module
 
         ! Grab the accumulated values
         logZ_dead           = evidence_vec(3)
-        logZ2_dead          = evidence_vec(4)
-        logZ2_deadp         = evidence_vec(5)
-        logmean_loglike_live= evidence_vec(6)
+        logmean_loglike_live= evidence_vec(4)
+        logZhat_dead          = evidence_vec(5)
+        logZp_dead         = evidence_vec(6)
 
         ! Add the evidence contribution of the kth dead point to the accumulated dead evidence
         logZ_dead = logaddexp(logZ_dead , old_loglikelihood+ logX_k -lognlive )
 
         ! Accumulate part of the dead evidence^2
-        logZ2_deadp = logaddexp(logZ2_deadp, old_loglikelihood + logY_k -lognlivep1  )
+        logZp_dead = logaddexp(logZp_dead, old_loglikelihood + logY_k -lognlivep1  )
 
         ! Accumulate the rest of the dead evidence^2
-        logZ2_dead = logaddexp(logZ2_dead, old_loglikelihood + logX_k + logZ2_deadp- lognlive )
+        logZhat_dead = logaddexp(logZhat_dead, old_loglikelihood + logX_k + logZp_dead- lognlive )
 
 
         ! Add the contribution of the new_loglikelihood from the mean ...
@@ -122,20 +157,20 @@ module evidence_module
         logmean = logaddexp(logZ_dead, logmean_loglike_live + logX_k) 
 
         ! Calculate the variance in the evidence
-        logvariance = logsubexp(log2 +logZ2_dead,2*logZ_dead)                                         ! dead contribution
+        logvariance = logsubexp(log2 +logZhat_dead,2*logZ_dead)                                         ! dead contribution
 
         logvariance = logaddexp(logvariance,2*logmean_loglike_live + logX_k+ logsubexp(logY_k,logX_k))    ! live contribution
 
-        logvariance = logaddexp(logvariance, log2 + logmean_loglike_live + logX_k + logZ2_deadp ) ! cross correlation
+        logvariance = logaddexp(logvariance, log2 + logmean_loglike_live + logX_k + logZp_dead ) ! cross correlation
         logvariance = logsubexp(logvariance, log2 + logmean_loglike_live + logX_k + logZ_dead       )
 
         ! Pass the mean and variance to evidence_vec in order to be outputted
         evidence_vec(1) = logmean 
         evidence_vec(2) = logvariance 
         evidence_vec(3) = logZ_dead            
-        evidence_vec(4) = logZ2_dead           
-        evidence_vec(5) = logZ2_deadp          
-        evidence_vec(6) = logmean_loglike_live 
+        evidence_vec(4) = logmean_loglike_live 
+        evidence_vec(5) = logZhat_dead           
+        evidence_vec(6) = logZp_dead          
 
 
         ! Test to see whether we have enough samples. If the contribution from
@@ -150,7 +185,6 @@ module evidence_module
 
 
     end subroutine KeetonEvidence
-
 
 
 

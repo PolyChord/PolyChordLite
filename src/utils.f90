@@ -25,6 +25,8 @@ module utils_module
     integer, parameter :: write_resume_unit = 11
     !> unit for writing to txt file
     integer, parameter :: write_txt_unit = 12
+    !> unit for writing dead file
+    integer, parameter :: write_dead_unit = 13
 
     ! All series used to approximate F are computed with relative
     ! tolerance:
@@ -94,28 +96,28 @@ module utils_module
     end function logsumexp
 
 
-    function logaddexp(a,b)
+    function logaddexp(loga,logb)
         implicit none
-        double precision :: a
-        double precision :: b
+        double precision :: loga
+        double precision :: logb
         double precision :: logaddexp
 
-        if (a>b) then
-            logaddexp = a + log(exp(b-a) + 1)
+        if (loga>logb) then
+            logaddexp = loga + log(exp(logb-loga) + 1)
         else
-            logaddexp = b + log(exp(a-b) + 1)
+            logaddexp = logb + log(exp(loga-logb) + 1)
         end if
 
     end function logaddexp
 
-    function logsubexp(a,b)
+    function logsubexp(loga,logb)
         implicit none
-        double precision :: a
-        double precision :: b
+        double precision :: loga
+        double precision :: logb
         double precision :: logsubexp
 
-        if(a>b) then
-            logsubexp = a + log(1-exp(b-a))
+        if(loga>logb) then
+            logsubexp = loga + log(1-exp(logb-loga))
         else 
             logsubexp = logzero
         end if

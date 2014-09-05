@@ -7,12 +7,12 @@ module nested_sampling_linear_module
     subroutine NestedSamplingL(loglikelihood,priors,M,settings)
         use priors_module,     only: prior
         use model_module,      only: model
-        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit
+        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file
         use feedback_module
-        use random_module,     only: random_integer
+        use random_module,     only: random_integer,random_direction
 
         implicit none
 
@@ -73,6 +73,9 @@ module nested_sampling_linear_module
         double precision :: logminimumweight
 
 
+        double precision :: nhats(M%nDims,settings%num_chords)
+
+
 
         call write_opening_statement(M,settings) 
 
@@ -129,7 +132,7 @@ module nested_sampling_linear_module
         else !(not resume) 
             ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
             evidence_vec = logzero
-            evidence_vec(6) = logsumexp(live_data(settings%l0,:)) - log(settings%nlive+0d0)
+            evidence_vec(4) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
         end if !(resume) 
 
         ! (b) get number of dead points
@@ -183,6 +186,8 @@ module nested_sampling_linear_module
         ! Write a resume file before we start
         if(settings%write_resume) call write_resume_file(settings,M,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
 
+        ! Open a dead points file if desired
+        if(settings%save_all) open(write_dead_unit,file=trim(settings%file_root)//'_dead.dat',action='write') 
 
 
         !======= 2) Main loop body =====================================
@@ -206,7 +211,6 @@ module nested_sampling_linear_module
             late_logweight = (ndead-1)*lognlive - ndead*lognlivep1 
 
             ! (2) Generate a new baby point
-
             ! Select a seed point for the generator
             !  -excluding the points which have likelihoods equal to the
             !   loglikelihood bound
@@ -219,6 +223,18 @@ module nested_sampling_linear_module
 
             ! Record the likelihood bound which this seed will generate from
             seed_point(settings%l1) = late_likelihood
+
+            ! Generate a set of directions
+            ! do i_dim=1,M%nDims
+            !     nhat2 = 0
+            !     do while(nhat2==0)
+            !         transformation_matrix(:,i_dim) = live_data(M%h0:M%h1,random_integer(settings%nlive)) - live_data(M%h0:M%h1,random_integer(settings%nlive))
+            !         nhat2 = dot_product(transformation_matrix(:,i_dim),transformation_matrix(:,i_dim))
+            !     end do
+            !     transformation_matrix(:,i_dim) = transformation_matrix(:,i_dim) / sqrt(nhat2)
+            ! end do
+
+            call settings%generate_directions(M,live_data,nhats)
 
             ! Generate a new point within the likelihood bound of the late point
             baby_point = settings%sampler(loglikelihood,priors,seed_point, M)
@@ -238,7 +254,6 @@ module nested_sampling_linear_module
             ! check to see if we've reached this
             if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
 
-
             ! (4) Calculate the new evidence (and check to see if we're accurate enough)
             call settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed,evidence_vec)
 
@@ -251,10 +266,10 @@ module nested_sampling_linear_module
                 ! should add it to the set of saved posterior points
 
                 ! calculate a new point for insertion
-                posterior_point(1)  = late_point(settings%l0) + late_logweight
-                posterior_point(2)  = late_point(settings%l0)
-                posterior_point(3:3+settings%nDims-1) = late_point(settings%p0:settings%p1)
-                posterior_point(4+settings%nDims:4+settings%nDerived-1) = late_point(settings%d0:settings%d1)
+                posterior_point(1)  = late_point(M%l0) + late_logweight
+                posterior_point(2)  = late_point(M%l0)
+                posterior_point(2+1:2+M%nDims) = late_point(M%p0:M%p1)
+                posterior_point(2+M%nDims+1:2+M%nDims+M%nDerived) = late_point(M%d0:M%d1)
 
                 if(nposterior<settings%nmax_posterior) then
                     ! If we're still able to use a restricted array,
@@ -280,6 +295,8 @@ module nested_sampling_linear_module
 
             end if
 
+            live_data(M%last_chord,:) = live_data(M%last_chord,:)/  (1d0+1d0/(M%nDims*settings%nlive) )
+
 
             ! (6) Command line feedback
 
@@ -288,6 +305,9 @@ module nested_sampling_linear_module
 
             ! update the total number of likelihood calls
             total_likelihood_calls = total_likelihood_calls + baby_point(settings%nlike)
+
+            ! update ndead file if we're that way inclined
+            if(settings%save_all) write(write_dead_unit,'(<2*M%nDims+M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>,I8,3E<DBL_FMT(1)>.<DBL_FMT(2)>)')  late_point(M%h0:M%h1), late_point(M%p0:M%p1), late_point(M%d0:M%d1), late_point(M%nlike),late_point(M%last_chord), late_point(M%l0:M%l1)
 
 
             ! Feedback to command line every nlive iterations
@@ -306,6 +326,9 @@ module nested_sampling_linear_module
 
         end do ! End main loop
 
+
+        if(settings%save_all) close(write_dead_unit) 
+
         call write_final_results(M,evidence_vec,ndead,total_likelihood_calls,settings%feedback)
 
     end subroutine NestedSamplingL
@@ -319,7 +342,9 @@ module nested_sampling_linear_module
         use model_module,    only: model, calculate_point
         use random_module,   only: random_reals
         use utils_module,    only: logzero
+
         implicit none
+
         interface
             function loglikelihood(theta,phi,context)
                 double precision, intent(in),  dimension(:) :: theta
