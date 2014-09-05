@@ -2,7 +2,6 @@
 !! details required to perform a nested sampling run.
 module settings_module
     use priors_module,   only: prior
-    use model_module,   only: model
     use utils_module,   only: STR_LENGTH
     implicit none
 
@@ -58,6 +57,66 @@ module settings_module
 
         !> Randomisation frequency for reflective sampler
         integer :: num_randomisations = 4
+
+        !> Dimensionality of the space
+        integer :: nDims = 1
+        !> Number of derived parameters
+        integer :: nDerived = 0   
+        !> 2*ndims + nDerived + 1
+        integer :: nTotal      
+
+        ! Indices for the sections of a live_points array
+
+        !> hypercube indices
+        !!
+        !! These are the coordinates in the unit hypercube.
+        !! h0 indicates the starting index, h1 the finishing index.
+        integer :: h0,h1       
+
+        !> physical indices
+        !!
+        !! These are the coordinates in the physical space 
+        !! These are linked to the hypercube coordinates via the prior.
+        !! p0 indicates the starting index, p1 the finishing index
+        integer :: p0,p1       
+
+        !> derived indices
+        !!
+        !! These are the indices of the derived parameters to be calculated
+        !! during the run.
+        !! d0 indicates the starting index, d1 the finishing index
+        integer :: d0,d1       
+
+        ! Algorithm indices
+        !> The number of likelihood evaluations required to calculate this point
+        integer :: nlike
+        !> The last chord length used in calculating this point
+        integer :: last_chord
+#ifdef MPI
+        !> Pointer to any daughter points
+        integer :: daughter
+#endif
+
+        !> likelihood index
+        !!
+        !! This is the likelihood evaluated at the position of the live point
+        integer :: l0          
+        !> This is the likelihood contour which generated the live point
+        integer :: l1          
+
+        !> Pointer to any additional files that need to be stored in between
+        !! evaluations (only really important for C likelihoods)
+        integer :: context
+
+        !> Grades of parameters
+        !!
+        !! In the case of 'fast-slow' parameters, these indicate the 'grade' of
+        !! parameter. grade=1 is slowest, 
+        integer, dimension(:), allocatable :: grade
+
+
+
+
 
         !> Pointer to the sampling procedure.
         !!
@@ -116,10 +175,9 @@ module settings_module
         !! The sampling procedure takes the details of the model (M) and the current
         !! set of live points (live_data) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
-        !! loglikelihood bound contained at the M%l1 index of seed_point
-        function samp(loglikelihood,priors,settings, seed_point,M) result(baby_point)
+        !! loglikelihood bound contained at the settings%l1 index of seed_point
+        function samp(loglikelihood,priors,settings,seed_point) result(baby_point)
 
-            import :: model
             import :: program_settings   
             import :: prior
             implicit none
@@ -139,15 +197,12 @@ module settings_module
             !> program settings (mostly useful to pass on the number of live points)
             class(program_settings), intent(in) :: settings
 
-            !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-            type(model),            intent(in) :: M
-
             !> The seed point
-            double precision, intent(in), dimension(M%nTotal)   :: seed_point
+            double precision, intent(in), dimension(settings%nTotal)   :: seed_point
 
             ! ------- Outputs -------
             !> The newly generated point
-            double precision,    dimension(M%nTotal)     :: baby_point
+            double precision,    dimension(settings%nTotal)     :: baby_point
 
 
         end function samp

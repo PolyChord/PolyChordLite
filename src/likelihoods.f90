@@ -1,7 +1,6 @@
 !> This file contains various likelihoods ready to be used in main.f90
 
 module example_likelihoods
-    use model_module,    only: model
     use utils_module,    only: logzero,TwoPi,stdout_unit,Hypergeometric1F1,Hypergeometric2F1,Pochhammer 
 #ifdef MPI
     use mpi_module
@@ -223,7 +222,7 @@ module example_likelihoods
     !! The function is named after David Mautner Himmelblau (1924-2011), who
     !! introduced it. 
     !! 
-    !! Note that this is a 2D function, and should hence only be used for M%nDims=2
+    !! Note that this is a 2D function, and should hence only be used for settings%nDims=2
     !!
     function himmelblau_loglikelihood(theta,phi,context) result(loglikelihood)
         use utils_module, only: logzero

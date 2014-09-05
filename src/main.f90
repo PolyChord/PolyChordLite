@@ -83,24 +83,24 @@ program main
     loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    M%nDims=8                  ! Dimensionality of the space
-    M%nDerived = 0             ! Assign the number of derived parameters
+    settings%nDims=8                  ! Dimensionality of the space
+    settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
-    M%uniform_num = M%nDims
+    settings%uniform_num = settings%nDims
 
     call allocate_live_indices(M)
 
     ! (v) Set up priors
-    allocate(minimums(M%nDims))
-    allocate(maximums(M%nDims))
-    allocate(physical_indices(M%nDims))
-    allocate(hypercube_indices(M%nDims))
+    allocate(minimums(settings%nDims))
+    allocate(maximums(settings%nDims))
+    allocate(physical_indices(settings%nDims))
+    allocate(hypercube_indices(settings%nDims))
 
     minimums=0.5-1d-2*5   
     maximums=0.5+1d-2*5    
 
-    do i=1,M%nDims
+    do i=1,settings%nDims
         physical_indices(i)  = i
         hypercube_indices(i) = i
     end do
@@ -114,8 +114,8 @@ program main
 
     !       - settings of priors
     call allocate_prior_arrays(M)
-    M%uniform_params(:,1) = 0.5-1d-2*5  
-    M%uniform_params(:,2) = 0.5+1d-2*5   
+    settings%uniform_params(:,1) = 0.5-1d-2*5  
+    settings%uniform_params(:,2) = 0.5+1d-2*5   
 
     call set_up_prior_indices(M)
 
@@ -124,7 +124,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 500                      !number of live points
-    settings%num_chords           = M%nDims*5                !Number of chords to draw (after each randomisation)
+    settings%num_chords           = 6                        !Number of chords to draw (after each randomisation)
     settings%num_randomisations   = 4                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .true.                   !whether or not to resume from file
@@ -132,15 +132,15 @@ program main
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => ChordalSamplingReflective         !Sampler choice
+    settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-1                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
-    settings%write_resume         = .true.                   !whether or not to write resume files
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
 
 

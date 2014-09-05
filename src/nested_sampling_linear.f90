@@ -34,10 +34,10 @@ module nested_sampling_linear_module
         !> This is a very important array. live_data(:,i) constitutes the
         !! information in the ith live point in the unit hypercube:
         !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(M%nTotal,settings%nlive) :: live_data
+        double precision, dimension(settings%nTotal,settings%nlive) :: live_data
 
         double precision, allocatable, dimension(:,:) :: posterior_array
-        double precision, dimension(M%nDims+M%nDerived+2) :: posterior_point
+        double precision, dimension(settings%nDims+settings%nDerived+2) :: posterior_point
         integer :: nposterior
         integer :: insertion_index(1)
         integer :: late_index(1)
@@ -45,16 +45,16 @@ module nested_sampling_linear_module
         logical :: more_samples_needed
 
         ! The new-born baby point
-        double precision,    dimension(M%nTotal)   :: baby_point
+        double precision,    dimension(settings%nTotal)   :: baby_point
         double precision :: baby_likelihood
 
         ! The recently dead point
-        double precision,    dimension(M%nTotal)   :: late_point
+        double precision,    dimension(settings%nTotal)   :: late_point
         double precision :: late_likelihood
         double precision :: late_logweight
 
         ! Point to seed a new one from
-        double precision,    dimension(M%nTotal)   :: seed_point
+        double precision,    dimension(settings%nTotal)   :: seed_point
 
 
         ! Evidence info
@@ -96,7 +96,7 @@ module nested_sampling_linear_module
             ! If there is a resume file present, then load the live points from that
             open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
             ! Read the live data
-            read(read_resume_unit,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
+            read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
         else !(not resume)
             call write_started_generating(settings%feedback)
 
@@ -129,7 +129,7 @@ module nested_sampling_linear_module
         else !(not resume) 
             ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
             evidence_vec = logzero
-            evidence_vec(6) = logsumexp(live_data(M%l0,:)) - log(settings%nlive+0d0)
+            evidence_vec(6) = logsumexp(live_data(settings%l0,:)) - log(settings%nlive+0d0)
         end if !(resume) 
 
         ! (b) get number of dead points
@@ -155,7 +155,7 @@ module nested_sampling_linear_module
 
         ! (d) Posterior array
 
-        allocate(posterior_array(M%nDims+M%nDerived+2,settings%nmax_posterior))
+        allocate(posterior_array(settings%nDims+settings%nDerived+2,settings%nmax_posterior))
         nposterior = 0
         ! set all of the loglikelihoods and logweights to be zero initially
         posterior_array(1:2,:) = logzero
@@ -167,7 +167,7 @@ module nested_sampling_linear_module
             ! Read the actual number we've used so far
             read(read_resume_unit,'(I)') nposterior
             !...followed by the posterior array itself
-            read(read_resume_unit,'(<M%nDims+M%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+            read(read_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
         end if !(resume) 
 
         ! Close the resume file if we've openend it
@@ -197,11 +197,11 @@ module nested_sampling_linear_module
             ! (1) Get the late point
 
             ! Find the point with the lowest likelihood...
-            late_index = minloc(live_data(M%l0,:))
+            late_index = minloc(live_data(settings%l0,:))
             ! ...and save it.
             late_point = live_data(:,late_index(1))
             ! Get the likelihood contour
-            late_likelihood = late_point(M%l0)
+            late_likelihood = late_point(settings%l0)
             ! Calculate the late logweight
             late_logweight = (ndead-1)*lognlive - ndead*lognlivep1 
 
@@ -210,19 +210,19 @@ module nested_sampling_linear_module
             ! Select a seed point for the generator
             !  -excluding the points which have likelihoods equal to the
             !   loglikelihood bound
-            seed_point(M%l0)=late_likelihood
-            do while (seed_point(M%l0)<=late_likelihood)
+            seed_point(settings%l0)=late_likelihood
+            do while (seed_point(settings%l0)<=late_likelihood)
                 ! get a random number in [1,nlive]
                 ! get this point from live_data 
                 seed_point = live_data(:,random_integer(settings%nlive))
             end do
 
             ! Record the likelihood bound which this seed will generate from
-            seed_point(M%l1) = late_likelihood
+            seed_point(settings%l1) = late_likelihood
 
             ! Generate a new point within the likelihood bound of the late point
             baby_point = settings%sampler(loglikelihood,priors,seed_point, M)
-            baby_likelihood  = baby_point(M%l0)
+            baby_likelihood  = baby_point(settings%l0)
 
 
             ! (3) Insert the baby point into the set of live points (over the
@@ -246,15 +246,15 @@ module nested_sampling_linear_module
 
 
             ! (5) Update the set of weighted posteriors
-            if( settings%calculate_posterior .and. late_point(M%l0) + late_logweight - evidence_vec(1) > logminimumweight ) then
+            if( settings%calculate_posterior .and. late_point(settings%l0) + late_logweight - evidence_vec(1) > logminimumweight ) then
                 ! If the late point has a sufficiently large weighting, then we
                 ! should add it to the set of saved posterior points
 
                 ! calculate a new point for insertion
-                posterior_point(1)  = late_point(M%l0) + late_logweight
-                posterior_point(2)  = late_point(M%l0)
-                posterior_point(3:3+M%nDims-1) = late_point(M%p0:M%p1)
-                posterior_point(4+M%nDims:4+M%nDerived-1) = late_point(M%d0:M%d1)
+                posterior_point(1)  = late_point(settings%l0) + late_logweight
+                posterior_point(2)  = late_point(settings%l0)
+                posterior_point(3:3+settings%nDims-1) = late_point(settings%p0:settings%p1)
+                posterior_point(4+settings%nDims:4+settings%nDerived-1) = late_point(settings%d0:settings%d1)
 
                 if(nposterior<settings%nmax_posterior) then
                     ! If we're still able to use a restricted array,
@@ -284,10 +284,10 @@ module nested_sampling_linear_module
             ! (6) Command line feedback
 
             ! update the mean number of likelihood calls
-            mean_likelihood_calls = mean_likelihood_calls + (baby_point(M%nlike) - late_point(M%nlike) ) / (settings%nlive + 0d0)
+            mean_likelihood_calls = mean_likelihood_calls + (baby_point(settings%nlike) - late_point(settings%nlike) ) / (settings%nlive + 0d0)
 
             ! update the total number of likelihood calls
-            total_likelihood_calls = total_likelihood_calls + baby_point(M%nlike)
+            total_likelihood_calls = total_likelihood_calls + baby_point(settings%nlike)
 
 
             ! Feedback to command line every nlive iterations
@@ -341,7 +341,7 @@ module nested_sampling_linear_module
 
         !live_data(:,i) constitutes the information in the ith live point in the unit hypercube: 
         ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(M%nTotal,nlive) :: live_data
+        double precision, dimension(settings%nTotal,nlive) :: live_data
 
         ! Loop variable
         integer i_live
@@ -352,7 +352,7 @@ module nested_sampling_linear_module
         do i_live=1,nlive
 
             ! Generate a random coordinate
-            live_data(:,i_live) = random_reals(M%nDims)
+            live_data(:,i_live) = random_reals(settings%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
             call calculate_point( loglikelihood, priors,M, live_data(:,i_live) )
@@ -360,10 +360,10 @@ module nested_sampling_linear_module
         end do
 
         ! Set the number of likelihood calls for each point to 1
-        live_data(M%nlike,:) = 1
+        live_data(settings%nlike,:) = 1
 
         ! Set the initial trial values of the chords as the diagonal of the hypercube
-        live_data(M%last_chord,:) = sqrt(M%nDims+0d0)
+        live_data(settings%last_chord,:) = sqrt(settings%nDims+0d0)
 
 
     end function GenerateLivePoints

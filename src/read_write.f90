@@ -18,7 +18,7 @@ module read_write_module
         integer :: nposterior
         double precision :: mean_likelihood_calls
         integer :: total_likelihood_calls
-        double precision, dimension(M%nDims+2,settings%nmax_posterior) :: posterior_array
+        double precision, dimension(settings%nDims+2,settings%nmax_posterior) :: posterior_array
         double precision, dimension(6)             :: evidence_vec
         integer :: ndead
 
@@ -31,7 +31,7 @@ module read_write_module
         open(write_resume_unit,file=trim(settings%file_root) // '.resume', action='write', iostat=i_err) 
 
         ! Live points
-        write(write_resume_unit,'(<M%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
+        write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
         ! Evidence vector
         write(write_resume_unit,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         ! number of dead points
@@ -43,7 +43,7 @@ module read_write_module
         ! Number of saved posterior points
         write(write_resume_unit,'(I)') nposterior
         ! posterior points
-        write(write_resume_unit,'(<M%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+        write(write_resume_unit,'(<settings%nDims+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
 
         close(write_resume_unit)
 
@@ -60,7 +60,7 @@ module read_write_module
         integer :: nposterior
         type(program_settings), intent(in) :: settings
         type(model),            intent(in) :: M
-        double precision, dimension(M%nDims+M%nDerived+2,nposterior) :: posterior_array
+        double precision, dimension(settings%nDims+settings%nDerived+2,nposterior) :: posterior_array
         double precision                           :: evidence
 
         integer :: i_err
@@ -78,7 +78,7 @@ module read_write_module
         do i_posterior=1,nposterior
 
             if (posterior_array(1,i_posterior)-evidence > logminimum_weight)                 &
-                write(write_txt_unit,'(<M%nDims+M%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')   &
+                write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')   &
                 exp(posterior_array(1,i_posterior)-evidence),posterior_array(2:,i_posterior)
         end do
 

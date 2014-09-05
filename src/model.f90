@@ -289,38 +289,6 @@ module model_module
 
 
 
-    subroutine calculate_point(loglikelihood,priors,M,live_data)
-        implicit none
-        interface
-            function loglikelihood(theta,phi,context)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
-                double precision :: loglikelihood
-            end function
-        end interface
-
-        type(prior), dimension(:), intent(in) :: priors
-        type(model),     intent(in)                   :: M
-        double precision, intent(inout) , dimension(:) :: live_data
-
-        if ( any(live_data(M%h0:M%h1)<0d0) .or. any(live_data(M%h0:M%h1)>1d0) )  then
-            live_data(M%p0:M%p1) = 0
-            live_data(M%l0) = logzero
-        else
-            ! Transform the the hypercube coordinates to the physical coordinates
-            live_data(M%p0:M%p1) = hypercube_to_physical( live_data(M%h0:M%h1),priors )
-
-            ! Calculate the likelihood and store it in the last index
-            live_data(M%l0) = loglikelihood( live_data(M%p0:M%p1), live_data(M%d0:M%d1),M%context)
-
-            ! accumulate the number of likelihood calls that we've made
-            live_data(M%nlike) = live_data(M%nlike)+1
-        end if
-
-    end subroutine calculate_point
-
-
 !    subroutine hypercube_to_physical(M, live_data)
 !        type(model),     intent(in)                   :: M
 !        double precision, intent(inout) , dimension(:) :: live_data

@@ -32,16 +32,16 @@ module chordal_module
         type(model),            intent(in) :: M
 
         !> The seed point
-        double precision, intent(in), dimension(M%nTotal)   :: seed_point
+        double precision, intent(in), dimension(settings%nTotal)   :: seed_point
 
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(M%nTotal)   :: baby_point
+        double precision,    dimension(settings%nTotal)   :: baby_point
 
 
         ! ------- Local Variables -------
-        double precision,    dimension(M%nDims)   :: nhat
+        double precision,    dimension(settings%nDims)   :: nhat
 
         double precision  :: max_chord
 
@@ -53,37 +53,37 @@ module chordal_module
         baby_point = seed_point
 
         ! Set the number of likelihood evaluations to zero
-        baby_point(M%nlike) = 0
+        baby_point(settings%nlike) = 0
 
         ! Record the step length
-        step_length = seed_point(M%last_chord)
+        step_length = seed_point(settings%last_chord)
 
         ! Initialise max_chord at 0
         max_chord = 0
 
         do i=1,settings%num_chords
             ! Give the baby point the step length
-            baby_point(M%last_chord) = step_length
+            baby_point(settings%last_chord) = step_length
 
             ! Get a new random direction
-            nhat = random_direction(M%nDims) 
+            nhat = random_direction(settings%nDims) 
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point(loglikelihood,priors, nhat, baby_point, M)
+            baby_point = random_chordal_point(loglikelihood,priors, nhat, baby_point, settings)
 
             ! keep track of the largest chord
-            max_chord = max(max_chord,baby_point(M%last_chord))
+            max_chord = max(max_chord,baby_point(settings%last_chord))
         end do
 
 #ifdef MPI
         ! Make sure to hand back any incubator information which has likely been
         ! overwritten
-        baby_point(M%daughter) = seed_point(M%daughter)
+        baby_point(settings%daughter) = seed_point(settings%daughter)
 #endif
 
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
-        baby_point(M%last_chord) = max_chord
+        baby_point(settings%last_chord) = max_chord
 
     end function ChordalSampling
 
@@ -115,16 +115,16 @@ module chordal_module
         type(model),            intent(in) :: M
 
         !> The seed point
-        double precision, intent(in), dimension(M%nTotal)   :: seed_point
+        double precision, intent(in), dimension(settings%nTotal)   :: seed_point
 
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(M%nTotal)   :: baby_point
+        double precision,    dimension(settings%nTotal)   :: baby_point
 
 
         ! ------- Local Variables -------
-        double precision,    dimension(M%nDims,product(settings%nums_chords))   :: nhats
+        double precision,    dimension(settings%nDims,product(settings%nums_chords))   :: nhats
 
         double precision  :: max_chord
 
@@ -137,19 +137,19 @@ module chordal_module
         baby_point = seed_point
 
         ! Set the number of likelihood evaluations to zero
-        baby_point(M%nlike) = 0
+        baby_point(settings%nlike) = 0
 
         ! Record the step length
-        step_length = seed_point(M%last_chord)
+        step_length = seed_point(settings%last_chord)
 
         ! Initialise max_chord at 0
         max_chord = 0
 
         ! Generate the set of nhats to use
         nhats=0
-        do i=1,M%nDims
-            nhats(i,: product(settings%nums_chords) : product(settings%nums_chords)/product(settings%nums_chords(:M%grade(i))) ) &
-                = random_gaussian(product(settings%nums_chords(:M%grade(i))))
+        do i=1,settings%nDims
+            nhats(i,: product(settings%nums_chords) : product(settings%nums_chords)/product(settings%nums_chords(:settings%grade(i))) ) &
+                = random_gaussian(product(settings%nums_chords(:settings%grade(i))))
         end do
         do i=1,product(settings%nums_chords)
             nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i)))
@@ -157,24 +157,24 @@ module chordal_module
 
         do i=1,product(settings%nums_chords)
             ! Give the baby point the step length
-            baby_point(M%last_chord) = step_length
+            baby_point(settings%last_chord) = step_length
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point(loglikelihood,priors, nhats(:,i), baby_point, M)
+            baby_point = random_chordal_point(loglikelihood,priors, nhats(:,i), baby_point, settings)
 
             ! keep track of the largest chord
-            max_chord = max(max_chord,baby_point(M%last_chord))
+            max_chord = max(max_chord,baby_point(settings%last_chord))
         end do
 
 #ifdef MPI
         ! Make sure to hand back any incubator information which has likely been
         ! overwritten
-        baby_point(M%daughter) = seed_point(M%daughter)
+        baby_point(settings%daughter) = seed_point(settings%daughter)
 #endif
 
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
-        baby_point(M%last_chord) = max_chord
+        baby_point(settings%last_chord) = max_chord
 
     end function ChordalSamplingFastSlow
 
@@ -206,18 +206,18 @@ module chordal_module
         type(model),            intent(in) :: M
 
         !> The seed point
-        double precision, intent(in), dimension(M%nTotal)   :: seed_point
+        double precision, intent(in), dimension(settings%nTotal)   :: seed_point
 
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(M%nTotal)   :: baby_point
+        double precision,    dimension(settings%nTotal)   :: baby_point
 
 
         ! ------- Local Variables -------
-        double precision,    dimension(M%nDims)   :: nhat
-        double precision,    dimension(M%nDims)   :: gradL
-        double precision,    dimension(M%nDims)   :: gradLperp
+        double precision,    dimension(settings%nDims)   :: nhat
+        double precision,    dimension(settings%nDims)   :: gradL
+        double precision,    dimension(settings%nDims)   :: gradLperp
         double precision                          :: gradL2
 
         double precision  :: max_chord
@@ -230,62 +230,62 @@ module chordal_module
         baby_point = seed_point
 
         ! Set the number of likelihood evaluations to zero
-        baby_point(M%nlike) = 0
+        baby_point(settings%nlike) = 0
 
 
         ! Record the step length
-        step_length = seed_point(M%last_chord)
+        step_length = seed_point(settings%last_chord)
 
         ! Initialise max_chord at 0
         max_chord = 0
 
         ! Get a new random direction
-        nhat = random_direction(M%nDims) 
+        nhat = random_direction(settings%nDims) 
 
 
         do i=1,settings%num_chords*settings%num_randomisations
             ! Give the baby point the step length
-            baby_point(M%last_chord) = step_length
+            baby_point(settings%last_chord) = step_length
 
             ! Generate a new nhat by reflecting the old one
             if(mod(i,settings%num_chords)==1) then
-                nhat = random_direction(M%nDims)
+                nhat = random_direction(settings%nDims)
             else
                 ! Get the grad loglikelihood
-                gradL = gradloglike(loglikelihood,M,baby_point(M%p0:M%p1),baby_point(M%l0),step_length*1d-3)
-                baby_point(M%nlike) = baby_point(M%nlike)+M%nDims
+                gradL = gradloglike(loglikelihood,M,baby_point(settings%p0:settings%p1),baby_point(settings%l0),step_length*1d-3)
+                baby_point(settings%nlike) = baby_point(settings%nlike)+settings%nDims
 
                 ! Normalise the grad loglikelihood
                 gradL2 = dot_product(gradL,gradL)
 
                 if (gradL2 /= 0d0 ) then
-                    !gradLperp = random_subdirection(M%nDims,gradL)
+                    !gradLperp = random_subdirection(settings%nDims,gradL)
                     !nhat = sqrt(1-(dot_product(gradL,nhat))**2/gradL2 )* gradLperp + dot_product(gradL,nhat)/gradL2 * gradL
                     nhat = nhat - 2d0* dot_product(gradL,nhat)/gradL2 * gradL
                 else
-                    nhat = random_direction(M%nDims)
+                    nhat = random_direction(settings%nDims)
                 end if
 
-                !write(*,'(6E17.5)') baby_point(M%p0:M%p1), gradL/sqrt(gradL2)
+                !write(*,'(6E17.5)') baby_point(settings%p0:settings%p1), gradL/sqrt(gradL2)
 
             end if
 
             ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point(loglikelihood,priors, nhat, baby_point, M)
+            baby_point = random_chordal_point(loglikelihood,priors, nhat, baby_point, settings)
 
             ! keep track of the largest chord
-            max_chord = max(max_chord,baby_point(M%last_chord))
+            max_chord = max(max_chord,baby_point(settings%last_chord))
         end do
 
 #ifdef MPI
         ! Make sure to hand back any incubator information which has likely been
         ! overwritten
-        baby_point(M%daughter) = seed_point(M%daughter)
+        baby_point(settings%daughter) = seed_point(settings%daughter)
 #endif
 
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
-        baby_point(M%last_chord) = max_chord
+        baby_point(settings%last_chord) = max_chord
 
     end function ChordalSamplingReflective
 
@@ -294,7 +294,8 @@ module chordal_module
 
 
 
-    function random_chordal_point(loglikelihood,priors,nhat,seed_point,M) result(baby_point)
+    function random_chordal_point(loglikelihood,priors,nhat,seed_point,settings) result(baby_point)
+        use settings_module, only: program_settings
         use priors_module, only: prior
         use model_module,  only: model, calculate_point
         use utils_module,  only: logzero, distance
@@ -311,48 +312,48 @@ module chordal_module
 
         !> The prior information
         type(prior), dimension(:), intent(in) :: priors
-        !> The details of the model (e.g. number of dimensions,loglikelihood,etc)
-        type(model),            intent(in) :: M
+        !> program settings
+        type(program_settings), intent(in) :: settings
         !> The direction to search for the root in
-        double precision, intent(in),    dimension(M%nDims)   :: nhat
+        double precision, intent(in),    dimension(settings%nDims)   :: nhat
         !> The start point
-        double precision, intent(in),    dimension(M%nTotal)   :: seed_point
+        double precision, intent(in),    dimension(settings%nTotal)   :: seed_point
 
         ! The output finish point
-        double precision,    dimension(M%nTotal)   :: baby_point
+        double precision,    dimension(settings%nTotal)   :: baby_point
 
         ! The upper bound
-        double precision,    dimension(M%nTotal)   :: u_bound
+        double precision,    dimension(settings%nTotal)   :: u_bound
         ! The lower bound
-        double precision,    dimension(M%nTotal)   :: l_bound
+        double precision,    dimension(settings%nTotal)   :: l_bound
 
         double precision :: trial_chord_length
 
         ! estimate at an appropriate chord
-        trial_chord_length = seed_point(M%last_chord)
+        trial_chord_length = seed_point(settings%last_chord)
 
         ! record the number of likelihood calls
-        u_bound(M%nlike) = seed_point(M%nlike)
-        l_bound(M%nlike) = 0
+        u_bound(settings%nlike) = seed_point(settings%nlike)
+        l_bound(settings%nlike) = 0
 
 
         ! Select initial start and end points
-        l_bound(M%h0:M%h1) = seed_point(M%h0:M%h1) - random_real() * trial_chord_length * nhat 
-        u_bound(M%h0:M%h1) = l_bound(M%h0:M%h1) + trial_chord_length * nhat 
+        l_bound(settings%h0:settings%h1) = seed_point(settings%h0:settings%h1) - random_real() * trial_chord_length * nhat 
+        u_bound(settings%h0:settings%h1) = l_bound(settings%h0:settings%h1) + trial_chord_length * nhat 
 
         ! Calculate initial likelihoods
         call calculate_point(loglikelihood,priors,M,u_bound)
         call calculate_point(loglikelihood,priors,M,l_bound)
 
         ! expand u_bound until it's outside the likelihood region
-        do while(u_bound(M%l0) > seed_point(M%l1) )
-            u_bound(M%h0:M%h1) = u_bound(M%h0:M%h1) + nhat * trial_chord_length
+        do while(u_bound(settings%l0) > seed_point(settings%l1) )
+            u_bound(settings%h0:settings%h1) = u_bound(settings%h0:settings%h1) + nhat * trial_chord_length
             call calculate_point(loglikelihood,priors,M,u_bound)
         end do
 
         ! expand l_bound until it's outside the likelihood region
-        do while(l_bound(M%l0) > seed_point(M%l1) )
-            l_bound(M%h0:M%h1) = l_bound(M%h0:M%h1) - nhat * trial_chord_length
+        do while(l_bound(settings%l0) > seed_point(settings%l1) )
+            l_bound(settings%h0:settings%h1) = l_bound(settings%h0:settings%h1) - nhat * trial_chord_length
             call calculate_point(loglikelihood,priors,M,l_bound)
         end do
 
@@ -360,44 +361,44 @@ module chordal_module
         baby_point = find_positive_within(l_bound,u_bound)
 
         ! Pass on the loglikelihood bound
-        baby_point(M%l1) = seed_point(M%l1)
+        baby_point(settings%l1) = seed_point(settings%l1)
 
         ! Estimate the next appropriate chord
-        baby_point(M%last_chord) = distance( u_bound(M%h0:M%h1),l_bound(M%h0:M%h1) )!distance( baby_point(M%h0:M%h1),seed_point(M%h0:M%h1) )
+        baby_point(settings%last_chord) = distance( u_bound(settings%h0:settings%h1),l_bound(settings%h0:settings%h1) )!distance( baby_point(settings%h0:settings%h1),seed_point(settings%h0:settings%h1) )
 
         contains
 
         recursive function find_positive_within(l_bound,u_bound) result(finish_point)
             implicit none
             !> The upper bound
-            double precision, intent(inout), dimension(M%nTotal)   :: u_bound
+            double precision, intent(inout), dimension(settings%nTotal)   :: u_bound
             !> The lower bound
-            double precision, intent(inout), dimension(M%nTotal)   :: l_bound
+            double precision, intent(inout), dimension(settings%nTotal)   :: l_bound
 
             ! The output finish point
-            double precision,    dimension(M%nTotal)   :: finish_point
+            double precision,    dimension(settings%nTotal)   :: finish_point
 
             double precision :: random_temp
 
             ! Draw a random point within l_bound and u_bound
             random_temp =random_real()
-            finish_point(M%h0:M%h1) = l_bound(M%h0:M%h1)*(1d0-random_temp) + random_temp * u_bound(M%h0:M%h1)
+            finish_point(settings%h0:settings%h1) = l_bound(settings%h0:settings%h1)*(1d0-random_temp) + random_temp * u_bound(settings%h0:settings%h1)
 
             ! Pass on the number of likelihood calls that have been made
-            finish_point(M%nlike) = l_bound(M%nlike) + u_bound(M%nlike)
+            finish_point(settings%nlike) = l_bound(settings%nlike) + u_bound(settings%nlike)
             ! zero the likelihood calls for l_bound and u_bound, as these are
             ! now stored in point
-            l_bound(M%nlike) = 0
-            u_bound(M%nlike) = 0
+            l_bound(settings%nlike) = 0
+            u_bound(settings%nlike) = 0
 
 
             ! calculate the likelihood 
             call calculate_point(loglikelihood,priors,M,finish_point)
 
             ! If we're not within the likelihood bound then we need to sample further
-            if( finish_point(M%l0) <= seed_point(M%l1) ) then
+            if( finish_point(settings%l0) <= seed_point(settings%l1) ) then
 
-                if ( dot_product(finish_point(M%h0:M%h1)-seed_point(M%h0:M%h1),nhat) > 0d0 ) then
+                if ( dot_product(finish_point(settings%h0:settings%h1)-seed_point(settings%h0:settings%h1),nhat) > 0d0 ) then
                     ! If finish_point is on the u_bound side of seed_point, then
                     ! contract u_bound
                     u_bound = finish_point

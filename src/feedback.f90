@@ -33,8 +33,8 @@ module feedback_module
 
         if(settings%feedback >=0) then
             write(stdout_unit,'("nlive      :",I8)')   settings%nlive
-            write(stdout_unit,'("nDims      :",I8)')   M%nDims
-            write(stdout_unit,'("nDerived   :",I8)')   M%nDerived
+            write(stdout_unit,'("nDims      :",I8)')   settings%nDims
+            write(stdout_unit,'("nDerived   :",I8)')   settings%nDerived
         end if
        
 
