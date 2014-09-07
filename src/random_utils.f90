@@ -406,6 +406,8 @@ module random_module
 
             ! Compute the inverse matrix
             call dpotri ('U',nDims,cholesky,nDims,errcode)
+
+            covmat_saved=covmat
         end if
 
 
