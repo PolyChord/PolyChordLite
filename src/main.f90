@@ -102,7 +102,7 @@ program main
         hypercube_indices(i) = i
     end do
 
-    call initialise_uniform(priors(1),hypercube_indices,physical_indices,maximums,minimums)
+    call initialise_uniform(priors(1),hypercube_indices,physical_indices,minimums,maximums)
 
 
 
@@ -124,8 +124,8 @@ program main
     settings%precision_criterion  =  1d-8                    !degree of precision in answer
     settings%max_ndead            =  4800                    !maximum number of samples
     settings%nmax_posterior       = 100000                   !max number of posterior points
-    settings%minimum_weight       = 1d-50                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%minimum_weight       = 1d-10                    !minimum weight of the posterior points
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%save_all             = .false.                  !Save all the dead points?
