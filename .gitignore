@@ -9,3 +9,6 @@ doc/latex/
 main
 chains
 *.a
+getdist/getdist
+getdist/plot_data/*
+getdist/plots/*
