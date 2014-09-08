@@ -93,7 +93,7 @@ module chordal_module
         use settings_module, only: program_settings
         use random_module, only: random_direction,random_subdirection
         use utils_module, only: logzero,stdout_unit
-        use calculate_module, only: gradloglike
+        use calculate_module, only: calculate_gradloglike
 
         implicit none
         interface
@@ -132,7 +132,8 @@ module chordal_module
 
         double precision :: step_length
 
-        integer :: i
+        integer :: i_chords
+        integer :: i_reflections
 
         ! Start the baby point at the seed point
         baby_point = seed_point
@@ -151,34 +152,36 @@ module chordal_module
         nhat = random_direction(settings%nDims) 
 
 
-        do i=1,settings%num_chords*settings%num_randomisations
+        do i_chords=1,settings%num_chords
             ! Give the baby point the step length
             baby_point(settings%last_chord) = step_length
 
-            ! Generate a new nhat by reflecting the old one
-            if(mod(i,settings%num_chords)==1) then
-                nhat = random_direction(settings%nDims)
-            else
-                ! Get the grad loglikelihood
-                gradL = gradloglike(loglikelihood,settings,baby_point(settings%p0:settings%p1),baby_point(settings%l0),step_length*1d-3)
-                baby_point(settings%nlike) = baby_point(settings%nlike)+settings%nDims
+            do i_reflections=1,settings%num_reflections
+                ! Generate a new nhat by reflecting the old one
+                if(i_reflections>1) then
+                    ! Get the grad loglikelihood
+                    gradL = calculate_gradloglike(loglikelihood,priors,baby_point,settings,step_length*1d-3)
+                    baby_point(settings%nlike) = baby_point(settings%nlike)+settings%nDims
 
-                ! Normalise the grad loglikelihood
-                gradL2 = dot_product(gradL,gradL)
+                    ! Normalise the grad loglikelihood
+                    gradL2 = dot_product(gradL,gradL)
 
-                if (gradL2 /= 0d0 ) then
-                    nhat = nhat - 2d0* dot_product(gradL,nhat)/gradL2 * gradL
+                    if (gradL2 /= 0d0 ) then
+                        nhat = nhat - 2d0* dot_product(gradL,nhat)/gradL2 * gradL
+                    else
+                        nhat = random_direction(settings%nDims)
+                    end if
                 else
-                    nhat = random_direction(settings%nDims)
+                    nhat = nhats(:,i_chords)
+
                 end if
 
-            end if
+                ! Generate a new random point along the chord defined by baby_point and nhat
+                baby_point = random_chordal_point(loglikelihood,priors, nhat, baby_point, settings)
 
-            ! Generate a new random point along the chord defined by baby_point and nhat
-            baby_point = random_chordal_point(loglikelihood,priors, nhat, baby_point, settings)
-
-            ! keep track of the largest chord
-            max_chord = max(max_chord,baby_point(settings%last_chord))
+                ! keep track of the largest chord
+                max_chord = max(max_chord,baby_point(settings%last_chord))
+            end do
         end do
 
 #ifdef MPI

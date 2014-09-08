@@ -55,8 +55,8 @@ module settings_module
         !> Whether or not to resume from file
         logical :: read_resume = .true.
 
-        !> Randomisation frequency for reflective sampler
-        integer :: num_randomisations = 4
+        !> The number of reflection step in between randomisation steps
+        integer :: num_reflections = 4
 
         !> Dimensionality of the space
         integer :: nDims = 1

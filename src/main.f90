@@ -79,10 +79,10 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood
+    loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims=8                  ! Dimensionality of the space
+    settings%nDims=5                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -108,24 +108,24 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 500                      !number of live points
-    settings%num_chords           = 8                        !Number of chords to draw (after each randomisation)
-    settings%num_randomisations   = 4                        !Number of randomisations to choose, 4 seems fine in most cases
+    settings%nlive                = 1000                     !number of live points
+    settings%num_chords           = 1                        !Number of chords to draw (after each randomisation)
+    settings%num_reflections      = 8                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .false.                  !whether or not to resume from file
 
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => ChordalSampling         !Sampler choice
+    settings%sampler              => ChordalSamplingReflective         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%generate_directions  => isotropic_nhats         !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-8                    !degree of precision in answer
-    settings%max_ndead            =  4800                    !maximum number of samples
+    settings%max_ndead            =  -1                      !maximum number of samples
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-10                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%save_all             = .false.                  !Save all the dead points?
