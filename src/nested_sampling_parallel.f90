@@ -390,8 +390,6 @@ module nested_sampling_parallel_module
                     call settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed,evidence_vec)
 
 
-
-
                     ! (5) Update the set of weighted posteriors
                     if( settings%calculate_posterior .and. late_point(settings%l0) + late_logweight - evidence_vec(1) > logminimumweight ) then
                         ! If the late point has a sufficiently large weighting, then we
@@ -424,6 +422,8 @@ module nested_sampling_parallel_module
                             insertion_index = minloc(posterior_array(1,:nposterior))
                             posterior_array(:,insertion_index(1)) = posterior_point
                         end if
+
+                        more_samples_needed=.true.
 
                     end if
 
