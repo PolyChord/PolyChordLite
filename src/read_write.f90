@@ -16,7 +16,7 @@ module read_write_module
         integer :: nposterior
         double precision :: mean_likelihood_calls
         integer :: total_likelihood_calls
-        double precision, dimension(settings%nDims+2,settings%nmax_posterior) :: posterior_array
+        double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
         double precision, dimension(6)             :: evidence_vec
         integer :: ndead
 
