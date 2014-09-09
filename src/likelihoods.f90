@@ -326,6 +326,88 @@ module example_likelihoods
 
     end function eggbox_loglikelihood
 
+    !> Model of the planck loglikelihood
+    !!
+    !! This reads in a covariance matrix from data/planck_covmat.dat and
+    !! produces a correlated gaussian from it. This effectively models many of
+    !! the difficulties associated with the planck loglikelihood
+    !! 
+    !! It is normalised so that it should output an evidence of 1.0 for
+    !! effectively infinite priors.
+
+    function planck_loglikelihood(theta,phi,context)
+        use random_module, only: random_reals
+        implicit none
+        !> Input parameters
+        double precision, intent(in), dimension(:)   :: theta
+        !> Output derived parameters
+        double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
+
+
+        double precision :: planck_loglikelihood
+
+        integer :: nDims
+
+        double precision, allocatable, dimension(:,:), save :: invcovmat ! covariance matrix
+        double precision, allocatable, dimension(:),   save :: mu    ! Mean
+        double precision, save :: logdetcovmat
+
+        logical,save :: initialised=.false.
+
+        double precision, parameter :: sigma = 0.01 ! width of peak
+
+
+        nDims = size(theta)
+
+        if(.not. initialised) then
+            allocate(invcovmat(nDims,nDims), &
+                mu(nDims))
+
+            ! create a rough mean vector for planck
+            mu( 1) =  0.2207254E-01  !omegabh2    
+            mu( 2) =  0.1196086E+00  !omegach2    
+            mu( 3) =  0.1041323E+01  !theta       
+            mu( 4) =  0.9667156E-01  !tau         
+            mu( 5) =  0.3102562E+01  !logA         
+            mu( 6) =  0.9616422E+00  !ns           
+            mu( 7) =  0.1685974E+03  !aps100      
+            mu( 8) =  0.5352338E+02  !aps143      
+            mu( 9) =  0.1070724E+03  !aps217      
+            mu(10) =  0.7815372E+01  !acib143     
+            mu(11) =  0.2861451E+02  !acib217     
+            mu(12) =  0.5130602E+01  !asz143      
+            mu(13) =  0.8821973E+00  !psr         
+            mu(14) =  0.4167502E+00  !cibr        
+            mu(15) =  0.5319894E+00  !ncib        
+            mu(16) =  0.1000581E+01  !cal0        
+            mu(17) =  0.9964250E+00  !cal2        
+            mu(18) =  0.4724667E+00  !xi          
+            mu(19) =  0.4426342E+01  !aksz        
+            mu(20) =  0.5281187E+00  !bm_1_1      
+  
+  
+            ! Generate a planck covariance matrix from file and compute inverses
+            ! and logdets 
+            call read_covariance(invcovmat,logdetcovmat,nDims)
+
+            initialised=.true.
+        end if
+
+
+
+        ! Compute log likelihood
+        planck_loglikelihood = log_gauss(theta,mu,invcovmat,logdetcovmat)
+
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
+
+    end function planck_loglikelihood
 
 
 
@@ -573,6 +655,49 @@ module example_likelihoods
         logdetcovmat = 2 * sum(log(eigenvalues))
 
     end subroutine generate_covariance
+
+
+    subroutine read_covariance(invcovmat,logdetcovmat,nDims)
+        use random_module, only: random_reals, random_orthonormal_basis
+        use utils_module, only: read_covmat_unit
+        implicit none
+        double precision, intent(out),dimension(nDims,nDims) :: invcovmat
+        double precision, intent(out)                        :: logdetcovmat
+        integer,          intent(in)                         :: nDims
+
+        !double precision, dimension(nDims)       :: eigenvalues
+        !double precision, dimension(nDims,nDims) :: eigenvectors
+        integer :: j,k
+        integer :: info
+        !double precision, parameter :: rng=1e-2
+        double precision, dimension(nDims,nDims) :: covmat
+
+        ! Read in the covariance matrix
+        open(read_covmat_unit,file="data/planck_covmat.dat",action='read')
+        read(read_covmat_unit,*) covmat
+        close(read_covmat_unit)
+
+        ! calculate the cholesky decomposition
+        invcovmat=covmat
+        call dpotrf('U',nDims,invcovmat,nDims,info)
+
+        ! Calculate the determinant
+        logdetcovmat=0
+        do j=1,nDims
+            logdetcovmat = logdetcovmat+log(invcovmat(j,j))*2
+        end do
+
+        ! calculate the inverse function
+        call dpotri('U',nDims,invcovmat,nDims,info)
+        ! symmetrise
+        do j=1,nDims
+            do k=j,nDims
+                invcovmat(j,k) = invcovmat(j,k)
+                invcovmat(k,j) = invcovmat(j,k)
+            end do
+        end do
+    end subroutine read_covariance
+
 
 
     !> Compute the loglikelihood of a multivariate gaussian

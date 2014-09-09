@@ -45,7 +45,7 @@ endif
 LDFLAGS =
 
 # List of executables to be built within the package
-PROGRAMS = libchord.a main
+PROGRAMS = libchord.a main planck
 
 # "make" builds all
 all: $(PROGRAMS)
@@ -70,6 +70,9 @@ libchord.a: $(OBJECTS)
 
 main: main.o
 	$(FC) $(FCFLAGS) -o ../main main.o -L. -lchord
+
+planck: planck.o
+	$(FC) $(FCFLAGS) -o ../planck planck.o -L. -lchord
 
 
 # General rule for building prog from prog.o; $^ (GNU extension) is
