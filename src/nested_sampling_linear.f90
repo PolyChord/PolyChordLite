@@ -1,6 +1,10 @@
 module nested_sampling_linear_module
     implicit none
 
+    integer,parameter :: flag_blank     = -2
+    integer,parameter :: flag_gestating = -1
+    integer,parameter :: flag_waiting   = 0
+
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
@@ -377,6 +381,13 @@ module nested_sampling_linear_module
 
         ! Set the initial trial values of the chords as the diagonal of the hypercube
         live_data(settings%last_chord,:) = sqrt(settings%nDims+0d0)
+
+        ! Initially, none of the points have been calculated yet
+        ! (only relevent in parallel mode)
+        live_data(settings%daughter,:) = flag_waiting
+
+        ! Set the likelihood contours to logzero for now
+        live_data(settings%l1,:) = logzero
 
 
     end function GenerateLivePoints

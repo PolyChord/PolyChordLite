@@ -669,6 +669,7 @@ module nested_sampling_parallel_module
         live_data(settings%last_chord,:) = sqrt(settings%nDims+0d0)
 
         ! Initially, none of the points have been calculated yet
+        ! (only relevent in parallel mode)
         live_data(settings%daughter,:) = flag_waiting
 
         ! Set the likelihood contours to logzero for now

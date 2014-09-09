@@ -92,10 +92,9 @@ module settings_module
         integer :: nlike
         !> The last chord length used in calculating this point
         integer :: last_chord
-#ifdef MPI
+
         !> Pointer to any daughter points
         integer :: daughter
-#endif
 
         !> likelihood index
         !!
@@ -300,14 +299,10 @@ module settings_module
         ! Algorithm indices
         settings%nlike=settings%d1+1
         settings%last_chord=settings%nlike+1
-#ifdef MPI
         settings%daughter=settings%last_chord+1
+
         ! Loglikelihood indices
         settings%l0=settings%daughter+1
-#else
-        settings%l0=settings%last_chord+1
-#endif
-
         settings%l1=settings%l0+1
 
         ! Total number of parameters
