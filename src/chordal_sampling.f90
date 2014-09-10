@@ -73,11 +73,9 @@ module chordal_module
             max_chord = max(max_chord,baby_point(settings%last_chord))
         end do
 
-#ifdef MPI
         ! Make sure to hand back any incubator information which has likely been
-        ! overwritten
+        ! overwritten (this is only relevent in parallel mode)
         baby_point(settings%daughter) = seed_point(settings%daughter)
-#endif
 
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
@@ -184,11 +182,9 @@ module chordal_module
             end do
         end do
 
-#ifdef MPI
         ! Make sure to hand back any incubator information which has likely been
-        ! overwritten
+        ! overwritten (this is only relevent in parallel mode)
         baby_point(settings%daughter) = seed_point(settings%daughter)
-#endif
 
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
@@ -417,7 +413,7 @@ module chordal_module
     !! a uni-modal distribution
     subroutine unimodal_nhats(settings,live_data,nhats)
         use settings_module, only: program_settings
-        use random_module, only: random_gaussian
+        use random_module, only: random_integer,random_direction
         use utils_module, only: logzero,stdout_unit,loginf
         implicit none
 
@@ -431,84 +427,21 @@ module chordal_module
         !> The set of nhats to be generated
         double precision, intent(out), dimension(:,:) :: nhats
 
-        double precision :: temp_basis(settings%nDims,settings%nDims)
-        double precision :: basis(settings%nDims,settings%nDims)
-        double precision :: temp_lengths(settings%nDims)
-        double precision :: lengths(settings%nDims)
-        double precision :: mean(settings%nDims)
-        integer :: min_pos(1)
-        integer :: max_pos(1)
-        double precision :: max_val
-        double precision :: min_val
+        integer :: i_nhat,i
+        integer,dimension(2*settings%num_chords) :: i_live
 
-        integer :: i,j
-
-
-        ! Find the mean vector
-        mean=sum(live_data(settings%h0:settings%h1,:),dim=2)/settings%nlive
-
-        ! initialise the smallest likelihood
-        min_val=logzero
-
-        ! Find the outward facing vectors
-        do i=1,settings%nDims
-
-            ! find the smallest position
-            min_pos=minloc(live_data(settings%l0,:),mask=live_data(settings%l0,:)>min_val)
-            min_val = live_data(settings%l0,min_pos(1))
-
-            ! define the basis vector as extending from the mean to this
-            ! position
-            basis(:,i) = live_data(settings%h0:settings%h1,min_pos(1)) - mean
-
-            ! get the length
-            lengths(i) = sqrt(dot_product(basis(:,i),basis(:,i)))
-
-            !normalise
-            !basis(:,i) = basis(:,i)!/lengths(i)
-
+        do i=1,settings%num_chords*2
+            do while( .true. ) 
+                i_live(i) = random_integer(settings%nstack)
+                if(all(i_live(i)/=i_live(:i-1)) .and. live_data(settings%daughter,i_live(i))>=0 )  exit
+            end do
         end do
-!       ! orthogonalise the basis, starting with the largest length
-!       temp_basis=basis
-!       temp_lengths=lengths
-!       basis=0
-!       lengths=0
-!
-!       max_val=loginf
-!
-!       ! Order the basis by chord length
-!       do i=1,settings%nDims
-!           max_pos = maxloc(temp_lengths,temp_lengths<max_val)
-!           max_val = temp_lengths(max_pos(1))
-!           basis(:,i) = temp_basis(:,max_pos(1))
-!           !lengths(i) = temp_lengths(max_pos(1))
-!       end do
-!
-!       ! Orthogonalise the basis, starting with the longest length
-!       do i=1,settings%nDims
-!           do j= 1,i-1
-!               basis(:,i) = basis(:,i)- dot_product(basis(:,i),basis(:,j))/dot_product(basis(:,j),basis(:,j)) * basis(:,j)
-!           end do
-!           !basis(:,i) = basis(:,i) !/ sqrt(dot_product(basis(:,i),basis(:,i))) 
-!       end do
 
-        ! Rescale the basis
-        !do i=1,settings%nDims
-        !    basis(:,i) = basis(:,i) * lengths(new_pos(i))
-        !end do
-
-        ! Choose a selection of nhats transformed by the basis
-        do i=1,settings%num_chords
-            ! generate a random direction
-            nhats(:,i) = random_gaussian(settings%nDims)
-            ! linearly rescale it
-            !nhats(:,i) = nhats(:,i)* lengths(:)
-            ! transform using the basis
-            nhats(:,i) = matmul(basis,nhats(:,i))
+        do i_nhat=1,settings%num_chords
+            ! set the i_nhat th nhat to be the j_live th point minus the k_live th point
+            nhats(:,i_nhat) = live_data(settings%h0:settings%h1,i_live(2*i_nhat)) -live_data(settings%h0:settings%h1,i_live(2*i_nhat-1))
             ! normalise
-            nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i)))
-            !nhats(:,i) = basis(:,1+mod(i,settings%nDims))
-            !nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i))) 
+            nhats(:,i_nhat) = nhats(:,i_nhat)/sqrt(dot_product(nhats(:,i_nhat),nhats(:,i_nhat)))
         end do
 
 
@@ -549,6 +482,55 @@ module chordal_module
         end do
 
     end subroutine fast_slow_nhats
+
+    subroutine fast_slow_unimodal_nhats(settings,live_data,nhats)
+        use settings_module, only: program_settings
+        use random_module, only: random_gaussian
+        use utils_module, only: logzero,stdout_unit,loginf
+        implicit none
+
+        ! ------- Inputs -------
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
+        !> The live points
+        double precision, intent(in), dimension(:,:) :: live_data
+
+        !> The set of nhats to be generated
+        double precision, intent(out), dimension(:,:) :: nhats
+        double precision, dimension(settings%nDims,settings%num_chords) :: nhats_temp
+
+
+        integer :: i
+
+        ! Generate a set of unimodal nhats
+        call unimodal_nhats(settings,live_data,nhats) 
+
+        nhats_temp = nhats
+
+        ! zero out the points not being varied
+        nhats=0
+        do i=1,settings%nDims
+            nhats(i,                                                                           &
+            : product(settings%nums_chords)                                                    &
+            : product(settings%nums_chords)/product(settings%nums_chords(:settings%grade(i)))  &
+            )                                                                                  &
+            =                                                                                  &
+            nhats_temp(i,                                                                      &
+            : product(settings%nums_chords)                                                    &
+            : product(settings%nums_chords)/product(settings%nums_chords(:settings%grade(i)))  &
+            )
+        end do
+
+        ! normalise
+        do i=1,product(settings%nums_chords)
+            nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i)))
+        end do
+
+    end subroutine fast_slow_unimodal_nhats
+
+
+
 
 end module chordal_module
 

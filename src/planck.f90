@@ -8,14 +8,13 @@ program main
     use random_module,          only: initialise_random, deinitialise_random
 
     use chordal_module,         only: ChordalSampling,ChordalSamplingReflective, &
-                                      isotropic_nhats,unimodal_nhats,fast_slow_nhats
+                                      isotropic_nhats,unimodal_nhats,fast_slow_unimodal_nhats
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
 #ifdef MPI
     use mpi_module
     use nested_sampling_parallel_module, only: NestedSamplingP
-#else
 #endif
     use nested_sampling_linear_module,   only: NestedSamplingL
 
@@ -94,25 +93,69 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
+    ! Standard minimums and maximums
+    !minimums( 1) = 0.019  !omegabh2  
+    !minimums( 2) = 0.095  !omegach2  
+    !minimums( 3) = 1.03   !theta     
+    !minimums( 4) = 0.01   !tau       
+    !minimums( 5) = 2.5    !logA        
+    !minimums( 6) = 0.885  !ns          
+    !minimums( 7) = 0      !aps100    
+    !minimums( 8) = 0      !aps143    
+    !minimums( 9) = 0      !aps217    
+    !minimums(10) = 0      !acib143   
+    !minimums(11) = 0      !acib217   
+    !minimums(12) = 0      !asz143    
+    !minimums(13) = 0.0    !psr       
+    !minimums(14) = 0.0    !cibr      
+    !minimums(15) = -2     !ncib      
+    !minimums(16) = 0.98   !cal0      
+    !minimums(17) = 0.95   !cal2      
+    !minimums(18) = 0      !xi        
+    !minimums(19) = 0      !aksz      
+    !minimums(20) = -20    !bm_1_1    
+     
+    !maximums( 1) = 0.025 !omegabh2  
+    !maximums( 2) = 0.145 !omegach2  
+    !maximums( 3) = 1.05  !theta     
+    !maximums( 4) = 0.4   !tau       
+    !maximums( 5) = 3.7   !logA        
+    !maximums( 6) = 1.04  !ns          
+    !maximums( 7) = 360   !aps100    
+    !maximums( 8) = 270   !aps143    
+    !maximums( 9) = 450   !aps217    
+    !maximums(10) = 20    !acib143   
+    !maximums(11) = 80    !acib217   
+    !maximums(12) = 10    !asz143    
+    !maximums(13) = 1.0   !psr       
+    !maximums(14) = 1.0   !cibr      
+    !maximums(15) = 2     !ncib      
+    !maximums(16) = 1.02  !cal0      
+    !maximums(17) = 1.05  !cal2      
+    !maximums(18) = 1     !xi        
+    !maximums(19) = 10    !aksz      
+    !maximums(20) = 20    !bm_1_1    
+
+    ! extended minimums and maximums
     minimums( 1) = 0.019  !omegabh2  
     minimums( 2) = 0.095  !omegach2  
     minimums( 3) = 1.03   !theta     
-    minimums( 4) = 0.01   !tau       
+    minimums( 4) = -0.1   !tau       
     minimums( 5) = 2.5    !logA        
     minimums( 6) = 0.885  !ns          
     minimums( 7) = 0      !aps100    
     minimums( 8) = 0      !aps143    
     minimums( 9) = 0      !aps217    
-    minimums(10) = 0      !acib143   
+    minimums(10) = -10    !acib143   
     minimums(11) = 0      !acib217   
-    minimums(12) = 0      !asz143    
+    minimums(12) = -4     !asz143    
     minimums(13) = 0.0    !psr       
-    minimums(14) = 0.0    !cibr      
+    minimums(14) = -0.2   !cibr      
     minimums(15) = -2     !ncib      
     minimums(16) = 0.98   !cal0      
     minimums(17) = 0.95   !cal2      
-    minimums(18) = 0      !xi        
-    minimums(19) = 0      !aksz      
+    minimums(18) = -1     !xi        
+    minimums(19) = -5     !aksz      
     minimums(20) = -20    !bm_1_1    
 
     maximums( 1) = 0.025 !omegabh2  
@@ -124,16 +167,16 @@ program main
     maximums( 7) = 360   !aps100    
     maximums( 8) = 270   !aps143    
     maximums( 9) = 450   !aps217    
-    maximums(10) = 20    !acib143   
+    maximums(10) = 25    !acib143   
     maximums(11) = 80    !acib217   
-    maximums(12) = 10    !asz143    
-    maximums(13) = 1.0   !psr       
-    maximums(14) = 1.0   !cibr      
+    maximums(12) = 12    !asz143    
+    maximums(13) = 2.0   !psr       
+    maximums(14) = 1.5   !cibr      
     maximums(15) = 2     !ncib      
     maximums(16) = 1.02  !cal0      
     maximums(17) = 1.05  !cal2      
-    maximums(18) = 1     !xi        
-    maximums(19) = 10    !aksz      
+    maximums(18) = 2     !xi        
+    maximums(19) = 20    !aksz      
     maximums(20) = 20    !bm_1_1    
 
     do i=1,settings%nDims
@@ -147,7 +190,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 500                      !number of live points
+    settings%nlive                = 1000                     !number of live points
     settings%num_chords           = 1                        !Number of chords to draw (after each randomisation)
     settings%num_reflections      = 1                        !Number of randomisations to choose, 4 seems fine in most cases
 
@@ -158,14 +201,14 @@ program main
     settings%file_root            =  'chains/test'           !file root
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%generate_directions  => fast_slow_nhats         !evidence calculator
+    settings%generate_directions  => fast_slow_unimodal_nhats         !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-8                     !minimum weight of the posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
-    settings%write_resume         = .true.                   !whether or not to write resume files
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%save_all             = .false.                  !Save all the dead points?
 
@@ -187,9 +230,11 @@ program main
     if (mpi_size()>1) then
         call NestedSamplingP(loglikelihood,priors,settings)
     else
+        settings%nstack=settings%nlive
         call NestedSamplingL(loglikelihood,priors,settings) 
     end if
 #else
+    settings%nstack=settings%nlive
     call NestedSamplingL(loglikelihood,priors,settings) 
 #endif 
 

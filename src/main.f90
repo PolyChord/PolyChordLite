@@ -15,7 +15,6 @@ program main
 #ifdef MPI
     use mpi_module
     use nested_sampling_parallel_module, only: NestedSamplingP
-#else
 #endif
     use nested_sampling_linear_module,   only: NestedSamplingL
 
@@ -82,7 +81,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims=5                  ! Dimensionality of the space
+    settings%nDims=20                ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -108,18 +107,18 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 1000                     !number of live points
-    settings%num_chords           = 1                        !Number of chords to draw (after each randomisation)
-    settings%num_reflections      = 8                        !Number of randomisations to choose, 4 seems fine in most cases
+    settings%nlive                = 200                      !number of live points
+    settings%num_chords           = 80                       !Number of chords to draw (after each randomisation)
+    settings%num_reflections      = 1                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .false.                  !whether or not to resume from file
 
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => ChordalSamplingReflective         !Sampler choice
+    settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%generate_directions  => isotropic_nhats         !evidence calculator
+    settings%generate_directions  => unimodal_nhats          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-8                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
@@ -138,9 +137,11 @@ program main
     if (mpi_size()>1) then
         call NestedSamplingP(loglikelihood,priors,settings)
     else
+        settings%nstack=settings%nlive
         call NestedSamplingL(loglikelihood,priors,settings) 
     end if
 #else
+    settings%nstack=settings%nlive
     call NestedSamplingL(loglikelihood,priors,settings) 
 #endif 
 
