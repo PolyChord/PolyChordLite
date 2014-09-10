@@ -12,7 +12,7 @@ module read_write_module
 
 
         type(program_settings), intent(in) :: settings
-        double precision, dimension(:,:) :: live_data
+        double precision,intent(in), dimension(settings%nTotal,settings%nstack) :: live_data
         integer :: nposterior
         double precision :: mean_likelihood_calls
         integer :: total_likelihood_calls
@@ -81,6 +81,31 @@ module read_write_module
         close(write_txt_unit)
 
     end subroutine write_posterior_file
+
+    subroutine write_phys_live_points(settings,live_data,late_loglikelihood)
+        use utils_module, only: DBL_FMT,write_phys_unit
+        use settings_module, only: program_settings
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        double precision, intent(in), dimension(settings%nTotal,settings%nstack) :: live_data
+        double precision, intent(in) :: late_loglikelihood
+
+        integer i_err
+
+        integer i_live
+
+        open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err) 
+
+        do i_live=1,settings%nstack
+            if(live_data(settings%l1,i_live)<=late_loglikelihood .and.  live_data(settings%daughter,i_live) >=0 ) then
+                write(write_phys_unit,'(<settings%nDims+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data(settings%p0:settings%p1,i_live),live_data(settings%l0,i_live)
+            end if
+        end do
+
+        close(write_phys_unit)
+
+    end subroutine
 
 
 

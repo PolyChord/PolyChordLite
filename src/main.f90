@@ -81,7 +81,7 @@ program main
     loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    settings%nDims=20                ! Dimensionality of the space
+    settings%nDims=8                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -107,12 +107,9 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 500                      !number of live points
+    settings%nlive                = 25*settings%nDims        !number of live points
     settings%num_chords           = settings%nDims           !Number of chords to draw (after each randomisation)
     settings%num_reflections      = 1                        !Number of randomisations to choose, 4 seems fine in most cases
-
-    settings%read_resume          = .false.                  !whether or not to resume from file
-
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
@@ -120,13 +117,21 @@ program main
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%generate_directions  => adaptive_nhats          !direction generator
     settings%feedback             =  1                       !degree of feedback
+
+    ! stopping criteria
     settings%precision_criterion  =  1d-8                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
+
+    ! posterior calculation
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-10                    !minimum weight of the posterior points
     settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+
+    ! reading and writing
+    settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
+    settings%write_live           = .false.                  !write out the physical live points?
     settings%save_all             = .false.                  !Save all the dead points?
 
 

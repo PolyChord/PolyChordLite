@@ -14,7 +14,7 @@ module nested_sampling_parallel_module
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
-        use read_write_module, only: write_resume_file,write_posterior_file
+        use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
 
         implicit none
@@ -457,6 +457,7 @@ module nested_sampling_parallel_module
                     if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
                         if(settings%write_resume) call write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
                         if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
+                        if(settings%write_live) call write_phys_live_points(settings,live_data,late_likelihood)
                     end if
 
                 end do

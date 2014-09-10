@@ -29,6 +29,8 @@ module utils_module
     integer, parameter :: write_dead_unit = 13
     !> unit for reading covariance matrices
     integer, parameter :: read_covmat_unit = 14
+    !> unit for reading covariance matrices
+    integer, parameter :: write_phys_unit = 15
 
     ! All series used to approximate F are computed with relative
     ! tolerance:

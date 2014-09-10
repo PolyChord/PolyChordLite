@@ -55,6 +55,9 @@ module settings_module
         !> Whether or not to resume from file
         logical :: read_resume = .true.
 
+        !> Whether or not to write phys_live points
+        logical :: write_live = .false.
+
         !> The number of reflection step in between randomisation steps
         integer :: num_reflections = 4
 
