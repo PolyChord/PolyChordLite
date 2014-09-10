@@ -384,7 +384,7 @@ module chordal_module
     ! Direction generators
 
     !> Generate a set of isotropic nhats
-    subroutine isotropic_nhats(settings,live_data,nhats,late_likelihood)
+    subroutine isotropic_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
         use settings_module, only: program_settings
         use random_module, only: random_direction
         use utils_module, only: logzero,stdout_unit
@@ -403,6 +403,9 @@ module chordal_module
         !> The late likelihood
         double precision, intent(in) :: late_likelihood
 
+        !> The position of the seed
+        integer, intent(in) :: seed_pos
+
 
         integer i_nhat
 
@@ -414,7 +417,7 @@ module chordal_module
 
     !> Generate a set of nhats that roughly agree with the longest directions of
     !! a uni-modal distribution
-    subroutine adaptive_nhats(settings,live_data,nhats,late_likelihood)
+    subroutine adaptive_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
         use settings_module, only: program_settings
         use random_module, only: random_integer,random_direction
         use utils_module, only: logzero,stdout_unit,loginf
@@ -433,29 +436,58 @@ module chordal_module
         !> The late likelihood
         double precision, intent(in) :: late_likelihood
 
+        !> The position of the seed
+        integer, intent(in) :: seed_pos
+
         integer :: i_nhat,i
         integer,dimension(2*settings%num_chords) :: i_live
+        double precision, dimension(settings%nDims,settings%nDims) :: basis
 
-        do i=1,settings%num_chords*2
+        integer :: counter
+
+        counter=0
+
+        do i=1,settings%nDims*2
             do while( .true. ) 
                 i_live(i) = random_integer(settings%nstack)
-                if(all(i_live(i)/=i_live(:i-1)) .and. live_data(settings%daughter,i_live(i))>=0 .and. live_data(settings%l1,i_live(i))<=late_likelihood)  exit
+                if(all(i_live(i)/=i_live(:i-1)) .and. live_data(settings%daughter,i_live(i))>=0 .and. live_data(settings%l1,i_live(i))<=late_likelihood .and. i_live(i) .ne. seed_pos)  exit
+
+                counter = counter+1
+                if(counter>settings%nstack*100) then 
+                    nhats=0
+                    return
+                end if
             end do
         end do
         !write(*,'(<settings%num_chords*2>I4)') i_live
 
-        do i_nhat=1,settings%num_chords
+        do i_nhat=1,settings%nDims
             ! set the i_nhat th nhat to be the j_live th point minus the k_live th point
-            nhats(:,i_nhat) = live_data(settings%h0:settings%h1,i_live(2*i_nhat)) -live_data(settings%h0:settings%h1,i_live(2*i_nhat-1))
+            basis(:,i_nhat) = live_data(settings%h0:settings%h1,i_live(2*i_nhat)) -live_data(settings%h0:settings%h1,i_live(2*i_nhat-1))
+            ! normalise
+            basis(:,i_nhat) = basis(:,i_nhat)/sqrt(dot_product(basis(:,i_nhat),basis(:,i_nhat)))
+        end do
+
+        do i_nhat=1,settings%num_chords
+            nhats(:,i_nhat) = matmul(basis,random_direction(settings%nDims))
             ! normalise
             nhats(:,i_nhat) = nhats(:,i_nhat)/sqrt(dot_product(nhats(:,i_nhat),nhats(:,i_nhat)))
         end do
+
+        !nhats_temp = nhats
+        !call dgetrf(settings%nDims,settings%num_chords,nhats_temp,max(1,settings%num_chords,settings%nDims),ipiv,info)
+        !logdetcovmat =1
+        !do i=1,settings%nDims
+        !    logdetcovmat = logdetcovmat + log(abs(nhats_temp(i,i)))
+        !end do
+
+        !write(*,'(F17.8)') exp(logdetcovmat/settings%nDims)
 
 
 
     end subroutine adaptive_nhats
 
-    subroutine fast_slow_nhats(settings,live_data,nhats,late_likelihood)
+    subroutine fast_slow_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
         use utils_module, only: logzero,stdout_unit,loginf
@@ -473,6 +505,9 @@ module chordal_module
 
         !> The late likelihood
         double precision, intent(in) :: late_likelihood
+
+        !> The position of the seed
+        integer, intent(in) :: seed_pos
 
 
         integer :: i
@@ -493,7 +528,7 @@ module chordal_module
 
     end subroutine fast_slow_nhats
 
-    subroutine fast_slow_adaptive_nhats(settings,live_data,nhats,late_likelihood)
+    subroutine fast_slow_adaptive_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
         use utils_module, only: logzero,stdout_unit,loginf
@@ -509,6 +544,9 @@ module chordal_module
         !> The set of nhats to be generated
         double precision, intent(out), dimension(:,:) :: nhats
 
+        !> The seed position
+        integer, intent(in) :: seed_pos
+
         !> The late likelihood
         double precision, intent(in) :: late_likelihood
 
@@ -518,7 +556,7 @@ module chordal_module
         integer :: i
 
         ! Generate a set of unimodal nhats
-        call adaptive_nhats(settings,live_data,nhats,late_likelihood) 
+        call adaptive_nhats(settings,live_data,nhats,late_likelihood,seed_pos) 
 
         nhats_temp = nhats
 

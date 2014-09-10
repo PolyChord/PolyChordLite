@@ -77,6 +77,8 @@ module nested_sampling_linear_module
 
         double precision :: nhats(settings%nDims,settings%num_chords)
 
+        integer :: seed_pos
+
 
 
         call write_opening_statement(settings) 
@@ -224,13 +226,14 @@ module nested_sampling_linear_module
             do while (seed_point(settings%l0)<=late_likelihood)
                 ! get a random number in [1,nlive]
                 ! get this point from live_data 
-                seed_point = live_data(:,random_integer(settings%nlive))
+                seed_pos =random_integer(settings%nlive)
+                seed_point = live_data(:,seed_pos)
             end do
 
             ! Record the likelihood bound which this seed will generate from
             seed_point(settings%l1) = late_likelihood
 
-            call settings%generate_directions(live_data,nhats,late_likelihood)
+            call settings%generate_directions(live_data,nhats,late_likelihood,seed_pos)
 
             ! Generate a new point within the likelihood bound of the late point
             baby_point = settings%sampler(loglikelihood,priors,nhats,seed_point)

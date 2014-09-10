@@ -47,6 +47,7 @@ module nested_sampling_parallel_module
         integer :: nlive_local
 
         integer :: last_wait
+        integer :: last_wait1
 
         integer :: i_live
         integer :: i_slaves
@@ -98,6 +99,7 @@ module nested_sampling_parallel_module
 
         double precision :: nhats(settings%nDims,settings%num_chords)
 
+        integer :: seed_pos
 
         nprocs = mpi_size()  ! Get the number of MPI procedures
         myrank = mpi_rank()  ! Get the MPI label of the current processor
@@ -256,6 +258,7 @@ module nested_sampling_parallel_module
             waiting_slave = .true.
 
             last_wait = -1
+            last_wait1 = -1
 
             ! Initialise the late likelihood at logzero so that live points are
             ! well defined
@@ -469,7 +472,7 @@ module nested_sampling_parallel_module
                     if( waiting_slave(i_slaves) ) then
 
                         ! Generate a seed point from live_data, and update accordingly
-                        seed_point = GenerateSeed(settings,live_data) 
+                        seed_point = GenerateSeed(settings,live_data,seed_pos) 
 
                         if(nint(seed_point(settings%daughter))==flag_blank) then
                             ! If we've generated a blank seed, then there aren't
@@ -488,6 +491,26 @@ module nested_sampling_parallel_module
                             exit slave_loop
                         end if
 
+                        ! Generate a set of directions
+                        call settings%generate_directions(live_data,nhats,seed_point(settings%l0),seed_pos)
+                        if(all(nint(nhats*settings%nDims)==0)) then
+                            ! If we haven't generated any directions
+                            if(all(waiting_slave)) then
+                                ! If they're all waiting, then we should abort
+                                write(stdout_unit,'(" Error: Too many processors")')
+                                call abort()
+                            else if(last_wait1<ndead) then
+                                ! If it's a 'blank' seed then we need to wait until a
+                                ! good seed can be generated
+                                ! Send out a warning if we haven't already
+                                write(stdout_unit,'(" Warning: unable to generate directions=", I8 " - Consider reducing nprocs to avoid CPU waste")') ndead
+                                last_wait1 = ndead
+                            end if
+                            exit slave_loop
+                        end if
+
+
+
                         ! Send a seed point back to that slave
                         call MPI_SEND(              &
                             seed_point,             & ! seed point to be sent
@@ -498,9 +521,6 @@ module nested_sampling_parallel_module
                             MPI_COMM_WORLD,         & ! communication data
                             mpierror                & ! error information (from mpi_module)
                             )
-
-                        ! Generate a set of directions
-                        call settings%generate_directions(live_data,nhats,late_likelihood)
 
                         ! Send the directions
                         call MPI_SEND(                          &
@@ -684,12 +704,14 @@ module nested_sampling_parallel_module
 
 
 
-    function GenerateSeed(settings,live_data) result(seed_point)
+    function GenerateSeed(settings,live_data,seed_pos) result(seed_point)
         use settings_module,   only: program_settings
         use random_module,     only: random_integer
         implicit none
         type(program_settings), intent(in) :: settings
         double precision, intent(inout), dimension(settings%nTotal,settings%nstack) :: live_data
+
+        integer, intent(out) :: seed_pos
 
         ! Point to seed a new one from
         double precision,    dimension(settings%nTotal)   :: seed_point
@@ -737,7 +759,8 @@ module nested_sampling_parallel_module
         do while (seed_point(settings%l0)<=loglikelihood_bound .or. seed_point(settings%l1)>loglikelihood_bound .or. nint(seed_point(settings%daughter))==flag_blank )
             ! get a random integer in [1,nstack]
             ! get this point from live_data 
-            seed_point = live_data(:,random_integer(settings%nstack))
+            seed_pos =random_integer(settings%nstack)
+            seed_point = live_data(:,seed_pos)
             counter = counter+1
             if(counter>settings%nstack*10) then
                 seed_point=blank_point(settings)
