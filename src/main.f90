@@ -8,7 +8,7 @@ program main
     use random_module,          only: initialise_random, deinitialise_random
 
     use chordal_module,         only: ChordalSampling,ChordalSamplingReflective, &
-                                      isotropic_nhats,unimodal_nhats
+                                      isotropic_nhats,adaptive_nhats
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -78,7 +78,7 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood_corr
+    loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
     settings%nDims=20                ! Dimensionality of the space
@@ -107,8 +107,8 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 200                      !number of live points
-    settings%num_chords           = 80                       !Number of chords to draw (after each randomisation)
+    settings%nlive                = 500                      !number of live points
+    settings%num_chords           = settings%nDims           !Number of chords to draw (after each randomisation)
     settings%num_reflections      = 1                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .false.                  !whether or not to resume from file
@@ -118,7 +118,7 @@ program main
     settings%file_root            =  'chains/test'           !file root
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%generate_directions  => unimodal_nhats          !evidence calculator
+    settings%generate_directions  => adaptive_nhats          !direction generator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-8                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples

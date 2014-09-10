@@ -8,7 +8,7 @@ program main
     use random_module,          only: initialise_random, deinitialise_random
 
     use chordal_module,         only: ChordalSampling,ChordalSamplingReflective, &
-                                      isotropic_nhats,unimodal_nhats,fast_slow_unimodal_nhats
+                                      isotropic_nhats,fast_slow_adaptive_nhats
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -93,7 +93,7 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    ! Standard minimums and maximums
+    ! Standard minimums and maximums from a normal run
     !minimums( 1) = 0.019  !omegabh2  
     !minimums( 2) = 0.095  !omegach2  
     !minimums( 3) = 1.03   !theta     
@@ -136,7 +136,7 @@ program main
     !maximums(19) = 10    !aksz      
     !maximums(20) = 20    !bm_1_1    
 
-    ! extended minimums and maximums
+    ! extended minimums and maximums for accurate evidence calculation
     minimums( 1) = 0.019  !omegabh2  
     minimums( 2) = 0.095  !omegach2  
     minimums( 3) = 1.03   !theta     
@@ -201,7 +201,7 @@ program main
     settings%file_root            =  'chains/test'           !file root
     settings%sampler              => ChordalSampling         !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%generate_directions  => fast_slow_unimodal_nhats         !evidence calculator
+    settings%generate_directions  => fast_slow_adaptive_nhats!direction generator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples

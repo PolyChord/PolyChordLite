@@ -384,7 +384,7 @@ module chordal_module
     ! Direction generators
 
     !> Generate a set of isotropic nhats
-    subroutine isotropic_nhats(settings,live_data,nhats)
+    subroutine isotropic_nhats(settings,live_data,nhats,late_likelihood)
         use settings_module, only: program_settings
         use random_module, only: random_direction
         use utils_module, only: logzero,stdout_unit
@@ -400,6 +400,9 @@ module chordal_module
         !> The set of nhats to be generated
         double precision, intent(out), dimension(:,:) :: nhats
 
+        !> The late likelihood
+        double precision, intent(in) :: late_likelihood
+
 
         integer i_nhat
 
@@ -411,7 +414,7 @@ module chordal_module
 
     !> Generate a set of nhats that roughly agree with the longest directions of
     !! a uni-modal distribution
-    subroutine unimodal_nhats(settings,live_data,nhats)
+    subroutine adaptive_nhats(settings,live_data,nhats,late_likelihood)
         use settings_module, only: program_settings
         use random_module, only: random_integer,random_direction
         use utils_module, only: logzero,stdout_unit,loginf
@@ -427,15 +430,19 @@ module chordal_module
         !> The set of nhats to be generated
         double precision, intent(out), dimension(:,:) :: nhats
 
+        !> The late likelihood
+        double precision, intent(in) :: late_likelihood
+
         integer :: i_nhat,i
         integer,dimension(2*settings%num_chords) :: i_live
 
         do i=1,settings%num_chords*2
             do while( .true. ) 
                 i_live(i) = random_integer(settings%nstack)
-                if(all(i_live(i)/=i_live(:i-1)) .and. live_data(settings%daughter,i_live(i))>=0 )  exit
+                if(all(i_live(i)/=i_live(:i-1)) .and. live_data(settings%daughter,i_live(i))>=0 .and. live_data(settings%l1,i_live(i))<=late_likelihood)  exit
             end do
         end do
+        !write(*,'(<settings%num_chords*2>I4)') i_live
 
         do i_nhat=1,settings%num_chords
             ! set the i_nhat th nhat to be the j_live th point minus the k_live th point
@@ -446,9 +453,9 @@ module chordal_module
 
 
 
-    end subroutine unimodal_nhats
+    end subroutine adaptive_nhats
 
-    subroutine fast_slow_nhats(settings,live_data,nhats)
+    subroutine fast_slow_nhats(settings,live_data,nhats,late_likelihood)
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
         use utils_module, only: logzero,stdout_unit,loginf
@@ -463,6 +470,9 @@ module chordal_module
 
         !> The set of nhats to be generated
         double precision, intent(out), dimension(:,:) :: nhats
+
+        !> The late likelihood
+        double precision, intent(in) :: late_likelihood
 
 
         integer :: i
@@ -483,7 +493,7 @@ module chordal_module
 
     end subroutine fast_slow_nhats
 
-    subroutine fast_slow_unimodal_nhats(settings,live_data,nhats)
+    subroutine fast_slow_adaptive_nhats(settings,live_data,nhats,late_likelihood)
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
         use utils_module, only: logzero,stdout_unit,loginf
@@ -498,13 +508,17 @@ module chordal_module
 
         !> The set of nhats to be generated
         double precision, intent(out), dimension(:,:) :: nhats
+
+        !> The late likelihood
+        double precision, intent(in) :: late_likelihood
+
         double precision, dimension(settings%nDims,settings%num_chords) :: nhats_temp
 
 
         integer :: i
 
         ! Generate a set of unimodal nhats
-        call unimodal_nhats(settings,live_data,nhats) 
+        call adaptive_nhats(settings,live_data,nhats,late_likelihood) 
 
         nhats_temp = nhats
 
@@ -527,7 +541,7 @@ module chordal_module
             nhats(:,i) = nhats(:,i)/sqrt(dot_product(nhats(:,i),nhats(:,i)))
         end do
 
-    end subroutine fast_slow_unimodal_nhats
+    end subroutine fast_slow_adaptive_nhats
 
 
 

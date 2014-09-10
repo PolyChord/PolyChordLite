@@ -184,6 +184,10 @@ module nested_sampling_linear_module
         logminimumweight = log(settings%minimum_weight)
 
 
+        ! Initialise the late likelihood at logzero so that live points are
+        ! well defined
+        late_likelihood = logzero
+
 
         ! Write a resume file before we start
         if(settings%write_resume) call write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
@@ -226,7 +230,7 @@ module nested_sampling_linear_module
             ! Record the likelihood bound which this seed will generate from
             seed_point(settings%l1) = late_likelihood
 
-            call settings%generate_directions(live_data,nhats)
+            call settings%generate_directions(live_data,nhats,late_likelihood)
 
             ! Generate a new point within the likelihood bound of the late point
             baby_point = settings%sampler(loglikelihood,priors,nhats,seed_point)

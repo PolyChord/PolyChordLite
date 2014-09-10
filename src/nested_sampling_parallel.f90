@@ -257,6 +257,9 @@ module nested_sampling_parallel_module
 
             last_wait = -1
 
+            ! Initialise the late likelihood at logzero so that live points are
+            ! well defined
+            late_likelihood = logzero
 
         end if
 
@@ -496,7 +499,7 @@ module nested_sampling_parallel_module
                             )
 
                         ! Generate a set of directions
-                        call settings%generate_directions(live_data,nhats)
+                        call settings%generate_directions(live_data,nhats,late_likelihood)
 
                         ! Send the directions
                         call MPI_SEND(                          &

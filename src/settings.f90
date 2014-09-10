@@ -257,7 +257,7 @@ module settings_module
 
 
     interface
-        subroutine dir(settings,live_data,nhats)
+        subroutine dir(settings,live_data,nhats,late_likelihood)
             import :: program_settings
             implicit none
 
@@ -270,6 +270,9 @@ module settings_module
 
             !> The set of nhats to be generated
             double precision, intent(out) , dimension(:,:) :: nhats
+
+            !> The late likelihood
+            double precision, intent(in) :: late_likelihood
 
         end subroutine dir
     end interface
