@@ -6,6 +6,8 @@ module example_likelihoods
     use mpi_module
 #endif
 
+    double precision :: logdetcovmat_true
+
     contains
 
     !> Gaussian shell defined as,
@@ -484,6 +486,7 @@ module example_likelihoods
             ! Generate a random covariance matrix, its inverse and logdet
             call generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
 #endif
+            logdetcovmat_true = logdetcovmat/2d0 - nDims*log(sigma) 
 
             initialised=.true.
         end if
@@ -723,5 +726,41 @@ module example_likelihoods
 
     end function log_gauss
 
+    !> Pyramidal likelihood centered on 0.5.
+    !! 
+    !! It is normalised so that it should output an evidence of 1.0 for
+    !! effectively infinite priors.
+
+    function pyramidal_loglikelihood(theta,phi,context) result(loglikelihood)
+        implicit none
+        !> Input parameters
+        double precision, intent(in), dimension(:)  :: theta
+        !> Output derived parameters
+        double precision, intent(out), dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                :: context
+                            
+        double precision :: loglikelihood
+
+        double precision, dimension(size(theta)) :: sigma ! Standard deviation (uncorrelated) 
+        double precision, dimension(size(theta)) :: center    ! Mean
+        
+        center= 5d-1   ! mean in the center
+        sigma = 1d-3 
+
+        ! normalisation
+        loglikelihood =   - log(gamma(1d0+size(theta)/2d0)) -sum(log(2d0*sigma))
+
+        ! theta dependence
+        loglikelihood = loglikelihood - maxval(abs(theta-center)/sigma)**2
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
+
+
+    end function pyramidal_loglikelihood
 
 end module example_likelihoods
