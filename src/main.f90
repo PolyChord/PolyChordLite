@@ -120,7 +120,7 @@ program main
 
     ! stopping criteria
     settings%precision_criterion  =  1d-8                    !degree of precision in answer
-    settings%max_ndead            =  -1                      !maximum number of samples
+    settings%max_ndead            =  1000000                 !maximum number of samples
 
     ! posterior calculation
     settings%nmax_posterior       = 100000                   !max number of posterior points
@@ -133,6 +133,10 @@ program main
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%write_live           = .false.                  !write out the physical live points?
     settings%save_all             = .false.                  !Save all the dead points?
+
+    ! Evidence inference
+    settings%infer_evidence       = .true.
+    settings%evidence_samples     = 10000
 
 
     ! ======= (2) Perform Nested Sampling =======

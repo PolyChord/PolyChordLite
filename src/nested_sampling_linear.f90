@@ -16,6 +16,7 @@ module nested_sampling_linear_module
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
         use random_module,     only: random_integer,random_direction
+        use evidence_module,   only: infer_evidence
 
         implicit none
 
@@ -78,6 +79,8 @@ module nested_sampling_linear_module
         double precision :: nhats(settings%nDims,settings%num_chords)
 
         integer :: seed_pos
+
+        double precision, dimension(settings%max_ndead) :: dead_likes
 
 
 
@@ -253,6 +256,9 @@ module nested_sampling_linear_module
             ! check to see if we've reached this
             if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
 
+            ! Record the loglikelihoods if we're inferring the evidence
+            if (settings%infer_evidence) dead_likes(ndead) = late_likelihood
+
             ! (4) Calculate the new evidence (and check to see if we're accurate enough)
             call settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed,evidence_vec)
 
@@ -328,6 +334,8 @@ module nested_sampling_linear_module
 
 
         if(settings%save_all) close(write_dead_unit) 
+
+        if(settings%infer_evidence) call infer_evidence(settings,dead_likes(:ndead))
 
         call write_final_results(evidence_vec,ndead,total_likelihood_calls,settings%feedback,priors)
 

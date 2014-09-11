@@ -187,5 +187,82 @@ module evidence_module
     end subroutine KeetonEvidence
 
 
+    subroutine infer_evidence(settings,loglikelihoods)
+        use settings_module, only: program_settings
+        use utils_module, only: write_ev_unit,DBL_FMT
+        implicit none
+        !> Program settings
+        type(program_settings), intent(in) :: settings
+        !> All of the likelihoods
+        double precision, intent(in), dimension(:) :: loglikelihoods
+
+        double precision, dimension(settings%evidence_samples) :: log_evidences
+
+        double precision, dimension(2,settings%evidence_samples-2) :: distribution
+
+        integer :: info,i_err
+        integer :: i
+
+        ! Compute evidence_samples volume samples of the log evidence
+        do i=1,settings%evidence_samples
+            log_evidences(i) = sample_logevidence(loglikelihoods,settings%nlive)
+        end do
+
+        ! Sort them in increasing order 
+        call dlasrt('I',settings%evidence_samples,log_evidences,info)
+
+        ! Create a distribution
+        distribution(1,:) = log_evidences(2:)
+        distribution(2,:) = 2d0/(log_evidences(3:) - log_evidences(:settings%evidence_samples-2))
+
+        ! write to file
+        open(write_ev_unit,file=trim(settings%file_root) // '_evidence.txt' , action='write', iostat=i_err) 
+        write(write_ev_unit,'(2E<DBL_FMT(1)>.<DBL_FMT(2)>)') distribution
+        close(write_ev_unit)
+
+
+    end subroutine infer_evidence
+
+    function sample_logevidence(loglikelihoods,nlive) result(logevidence)
+        use utils_module, only: logsubexp,logsumexp
+        use random_module, only: random_reals
+        implicit none
+        !> All of the likelihoods
+        double precision, intent(in), dimension(:) :: loglikelihoods
+        !> the number of live points
+        integer, intent(in) :: nlive
+
+        ! The result
+        double precision :: logevidence
+
+        double precision, dimension(0:size(loglikelihoods)) :: logvolumes
+        double precision, dimension(size(loglikelihoods)) :: logweights
+
+        integer :: nlike
+        integer :: i
+
+        ! Get the number of likelihoods
+        nlike = size(loglikelihoods)
+
+        ! Generate nlike random numbers distributed as P(t) = nlive t^(nlive-1)
+        ! take the log to preserve accuracy
+        logvolumes(0)=0
+        logvolumes(1:) = log(random_reals(nlike))/nlive
+
+        ! shrink each volume by a factor of the previous volume
+        do i=1,nlike
+            logvolumes(i) = logvolumes(i)+logvolumes(i-1)
+        end do
+
+        ! calculate the weights
+        do i=1,nlike
+            logweights(i) = logsubexp( logvolumes(i-1) , logvolumes(i) )
+        end do
+
+        ! Compute the evidence
+        logevidence = logsumexp(loglikelihoods+logweights)
+        
+    end function
+
 
 end module evidence_module
