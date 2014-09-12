@@ -192,13 +192,20 @@ module feedback_module
         !> The prior information
         type(prior), dimension(:), intent(in) :: priors
 
+        double precision :: logZ, sigma
+
+        ! The unbiased mean of the logevidence
+        logZ = evidence_vec(1) - 0.5d0*log(1+exp(evidence_vec(2)-2*evidence_vec(1)))
+        ! The unbiased stdev
+        sigma = sqrt(log(1+exp(evidence_vec(2)-2*evidence_vec(1))))
+
         if (feedback>=0) then
             write(stdout_unit,'(A42)')                                        ' ________________________________________ '
             write(stdout_unit,'(A42)')                                        '|                                        |'
             write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') ndead
             write(stdout_unit,'("| nlike  = ", I12, "                  |"  )') total_likelihood_calls
-            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1))  
-            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') evidence_vec(1)+prior_log_volume(priors), exp(0.5*evidence_vec(2)-evidence_vec(1))  
+            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') logZ,sigma
+            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') logZ+prior_log_volume(priors),sigma
             write(stdout_unit,'(A42)')                                        '|________________________________________|'
         endif
     end subroutine write_final_results
