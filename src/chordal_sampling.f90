@@ -439,48 +439,35 @@ module chordal_module
         !> The position of the seed
         integer, intent(in) :: seed_pos
 
-        integer :: i_nhat,i
         integer,dimension(settings%nlive) :: i_live
+        integer,dimension(settings%nDims) :: i_chords
         double precision, dimension(settings%nDims,settings%nlive/2) :: live_vectors
-        double precision, dimension(settings%nlive/2,settings%nlive/2) :: signs
 
         double precision, dimension(settings%nDims,settings%nDims) :: basis
         integer :: i_vec
         integer :: i_dims
-
-        integer :: counter
+        integer :: i_nhat
+        integer :: i
 
 
         ! Find the live indices
         i_live = pack([(i,i=1,settings%nstack)], mask=live_data(settings%l1,:)<=late_likelihood .and. live_data(settings%daughter,:)>=0)
-        counter=0
 
         ! Shuffle this deck
         call shuffle_deck(i_live)
 
-        do i_vec=1,settings%nlive/2
-            ! get a set of live vectors
-            live_vectors(:,i_vec) = live_data(settings%h0:settings%h1,i_live(2*i_vec)) -live_data(settings%h0:settings%h1,i_live(2*i_vec-1))
-        end do
+        ! get a set of live vectors
+        live_vectors = live_data(settings%h0:settings%h1,i_live(1::2)) -live_data(settings%h0:settings%h1,i_live(2::2))
 
         ! Create the basis
         basis=0
         do i_dims=1,settings%nDims
-            !Point all the vectors in the same direction
+
             do i_vec=1,settings%nlive/2
-                if( sum(nint(sign( matmul( transpose(live_vectors), live_vectors(:,i_vec) ) , 1d0)) ) <=0) then
-                    live_vectors(:,i_vec) = - live_vectors(:,i_vec)
-                end if
+                ! Remove ambiguity of direction by flipping them according to
+                ! their first coordinate, and sum up all of the vectors
+                basis(:,i_dims) = basis(:,i_dims) + sign(live_vectors(1,i_vec),1d0)*live_vectors(:,i_vec)
             end do
-            ! sum up vectors
-            basis(:,i_dims) =sum(live_vectors,dim=2)
-            !do i_vec=1,settings%nlive/2
-            !    if(dot_product(basis(:,i_dims),live_vectors(:,i_vec))>0) then
-            !        basis(:,i_dims) =basis(:,i_dims) + live_vectors(:,i_vec)
-            !    else
-            !        basis(:,i_dims) =basis(:,i_dims) - live_vectors(:,i_vec)
-            !    end if
-            !end do
 
             ! Normalise
             basis(:,i_dims)= basis(:,i_dims)/sqrt(mod2(basis(:,i_dims)))
@@ -493,25 +480,16 @@ module chordal_module
         end do
 
 
+        ! Choose a random set of directions to move about in
+        i_chords = [(i,i=1,settings%nDims)]
+        call shuffle_deck(i_chords)
 
-
-
+        ! Choose each of the basis vectors in turn in the order prescribed above
+        ! until no more chords are required
         do i_nhat=1,settings%num_chords
-            !nhats(:,i_nhat) = matmul(basis,random_direction(settings%nDims))
-            ! normalise
-            !nhats(:,i_nhat) = nhats(:,i_nhat)/sqrt(dot_product(nhats(:,i_nhat),nhats(:,i_nhat)))
-            nhats(:,i_nhat) = basis(:,1+mod(i_nhat,settings%num_chords-1))
+            nhats(:,i_nhat) = basis(:,1+mod(i_nhat-1,settings%nDims))
+            !nhats(:,i_nhat) = basis(:,i_chords(1+mod(i_nhat-1,settings%nDims)))
         end do
-
-        !nhats_temp = nhats
-        !call dgetrf(settings%nDims,settings%num_chords,nhats_temp,max(1,settings%num_chords,settings%nDims),ipiv,info)
-        !logdetcovmat =1
-        !do i=1,settings%nDims
-        !    logdetcovmat = logdetcovmat + log(abs(nhats_temp(i,i)))
-        !end do
-
-        !write(*,'(F17.8)') exp(logdetcovmat/settings%nDims)
-
 
 
     end subroutine adaptive_nhats

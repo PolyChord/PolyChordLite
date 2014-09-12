@@ -81,7 +81,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims=2                  ! Dimensionality of the space
+    settings%nDims=20                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -108,8 +108,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
-    settings%num_chords           = settings%nDims           !Number of chords to draw (after each randomisation)
-    settings%num_reflections      = 1                        !Number of randomisations to choose, 4 seems fine in most cases
+    settings%num_chords           = settings%nDims           !Number of chords to draw
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
@@ -125,7 +124,7 @@ program main
     ! posterior calculation
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-10                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
 
     ! reading and writing
     settings%read_resume          = .false.                  !whether or not to resume from file
