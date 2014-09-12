@@ -61,6 +61,20 @@ module utils_module
 
     end function distance
 
+    !> Modulus squared of a vector
+    !!
+    !! returns \f$\sum_i (a_i)^2 \f$
+    function mod2(a)
+        implicit none
+        !> First vector
+        double precision, dimension(:) :: a
+
+        double precision :: mod2
+
+        mod2 = dot_product(a,a)
+
+    end function mod2
+
 
     !> Double comparison
     function dbleq(a,b)

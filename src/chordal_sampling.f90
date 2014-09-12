@@ -420,7 +420,7 @@ module chordal_module
     subroutine adaptive_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
         use settings_module, only: program_settings
         use random_module, only: random_integer,random_direction,shuffle_deck
-        use utils_module, only: logzero,stdout_unit,loginf
+        use utils_module, only: logzero,stdout_unit,loginf,mod2
         implicit none
 
         ! ------- Inputs -------
@@ -441,7 +441,12 @@ module chordal_module
 
         integer :: i_nhat,i
         integer,dimension(settings%nlive) :: i_live
+        double precision, dimension(settings%nDims,settings%nlive/2) :: live_vectors
+        double precision, dimension(settings%nlive/2,settings%nlive/2) :: signs
+
         double precision, dimension(settings%nDims,settings%nDims) :: basis
+        integer :: i_vec
+        integer :: i_dims
 
         integer :: counter
 
@@ -453,17 +458,49 @@ module chordal_module
         ! Shuffle this deck
         call shuffle_deck(i_live)
 
-        do i_nhat=1,settings%nDims
-            ! set the i_nhat th nhat to be the j_live th point minus the k_live th point
-            basis(:,i_nhat) = live_data(settings%h0:settings%h1,i_live(2*i_nhat)) -live_data(settings%h0:settings%h1,i_live(2*i_nhat-1))
-            ! normalise
-            basis(:,i_nhat) = basis(:,i_nhat)/sqrt(dot_product(basis(:,i_nhat),basis(:,i_nhat)))
+        do i_vec=1,settings%nlive/2
+            ! get a set of live vectors
+            live_vectors(:,i_vec) = live_data(settings%h0:settings%h1,i_live(2*i_vec)) -live_data(settings%h0:settings%h1,i_live(2*i_vec-1))
         end do
 
+        ! Create the basis
+        basis=0
+        do i_dims=1,settings%nDims
+            !Point all the vectors in the same direction
+            do i_vec=1,settings%nlive/2
+                if( sum(nint(sign( matmul( transpose(live_vectors), live_vectors(:,i_vec) ) , 1d0)) ) <=0) then
+                    live_vectors(:,i_vec) = - live_vectors(:,i_vec)
+                end if
+            end do
+            ! sum up vectors
+            basis(:,i_dims) =sum(live_vectors,dim=2)
+            !do i_vec=1,settings%nlive/2
+            !    if(dot_product(basis(:,i_dims),live_vectors(:,i_vec))>0) then
+            !        basis(:,i_dims) =basis(:,i_dims) + live_vectors(:,i_vec)
+            !    else
+            !        basis(:,i_dims) =basis(:,i_dims) - live_vectors(:,i_vec)
+            !    end if
+            !end do
+
+            ! Normalise
+            basis(:,i_dims)= basis(:,i_dims)/sqrt(mod2(basis(:,i_dims)))
+
+            ! Project all vectors into the subspace
+            do i_vec=1,settings%nlive/2
+                live_vectors(:,i_vec) = live_vectors(:,i_vec) - dot_product(live_vectors(:,i_vec),basis(:,i_dims)) * basis(:,i_dims)
+            end do
+
+        end do
+
+
+
+
+
         do i_nhat=1,settings%num_chords
-            nhats(:,i_nhat) = matmul(basis,random_direction(settings%nDims))
+            !nhats(:,i_nhat) = matmul(basis,random_direction(settings%nDims))
             ! normalise
-            nhats(:,i_nhat) = nhats(:,i_nhat)/sqrt(dot_product(nhats(:,i_nhat),nhats(:,i_nhat)))
+            !nhats(:,i_nhat) = nhats(:,i_nhat)/sqrt(dot_product(nhats(:,i_nhat),nhats(:,i_nhat)))
+            nhats(:,i_nhat) = basis(:,1+mod(i_nhat,settings%num_chords-1))
         end do
 
         !nhats_temp = nhats

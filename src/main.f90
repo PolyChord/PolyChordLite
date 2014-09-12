@@ -81,7 +81,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims=20                 ! Dimensionality of the space
+    settings%nDims=2                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -120,12 +120,12 @@ program main
 
     ! stopping criteria
     settings%precision_criterion  =  1d-8                    !degree of precision in answer
-    settings%max_ndead            =  1000000                 !maximum number of samples
+    settings%max_ndead            =  100000                  !maximum number of samples
 
     ! posterior calculation
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-10                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
 
     ! reading and writing
     settings%read_resume          = .false.                  !whether or not to resume from file
@@ -135,8 +135,8 @@ program main
     settings%save_all             = .false.                  !Save all the dead points?
 
     ! Evidence inference
-    settings%infer_evidence       = .true.
-    settings%evidence_samples     = 10000
+    settings%infer_evidence       = .false.
+    settings%evidence_samples     = 100000
 
 
     ! ======= (2) Perform Nested Sampling =======
