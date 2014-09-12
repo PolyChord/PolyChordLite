@@ -16,6 +16,7 @@ module nested_sampling_parallel_module
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
+        use evidence_module,   only: infer_evidence
 
         implicit none
 
@@ -91,6 +92,7 @@ module nested_sampling_parallel_module
         integer                                    :: total_likelihood_calls
 
         integer :: ndead
+        integer :: ndead_buffer(1)
 
         double precision :: lognlive 
         double precision :: lognlivep1 
@@ -100,6 +102,8 @@ module nested_sampling_parallel_module
         double precision :: nhats(settings%nDims,settings%num_chords)
 
         integer :: seed_pos
+
+        double precision, dimension(settings%max_ndead) :: dead_likes
 
         nprocs = mpi_size()  ! Get the number of MPI procedures
         myrank = mpi_rank()  ! Get the MPI label of the current processor
@@ -392,6 +396,9 @@ module nested_sampling_parallel_module
                     ! check to see if we've reached this
                     if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
 
+                    ! Record the loglikelihoods if we're inferring the evidence
+                    if (settings%infer_evidence) dead_likes(ndead) = late_likelihood
+
                     ! (4) Calculate the new evidence (and check to see if we're accurate enough)
                     call settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed,evidence_vec)
 
@@ -625,13 +632,37 @@ module nested_sampling_parallel_module
 
             end if
 
-
-
-
             if(settings%save_all) close(write_dead_unit) 
 
-            call write_final_results(evidence_vec,ndead,total_likelihood_calls,settings%feedback,priors)
         end if
+
+
+        if(settings%infer_evidence) then
+            if(myrank==0) ndead_buffer(1)=ndead
+            write(*,*) myrank, 'is here 1'
+            call MPI_BCAST(     &
+                ndead_buffer,   &
+                1,              &
+                MPI_INTEGER,    &
+                0,              &
+                MPI_COMM_WORLD, &
+                mpi_error       &
+                )
+            ndead=ndead_buffer(1)
+            write(*,*) myrank, 'is here 2'
+            call MPI_BCAST(           &
+                dead_likes,           &
+                settings%max_ndead,   &
+                MPI_DOUBLE_PRECISION, &
+                0,                    &
+                MPI_COMM_WORLD,       &
+                mpi_error             &
+                )
+            write(*,*) myrank, 'is here 3'
+            call infer_evidence(settings,dead_likes(:ndead))
+        end if
+
+        if(myrank==0) call write_final_results(evidence_vec,ndead,total_likelihood_calls,settings%feedback,priors)
 
     end subroutine NestedSamplingP
 

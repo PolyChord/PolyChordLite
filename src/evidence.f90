@@ -190,6 +190,9 @@ module evidence_module
     subroutine infer_evidence(settings,loglikelihoods)
         use settings_module, only: program_settings
         use utils_module, only: write_ev_unit,DBL_FMT
+#ifdef MPI
+        use mpi_module
+#endif
         implicit none
         !> Program settings
         type(program_settings), intent(in) :: settings
@@ -203,10 +206,42 @@ module evidence_module
         integer :: info,i_err
         integer :: i
 
+#ifdef MPI
+        double precision, allocatable, dimension(:) :: log_evidences_local
+        integer :: evidence_samples_local
+        integer :: nprocs
+
+        nprocs = mpi_size()  ! Get the number of MPI procedures
+        write(*,*) 'i am here'
+
+        evidence_samples_local = ceiling(settings%evidence_samples/(nprocs+0d0))
+
+        ! Allocate the arrays for storing log evidences on each node
+        allocate(log_evidences_local(evidence_samples_local))
+        
+        ! Calculate the log evidences on each node
+        do i=1,evidence_samples_local
+            log_evidences_local(i) = sample_logevidence(loglikelihoods,settings%nlive)
+        end do
+
+        ! Gather them onto the root node
+        call MPI_GATHER(                 &  
+            log_evidences_local,         & ! sending array
+            evidence_samples_local,      & ! number of elements to be sent
+            MPI_DOUBLE_PRECISION,        & ! type of element to be sent
+            log_evidences,               & ! recieving array
+            evidence_samples_local,      & ! number of elements to be recieved from each node
+            MPI_DOUBLE_PRECISION,        & ! type of element recieved
+            0,                           & ! root node address
+            MPI_COMM_WORLD,              & ! communication info
+            mpierror)                      ! error (from module mpi_module)
+
+#else
         ! Compute evidence_samples volume samples of the log evidence
         do i=1,settings%evidence_samples
             log_evidences(i) = sample_logevidence(loglikelihoods,settings%nlive)
         end do
+#endif
 
         ! Sort them in increasing order 
         call dlasrt('I',settings%evidence_samples,log_evidences,info)
@@ -262,7 +297,7 @@ module evidence_module
         ! Compute the evidence
         logevidence = logsumexp(loglikelihoods+logweights)
         
-    end function
+    end function sample_logevidence
 
 
 end module evidence_module

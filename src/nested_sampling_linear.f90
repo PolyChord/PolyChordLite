@@ -37,7 +37,7 @@ module nested_sampling_linear_module
         !> This is a very important array. live_data(:,i) constitutes the
         !! information in the ith live point in the unit hypercube:
         !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal,settings%nlive) :: live_data
+        double precision, dimension(settings%nTotal,settings%nstack) :: live_data
 
         double precision, allocatable, dimension(:,:) :: posterior_array
         double precision, dimension(settings%nDims+settings%nDerived+2) :: posterior_point
