@@ -419,7 +419,7 @@ module chordal_module
     !! a uni-modal distribution
     subroutine adaptive_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
         use settings_module, only: program_settings
-        use random_module, only: random_integer,random_direction
+        use random_module, only: random_integer,random_direction,shuffle_deck
         use utils_module, only: logzero,stdout_unit,loginf
         implicit none
 
@@ -440,26 +440,18 @@ module chordal_module
         integer, intent(in) :: seed_pos
 
         integer :: i_nhat,i
-        integer,dimension(2*settings%num_chords) :: i_live
+        integer,dimension(settings%nlive) :: i_live
         double precision, dimension(settings%nDims,settings%nDims) :: basis
 
         integer :: counter
 
+
+        ! Find the live indices
+        i_live = pack([(i,i=1,settings%nstack)], mask=live_data(settings%l1,:)<=late_likelihood .and. live_data(settings%daughter,:)>=0)
         counter=0
 
-        do i=1,settings%nDims*2
-            do while( .true. ) 
-                i_live(i) = random_integer(settings%nstack)
-                if(all(i_live(i)/=i_live(:i-1)) .and. live_data(settings%daughter,i_live(i))>=0 .and. live_data(settings%l1,i_live(i))<=late_likelihood .and. i_live(i) .ne. seed_pos)  exit
-
-                counter = counter+1
-                if(counter>settings%nstack*100) then 
-                    nhats=0
-                    return
-                end if
-            end do
-        end do
-        !write(*,'(<settings%num_chords*2>I4)') i_live
+        ! Shuffle this deck
+        call shuffle_deck(i_live)
 
         do i_nhat=1,settings%nDims
             ! set the i_nhat th nhat to be the j_live th point minus the k_live th point

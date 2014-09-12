@@ -179,9 +179,9 @@ module random_module
     ! ===========================================================================================
 
 
-    !>  Random integers between 1 and nmax (inclusive)
+    !>  Random integer between 1 and nmax (inclusive)
     !!
-    !! Generate nDims integers between 1 and nmax inclusive
+    !! Generate a random integer  between 1 and nmax inclusive
     !!
     !! We use the 
     !! [VSL_RNG_METHOD_UNIFORM_STD](
@@ -550,6 +550,41 @@ module random_module
     end function random_orthonormal_basis
 
     ! ===========================================================================================
+
+
+    !> Shuffle a 'deck' of integers
+    !!
+    !! This uses a [Fischer-Yates](http://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle)
+    !! shuffle, which is \f$\mathcal{O}(n)\f$
+
+    subroutine shuffle_deck(deck)
+        implicit none
+
+        ! The input deck to be shuffled
+        integer, intent(inout), dimension(:) :: deck
+
+        ! Temporary variable for swapping
+        integer :: temp
+
+        ! Indices
+        integer :: i,j
+
+        ! Size of deck
+        integer :: n
+
+        n = size(deck)
+
+        do i=n,1,-1
+            ! pick a random integer in [1,i]
+            j=random_integer(i)
+
+            ! swap elements i and j
+            temp    = deck(i) 
+            deck(i) = deck(j)
+            deck(j) = temp
+        end do
+
+    end subroutine shuffle_deck
 
     !> De-initialise the random number generators
 
