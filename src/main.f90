@@ -93,8 +93,8 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    minimums=0.5-1d-2*5   
-    maximums=0.5+1d-2*5    
+    minimums=0.5-1d-2*5  
+    maximums=0.5+1d-2*5   
 
     do i=1,settings%nDims
         physical_indices(i)  = i

@@ -6,6 +6,8 @@ module example_likelihoods
     use mpi_module
 #endif
 
+    double precision, allocatable, dimension(:,:) :: eigenbasis_true
+
     double precision :: logdetcovmat_true
 
     contains
@@ -639,11 +641,18 @@ module example_likelihoods
         double precision, dimension(nDims,nDims) :: eigenvectors
         integer :: j
         double precision, parameter :: rng=1e-2
+        integer :: info
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)
+        allocate(eigenbasis_true(nDims,nDims))
+        eigenbasis_true = eigenvectors
         ! Generate the eigenvalues logarithmically in [rng,1] * sigma
-        eigenvalues  = sigma *( rng**random_reals(nDims))
+        do j=1,nDims
+            eigenvalues(j)  = sigma * rng**((j-1d0)/(nDims-1d0))
+        end do
+        ! Sort them lowest to highest for consistency
+        !call dlasrt('D',nDims,eigenvalues,info)
 
         ! Create the inverse covariance matrix in the eigenbasis
         invcovmat = 0d0

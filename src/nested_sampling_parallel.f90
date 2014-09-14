@@ -499,7 +499,7 @@ module nested_sampling_parallel_module
                         end if
 
                         ! Generate a set of directions
-                        call settings%generate_directions(live_data,nhats,seed_point(settings%l0),seed_pos)
+                        call settings%generate_directions(live_data,nhats,seed_point(settings%l0))
                         if(all(nint(nhats*settings%nDims)==0)) then
                             ! If we haven't generated any directions
                             if(all(waiting_slave)) then

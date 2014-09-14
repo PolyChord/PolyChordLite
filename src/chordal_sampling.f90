@@ -384,7 +384,7 @@ module chordal_module
     ! Direction generators
 
     !> Generate a set of isotropic nhats
-    subroutine isotropic_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
+    subroutine isotropic_nhats(settings,live_data,nhats,late_likelihood)
         use settings_module, only: program_settings
         use random_module, only: random_direction
         use utils_module, only: logzero,stdout_unit
@@ -403,10 +403,6 @@ module chordal_module
         !> The late likelihood
         double precision, intent(in) :: late_likelihood
 
-        !> The position of the seed
-        integer, intent(in) :: seed_pos
-
-
         integer i_nhat
 
         do i_nhat=1,settings%num_chords 
@@ -417,10 +413,9 @@ module chordal_module
 
     !> Generate a set of nhats that roughly agree with the longest directions of
     !! a uni-modal distribution
-    subroutine adaptive_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
+    subroutine adaptive_nhats(settings,live_data,nhats,late_likelihood)
         use settings_module, only: program_settings
-        use random_module, only: random_integer,random_direction,shuffle_deck
-        use utils_module, only: logzero,stdout_unit,loginf,mod2
+        use random_module, only: shuffle_deck,random_integer
         implicit none
 
         ! ------- Inputs -------
@@ -436,31 +431,73 @@ module chordal_module
         !> The late likelihood
         double precision, intent(in) :: late_likelihood
 
-        !> The position of the seed
-        integer, intent(in) :: seed_pos
-
         integer,dimension(settings%nlive) :: i_live
         integer,dimension(settings%nDims) :: i_chords
         double precision, dimension(settings%nDims,settings%nlive/2) :: live_vectors
 
-        double precision, dimension(settings%nDims,settings%nDims) :: basis
+        double precision, save, allocatable, dimension(:,:) :: basis
         integer :: i_vec
         integer :: i_dims
         integer :: i_nhat
         integer :: i
 
+        integer, save :: counter=0
 
-        ! Find the live indices
-        i_live = pack([(i,i=1,settings%nstack)], mask=live_data(settings%l1,:)<=late_likelihood .and. live_data(settings%daughter,:)>=0)
+        if(.not. allocated(basis)) allocate(basis(settings%nDims,settings%nDims))
 
-        ! Shuffle this deck
-        call shuffle_deck(i_live)
 
-        ! get a set of live vectors
-        live_vectors = live_data(settings%h0:settings%h1,i_live(1::2)) -live_data(settings%h0:settings%h1,i_live(2::2))
+        if(counter==0) then
+            ! Find the live indices
+            i_live = pack([(i,i=1,settings%nstack)], mask=live_data(settings%l1,:)<=late_likelihood .and. live_data(settings%daughter,:)>=0)
 
-        ! Create the basis
+            ! Shuffle this deck
+            call shuffle_deck(i_live)
+
+            ! get a set of live vectors
+            live_vectors = live_data(settings%h0:settings%h1,i_live(1::2)) -live_data(settings%h0:settings%h1,i_live(2::2))
+
+            ! Generate a basis
+            basis = generate_basis_from_vectors(settings,live_vectors)
+
+            ! Reset the counter
+            counter = settings%nDims
+        end if
+
+        ! Choose a random set of directions to move about in
+        !i_chords = [(i,i=1,settings%nDims)]
+        !call shuffle_deck(i_chords)
+
+        ! Choose each of the basis vectors in turn in the order prescribed above
+        ! until no more chords are required
+        do i_nhat=1,settings%num_chords
+            nhats(:,i_nhat) = basis(:,random_integer(settings%nDims))
+            !nhats(:,i_nhat) = basis(:,i_chords(1+mod(i_nhat-1,settings%nDims)))
+        end do
+
+        counter = counter-1
+
+    end subroutine adaptive_nhats
+
+    function generate_basis_from_vectors(settings,live_vectors_input) result(basis)
+        use settings_module, only: program_settings
+        use utils_module, only: mod2
+        use example_likelihoods, only: eigenbasis_true
+        implicit none
+        class(program_settings), intent(in) :: settings
+        double precision, dimension(settings%nDims,settings%nlive/2), intent(in) :: live_vectors_input
+        double precision, dimension(settings%nDims,settings%nDims) :: basis
+
+        double precision, dimension(settings%nDims,settings%nlive/2) :: live_vectors
+
+        double precision, dimension(settings%nDims) :: eigenvalues
+
+        integer :: i_dims
+        integer :: i_vec
+
+        live_vectors = live_vectors_input
+
         basis=0
+
         do i_dims=1,settings%nDims
 
             do i_vec=1,settings%nlive/2
@@ -479,22 +516,9 @@ module chordal_module
 
         end do
 
+    end function generate_basis_from_vectors
 
-        ! Choose a random set of directions to move about in
-        i_chords = [(i,i=1,settings%nDims)]
-        call shuffle_deck(i_chords)
-
-        ! Choose each of the basis vectors in turn in the order prescribed above
-        ! until no more chords are required
-        do i_nhat=1,settings%num_chords
-            nhats(:,i_nhat) = basis(:,1+mod(i_nhat-1,settings%nDims))
-            !nhats(:,i_nhat) = basis(:,i_chords(1+mod(i_nhat-1,settings%nDims)))
-        end do
-
-
-    end subroutine adaptive_nhats
-
-    subroutine fast_slow_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
+    subroutine fast_slow_nhats(settings,live_data,nhats,late_likelihood)
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
         use utils_module, only: logzero,stdout_unit,loginf
@@ -512,10 +536,6 @@ module chordal_module
 
         !> The late likelihood
         double precision, intent(in) :: late_likelihood
-
-        !> The position of the seed
-        integer, intent(in) :: seed_pos
-
 
         integer :: i
 
@@ -535,7 +555,7 @@ module chordal_module
 
     end subroutine fast_slow_nhats
 
-    subroutine fast_slow_adaptive_nhats(settings,live_data,nhats,late_likelihood,seed_pos)
+    subroutine fast_slow_adaptive_nhats(settings,live_data,nhats,late_likelihood)
         use settings_module, only: program_settings
         use random_module, only: random_gaussian
         use utils_module, only: logzero,stdout_unit,loginf
@@ -551,21 +571,18 @@ module chordal_module
         !> The set of nhats to be generated
         double precision, intent(out), dimension(:,:) :: nhats
 
-        !> The seed position
-        integer, intent(in) :: seed_pos
-
         !> The late likelihood
         double precision, intent(in) :: late_likelihood
 
         double precision, dimension(settings%nDims,settings%num_chords) :: nhats_temp
 
+        double precision, dimension(settings%nDims,settings%nDims,maxval(settings%grade)) :: basis
+        double precision, dimension(settings%nDims,settings%nlive/2) :: live_vectors
 
         integer :: i
+        integer :: i_grade
 
-        ! Generate a set of unimodal nhats
-        call adaptive_nhats(settings,live_data,nhats,late_likelihood,seed_pos) 
 
-        nhats_temp = nhats
 
         ! zero out the points not being varied
         nhats=0

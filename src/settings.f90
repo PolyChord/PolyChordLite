@@ -265,7 +265,7 @@ module settings_module
 
 
     interface
-        subroutine dir(settings,live_data,nhats,late_likelihood,seed_pos)
+        subroutine dir(settings,live_data,nhats,late_likelihood)
             import :: program_settings
             implicit none
 
@@ -281,9 +281,6 @@ module settings_module
 
             !> The late likelihood
             double precision, intent(in) :: late_likelihood
-
-            !> The position of the seed
-            integer, intent(in) :: seed_pos
 
         end subroutine dir
     end interface
