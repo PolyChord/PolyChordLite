@@ -82,6 +82,9 @@ module nested_sampling_linear_module
 
         double precision, dimension(settings%max_ndead) :: dead_likes
 
+        integer :: old_nlike
+        integer :: new_nlike
+
 
 
         call write_opening_statement(settings) 
@@ -241,6 +244,23 @@ module nested_sampling_linear_module
             ! Generate a new point within the likelihood bound of the late point
             baby_point = settings%sampler(loglikelihood,priors,nhats,seed_point)
             baby_likelihood  = baby_point(settings%l0)
+
+            ! Scatter the seed point
+            ! Generate some new directions
+            call settings%generate_directions(live_data,nhats,late_likelihood)
+            ! record the number of likelihood evaluations originally stored in
+            ! the seed
+            old_nlike = live_data(settings%nlike,seed_pos)
+            ! Generate a new point from the seed point
+            live_data(:,seed_pos) = settings%sampler(loglikelihood,priors,nhats,seed_point)
+
+            ! Record the number of likelihood evaluations for this
+            new_nlike = live_data(settings%nlike,seed_pos)
+            ! Replace the number of likelihood evaluations in the seed point
+            live_data(settings%nlike,seed_pos) = old_nlike
+            ! Add the number of likelihood evalutians for re-seeding to the
+            ! baby_point
+            baby_point(settings%nlike) = baby_point(settings%nlike) + new_nlike
 
 
             ! (3) Insert the baby point into the set of live points (over the

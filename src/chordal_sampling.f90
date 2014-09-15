@@ -470,7 +470,8 @@ module chordal_module
         ! Choose each of the basis vectors in turn in the order prescribed above
         ! until no more chords are required
         do i_nhat=1,settings%num_chords
-            nhats(:,i_nhat) = basis(:,random_integer(settings%nDims))
+            !nhats(:,i_nhat) = basis(:,random_integer(settings%nDims))
+            nhats(:,i_nhat) = basis(:,1+mod(i_nhat-1,settings%nDims))
             !nhats(:,i_nhat) = basis(:,i_chords(1+mod(i_nhat-1,settings%nDims)))
         end do
 
