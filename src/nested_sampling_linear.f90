@@ -61,7 +61,7 @@ module nested_sampling_linear_module
 
 
         ! Evidence info
-        double precision, dimension(6) :: evidence_vec
+        double precision, allocatable, dimension(:) :: evidence_vec
 
 
         logical :: resume=.false.
@@ -78,7 +78,7 @@ module nested_sampling_linear_module
 
         double precision :: nhats(settings%nDims,settings%num_chords)
 
-        integer :: seed_pos
+        integer :: seed_index
 
         double precision, dimension(settings%max_ndead) :: dead_likes
 
@@ -135,10 +135,12 @@ module nested_sampling_linear_module
         !  (d) posterior_array        | Array of weighted posterior points
 
         ! (a)
+            ! Allocate the evidence vector using the evidence function
+        more_samples_needed = settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,evidence_vec)
         if(resume) then
             ! If resuming, get the accumulated stats to calculate the
             ! evidence from the resume file
-            read(read_resume_unit,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
+            read(read_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         else !(not resume) 
             ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
             evidence_vec = logzero
@@ -232,8 +234,8 @@ module nested_sampling_linear_module
             do while (seed_point(settings%l0)<=late_likelihood)
                 ! get a random number in [1,nlive]
                 ! get this point from live_data 
-                seed_pos =random_integer(settings%nlive)
-                seed_point = live_data(:,seed_pos)
+                seed_index =random_integer(settings%nlive)
+                seed_point = live_data(:,seed_index)
             end do
 
             ! Record the likelihood bound which this seed will generate from
@@ -245,22 +247,6 @@ module nested_sampling_linear_module
             baby_point = settings%sampler(loglikelihood,priors,nhats,seed_point)
             baby_likelihood  = baby_point(settings%l0)
 
-            ! Scatter the seed point
-            ! Generate some new directions
-            call settings%generate_directions(live_data,nhats,late_likelihood)
-            ! record the number of likelihood evaluations originally stored in
-            ! the seed
-            old_nlike = live_data(settings%nlike,seed_pos)
-            ! Generate a new point from the seed point
-            live_data(:,seed_pos) = settings%sampler(loglikelihood,priors,nhats,seed_point)
-
-            ! Record the number of likelihood evaluations for this
-            new_nlike = live_data(settings%nlike,seed_pos)
-            ! Replace the number of likelihood evaluations in the seed point
-            live_data(settings%nlike,seed_pos) = old_nlike
-            ! Add the number of likelihood evalutians for re-seeding to the
-            ! baby_point
-            baby_point(settings%nlike) = baby_point(settings%nlike) + new_nlike
 
 
             ! (3) Insert the baby point into the set of live points (over the
@@ -280,7 +266,7 @@ module nested_sampling_linear_module
             if (settings%infer_evidence) dead_likes(ndead) = late_likelihood
 
             ! (4) Calculate the new evidence (and check to see if we're accurate enough)
-            call settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed,evidence_vec)
+            more_samples_needed = settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,evidence_vec)
 
 
             ! (5) Update the set of weighted posteriors
@@ -357,7 +343,7 @@ module nested_sampling_linear_module
 
         if(settings%infer_evidence) call infer_evidence(settings,dead_likes(:ndead))
 
-        call write_final_results(evidence_vec,ndead,total_likelihood_calls,settings%feedback,priors)
+        call write_final_results(evidence_vec(1:2),ndead,total_likelihood_calls,settings%feedback,priors)
 
     end subroutine NestedSamplingL
 

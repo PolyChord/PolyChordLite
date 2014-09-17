@@ -233,7 +233,7 @@ module settings_module
         !! * a length 2 vector ( evidence_vec ) with the [evidence, evidence error] in the value of the function
         !! * whether more samples are needed in the logical variable more_samples_needed
         !!
-        subroutine ev(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed,evidence_vec)
+        function ev(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec) result(more_samples_needed)
 
             import :: program_settings
 
@@ -253,14 +253,14 @@ module settings_module
             integer,                intent(in) :: ndead
 
             ! vector containing [evidence, evidence error]
-            double precision, dimension(6) :: evidence_vec
+            double precision,       intent(inout), allocatable, dimension(:) :: evidence_vec
 
             ! ------- Outputs ------- 
             !> Whether we have obtained enough samples for an accurate evidence
-            logical,intent(out) :: more_samples_needed
+            logical :: more_samples_needed
 
 
-        end subroutine ev
+        end function ev
     end interface
 
 

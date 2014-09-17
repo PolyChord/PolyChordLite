@@ -17,7 +17,7 @@ module read_write_module
         double precision :: mean_likelihood_calls
         integer :: total_likelihood_calls
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
-        double precision, dimension(6)             :: evidence_vec
+        double precision, dimension(:)             :: evidence_vec
         integer :: ndead
 
         integer :: i_err
@@ -31,7 +31,7 @@ module read_write_module
         ! Live points
         write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
         ! Evidence vector
-        write(write_resume_unit,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
+        write(write_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         ! number of dead points
         write(write_resume_unit,'(I)') ndead
         ! mean likelihood calls

@@ -83,7 +83,7 @@ module nested_sampling_parallel_module
 
 
         ! Evidence info
-        double precision, dimension(6)             :: evidence_vec
+        double precision, allocatable, dimension(:) :: evidence_vec
 
 
         logical :: resume=.false.
@@ -201,10 +201,12 @@ module nested_sampling_parallel_module
         if(myrank==0) then 
 
             ! (a) 
+            ! Allocate the evidence vector using the evidence function
+        more_samples_needed = settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,evidence_vec)
             if(resume) then
                 ! If resuming, get the accumulated stats to calculate the
                 ! evidence from the resume file
-                read(read_resume_unit,'(6E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
+            read(read_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
             else !(not resume) 
                 ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
                 evidence_vec = logzero
@@ -400,7 +402,7 @@ module nested_sampling_parallel_module
                     if (settings%infer_evidence) dead_likes(ndead) = late_likelihood
 
                     ! (4) Calculate the new evidence (and check to see if we're accurate enough)
-                    call settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,more_samples_needed,evidence_vec)
+                    more_samples_needed = settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,evidence_vec)
 
 
                     ! (5) Update the set of weighted posteriors
@@ -662,7 +664,7 @@ module nested_sampling_parallel_module
             call infer_evidence(settings,dead_likes(:ndead))
         end if
 
-        if(myrank==0) call write_final_results(evidence_vec,ndead,total_likelihood_calls,settings%feedback,priors)
+        if(myrank==0) call write_final_results(evidence_vec(1:2),ndead,total_likelihood_calls,settings%feedback,priors)
 
     end subroutine NestedSamplingP
 

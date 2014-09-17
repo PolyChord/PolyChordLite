@@ -76,7 +76,7 @@ module evidence_module
         integer,                intent(in) :: ndead
 
         !> vector containing [logevidence, logevidence error,logZ_dead,logZhat_dead,logZp_dead,logmean_loglike_live]
-        double precision, intent(inout), dimension(6) :: evidence_vec
+        double precision,       intent(inout), allocatable, dimension(:) :: evidence_vec
 
         ! ------- Outputs ------- 
         !> Whether we have obtained enough samples for an accurate evidence
@@ -116,6 +116,12 @@ module evidence_module
         double precision :: lognlivep2 
 
         double precision,parameter :: log2 = log(2d0)
+
+        if(.not.allocated(evidence_vec)) then
+            allocate(evidence_vec(6))
+            more_samples_needed = .true.
+            return
+        end if
 
 
         ! Get the number of live points (and convert to double precision implicitly)
