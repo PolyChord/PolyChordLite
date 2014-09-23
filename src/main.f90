@@ -21,6 +21,13 @@ program main
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
 
+    ! Output of the program
+    ! 1) log(evidence)
+    ! 2) error(log(evidence))
+    ! 3) ndead
+    ! 4) number of likelihood calls
+    double precision, dimension(4) :: output_info
+
     type(program_settings)    :: settings  ! The program settings 
     type(prior), dimension(1) :: priors
 
@@ -143,14 +150,14 @@ program main
 
 #ifdef MPI
     if (mpi_size()>1) then
-        call NestedSamplingP(loglikelihood,priors,settings)
+        output_info = NestedSamplingP(loglikelihood,priors,settings)
     else
         settings%nstack=settings%nlive
-        call NestedSamplingL(loglikelihood,priors,settings) 
+        output_info = NestedSamplingL(loglikelihood,priors,settings) 
     end if
 #else
     settings%nstack=settings%nlive
-    call NestedSamplingL(loglikelihood,priors,settings) 
+    output_info = NestedSamplingL(loglikelihood,priors,settings) 
 #endif 
 
 

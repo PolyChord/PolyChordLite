@@ -5,7 +5,7 @@ module nested_sampling_linear_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    subroutine NestedSamplingL(loglikelihood,priors,settings)
+    function NestedSamplingL(loglikelihood,priors,settings) result(output_info)
         use priors_module,     only: prior
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
         use settings_module,   only: program_settings
@@ -27,6 +27,13 @@ module nested_sampling_linear_module
 
         type(prior), dimension(:), intent(in) :: priors
         type(program_settings), intent(in) :: settings
+
+        ! Output of the program
+        ! 1) log(evidence)
+        ! 2) error(log(evidence))
+        ! 3) ndead
+        ! 4) number of likelihood calls
+        double precision, dimension(4) :: output_info
 
 
 
@@ -332,9 +339,22 @@ module nested_sampling_linear_module
 
         if(settings%infer_evidence) call infer_evidence(settings,dead_likes(:ndead))
 
-        call write_final_results(evidence_vec(1:2),ndead,total_likelihood_calls,settings%feedback,priors)
 
-    end subroutine NestedSamplingL
+        ! Create the output array
+        ! log evidence
+        output_info(1) = evidence_vec(1) - 0.5d0*log(1+exp(evidence_vec(2)-2*evidence_vec(1)))
+        ! Error in the log evidence
+        output_info(2) = sqrt(log(1+exp(evidence_vec(2)-2*evidence_vec(1))))
+        ! Number of dead points
+        output_info(3) = ndead
+        ! Number of likelihood calls
+        output_info(4) = total_likelihood_calls
+
+
+        call write_final_results(output_info,settings%feedback,priors)
+
+
+    end function NestedSamplingL
 
 
 

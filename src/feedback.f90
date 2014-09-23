@@ -177,35 +177,28 @@ module feedback_module
 
 
     !> Nicely formatted final output statement
-    subroutine write_final_results(evidence_vec,ndead,total_likelihood_calls,feedback,priors)
+    subroutine write_final_results(output_info,feedback,priors)
         use utils_module,    only: stdout_unit
         use priors_module,   only: prior,prior_log_volume
         implicit none
+        !> Output of the program.
+        !! # log(evidence)
+        !! # error(log(evidence))
+        !! # ndead
+        !! # number of likelihood calls
+        double precision, dimension(4) :: output_info
         !> The degree of feedback required
         integer, intent(in) :: feedback 
-        !> the evidence information
-        double precision, intent(in), dimension(2) :: evidence_vec
-        !> the number of dead points
-        integer,intent(in) :: ndead
-        !> the total number of likelihood calls
-        integer,intent(in) :: total_likelihood_calls
         !> The prior information
         type(prior), dimension(:), intent(in) :: priors
-
-        double precision :: logZ, sigma
-
-        ! The unbiased mean of the logevidence
-        logZ = evidence_vec(1) - 0.5d0*log(1+exp(evidence_vec(2)-2*evidence_vec(1)))
-        ! The unbiased stdev
-        sigma = sqrt(log(1+exp(evidence_vec(2)-2*evidence_vec(1))))
 
         if (feedback>=0) then
             write(stdout_unit,'(A42)')                                        ' ________________________________________ '
             write(stdout_unit,'(A42)')                                        '|                                        |'
-            write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') ndead
-            write(stdout_unit,'("| nlike  = ", I12, "                  |"  )') total_likelihood_calls
-            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') logZ,sigma
-            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') logZ+prior_log_volume(priors),sigma
+            write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') nint(output_info(3))
+            write(stdout_unit,'("| nlike  = ", I12, "                  |"  )') nint(output_info(4)) 
+            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1:2)
+            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') output_info(1)+prior_log_volume(priors),output_info(2)
             write(stdout_unit,'(A42)')                                        '|________________________________________|'
         endif
     end subroutine write_final_results
