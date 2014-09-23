@@ -7,9 +7,9 @@ program main
     use settings_module,        only: program_settings,allocate_indices
     use random_module,          only: initialise_random, deinitialise_random
  
-    use chordal_module,         only: SliceSampling_Adaptive_Graded , get_live_coordinates
-    !use chordal_module,         only: SliceSampling_HitAndRun, no_processing
-    !use chordal_module,         only: SliceSampling_AdaptiveParallel, get_live_coordinates
+    use chordal_module,         only: SliceSampling, &
+                                      HitAndRun, Adaptive_Parallel, &
+                                      no_processing, get_live_coordinates
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -116,13 +116,15 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
-    settings%chain_length           = settings%nDims*10        !Number of chords to draw
+    settings%chain_length         = settings%nDims*10        !Number of chords to draw
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => SliceSampling_Adaptive_Graded !Sampler choice
+    settings%sampler              => SliceSampling           !Sampler choice
+    settings%get_nhat             => Adaptive_Parallel       !Direction choice
+    settings%process_live_points  => get_live_coordinates    !no processing of live points needed
+
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%process_live_points  => get_live_coordinates           !no processing of live points needed
     settings%feedback             =  1                       !degree of feedback
 
     ! stopping criteria

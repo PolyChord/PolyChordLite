@@ -148,6 +148,8 @@ module settings_module
         !!
         procedure(samp), pass(settings),       pointer :: sampler
 
+        procedure(dir), pass(settings),        pointer :: get_nhat
+
 
         !> Pointer to the evidence calculator
         !!
@@ -222,6 +224,26 @@ module settings_module
 
 
         end function samp
+    end interface
+
+    interface
+        subroutine dir(settings,live_data,nhat)
+
+            import :: program_settings   
+            implicit none
+
+            !> program settings (mostly useful to pass on the number of live points)
+            class(program_settings), intent(in) :: settings
+
+            !> Any data from the live points which is needed
+            double precision, intent(in), allocatable, dimension(:,:) :: live_data
+
+            ! ------- Outputs -------
+            !> The newly generated point
+            double precision, intent(out),   dimension(:)     :: nhat
+
+
+        end subroutine dir
     end interface
 
     interface
