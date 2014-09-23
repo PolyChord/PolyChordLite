@@ -78,10 +78,10 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood_corr
+    loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    settings%nDims=2                  ! Dimensionality of the space
+    settings%nDims=20                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -124,7 +124,7 @@ program main
     ! posterior calculation
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-10                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
 
     ! reading and writing
     settings%read_resume          = .false.                  !whether or not to resume from file
@@ -135,7 +135,7 @@ program main
 
     ! Evidence inference
     settings%infer_evidence       = .false.
-    settings%evidence_samples     = 100000
+    settings%evidence_samples     = 100000 
 
 
     ! ======= (2) Perform Nested Sampling =======

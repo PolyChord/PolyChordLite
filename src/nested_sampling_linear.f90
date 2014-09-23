@@ -1,9 +1,6 @@
 module nested_sampling_linear_module
+    use utils_module,      only: flag_blank,flag_gestating,flag_waiting  
     implicit none
-
-    integer,parameter :: flag_blank     = -2
-    integer,parameter :: flag_gestating = -1
-    integer,parameter :: flag_waiting   = 0
 
     contains
 
@@ -15,7 +12,6 @@ module nested_sampling_linear_module
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
-        use random_module,     only: random_integer,random_direction
         use evidence_module,   only: infer_evidence
 
         implicit none
@@ -78,15 +74,9 @@ module nested_sampling_linear_module
         double precision :: logminimumweight
 
 
-        double precision :: nhats(settings%nDims,settings%num_chords)
-
         integer :: seed_index
 
         double precision, dimension(settings%max_ndead) :: dead_likes
-
-        integer :: old_nlike
-        integer :: new_nlike
-
 
 
         call write_opening_statement(settings) 
@@ -232,13 +222,7 @@ module nested_sampling_linear_module
             ! Select a seed point for the generator
             !  -excluding the points which have likelihoods equal to the
             !   loglikelihood bound
-            seed_point(settings%l0)=late_likelihood
-            do while (seed_point(settings%l0)<=late_likelihood)
-                ! get a random number in [1,nlive]
-                ! get this point from live_points 
-                seed_index =random_integer(settings%nlive)
-                seed_point = live_points(:,seed_index)
-            end do
+            seed_point = GenerateSeed(settings,live_points,seed_index)
 
             ! Record the likelihood bound which this seed will generate from
             seed_point(settings%l1) = late_likelihood
@@ -421,5 +405,21 @@ module nested_sampling_linear_module
 
 
 
+    function GenerateSeed(settings,live_points,seed_pos) result(seed_point)
+        use settings_module,   only: program_settings
+        use random_module,     only: random_integer
+        implicit none
+        type(program_settings), intent(in) :: settings
+        double precision, intent(inout), dimension(settings%nTotal,settings%nstack) :: live_points
+
+        integer, intent(out) :: seed_pos
+
+        ! Point to seed a new one from
+        double precision,    dimension(settings%nTotal)   :: seed_point
+
+        seed_pos =random_integer(settings%nlive)
+        seed_point = live_points(:,seed_pos)
+
+    end function GenerateSeed
 
 end module nested_sampling_linear_module

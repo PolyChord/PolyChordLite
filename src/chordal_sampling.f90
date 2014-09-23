@@ -391,6 +391,7 @@ module chordal_module
                 live_data(settings%nDims+1,i_data) = 1
                 i_data = i_data+1
             end if
+            if(i_data>settings%nlive) exit
         end do
 
     end subroutine get_live_coordinates

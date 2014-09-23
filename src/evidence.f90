@@ -218,7 +218,6 @@ module evidence_module
         integer :: nprocs
 
         nprocs = mpi_size()  ! Get the number of MPI procedures
-        write(*,*) 'i am here'
 
         evidence_samples_local = ceiling(settings%evidence_samples/(nprocs+0d0))
 

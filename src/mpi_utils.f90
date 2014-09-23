@@ -4,6 +4,7 @@ module mpi_module
     
     implicit none
     integer :: mpierror
+    integer, parameter :: root=0
 
     contains
 
