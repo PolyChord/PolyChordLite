@@ -6,10 +6,6 @@ module example_likelihoods
     use mpi_module
 #endif
 
-    double precision, allocatable, dimension(:,:) :: eigenbasis_true
-
-    double precision :: logdetcovmat_true
-
     contains
 
     !> Gaussian shell defined as,
@@ -488,8 +484,6 @@ module example_likelihoods
             ! Generate a random covariance matrix, its inverse and logdet
             call generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
 #endif
-            logdetcovmat_true = logdetcovmat/2d0 - nDims*log(sigma) 
-
             initialised=.true.
         end if
 
@@ -645,8 +639,6 @@ module example_likelihoods
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)
-        allocate(eigenbasis_true(nDims,nDims))
-        eigenbasis_true = eigenvectors
         ! Generate the eigenvalues logarithmically in [rng,1] * sigma
         do j=1,nDims
             eigenvalues(j)  = sigma * rng**((j-1d0)/(nDims-1d0))

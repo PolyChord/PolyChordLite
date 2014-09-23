@@ -250,13 +250,13 @@ module chordal_module
         call calculate_point(loglikelihood,priors,L,S)
 
         ! expand R until it's outside the likelihood region
-        do while(R(S%l0) > x0(S%l1) )
+        do while(R(S%l0) >= x0(S%l1) .and. R(S%l0) > logzero )
             R(S%h0:S%h1) = R(S%h0:S%h1) + nhat * w
             call calculate_point(loglikelihood,priors,R,S)
         end do
 
         ! expand L until it's outside the likelihood region
-        do while(L(S%l0) > x0(S%l1) )
+        do while(L(S%l0) >= x0(S%l1) .and. L(S%l0) > logzero )
             L(S%h0:S%h1) = L(S%h0:S%h1) - nhat * w
             call calculate_point(loglikelihood,priors,L,S)
         end do
@@ -300,7 +300,7 @@ module chordal_module
             call calculate_point(loglikelihood,priors,x1,S)
 
             ! If we're not within the likelihood bound then we need to sample further
-            if( x1(S%l0) <= x0(S%l1) ) then
+            if( x1(S%l0) < x0(S%l1) .or. x1(S%l0) <= logzero ) then
 
                 if ( dot_product(x1(S%h0:S%h1)-x0(S%h0:S%h1),nhat) > 0d0 ) then
                     ! If x1 is on the R side of x0, then

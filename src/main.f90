@@ -7,8 +7,8 @@ program main
     use settings_module,        only: program_settings,allocate_indices
     use random_module,          only: initialise_random, deinitialise_random
 
-    !use chordal_module,         only: SliceSampling_HitAndRun, no_processing
-    use chordal_module,         only: SliceSampling_AdaptiveParallel, get_live_coordinates
+    use chordal_module,         only: SliceSampling_HitAndRun, no_processing
+    !use chordal_module,         only: SliceSampling_AdaptiveParallel, get_live_coordinates
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -81,7 +81,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims=50                 ! Dimensionality of the space
+    settings%nDims=2                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -93,8 +93,8 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    minimums=0.5-1d-2*5  
-    maximums=0.5+1d-2*5   
+    minimums=0.5-1d-2*5
+    maximums=0.5+1d-2*5
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -112,9 +112,9 @@ program main
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => SliceSampling_AdaptiveParallel !Sampler choice
+    settings%sampler              => SliceSampling_HitAndRun !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%process_live_points  => get_live_coordinates           !no processing of live points needed
+    settings%process_live_points  => no_processing           !no processing of live points needed
     settings%feedback             =  1                       !degree of feedback
 
     ! stopping criteria
@@ -124,7 +124,7 @@ program main
     ! posterior calculation
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-10                    !minimum weight of the posterior points
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
 
     ! reading and writing
     settings%read_resume          = .false.                  !whether or not to resume from file
