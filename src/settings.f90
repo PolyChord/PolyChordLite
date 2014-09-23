@@ -47,10 +47,10 @@ module settings_module
         integer :: update_resume = 10000
 
         !> The number of chords to draw
-        integer :: num_chords
+        integer :: chain_length
 
         !> The number of chords to draw if we're doing a fast-slow algorithm
-        integer, dimension(:), allocatable :: nums_chords
+        integer, dimension(:), allocatable :: chain_lengths
 
         !> Whether or not to resume from file
         logical :: read_resume = .true.

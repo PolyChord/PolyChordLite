@@ -191,7 +191,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 1000                     !number of live points
-    settings%num_chords           = 1                        !Number of chords to draw (after each randomisation)
+    settings%chain_length           = 1                        !Number of chords to draw (after each randomisation)
     settings%num_reflections      = 1                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .false.                  !whether or not to resume from file
@@ -216,12 +216,12 @@ program main
     settings%grade(5:6)=2
     settings%grade(7:)=4
 
-    allocate(settings%nums_chords(maxval(settings%grade)))
+    allocate(settings%chain_lengths(maxval(settings%grade)))
     do i=1,maxval(settings%grade)
-        settings%nums_chords(i) = count(settings%grade==i)+1
+        settings%chain_lengths(i) = count(settings%grade==i)+1
     end do
-    settings%nums_chords(minval(settings%grade)) =  count(settings%grade==minval(settings%grade))
-    settings%num_chords=product(settings%nums_chords)
+    settings%chain_lengths(minval(settings%grade)) =  count(settings%grade==minval(settings%grade))
+    settings%chain_length=product(settings%chain_lengths)
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors

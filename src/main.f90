@@ -6,8 +6,9 @@ program main
     use priors_module
     use settings_module,        only: program_settings,allocate_indices
     use random_module,          only: initialise_random, deinitialise_random
-
-    use chordal_module,         only: SliceSampling_HitAndRun, no_processing
+ 
+    use chordal_module,         only: SliceSampling_Adaptive_Graded , get_live_coordinates
+    !use chordal_module,         only: SliceSampling_HitAndRun, no_processing
     !use chordal_module,         only: SliceSampling_AdaptiveParallel, get_live_coordinates
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
@@ -85,7 +86,7 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood
+    loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
     settings%nDims=20                 ! Dimensionality of the space
@@ -115,13 +116,13 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
-    settings%num_chords           = settings%nDims*10        !Number of chords to draw
+    settings%chain_length           = settings%nDims*10        !Number of chords to draw
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => SliceSampling_HitAndRun !Sampler choice
+    settings%sampler              => SliceSampling_Adaptive_Graded !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%process_live_points  => no_processing           !no processing of live points needed
+    settings%process_live_points  => get_live_coordinates           !no processing of live points needed
     settings%feedback             =  1                       !degree of feedback
 
     ! stopping criteria
@@ -144,6 +145,12 @@ program main
     settings%infer_evidence       = .false.
     settings%evidence_samples     = 100000 
 
+
+    settings%grade(:4) = 1
+    settings%grade(5:) = 2
+    allocate(settings%chain_lengths(2))
+    settings%chain_lengths(1) = 20
+    settings%chain_lengths(2) = 100
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
