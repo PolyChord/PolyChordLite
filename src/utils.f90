@@ -41,6 +41,12 @@ module utils_module
     ! which means that we neglect all terms smaller than eps times the
     ! current sum
 
+
+    integer,parameter :: flag_blank     = -2
+    integer,parameter :: flag_gestating = -1
+    integer,parameter :: flag_waiting   = 0
+
+
     contains
 
 

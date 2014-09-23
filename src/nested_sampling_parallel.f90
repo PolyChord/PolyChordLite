@@ -1,17 +1,14 @@
 module nested_sampling_parallel_module
     implicit none
 
-    integer,parameter :: flag_blank     = -2
-    integer,parameter :: flag_gestating = -1
-    integer,parameter :: flag_waiting   = 0
-
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
     subroutine NestedSamplingP(loglikelihood,priors,settings)
         use mpi_module
         use priors_module,     only: prior
-        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
+        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit, &
+                                     flag_blank,flag_gestating,flag_waiting  
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points

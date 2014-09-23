@@ -7,7 +7,8 @@ program main
     use settings_module,        only: program_settings,allocate_indices
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,         only: HitAndRun, no_processing
+    !use chordal_module,         only: SliceSampling_HitAndRun, no_processing
+    use chordal_module,         only: SliceSampling_AdaptiveParallel, get_live_coordinates
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -77,10 +78,10 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood
+    loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims=20                 ! Dimensionality of the space
+    settings%nDims=50                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -107,13 +108,13 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
-    settings%num_chords           = settings%nDims           !Number of chords to draw
+    settings%num_chords           = settings%nDims*10        !Number of chords to draw
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => HitAndRun               !Sampler choice
+    settings%sampler              => SliceSampling_AdaptiveParallel !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%process_live_points  => no_processing           !no processing of live points needed
+    settings%process_live_points  => get_live_coordinates           !no processing of live points needed
     settings%feedback             =  1                       !degree of feedback
 
     ! stopping criteria

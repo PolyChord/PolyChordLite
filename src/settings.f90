@@ -268,7 +268,7 @@ module settings_module
 
 
     interface
-        subroutine process(settings,live_points,live_data)
+        subroutine process(settings,live_points,live_data,loglikelihood_bound)
             import :: program_settings
             implicit none
 
@@ -278,6 +278,9 @@ module settings_module
 
             !> The live points
             double precision, intent(in), dimension(:,:) :: live_points
+
+            !> The loglikelihood bound to define the live points
+            double precision, intent(in) :: loglikelihood_bound
 
             ! ------ Result -----------
             !> The processed data

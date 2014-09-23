@@ -3,11 +3,15 @@ module chordal_module
 
     contains
 
-    function HitAndRun(loglikelihood,priors,settings,live_data,seed_point)  result(baby_point)
+    !> Basic 'hit and run' sampling procedure
+    !!
+    !! This randomises the direction at every step of the algorithm.
+    !!
+    !! Fairly safe, but needs a lot of chords to remove the bias ( ~ 10's * nDims )
+    function SliceSampling_HitAndRun(loglikelihood,priors,settings,live_data,seed_point)  result(baby_point)
         use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_direction
-        use utils_module, only: logzero,stdout_unit
 
         implicit none
         interface
@@ -82,8 +86,103 @@ module chordal_module
         ! next time this point is drawn
         baby_point(settings%last_chord) = max_chord
 
-    end function HitAndRun
+    end function SliceSampling_HitAndRun
 
+
+
+    !> This 
+    function SliceSampling_AdaptiveParallel(loglikelihood,priors,settings,live_data,seed_point)  result(baby_point)
+        use priors_module, only: prior
+        use settings_module, only: program_settings
+        use random_module, only: random_distinct_integers
+        use utils_module, only: mod2
+
+        implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
+        ! ------- Inputs -------
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
+
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
+        !> The seed point
+        double precision, intent(in), dimension(:)   :: seed_point
+
+        !> The directions of the chords
+        double precision, intent(in), allocatable, dimension(:,:) :: live_data
+
+        ! ------- Outputs -------
+        !> The newly generated point, plus the loglikelihood bound that
+        !! generated it
+        double precision,    dimension(size(seed_point))   :: baby_point
+
+
+        ! ------- Local Variables -------
+        double precision,    dimension(settings%nDims)   :: nhat
+        integer,             dimension(2)                :: nhat_indices(2)
+
+        double precision  :: max_chord
+
+        double precision :: step_length
+
+        integer :: i_chords
+
+        integer :: nlive
+
+
+        ! Start the baby point at the seed point
+        baby_point = seed_point
+
+        ! Set the number of likelihood evaluations to zero
+        baby_point(settings%nlike) = 0
+
+        ! Record the step length
+        step_length = seed_point(settings%last_chord)
+
+        ! Initialise max_chord at 0
+        max_chord = 0
+
+        ! Find the number of live points in the data
+        nlive = count( nint(live_data(settings%nDims+1,:)) == 1 )
+
+        do i_chords=1,settings%num_chords
+            ! Give the baby point the step length
+            baby_point(settings%last_chord) = step_length
+
+            ! Get two distinct indices 
+            nhat_indices = random_distinct_integers(nlive,2)
+
+            ! Define the direction as the difference between these
+            nhat = live_data(:,nhat_indices(1)) - live_data(:,nhat_indices(2))
+
+            ! Normalise nhat
+            nhat = nhat/sqrt(mod2(nhat))
+
+            ! Generate a new random point along the chord defined by baby_point and nhat
+            baby_point = slice_sample(loglikelihood,priors, nhat, baby_point, settings)
+
+            ! keep track of the largest chord
+            max_chord = max(max_chord,baby_point(settings%last_chord))
+        end do
+
+        ! Make sure to hand back any incubator information which has likely been
+        ! overwritten (this is only relevent in parallel mode)
+        baby_point(settings%daughter) = seed_point(settings%daughter)
+
+        ! Hand back the maximum chord this time to be used as the step length
+        ! next time this point is drawn
+        baby_point(settings%last_chord) = max_chord
+
+    end function SliceSampling_AdaptiveParallel
 
 
 
@@ -226,7 +325,14 @@ module chordal_module
 
 
     ! Information extractors
-    subroutine no_processing(settings,live_points,live_data)
+
+
+
+    !> Blanck extractor
+    !!
+    !! Use this if your sampling method doesn't need any information from the
+    !! live points
+    subroutine no_processing(settings,live_points,live_data,loglikelihood_bound)
         use settings_module, only: program_settings
         implicit none
 
@@ -236,6 +342,9 @@ module chordal_module
 
         !> The live points
         double precision, intent(in), dimension(:,:) :: live_points
+
+        !> The loglikelihood bound to define the live points
+        double precision, intent(in) :: loglikelihood_bound
 
         ! ------ Result -----------
         !> The processed data
@@ -247,6 +356,44 @@ module chordal_module
     end subroutine no_processing
 
 
+    subroutine get_live_coordinates(settings,live_points,live_data,loglikelihood_bound)
+        use utils_module, only: flag_waiting
+        use settings_module, only: program_settings
+        implicit none
+
+        ! ------- Inputs -------
+        !> program settings 
+        class(program_settings), intent(in) :: settings
+
+        !> The live points
+        double precision, intent(in), dimension(:,:) :: live_points
+
+        !> The loglikelihood bound to define the live points
+        double precision, intent(in) :: loglikelihood_bound
+
+        ! ------ Result -----------
+        !> The processed data
+        double precision, intent(out), allocatable, dimension(:,:) :: live_data
+
+        integer :: i_data
+        integer :: i_live
+
+        if(.not. allocated(live_data)) allocate(live_data(settings%nDims+1,settings%nlive))
+
+        live_data(:,settings%nDims+1) = 0
+
+        i_data=1
+        do i_live=1,size(live_points,2)
+            if( live_points(settings%l1,i_live)<=loglikelihood_bound .and. live_points(settings%daughter,i_live)>=flag_waiting )  then
+                ! Extract the coordinates
+                live_data(:settings%nDims,i_data) = live_points(settings%h0:settings%h1,i_live) 
+                ! Recort that this is a point to be drawn from
+                live_data(settings%nDims+1,i_data) = 1
+                i_data = i_data+1
+            end if
+        end do
+
+    end subroutine get_live_coordinates
 
 
 end module chordal_module

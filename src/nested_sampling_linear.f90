@@ -244,7 +244,7 @@ module nested_sampling_linear_module
             seed_point(settings%l1) = late_likelihood
 
             ! Process the live points into live_data (if necessary)
-            call settings%process_live_points(live_points,live_data)
+            call settings%process_live_points(live_points,live_data,late_likelihood)
 
             ! Generate a new point within the likelihood bound of the late
             ! point, giving any additional data from the live_points that might

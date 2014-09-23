@@ -506,17 +506,17 @@ module random_module
         double precision, dimension(nDims) :: random_point_in_sphere
 
         ! Temporary variable for storing a random radius
-        double precision :: rand_rad(1)
+        double precision :: rand_rad
 
 
         ! generate a random direction
         random_point_in_sphere = random_direction(nDims)
 
         ! generate a single random number distributed as beta(r,1) ~ r^{d-1}
-        rand_rad = random_beta_vec(nDims+0d0,1d0,1)
+        rand_rad = random_real()**(1d0/nDims)
 
         ! Create a point in the sphere
-        random_point_in_sphere = random_point_in_sphere * rand_rad(1)
+        random_point_in_sphere = random_point_in_sphere * rand_rad
 
 
     end function random_point_in_sphere
@@ -550,6 +550,64 @@ module random_module
     end function random_orthonormal_basis
 
     ! ===========================================================================================
+    !> Generate a set of k distinct random integers between [1,m]
+    !! There are two ways of doing this:
+    !! # Generate successive random numbers, rejecting any which have already
+    !!   been found
+    !! # Generate a shuffled deck of random numbers, and pick the first k of
+    !!   them
+    !!
+    !! Which of these is the more efficient depends on the size difference of
+    !! k and m. In general, the first method will require one to draw an
+    !! expected number of random numbers evaluating to:
+    !! \f[ m\sum\limits_{i=1}^k \frac{1}{m-(i-1)} \approx m \log\left(\frac{m}{m-k}\right) \f]
+    !! whereas the second requires m random numbers to be drawn. The cutoff
+    !! moment is therefore when
+    !! \f[ k \sim \frac{e-1}{e} n \sim 0.63 n \f]
+    !!
+    !! We thus use the first method if k is less than 0.63n
+    function random_distinct_integers(m,k) result(integers)
+        implicit none
+        double precision, parameter :: cutoff=0.6321205588285576784d0
+
+        !> The upper bound of integers to be generated
+        integer, intent(in) :: m
+
+        !> The number of distinct integers to be generated
+        !! If k is not present, then we generate a shuffled deck of integers
+        integer,intent(in) :: k
+
+        ! The returning array
+        integer, dimension(k) :: integers
+
+        integer :: i
+        integer, dimension(m) :: deck 
+
+        if(k<cutoff*m) then
+            ! Case 1, generate by rejection
+
+            i=1
+            do while (i<=k)
+                ! Draw a random integer
+                integers(i) = random_integer(m) 
+
+                ! Move to the next index if it's unique
+                if(all(integers(i)/=integers(:i-1))) i=i+1
+            end do
+
+        else
+            ! Case 2, generate by shuffling
+
+            ! Generate a randomly shuffled deck
+            deck = [(i,i=1,m)]
+            call shuffle_deck(deck)
+
+            ! output the first k of them
+            integers = deck
+
+        end if
+
+    end function random_distinct_integers
 
 
     !> Shuffle a 'deck' of integers
