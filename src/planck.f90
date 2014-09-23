@@ -7,8 +7,9 @@ program main
     use settings_module,        only: program_settings,allocate_indices
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective, &
-                                      isotropic_nhats,fast_slow_adaptive_nhats
+    use chordal_module,         only: SliceSampling, SliceSampling_Graded, &
+                                      HitAndRun, Adaptive_Parallel, &
+                                      no_processing, get_live_coordinates
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -23,6 +24,8 @@ program main
 
     type(program_settings)    :: settings  ! The program settings 
     type(prior), dimension(1) :: priors
+
+    double precision, dimension(4) :: output_info
 
     pointer loglikelihood
 
@@ -199,9 +202,11 @@ program main
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => ChordalSampling         !Sampler choice
+    settings%sampler              => SliceSampling_Graded    !Sampler choice
+    settings%get_nhat             => Adaptive_Parallel       !Direction choice
+    settings%process_live_points  => get_live_coordinates    !no processing of live points needed
+
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%generate_directions  => fast_slow_adaptive_nhats!direction generator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
@@ -217,25 +222,24 @@ program main
     settings%grade(7:)=4
 
     allocate(settings%chain_lengths(maxval(settings%grade)))
-    do i=1,maxval(settings%grade)
-        settings%chain_lengths(i) = count(settings%grade==i)+1
-    end do
-    settings%chain_lengths(minval(settings%grade)) =  count(settings%grade==minval(settings%grade))
-    settings%chain_length=product(settings%chain_lengths)
+    settings%chain_lengths(1) = 4
+    settings%chain_lengths(2) = 10
+    settings%chain_lengths(3) = 0
+    settings%chain_lengths(4) = 10
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 
 #ifdef MPI
     if (mpi_size()>1) then
-        call NestedSamplingP(loglikelihood,priors,settings)
+        output_info = NestedSamplingP(loglikelihood,priors,settings)
     else
         settings%nstack=settings%nlive
-        call NestedSamplingL(loglikelihood,priors,settings) 
+        output_info = NestedSamplingL(loglikelihood,priors,settings) 
     end if
 #else
     settings%nstack=settings%nlive
-    call NestedSamplingL(loglikelihood,priors,settings) 
+    output_info = NestedSamplingL(loglikelihood,priors,settings) 
 #endif 
 
 
