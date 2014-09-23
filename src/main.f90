@@ -7,8 +7,7 @@ program main
     use settings_module,        only: program_settings,allocate_indices
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,         only: ChordalSampling,ChordalSamplingReflective, &
-                                      isotropic_nhats,adaptive_nhats
+    use chordal_module,         only: HitAndRun, no_processing
     use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
@@ -78,7 +77,7 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood_corr
+    loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
     settings%nDims=20                 ! Dimensionality of the space
@@ -112,9 +111,9 @@ program main
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => ChordalSampling         !Sampler choice
+    settings%sampler              => HitAndRun               !Sampler choice
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%generate_directions  => adaptive_nhats          !direction generator
+    settings%process_live_points  => no_processing           !no processing of live points needed
     settings%feedback             =  1                       !degree of feedback
 
     ! stopping criteria

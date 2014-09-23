@@ -56,7 +56,7 @@ module evidence_module
     !!
     !! Also note that in order to prevent floating point errors, all of these are done with the logarithmic values
     !!
-    subroutine KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,more_samples_needed, evidence_vec)
+    function KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec) result(more_samples_needed)
         use settings_module
         use utils_module, only: logzero,logaddexp,logsubexp
 
@@ -80,7 +80,7 @@ module evidence_module
 
         ! ------- Outputs ------- 
         !> Whether we have obtained enough samples for an accurate evidence
-        logical,intent(out) :: more_samples_needed
+        logical :: more_samples_needed
 
 
 
@@ -190,7 +190,7 @@ module evidence_module
 
 
 
-    end subroutine KeetonEvidence
+    end function KeetonEvidence
 
 
     subroutine infer_evidence(settings,loglikelihoods)

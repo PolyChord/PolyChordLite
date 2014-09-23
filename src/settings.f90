@@ -174,8 +174,11 @@ module settings_module
         !!
         procedure(ev),   pass(settings), pointer :: evidence_calculator
 
-        !> Pointer to the generator of nhats for the chordal sampling procedure
-        procedure(dir),   pass(settings), pointer :: generate_directions
+        !> Pointer to the subroutine that processes data for the sampler
+        !! 
+        !! (This prevents the need to pass all of the live points around, in
+        !!  case we don't need them)
+        procedure(process),   pass(settings), pointer :: process_live_points
 
     end type program_settings
 
@@ -183,10 +186,10 @@ module settings_module
         !> Interface to the sampling procedure
         !!
         !! The sampling procedure takes the details of the model (M) and the current
-        !! set of live points (live_data) in order to generate a baby_point
+        !! set of live points (live_points) in order to generate a baby_point
         !! uniformly sampled from within the loglikelihood contour specifed by
         !! loglikelihood bound contained at the settings%l1 index of seed_point
-        function samp(loglikelihood,priors,settings,nhats,seed_point) result(baby_point)
+        function samp(loglikelihood,priors,settings,live_data,seed_point) result(baby_point)
 
             import :: program_settings   
             import :: prior
@@ -210,8 +213,8 @@ module settings_module
             !> The seed point
             double precision, intent(in), dimension(:)   :: seed_point
 
-            !> The directions of the chords
-            double precision, intent(in), dimension(:,:) :: nhats
+            !> Any data from the live points which is needed
+            double precision, intent(in), allocatable, dimension(:,:) :: live_data
 
             ! ------- Outputs -------
             !> The newly generated point
@@ -265,24 +268,22 @@ module settings_module
 
 
     interface
-        subroutine dir(settings,live_data,nhats,late_likelihood)
+        subroutine process(settings,live_points,live_data)
             import :: program_settings
             implicit none
 
             ! ------- Inputs -------
-            !> program settings (mostly useful to pass on the number of live points)
+            !> program settings 
             class(program_settings), intent(in) :: settings
 
             !> The live points
-            double precision, intent(in), dimension(:,:) :: live_data
+            double precision, intent(in), dimension(:,:) :: live_points
 
-            !> The set of nhats to be generated
-            double precision, intent(out) , dimension(:,:) :: nhats
+            ! ------ Result -----------
+            !> The processed data
+            double precision, intent(out), allocatable, dimension(:,:) :: live_data
 
-            !> The late likelihood
-            double precision, intent(in) :: late_likelihood
-
-        end subroutine dir
+        end subroutine process
     end interface
 
 

@@ -34,11 +34,11 @@ module nested_sampling_parallel_module
 
 
 
-        !> This is a very important array. live_data(:,i) constitutes the
+        !> This is a very important array. live_points(:,i) constitutes the
         !! information in the ith live point in the unit hypercube:
         !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal,settings%nstack) :: live_data
-        double precision, allocatable, dimension(:,:)        :: live_data_local
+        double precision, dimension(settings%nTotal,settings%nstack) :: live_points
+        double precision, allocatable, dimension(:,:)        :: live_points_local
 
         integer :: daughter_index
         integer :: mother_index(1)
@@ -132,15 +132,15 @@ module nested_sampling_parallel_module
                 ! If there is a resume file present, then load the live points from that
                 open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
                 ! Read the live data
-                read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
+                read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points
                 ! Cancel any points that were recorded as gestating
                 do i_live = 1,settings%nstack
-                    if( nint(live_data(settings%daughter,i_live))==flag_gestating ) then
+                    if( nint(live_points(settings%daughter,i_live))==flag_gestating ) then
                         ! abort the gestating point
-                        live_data(:,i_live) = blank_point(settings)
+                        live_points(:,i_live) = blank_point(settings)
                         ! find the mother and make her childless
-                        mother_index = minloc(live_data(settings%daughter,:),mask = nint(live_data(settings%daughter,:))==i_live)
-                        live_data(settings%daughter,mother_index(1)) = flag_waiting
+                        mother_index = minloc(live_points(settings%daughter,:),mask = nint(live_points(settings%daughter,:))==i_live)
+                        live_points(settings%daughter,mother_index(1)) = flag_waiting
                     end if
                 end do
             end if
@@ -155,20 +155,20 @@ module nested_sampling_parallel_module
             ! the root with MPI_GATHER
 
 
-            ! First allocate a local live_data array which is nlive/nprocs on each
+            ! First allocate a local live_points array which is nlive/nprocs on each
             ! of the nprocs nodes
             nlive_local = ceiling(settings%nlive/(nprocs+0d0))
-            allocate(live_data_local(settings%nTotal,nlive_local))
+            allocate(live_points_local(settings%nTotal,nlive_local))
 
             ! Generate nlive/nprocs live points on each of the nprocs nodes
-            live_data_local = GenerateLivePoints(loglikelihood,priors,settings,nlive_local)
+            live_points_local = GenerateLivePoints(loglikelihood,priors,settings,nlive_local)
 
             ! Gather all of this data onto the root node
             call MPI_GATHER(                 &  
-                live_data_local,             & ! sending array
+                live_points_local,             & ! sending array
                 settings%nTotal*nlive_local, & ! number of elements to be sent
                 MPI_DOUBLE_PRECISION,        & ! type of element to be sent
-                live_data,                   & ! recieving array
+                live_points,                   & ! recieving array
                 settings%nTotal*nlive_local, & ! number of elements to be recieved from each node
                 MPI_DOUBLE_PRECISION,        & ! type of element recieved
                 0,                           & ! root node address
@@ -176,10 +176,10 @@ module nested_sampling_parallel_module
                 mpierror)                      ! error (from module mpi_module)
 
             ! deallocate the now unused local live points array to save memory
-            deallocate(live_data_local)
+            deallocate(live_points_local)
 
             do i_live=settings%nlive+1,settings%nstack
-                live_data(:,i_live) = blank_point(settings)
+                live_points(:,i_live) = blank_point(settings)
             end do
 
 
@@ -210,7 +210,7 @@ module nested_sampling_parallel_module
             else !(not resume) 
                 ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
                 evidence_vec = logzero
-                evidence_vec(4) = logsumexp(live_data(settings%l0,:)) - log(settings%nlive+0d0)
+                evidence_vec(4) = logsumexp(live_points(settings%l0,:)) - log(settings%nlive+0d0)
             end if !(resume) 
 
             ! (b) get number of dead points
@@ -273,7 +273,7 @@ module nested_sampling_parallel_module
         end if
 
         ! Write a resume file before we start
-        if(myrank==0 .and. settings%write_resume) call write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
+        if(myrank==0 .and. settings%write_resume) call write_resume_file(settings,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
 
         ! Open a dead points file if desired
         if(myrank==0 .and. settings%save_all) open(write_dead_unit,file=trim(settings%file_root)//'_dead.dat',action='write') 
@@ -351,7 +351,7 @@ module nested_sampling_parallel_module
                         ! note that this point hasn't launched any new ones
                         baby_point(settings%daughter)=flag_waiting
                         ! Insert this into the stack
-                        live_data(:,daughter_index) = baby_point
+                        live_points(:,daughter_index) = baby_point
 
                         ! Mark this node as waiting for a new point
                         waiting_slave(i_slaves) = .true.
@@ -363,13 +363,13 @@ module nested_sampling_parallel_module
                 ! place
                 do while(.true.)
                     ! Find the point with the lowest likelihood...
-                    late_index = minloc(live_data(settings%l0,:),mask=live_data(settings%daughter,:)>=flag_waiting)
+                    late_index = minloc(live_points(settings%l0,:),mask=live_points(settings%daughter,:)>=flag_waiting)
 
                     ! If there is no such point, then all live points are gestating
                     if(late_index(1)==0) exit
 
                     ! ...and save it.
-                    late_point = live_data(:,late_index(1))
+                    late_point = live_points(:,late_index(1))
                     ! Get the likelihood contour
                     late_likelihood = late_point(settings%l0)
                     ! Calculate the late logweight
@@ -382,13 +382,13 @@ module nested_sampling_parallel_module
                     if(daughter_index<=flag_waiting) exit
 
                     ! Check to see if that daughter has been born yet
-                    if(live_data( settings%daughter, daughter_index )<=flag_gestating ) exit
+                    if(live_points( settings%daughter, daughter_index )<=flag_gestating ) exit
 
                     ! Kill the late point
-                    live_data(:,late_index(1)) = blank_point(settings)
+                    live_points(:,late_index(1)) = blank_point(settings)
 
                     ! Promote the daughter to a live point
-                    baby_point = live_data(:,daughter_index) 
+                    baby_point = live_points(:,daughter_index) 
                     baby_likelihood  = baby_point(settings%l0)
 
                     ! record that we have a new dead point
@@ -442,7 +442,7 @@ module nested_sampling_parallel_module
 
                     end if
 
-            live_data(settings%last_chord,:) = live_data(settings%last_chord,:)/  (1d0+1d0/(settings%nDims*settings%nlive) ) 
+            live_points(settings%last_chord,:) = live_points(settings%last_chord,:)/  (1d0+1d0/(settings%nDims*settings%nlive) ) 
 
 
                     ! (6) Command line feedback
@@ -467,9 +467,9 @@ module nested_sampling_parallel_module
 
                     ! (7) Update the resume and posterior files every update_resume iterations, or at program termination
                     if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-                        if(settings%write_resume) call write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
+                        if(settings%write_resume) call write_resume_file(settings,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)  
                         if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
-                        if(settings%write_live) call write_phys_live_points(settings,live_data,late_likelihood)
+                        if(settings%write_live) call write_phys_live_points(settings,live_points,late_likelihood)
                     end if
 
                 end do
@@ -480,8 +480,8 @@ module nested_sampling_parallel_module
                 slave_loop: do i_slaves=1,nprocs-1
                     if( waiting_slave(i_slaves) ) then
 
-                        ! Generate a seed point from live_data, and update accordingly
-                        seed_point = GenerateSeed(settings,live_data,seed_pos) 
+                        ! Generate a seed point from live_points, and update accordingly
+                        seed_point = GenerateSeed(settings,live_points,seed_pos) 
 
                         if(nint(seed_point(settings%daughter))==flag_blank) then
                             ! If we've generated a blank seed, then there aren't
@@ -501,7 +501,7 @@ module nested_sampling_parallel_module
                         end if
 
                         ! Generate a set of directions
-                        call settings%generate_directions(live_data,nhats,seed_point(settings%l0))
+                        call settings%generate_directions(live_points,nhats,seed_point(settings%l0))
                         if(all(nint(nhats*settings%nDims)==0)) then
                             ! If we haven't generated any directions
                             if(all(waiting_slave)) then
@@ -672,7 +672,7 @@ module nested_sampling_parallel_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(loglikelihood,priors,settings,nlive) result(live_data)
+    function GenerateLivePoints(loglikelihood,priors,settings,nlive) result(live_points)
         use priors_module,    only: prior
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
@@ -699,50 +699,50 @@ module nested_sampling_parallel_module
         !> The number of points to be generated
         integer, intent(in) :: nlive
 
-        !live_data(:,i) constitutes the information in the ith live point in the unit hypercube: 
+        !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
         ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal,nlive) :: live_data
+        double precision, dimension(settings%nTotal,nlive) :: live_points
 
         ! Loop variable
         integer i_live
 
         ! initialise live points at zero
-        live_data = 0d0
+        live_points = 0d0
 
         do i_live=1,nlive
 
             ! Generate a random coordinate
-            live_data(:,i_live) = random_reals(settings%nDims)
+            live_points(:,i_live) = random_reals(settings%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point( loglikelihood, priors, live_data(:,i_live), settings )
+            call calculate_point( loglikelihood, priors, live_points(:,i_live), settings )
 
         end do
 
         ! Set the number of likelihood calls for each point to 1
-        live_data(settings%nlike,:) = 1
+        live_points(settings%nlike,:) = 1
 
         ! Set the initial trial values of the chords as the diagonal of the hypercube
-        live_data(settings%last_chord,:) = sqrt(settings%nDims+0d0)
+        live_points(settings%last_chord,:) = sqrt(settings%nDims+0d0)
 
         ! Initially, none of the points have been calculated yet
         ! (only relevent in parallel mode)
-        live_data(settings%daughter,:) = flag_waiting
+        live_points(settings%daughter,:) = flag_waiting
 
         ! Set the likelihood contours to logzero for now
-        live_data(settings%l1,:) = logzero
+        live_points(settings%l1,:) = logzero
 
 
     end function GenerateLivePoints
 
 
 
-    function GenerateSeed(settings,live_data,seed_pos) result(seed_point)
+    function GenerateSeed(settings,live_points,seed_pos) result(seed_point)
         use settings_module,   only: program_settings
         use random_module,     only: random_integer
         implicit none
         type(program_settings), intent(in) :: settings
-        double precision, intent(inout), dimension(settings%nTotal,settings%nstack) :: live_data
+        double precision, intent(inout), dimension(settings%nTotal,settings%nstack) :: live_points
 
         integer, intent(out) :: seed_pos
 
@@ -758,7 +758,7 @@ module nested_sampling_parallel_module
 
         ! Find the lowest likelihood point whose contour is waiting to
         ! be generated from                  
-        live_index = minloc(live_data(settings%l0,:),mask=nint(live_data(settings%daughter,:))==flag_waiting) 
+        live_index = minloc(live_points(settings%l0,:),mask=nint(live_points(settings%daughter,:))==flag_waiting) 
         if(live_index(1)==0) then
             seed_point = blank_point(settings)
             return
@@ -767,33 +767,33 @@ module nested_sampling_parallel_module
         ! Find a place stack for the generated point
         ! We search through the stack to find the first index which indicates
         ! the point is 'blank'
-        daughter_index = minloc(live_data(settings%daughter,:),mask=nint(live_data(settings%daughter,:))==flag_blank) 
+        daughter_index = minloc(live_points(settings%daughter,:),mask=nint(live_points(settings%daughter,:))==flag_blank) 
         if(daughter_index(1)==0) then
             seed_point = blank_point(settings)
             return
         end if
 
         ! Give this place to the point that generated the contour
-        live_data(settings%daughter,live_index(1)) = daughter_index(1)
+        live_points(settings%daughter,live_index(1)) = daughter_index(1)
 
         ! Note at the daughter's place that we're waiting on a
         ! point to be generated
-        live_data(settings%daughter,daughter_index(1))=flag_gestating
+        live_points(settings%daughter,daughter_index(1))=flag_gestating
              
         ! Select a seed point for the generator
         !  -excluding the points which have likelihoods equal to the
         !   loglikelihood bound
         !  -as well as those which were generated with a likelihood less than
         !   the loglikelihood bound
-        loglikelihood_bound = live_data(settings%l0,live_index(1))
+        loglikelihood_bound = live_points(settings%l0,live_index(1))
         seed_point(settings%l0)=loglikelihood_bound
 
         counter = 0
         do while (seed_point(settings%l0)<=loglikelihood_bound .or. seed_point(settings%l1)>loglikelihood_bound .or. nint(seed_point(settings%daughter))==flag_blank )
             ! get a random integer in [1,nstack]
-            ! get this point from live_data 
+            ! get this point from live_points 
             seed_pos =random_integer(settings%nstack)
-            seed_point = live_data(:,seed_pos)
+            seed_point = live_points(:,seed_pos)
             counter = counter+1
             if(counter>settings%nstack*10) then
                 seed_point=blank_point(settings)

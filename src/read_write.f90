@@ -4,7 +4,7 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,live_data,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)
+    subroutine write_resume_file(settings,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)
         use utils_module, only: DBL_FMT,write_resume_unit
         use settings_module, only: program_settings
 
@@ -12,7 +12,7 @@ module read_write_module
 
 
         type(program_settings), intent(in) :: settings
-        double precision,intent(in), dimension(settings%nTotal,settings%nstack) :: live_data
+        double precision,intent(in), dimension(settings%nTotal,settings%nstack) :: live_points
         integer :: nposterior
         double precision :: mean_likelihood_calls
         integer :: total_likelihood_calls
@@ -29,7 +29,7 @@ module read_write_module
         open(write_resume_unit,file=trim(settings%file_root) // '.resume', action='write', iostat=i_err) 
 
         ! Live points
-        write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data
+        write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points
         ! Evidence vector
         write(write_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         ! number of dead points
@@ -82,13 +82,13 @@ module read_write_module
 
     end subroutine write_posterior_file
 
-    subroutine write_phys_live_points(settings,live_data,late_loglikelihood)
+    subroutine write_phys_live_points(settings,live_points,late_loglikelihood)
         use utils_module, only: DBL_FMT,write_phys_unit
         use settings_module, only: program_settings
         implicit none
 
         type(program_settings), intent(in) :: settings
-        double precision, intent(in), dimension(settings%nTotal,settings%nstack) :: live_data
+        double precision, intent(in), dimension(settings%nTotal,settings%nstack) :: live_points
         double precision, intent(in) :: late_loglikelihood
 
         integer i_err
@@ -98,8 +98,8 @@ module read_write_module
         open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err) 
 
         do i_live=1,settings%nstack
-            if(live_data(settings%l1,i_live)<=late_loglikelihood .and.  live_data(settings%daughter,i_live) >=0 ) then
-                write(write_phys_unit,'(<settings%nDims+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_data(settings%p0:settings%p1,i_live),live_data(settings%l0,i_live)
+            if(live_points(settings%l1,i_live)<=late_loglikelihood .and.  live_points(settings%daughter,i_live) >=0 ) then
+                write(write_phys_unit,'(<settings%nDims+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(settings%p0:settings%p1,i_live),live_points(settings%l0,i_live)
             end if
         end do
 
