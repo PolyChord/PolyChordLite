@@ -275,7 +275,11 @@ module chordal_module
             baby_point(settings%last_chord) = step_length
 
             ! Get a new random direction
-            call settings%get_nhat(live_data,nhat)
+            if(grade==1) then
+                call settings%get_nhat(live_data,nhat)
+            else
+                call HitAndRun(settings,live_data,nhat) 
+            end if
 
             ! Zero out the unused dimensions
             where( settings%grade <grade )  nhat=0
