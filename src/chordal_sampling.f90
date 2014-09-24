@@ -457,7 +457,7 @@ module chordal_module
     !!
     !! Use this if your sampling method doesn't need any information from the
     !! live points
-    subroutine no_processing(settings,live_points,live_data,loglikelihood_bound)
+    function no_processing(settings,live_points,live_data,loglikelihood_bound) result(issue)
         use settings_module, only: program_settings
         implicit none
 
@@ -475,13 +475,18 @@ module chordal_module
         !> The processed data
         double precision, intent(out), allocatable, dimension(:,:) :: live_data
 
+        ! Whether we have enough live points to compute the task
+        ! return as true if there is an issue
+        logical :: issue
+
         if(.not. allocated(live_data)) allocate(live_data(0,0))
+        issue = .false.
 
 
-    end subroutine no_processing
+    end function no_processing
 
 
-    subroutine get_live_coordinates(settings,live_points,live_data,loglikelihood_bound)
+    function get_live_coordinates(settings,live_points,live_data,loglikelihood_bound) result(issue)
         use utils_module, only: flag_waiting
         use settings_module, only: program_settings
         implicit none
@@ -499,6 +504,10 @@ module chordal_module
         ! ------ Result -----------
         !> The processed data
         double precision, intent(out), allocatable, dimension(:,:) :: live_data
+
+        ! Whether we have enough live points to compute the task
+        ! return as true if there is an issue
+        logical :: issue
 
         integer :: i_data
         integer :: i_live
@@ -519,9 +528,9 @@ module chordal_module
             if(i_data>settings%nlive) exit
         end do
 
-        if( i_data < settings%nDims ) write(*,*) 'Warning: Running low on live points for the generation of directions'
+        issue = i_data < settings%nDims 
 
-    end subroutine get_live_coordinates
+    end function get_live_coordinates
 
 
 end module chordal_module

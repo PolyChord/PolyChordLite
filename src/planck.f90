@@ -208,11 +208,11 @@ program main
 
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
-    settings%precision_criterion  =  1d-3                    !degree of precision in answer
+    settings%precision_criterion  =  1d-2                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%nmax_posterior       = 100000                   !max number of posterior points
-    settings%minimum_weight       = 1d-8                     !minimum weight of the posterior points
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%minimum_weight       = 1d-5                     !minimum weight of the posterior points
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%save_all             = .false.                  !Save all the dead points?

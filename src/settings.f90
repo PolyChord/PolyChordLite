@@ -290,7 +290,7 @@ module settings_module
 
 
     interface
-        subroutine process(settings,live_points,live_data,loglikelihood_bound)
+        function process(settings,live_points,live_data,loglikelihood_bound) result(issue)
             import :: program_settings
             implicit none
 
@@ -308,7 +308,13 @@ module settings_module
             !> The processed data
             double precision, intent(out), allocatable, dimension(:,:) :: live_data
 
-        end subroutine process
+            ! Whether we have enough live points to compute the task
+            ! return as true if there is an issue
+            logical :: issue
+
+
+
+        end function process
     end interface
 
 

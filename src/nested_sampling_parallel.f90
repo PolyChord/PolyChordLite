@@ -108,6 +108,8 @@ module nested_sampling_parallel_module
 
         double precision, dimension(settings%max_ndead) :: dead_likes
 
+        logical :: issue
+
         nprocs = mpi_size()  ! Get the number of MPI procedures
         myrank = mpi_rank()  ! Get the MPI label of the current processor
 
@@ -178,7 +180,7 @@ module nested_sampling_parallel_module
 
 
         ! Allocate the live_data array and save the size (for mpi passing)
-        call settings%process_live_points(live_points,live_data,logzero)
+        issue = settings%process_live_points(live_points,live_data,logzero)
         live_data_shape = shape(live_data)
 
 
@@ -196,7 +198,7 @@ module nested_sampling_parallel_module
 
             ! (a) 
             ! Allocate the evidence vector using the evidence function
-        more_samples_needed = settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,evidence_vec)
+            more_samples_needed = settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,evidence_vec)
             if(resume) then
                 ! If resuming, get the accumulated stats to calculate the
                 ! evidence from the resume file
@@ -495,7 +497,14 @@ module nested_sampling_parallel_module
                         end if
 
                         ! Process the live points into live_data
-                        call settings%process_live_points(live_points,live_data,seed_point(settings%l0))
+                        if( settings%process_live_points(live_points,live_data,seed_point(settings%l0)) ) then
+
+                            if(last_wait<ndead) then
+                                write(stdout_unit,'("Warning: Running low on live points for the generation of directions")')
+                                last_wait = ndead
+                            end if
+                            exit slave_loop
+                        end if
 
 
                         ! Send a seed point back to that slave
@@ -666,6 +675,7 @@ module nested_sampling_parallel_module
         use random_module,   only: random_reals
         use utils_module,    only: logzero
         use calculate_module, only: calculate_point
+        use read_write_module, only: write_phys_live_points
 
         implicit none
         
@@ -711,7 +721,7 @@ module nested_sampling_parallel_module
         myrank = mpi_rank()  ! Get the MPI label of the current processor
 
         ! initialise live points at zero
-        live_points = 0d0
+        live_points = spread(blank_point(settings),2,settings%nstack)
 
         if(myrank==root) then
 
@@ -736,6 +746,7 @@ module nested_sampling_parallel_module
                 if(live_point(settings%l0)>=logzero .and. i_live<=settings%nlive) then
                     i_live=i_live+1
                     live_points(:,i_live) = live_point
+                    if(settings%write_live) call write_phys_live_points(settings,live_points,logzero)
                 end if
 
                 ! If we still need more points, send a signal to have another go
