@@ -33,6 +33,10 @@ program main
     type(prior), dimension(1) :: priors
 
     pointer loglikelihood
+    double precision :: loglike
+
+    double precision, allocatable, dimension(:) :: theta
+    double precision, allocatable, dimension(:) :: phi
 
     double precision, allocatable, dimension(:) :: minimums 
     double precision, allocatable, dimension(:) :: maximums
@@ -89,7 +93,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims=20                 ! Dimensionality of the space
+    settings%nDims=2                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -120,7 +124,7 @@ program main
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => SliceSampling_Graded    !Sampler choice
+    settings%sampler              => SliceSampling           !Sampler choice
     settings%get_nhat             => Adaptive_Parallel       !Direction choice
     settings%process_live_points  => get_live_coordinates    !no processing of live points needed
 
@@ -148,11 +152,10 @@ program main
     settings%evidence_samples     = 100000 
 
 
-    settings%grade(:4) = 1
-    settings%grade(5:) = 2
-    allocate(settings%chain_lengths(2))
-    settings%chain_lengths(1) = 20
-    settings%chain_lengths(2) = 100
+    ! Initialise the loglikelihood
+    allocate(theta(settings%nDims),phi(settings%nDerived))
+    loglike = loglikelihood(theta,phi,0)
+
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors

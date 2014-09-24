@@ -508,7 +508,7 @@ module chordal_module
         live_data(:,settings%nDims+1) = 0
 
         i_data=1
-        do i_live=1,size(live_points,2)
+        do i_live=1,settings%nstack
             if( live_points(settings%l1,i_live)<=loglikelihood_bound .and. live_points(settings%daughter,i_live)>=flag_waiting )  then
                 ! Extract the coordinates
                 live_data(:settings%nDims,i_data) = live_points(settings%h0:settings%h1,i_live) 
@@ -518,6 +518,8 @@ module chordal_module
             end if
             if(i_data>settings%nlive) exit
         end do
+
+        if( i_data < settings%nDims ) write(*,*) 'Warning: Running low on live points for the generation of directions'
 
     end subroutine get_live_coordinates
 

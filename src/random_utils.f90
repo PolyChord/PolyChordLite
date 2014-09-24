@@ -77,14 +77,13 @@ module random_module
             call system_clock(seed)
 #ifdef MPI
             call MPI_BCAST(     &
-                seed,           & ! inverse covariance matrix data to be broadcast
+                seed,           & ! seed to be broadcast
                 1,              & ! size of the data
                 MPI_INTEGER,    & ! type of data
                 0,              & ! root node id
                 MPI_COMM_WORLD, & ! communication info
                 mpierror)         ! error (from mpiutils)
 
-            write(*,*) 'initialising with seed',   seed + mpi_rank()
             errcode=vslnewstream( rng_stream, basic_rng_type,  seed + mpi_rank() )
 #else
             errcode=vslnewstream( rng_stream, basic_rng_type,  seed )

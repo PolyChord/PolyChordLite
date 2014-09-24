@@ -2,6 +2,10 @@ module nested_sampling_parallel_module
     use utils_module,      only: flag_blank,flag_gestating,flag_waiting  
     implicit none
 
+    integer, parameter :: RUNTAG=0
+    integer, parameter :: ENDTAG=1
+
+
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
@@ -42,7 +46,6 @@ module nested_sampling_parallel_module
         !! information in the ith live point in the unit hypercube:
         !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
         double precision, dimension(settings%nTotal,settings%nstack) :: live_points
-        double precision, allocatable, dimension(:,:)        :: live_points_local
 
         double precision, allocatable, dimension(:,:) :: live_data
         integer :: live_data_shape(2)
@@ -52,16 +55,12 @@ module nested_sampling_parallel_module
 
         integer :: nprocs
         integer :: myrank
-        integer :: nlive_local
 
         integer :: last_wait
         integer :: last_wait1
 
         integer :: i_live
         integer :: i_slaves
-
-        integer, parameter :: RUNTAG=0
-        integer, parameter :: ENDTAG=1
 
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status
 
@@ -161,27 +160,14 @@ module nested_sampling_parallel_module
 
             ! First allocate a local live_points array which is nlive/nprocs on each
             ! of the nprocs nodes
-            nlive_local = ceiling(settings%nlive/(nprocs+0d0))
-            allocate(live_points_local(settings%nTotal,nlive_local))
 
             ! Generate nlive/nprocs live points on each of the nprocs nodes
-            live_points_local = GenerateLivePoints(loglikelihood,priors,settings,nlive_local)
+            live_points = GenerateLivePoints(loglikelihood,priors,settings)
 
-            ! Gather all of this data onto the root node
-            call MPI_GATHER(                 &  
-                live_points_local,           & ! sending array
-                settings%nTotal*nlive_local, & ! number of elements to be sent
-                MPI_DOUBLE_PRECISION,        & ! type of element to be sent
-                live_points,                 & ! recieving array
-                settings%nTotal*nlive_local, & ! number of elements to be recieved from each node
-                MPI_DOUBLE_PRECISION,        & ! type of element recieved
-                0,                           & ! root node address
-                MPI_COMM_WORLD,              & ! communication info
-                mpierror)                      ! error (from module mpi_module)
 
             ! deallocate the now unused local live points array to save memory
-            deallocate(live_points_local)
 
+            ! Zero the rest of the stack
             do i_live=settings%nlive+1,settings%nstack
                 live_points(:,i_live) = blank_point(settings)
             end do
@@ -345,7 +331,7 @@ module nested_sampling_parallel_module
                             baby_point,           & ! newly generated point to be receieved
                             settings%nTotal,             & ! size of this data
                             MPI_DOUBLE_PRECISION, & ! type of this data
-                            i_slaves,             & ! recieve it from any slave
+                            i_slaves,             & ! recieve it from i_slaves
                             MPI_ANY_TAG,          & ! tagging information (not important here)
                             MPI_COMM_WORLD,       & ! communication data
                             mpi_status,           & ! status - important (tells you where it's been recieved from )
@@ -550,7 +536,7 @@ module nested_sampling_parallel_module
                     seed_point,           & ! seed point to be recieved
                     settings%nTotal,      & ! size of this data
                     MPI_DOUBLE_PRECISION, & ! type of this data
-                    0,                    & ! recieve it from the master
+                    root,                 & ! recieve it from the master
                     MPI_ANY_TAG,          & ! recieve any tagging information
                     MPI_COMM_WORLD,       & ! communication data
                     mpi_status,           & ! status (not important here)
@@ -568,7 +554,7 @@ module nested_sampling_parallel_module
                     live_data,                          & ! seed point to be recieved
                     product(live_data_shape),           & ! size of this data
                     MPI_DOUBLE_PRECISION,               & ! type of this data
-                    0,                                  & ! recieve it from the master
+                    root,                               & ! recieve it from the master
                     MPI_ANY_TAG,                        & ! recieve any tagging information
                     MPI_COMM_WORLD,                     & ! communication data
                     mpi_status,                         & ! status (not important here)
@@ -583,7 +569,7 @@ module nested_sampling_parallel_module
                     baby_point,           & ! baby point to be sent
                     settings%nTotal,      & ! size of this data
                     MPI_DOUBLE_PRECISION, & ! type of this data
-                    0,                    & ! send it to the master
+                    root,                 & ! send it to the master
                     RUNTAG,               & ! tagging information (not important here)
                     MPI_COMM_WORLD,       & ! communication data
                     mpierror              & ! error information (from mpi_module)
@@ -605,7 +591,7 @@ module nested_sampling_parallel_module
                             baby_point,           & ! newly generated point to be receieved
                             settings%nTotal,             & ! size of this data
                             MPI_DOUBLE_PRECISION, & ! type of this data
-                            i_slaves,             & ! recieve it from any slave
+                            i_slaves,             & ! recieve it from i_slaves
                             MPI_ANY_TAG,          & ! tagging information (not important here)
                             MPI_COMM_WORLD,       & ! communication data
                             mpi_status,           & ! status - important (tells you where it's been recieved from )
@@ -673,7 +659,8 @@ module nested_sampling_parallel_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(loglikelihood,priors,settings,nlive) result(live_points)
+    function GenerateLivePoints(loglikelihood,priors,settings) result(live_points)
+        use mpi_module 
         use priors_module,    only: prior
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
@@ -697,41 +684,139 @@ module nested_sampling_parallel_module
         !> Program settings
         type(program_settings), intent(in) :: settings
 
-        !> The number of points to be generated
-        integer, intent(in) :: nlive
+        !> The rank of the processor
+        integer :: myrank
+        integer :: nprocs
+        integer :: active_procs
+
+        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
 
         !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
         ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal,nlive) :: live_points
+        double precision, dimension(settings%nTotal) :: live_point
 
         ! Loop variable
         integer i_live
+        integer i_procs
+
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+        integer :: request
+
+        integer :: empty_buffer(0)
+        logical :: enough_samples
+
+        integer :: tag
+
+        nprocs = mpi_size()  ! Get the number of MPI procedures
+        myrank = mpi_rank()  ! Get the MPI label of the current processor
 
         ! initialise live points at zero
         live_points = 0d0
 
-        do i_live=1,nlive
+        if(myrank==root) then
 
-            ! Generate a random coordinate
-            live_points(:,i_live) = random_reals(settings%nDims)
 
-            ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point( loglikelihood, priors, live_points(:,i_live), settings )
+            ! The root node just recieves data from all other processors
+            active_procs=nprocs-1
+            i_live=0
+            do while(active_procs>0) 
 
-        end do
+                ! Recieve a point from any slave
+                call MPI_RECV(            &
+                    live_point,           & ! newly generated point to be receieved at the i_live th position
+                    settings%nTotal,      & ! size of this data
+                    MPI_DOUBLE_PRECISION, & ! type of this data
+                    MPI_ANY_SOURCE,       & ! recieve it from any slave
+                    MPI_ANY_TAG,          & ! tagging information (not important here)
+                    MPI_COMM_WORLD,       & ! communication data
+                    mpi_status,           & ! status - important (tells you where it's been recieved from )
+                    mpierror              & ! error information (from mpi_module)
+                    )
+                ! If its valid, and we need more points, add it to the array
+                if(live_point(settings%l0)>=logzero .and. i_live<=settings%nlive) then
+                    i_live=i_live+1
+                    live_points(:,i_live) = live_point
+                end if
 
-        ! Set the number of likelihood calls for each point to 1
-        live_points(settings%nlike,:) = 1
+                ! If we still need more points, send a signal to have another go
+                if(i_live<settings%nlive) then
+                    tag=RUNTAG
+                else
+                    tag=ENDTAG
+                    active_procs=active_procs-1
+                end if
 
-        ! Set the initial trial values of the chords as the diagonal of the hypercube
-        live_points(settings%last_chord,:) = sqrt(settings%nDims+0d0)
+                call MPI_SEND(              &
+                    empty_buffer,           & ! send buffer
+                    0,                      & ! send count 
+                    MPI_INT,                & ! send type  
+                    mpi_status(MPI_SOURCE), & ! send to the slave we just recieved from
+                    tag,                    & ! tag set immediately above
+                    MPI_COMM_WORLD,         & ! communication data
+                    mpierror                & ! error information (from mpi_module)  
+                    )
 
-        ! Initially, none of the points have been calculated yet
-        ! (only relevent in parallel mode)
-        live_points(settings%daughter,:) = flag_waiting
+            end do
 
-        ! Set the likelihood contours to logzero for now
-        live_points(settings%l1,:) = logzero
+
+
+        else
+
+            generating_loop: do while(.true.)
+
+                ! No likelihood calculations initially
+                live_point(settings%nlike) = 0
+
+                ! Set the initial trial values of the chords as the diagonal of the hypercube
+                live_point(settings%last_chord) = sqrt(settings%nDims+0d0)
+
+                ! Initially, none of the points have been calculated yet
+                ! (only relevent in parallel mode)
+                live_point(settings%daughter) = flag_waiting
+
+                ! Set the likelihood contours to logzero for now
+                live_point(settings%l1) = logzero
+
+                ! Try to generate a new point until it is physical
+                live_point(settings%l0) = logzero
+
+                ! Generate a random hypercube coordinate
+                live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
+
+                ! Compute physical coordinates, likelihoods and derived parameters
+                call calculate_point( loglikelihood, priors, live_point, settings )
+
+                ! Send it to the root node
+                call MPI_SEND(            &
+                    live_point,           & ! baby point to be sent
+                    settings%nTotal,      & ! size of this data
+                    MPI_DOUBLE_PRECISION, & ! type of this data
+                    root,                 & ! send it to the master
+                    0,                    & ! tagging information (not important here)
+                    MPI_COMM_WORLD,       & ! communication data
+                    mpierror              & ! error information (from mpi_module)
+                    )
+
+                ! Recieve signal as to whether we should keep generating
+                call MPI_RECV(&
+                    empty_buffer,      & ! recieve buffer
+                    0,                 & ! recieve count
+                    MPI_INT,           & ! recieve type
+                    root,              & ! recieve from root
+                    MPI_ANY_TAG,       & ! tag doesn't matter
+                    MPI_COMM_WORLD,    & ! communication data
+                    mpi_status,        & ! status - important (tells you whether to continue)
+                    mpierror           & ! error information (from mpi_module)
+                    )
+
+                if(mpi_status(MPI_TAG) == ENDTAG ) exit generating_loop
+
+            end do generating_loop
+
+        end if
+
+
+
 
 
     end function GenerateLivePoints
