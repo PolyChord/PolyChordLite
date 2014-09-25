@@ -9,6 +9,7 @@ doc/latex/
 main
 planck
 chains
+batch
 *.a
 getdist/getdist
 getdist/plot_data/*

@@ -45,7 +45,7 @@ endif
 LDFLAGS =
 
 # List of executables to be built within the package
-PROGRAMS = libchord.a main planck
+PROGRAMS = libchord.a main planck batch
 
 # "make" builds all
 all: $(PROGRAMS)
@@ -70,6 +70,9 @@ libchord.a: $(OBJECTS)
 
 main: main.o
 	$(FC) $(FCFLAGS) -o ../main main.o -L. -lchord
+
+batch: batch.o
+	$(FC) $(FCFLAGS) -o ../batch batch.o -L. -lchord
 
 planck: planck.o
 	$(FC) $(FCFLAGS) -o ../planck planck.o -L. -lchord

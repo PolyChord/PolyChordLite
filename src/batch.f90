@@ -44,6 +44,8 @@ program main
     integer, allocatable, dimension(:) :: physical_indices
     integer :: i
 
+    integer, parameter :: num_samples = 100000
+    integer :: i_err
 
 
     interface
@@ -90,10 +92,10 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood_corr
+    loglikelihood => twin_gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    settings%nDims=2                  ! Dimensionality of the space
+    settings%nDims= 8                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -105,8 +107,8 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    minimums=0.5-1d-2*5
-    maximums=0.5+1d-2*5
+    minimums= 5d-1 - 5*1d-2
+    maximums= 5d-1 + 5*1d-2
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -129,7 +131,7 @@ program main
     settings%process_live_points  => get_live_coordinates    !no processing of live points needed
 
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%feedback             =  1                       !degree of feedback
+    settings%feedback             =  0                       !degree of feedback
 
     ! stopping criteria
     settings%precision_criterion  =  1d-1                    !degree of precision in answer
@@ -144,7 +146,7 @@ program main
     settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
-    settings%write_live           = .true.                   !write out the physical live points?
+    settings%write_live           = .false.                  !write out the physical live points?
     settings%save_all             = .false.                  !Save all the dead points?
 
     ! Evidence inference
@@ -160,17 +162,17 @@ program main
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 
-#ifdef MPI
-    if (mpi_size()>1) then
-        output_info = NestedSamplingP(loglikelihood,priors,settings)
-    else
-        settings%nstack=settings%nlive
-        output_info = NestedSamplingL(loglikelihood,priors,settings) 
-    end if
-#else
     settings%nstack=settings%nlive
-    output_info = NestedSamplingL(loglikelihood,priors,settings) 
-#endif 
+
+    open(111,file="evidences_twin_8.dat", action='write', iostat=i_err)
+
+    do i=1,num_samples
+        output_info = NestedSamplingL(loglikelihood,priors,settings) 
+        write(111,'(2E17.8)') output_info(5), output_info(2)
+    end do
+
+    close(111)
+
 
 
 

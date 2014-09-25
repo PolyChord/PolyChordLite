@@ -11,7 +11,7 @@ module nested_sampling_parallel_module
     !> Main subroutine for computing a generic nested sampling algorithm
     function NestedSamplingP(loglikelihood,priors,settings) result(output_info)
         use mpi_module
-        use priors_module,     only: prior
+        use priors_module,     only: prior,prior_log_volume
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit, &
                                      flag_blank,flag_gestating,flag_waiting  
         use settings_module,   only: program_settings
@@ -39,7 +39,8 @@ module nested_sampling_parallel_module
         ! 2) error(log(evidence))
         ! 3) ndead
         ! 4) number of likelihood calls
-        double precision, dimension(4) :: output_info
+        ! 5) log(evidence) + log(prior volume)
+        double precision, dimension(5) :: output_info
 
 
         !> This is a very important array. live_points(:,i) constitutes the
@@ -657,6 +658,8 @@ module nested_sampling_parallel_module
             output_info(3) = ndead
             ! Number of likelihood calls
             output_info(4) = total_likelihood_calls
+            ! log(evidence * prior volume)
+            output_info(5) = output_info(1)+prior_log_volume(priors)
 
             call write_final_results(output_info,settings%feedback,priors)
         end if

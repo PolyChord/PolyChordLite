@@ -1,6 +1,6 @@
 DEBUG ?= 0
 PAR   ?= 1
-export DEBUG
+export DEBUG PAR
 
 default: all
 
@@ -9,6 +9,9 @@ libchord.a: ./src/*90
 
 main: ./src/*90
 	cd ./src && make libchord.a && make main
+
+batch: ./src/*90
+	cd ./src && make libchord.a && make batch
 
 planck: ./src/*90
 	cd ./src && make libchord.a && make planck
@@ -19,4 +22,4 @@ clean:
 veryclean:
 	cd ./src && make veryclean
 
-all: main planck
+all: batch main planck

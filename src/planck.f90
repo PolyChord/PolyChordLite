@@ -25,7 +25,7 @@ program main
     type(program_settings)    :: settings  ! The program settings 
     type(prior), dimension(1) :: priors
 
-    double precision, dimension(4) :: output_info
+    double precision, dimension(5) :: output_info
 
     pointer loglikelihood
 
@@ -193,8 +193,8 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 1000                     !number of live points
-    settings%chain_length           = 1                        !Number of chords to draw (after each randomisation)
+    settings%nlive                = 500                      !number of live points
+    settings%chain_length         = 1                        !Number of chords to draw (after each randomisation)
     settings%num_reflections      = 1                        !Number of randomisations to choose, 4 seems fine in most cases
 
     settings%read_resume          = .false.                  !whether or not to resume from file
@@ -212,7 +212,7 @@ program main
     settings%max_ndead            =  -1                      !maximum number of samples
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%minimum_weight       = 1d-5                     !minimum weight of the posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%save_all             = .false.                  !Save all the dead points?
