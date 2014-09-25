@@ -743,7 +743,7 @@ module nested_sampling_parallel_module
                     mpierror              & ! error information (from mpi_module)
                     )
                 ! If its valid, and we need more points, add it to the array
-                if(live_point(settings%l0)>=logzero .and. i_live<=settings%nlive) then
+                if(live_point(settings%l0)>logzero .and. i_live<settings%nlive) then
                     i_live=i_live+1
                     live_points(:,i_live) = live_point
                     if(settings%write_live) call write_phys_live_points(settings,live_points,logzero)
