@@ -129,6 +129,59 @@ module example_likelihoods
 
     end function gaussian_loglikelihood
 
+    !> Twin gaussian peaks likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
+    !! 
+    !! It is normalised so that it should output an evidence of 1.0 for
+    !! effectively infinite priors.
+    !!
+    !! The mean is set at 0.5 by default, apart from the x directions, where
+    !! they are separated by 6 sigma widths and all sigmas at 0.01
+
+    function twin_gaussian_loglikelihood(theta,phi,context) result(loglikelihood)
+        use utils_module, only: logaddexp
+        implicit none
+        !> Input parameters
+        double precision, intent(in), dimension(:)   :: theta
+        !> Output derived parameters
+        double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
+
+        double precision :: loglikelihood 
+        double precision :: loglikelihood1
+        double precision :: loglikelihood2
+
+        double precision, dimension(size(theta)) :: sigma ! Standard deviation (uncorrelated) 
+        double precision, dimension(size(theta)) :: mu1   ! Mean
+        double precision, dimension(size(theta)) :: mu2   ! Mean
+
+
+        ! Initialise the mean and standard deviation
+        sigma = 1d-2  ! all sigma set relatively small
+        mu1    = 5d-1 ! mean in the center
+        mu1(1) = 5d-1 + 3*sigma(1)
+        mu2    = 5d-1 ! mean in the center
+        mu2(1) = 5d-1 - 3*sigma(1)
+
+        ! Gaussian normalisation
+        loglikelihood1 = - sum( log( sigma ) + log( TwoPi )/2d0 ) 
+        loglikelihood2 = loglikelihood1
+
+        ! theta dependence
+        loglikelihood1 = loglikelihood1 - sum( ( ( theta - mu1 ) / sigma ) ** 2d0 ) / 2d0
+        loglikelihood2 = loglikelihood2 - sum( ( ( theta - mu2 ) / sigma ) ** 2d0 ) / 2d0
+
+        loglikelihood = logaddexp(loglikelihood1,loglikelihood2) - log(2d0)
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
+
+
+    end function twin_gaussian_loglikelihood
+
 
 
     !> Upside down [Rosenbrock function](http://en.wikipedia.org/wiki/Rosenbrock_function).
