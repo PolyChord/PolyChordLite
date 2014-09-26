@@ -90,10 +90,10 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood_corr
+    loglikelihood => gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    settings%nDims=2                  ! Dimensionality of the space
+    settings%nDims=20                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -144,7 +144,7 @@ program main
     settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
-    settings%write_live           = .true.                   !write out the physical live points?
+    settings%write_live           = .false.                  !write out the physical live points?
     settings%save_all             = .false.                  !Save all the dead points?
 
     ! Evidence inference
