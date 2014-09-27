@@ -6,8 +6,8 @@ module chordal_module
     function SliceSampling(loglikelihood,priors,settings,live_data,seed_point)  result(baby_point)
         use priors_module, only: prior
         use settings_module, only: program_settings
-        use random_module, only: random_integer
-        use utils_module, only: distance
+        use random_module, only: random_integer,random_real
+        use utils_module, only: distance,MP
 
         implicit none
         interface
@@ -77,17 +77,12 @@ module chordal_module
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(settings%last_chord))
 
-
-            ! Check whether we're far enough away
-            ! Pick a random live point
-            test_point = live_data(:,random_integer(size(live_data,2)))
-            ! Find its distance away from seed
-            test_distance = distance(seed_point(settings%h0:settings%h1),test_point)
-
-            ! If this distance is smaller than the distance of the baby point, then accept
-            if(test_distance/=0d0 .and. test_distance < distance(baby_point(settings%h0:settings%h1),seed_point(settings%h0:settings%h1)) ) exit
+            ! Mutual proximity test
+            write(*,'(F5.2)') MP(baby_point(settings%h0:settings%h1),seed_point(settings%h0:settings%h1),live_data)
+            if( random_real() > MP(baby_point(settings%h0:settings%h1),seed_point(settings%h0:settings%h1),live_data) ) exit
 
         end do
+        write(*,*) '-------------------'
 
         ! Make sure to hand back any incubator information which has likely been
         ! overwritten (this is only relevent in parallel mode)

@@ -63,9 +63,52 @@ module utils_module
 
         double precision :: distance
 
-        distance = sqrt( dot_product(a-b,a-b) )
+        distance = sqrt(distance2(a,b))
 
     end function distance
+
+    !> Euclidean distance squared of two coordinates
+    !!
+    !! returns \f$\sum_i (a_i-b_i)^2 \f$
+    function distance2(a,b)
+        implicit none
+        !> First vector
+        double precision, dimension(:) :: a
+        !> Second vector
+        double precision, dimension(:) :: b
+
+        double precision :: distance2
+
+        distance2 = dot_product(a-b,a-b) 
+
+    end function distance2
+
+
+    !> Mutual proximity 
+    !!
+    function MP(a,b,live_data)
+        implicit none
+        double precision, dimension(:)   :: a
+        double precision, dimension(:)   :: b
+        double precision, dimension(:,:) :: live_data
+
+        double precision :: MP
+
+        double precision :: dab2
+
+        integer i
+
+        MP=0d0
+
+        dab2 = distance2(a,b)
+
+        do i=1,size(live_data,2)
+            if(distance2(live_data(:,i),a) > dab2 .and. distance2(live_data(:,i),b) > dab2 ) MP = MP+1d0
+        end do
+
+        MP = MP/(size(live_data,2)+0d0)
+
+    end function MP
 
     !> Modulus squared of a vector
     !!

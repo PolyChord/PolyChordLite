@@ -95,7 +95,7 @@ program main
     loglikelihood => twin_gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
-    settings%nDims= 8                 ! Dimensionality of the space
+    settings%nDims= 2                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -107,8 +107,8 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    minimums= 5d-1 - 5*1d-2
-    maximums= 5d-1 + 5*1d-2
+    minimums=0.5-1d-2*5
+    maximums=0.5+1d-2*5
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -164,7 +164,7 @@ program main
 
     settings%nstack=settings%nlive
 
-    open(111,file="evidences_twin_8.dat", action='write', iostat=i_err)
+    open(111,file="evidences_2.dat", action='write', iostat=i_err)
 
     do i=1,num_samples
         output_info = NestedSamplingL(loglikelihood,priors,settings) 
