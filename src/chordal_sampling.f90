@@ -7,7 +7,7 @@ module chordal_module
         use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_integer,random_real
-        use utils_module, only: distance,MP
+        use utils_module, only: distance,MP2
 
         implicit none
         interface
@@ -78,11 +78,12 @@ module chordal_module
             max_chord = max(max_chord,baby_point(settings%last_chord))
 
             ! Mutual proximity test
-            write(*,'(F5.2)') MP(baby_point(settings%h0:settings%h1),seed_point(settings%h0:settings%h1),live_data)
-            if( random_real() > MP(baby_point(settings%h0:settings%h1),seed_point(settings%h0:settings%h1),live_data) ) exit
+            !write(*,'(F5.2)') MP2(seed_point(settings%h0:settings%h1),baby_point(settings%h0:settings%h1),live_data)
+            if( random_real() < MP2(seed_point(settings%h0:settings%h1),baby_point(settings%h0:settings%h1),live_data) ) exit
+            write(*,*) 'repeat'
 
         end do
-        write(*,*) '-------------------'
+        !write(*,*) '-------------------'
 
         ! Make sure to hand back any incubator information which has likely been
         ! overwritten (this is only relevent in parallel mode)

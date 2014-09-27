@@ -110,6 +110,30 @@ module utils_module
 
     end function MP
 
+    function MP2(seed,baby,live_data)
+        implicit none
+        double precision, dimension(:)   :: seed
+        double precision, dimension(:)   :: baby
+        double precision, dimension(:,:) :: live_data
+
+        double precision :: MP2
+
+        double precision :: dab2
+
+        integer i
+
+        MP2=0d0
+
+        dab2 = distance2(seed,baby)
+
+        do i=1,size(live_data,2)
+            if(distance2(live_data(:,i),seed) > dab2 ) MP2 = MP2+1d0
+        end do
+
+        MP2 = MP2/(size(live_data,2)+0d0)
+
+    end function MP2
+
     !> Modulus squared of a vector
     !!
     !! returns \f$\sum_i (a_i)^2 \f$

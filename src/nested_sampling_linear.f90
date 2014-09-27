@@ -333,6 +333,7 @@ module nested_sampling_linear_module
                 if(settings%write_resume) call write_resume_file(settings,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
                 if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
                 if(settings%write_live) call write_phys_live_points(settings,live_points,late_likelihood)
+                !call sleep(2)
             end if
 
         end do ! End main loop

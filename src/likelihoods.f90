@@ -687,7 +687,7 @@ module example_likelihoods
         double precision, dimension(nDims)       :: eigenvalues
         double precision, dimension(nDims,nDims) :: eigenvectors
         integer :: j
-        double precision, parameter :: rng=1e-2
+        double precision, parameter :: rng=1e-1
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)

@@ -93,7 +93,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims=2                  ! Dimensionality of the space
+    settings%nDims=8                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -125,7 +125,7 @@ program main
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
     settings%sampler              => SliceSampling           !Sampler choice
-    settings%get_nhat             => Adaptive_Parallel       !Direction choice
+    settings%get_nhat             => HitAndRun               !Direction choice
     settings%process_live_points  => get_live_coordinates    !no processing of live points needed
 
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
@@ -144,7 +144,7 @@ program main
     settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
-    settings%write_live           = .false.                  !write out the physical live points?
+    settings%write_live           = .true.                   !write out the physical live points?
     settings%save_all             = .false.                  !Save all the dead points?
 
     ! Evidence inference
