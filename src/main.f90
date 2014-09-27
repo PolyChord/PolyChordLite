@@ -93,7 +93,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims=8                  ! Dimensionality of the space
+    settings%nDims=2                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -119,13 +119,13 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 25*settings%nDims        !number of live points
+    settings%nlive                = 500!25*settings%nDims        !number of live points
     settings%chain_length         = settings%nDims*10        !Number of chords to draw
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
     settings%sampler              => SliceSampling           !Sampler choice
-    settings%get_nhat             => HitAndRun               !Direction choice
+    settings%get_nhat             => Adaptive_Parallel       !Direction choice
     settings%process_live_points  => get_live_coordinates    !no processing of live points needed
 
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator

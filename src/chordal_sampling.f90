@@ -77,13 +77,10 @@ module chordal_module
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(settings%last_chord))
 
-            ! Mutual proximity test
-            !write(*,'(F5.2)') MP2(seed_point(settings%h0:settings%h1),baby_point(settings%h0:settings%h1),live_data)
-            if( random_real() < MP2(seed_point(settings%h0:settings%h1),baby_point(settings%h0:settings%h1),live_data) ) exit
-            write(*,*) 'repeat'
+            ! De-correlation test
+            if( de_correlated(baby_point(settings%h0:settings%h1),seed_point(settings%h0:settings%h1),live_data) ) exit
 
         end do
-        !write(*,*) '-------------------'
 
         ! Make sure to hand back any incubator information which has likely been
         ! overwritten (this is only relevent in parallel mode)
@@ -94,6 +91,56 @@ module chordal_module
         baby_point(settings%last_chord) = max_chord
 
     end function SliceSampling
+
+    function de_correlated(baby,seed,live_data) 
+        use random_module, only: random_integer
+        implicit none
+
+        double precision, dimension(:),   intent(in) :: baby
+        double precision, dimension(:),   intent(in) :: seed
+        double precision, dimension(:,:), intent(in) :: live_data
+
+        logical :: de_correlated
+
+
+        integer :: i_dim
+
+        integer :: n_live
+
+        double precision :: temp_distance
+
+        n_live = size(live_data,2)
+
+        ! Start out with it as true
+        de_correlated=.true.
+
+        do i_dim=1,size(baby)
+
+            temp_distance = 0d0
+            do while(temp_distance==0d0) 
+                temp_distance =  abs(live_data(i_dim,random_integer(n_live)) - seed(i_dim))
+            end do
+
+            if( temp_distance > abs( baby(i_dim)-seed(i_dim) ) ) then
+                de_correlated=.false.
+                return
+            end if
+
+        end do
+
+
+    end function de_correlated
+
+
+
+
+
+
+
+
+
+
+
 
     subroutine HitAndRun(settings,live_data,nhat)
         use settings_module, only: program_settings
