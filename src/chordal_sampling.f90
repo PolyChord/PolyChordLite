@@ -64,6 +64,7 @@ module chordal_module
         ! Initialise max_chord at 0
         max_chord = 0
 
+        counter =0
         do while(.true.)!i_chords=1,settings%chain_length
             ! Give the baby point the step length
             baby_point(settings%last_chord) = step_length
@@ -73,6 +74,7 @@ module chordal_module
 
             ! Generate a new random point along the chord defined by baby_point and nhat
             baby_point = slice_sample(loglikelihood,priors, nhat, baby_point, settings)
+            counter = counter+1
 
             ! keep track of the largest chord
             max_chord = max(max_chord,baby_point(settings%last_chord))
@@ -81,6 +83,7 @@ module chordal_module
             if( de_correlated(baby_point(settings%h0:settings%h1),seed_point(settings%h0:settings%h1),live_data) ) exit
 
         end do
+        !write(*,*) counter
 
         ! Make sure to hand back any incubator information which has likely been
         ! overwritten (this is only relevent in parallel mode)
@@ -119,7 +122,7 @@ module chordal_module
             temp_distance = 0d0
             do while(temp_distance==0d0) 
                 temp_distance =  abs(live_data(i_dim,random_integer(n_live)) - seed(i_dim))
-            end do
+        end do
 
             if( temp_distance > abs( baby(i_dim)-seed(i_dim) ) ) then
                 de_correlated=.false.
