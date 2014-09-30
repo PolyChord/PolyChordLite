@@ -22,12 +22,16 @@ program main
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
 
+    integer, parameter :: num_samples = 100000
+    integer, parameter :: update = 10
+
     ! Output of the program
     ! 1) log(evidence)
     ! 2) error(log(evidence))
     ! 3) ndead
     ! 4) number of likelihood calls
-    double precision, dimension(5) :: output_info
+    double precision, dimension(5,update) :: output_info_local
+    double precision, dimension(:,:),allocatable :: output_info
 
     type(program_settings)    :: settings  ! The program settings 
     type(prior), dimension(1) :: priors
@@ -42,10 +46,11 @@ program main
     double precision, allocatable, dimension(:) :: maximums
     integer, allocatable, dimension(:) :: hypercube_indices
     integer, allocatable, dimension(:) :: physical_indices
-    integer :: i
-
-    integer, parameter :: num_samples = 100000
+    integer :: i,j
     integer :: i_err
+
+    integer :: myrank
+    integer :: nprocs
 
 
     interface
@@ -92,10 +97,10 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => twin_gaussian_loglikelihood
+    loglikelihood => gaussian_loglikelihood_corr 
 
     ! (ii) Set the dimensionality
-    settings%nDims= 2                 ! Dimensionality of the space
+    settings%nDims= 20                ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -122,16 +127,16 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
-    settings%chain_length         = settings%nDims*10        !Number of chords to draw
+    settings%chain_length         = 6!settings%nDims           !Number of chords to draw
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
     settings%sampler              => SliceSampling           !Sampler choice
-    settings%get_nhat             => Adaptive_Parallel       !Direction choice
+    settings%get_nhat             => HitAndRun               !Direction choice
     settings%process_live_points  => get_live_coordinates    !no processing of live points needed
 
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
-    settings%feedback             =  0                       !degree of feedback
+    settings%feedback             =  -1                      !degree of feedback
 
     ! stopping criteria
     settings%precision_criterion  =  1d-1                    !degree of precision in answer
@@ -164,14 +169,40 @@ program main
 
     settings%nstack=settings%nlive
 
-    open(111,file="evidences_2.dat", action='write', iostat=i_err)
+    myrank = mpi_rank()
+    nprocs = mpi_size()
+
+    allocate(output_info(5,nprocs*update))
 
     do i=1,num_samples
-        output_info = NestedSamplingL(loglikelihood,priors,settings) 
-        write(111,'(2E17.8)') output_info(5), output_info(2)
+
+        if(myrank==root) write(*,*) i
+        output_info_local(:,mod(i-1,update)+1) = NestedSamplingL(loglikelihood,priors,settings) 
+
+        if(mod(i-1,update)+1 == update) then
+            if(myrank==root) write(*,*) 'gathering'
+
+            call MPI_GATHER(                 &  
+                output_info_local,           & ! sending array
+                5*update,                    & ! number of elements to be sent
+                MPI_DOUBLE_PRECISION,        & ! type of element to be sent
+                output_info,                 & ! recieving array
+                5*update,                    & ! number of elements to be recieved from each node
+                MPI_DOUBLE_PRECISION,        & ! type of element recieved
+                root,                        & ! root node address
+                MPI_COMM_WORLD,              & ! communication info
+                mpierror)                      ! error (from module mpi_module)
+
+            if(myrank==root) write(*,*) 'writing'
+            if(myrank==root) open(111,file="evidences_2.dat", action='write', position="append", iostat=i_err)
+            do j=1,update*nprocs
+                if(myrank==root) write(111,'(2E17.8)') output_info(5,j), output_info(2,j)
+            end do
+            if(myrank==root) close(111)
+        end if
+
     end do
 
-    close(111)
 
 
 
