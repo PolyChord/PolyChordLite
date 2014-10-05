@@ -119,7 +119,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 500!25*settings%nDims        !number of live points
+    settings%nlive                = 25*settings%nDims        !number of live points
     settings%chain_length         = settings%nDims*10        !Number of chords to draw
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'

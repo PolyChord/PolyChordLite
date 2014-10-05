@@ -19,11 +19,17 @@ program main
 #endif
     use nested_sampling_linear_module,   only: NestedSamplingL
 
+    use utils_module, only: STR_LENGTH
+
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
 
-    integer, parameter :: num_samples = 100000
+    ! The number of samples to draw
+    integer, parameter :: num_samples = 100000  
+    ! How often to update from all the MPI cores
     integer, parameter :: update = 10
+    ! The name of the file
+    character(STR_LENGTH) :: out_root='corr8_8_1.dat'
 
     ! Output of the program
     ! 1) log(evidence)
@@ -97,10 +103,10 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood_corr 
+    loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20                ! Dimensionality of the space
+    settings%nDims= 8                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -114,6 +120,8 @@ program main
 
     minimums=0.5-1d-2*5
     maximums=0.5+1d-2*5
+    !minimums=-5
+    !maximums=5
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -127,12 +135,12 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
-    settings%chain_length         = 6!settings%nDims           !Number of chords to draw
+    settings%chain_length         = settings%nDims           !Number of chords to draw
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
     settings%sampler              => SliceSampling           !Sampler choice
-    settings%get_nhat             => HitAndRun               !Direction choice
+    settings%get_nhat             => Adaptive_Parallel       !Direction choice
     settings%process_live_points  => get_live_coordinates    !no processing of live points needed
 
     settings%evidence_calculator  => KeetonEvidence          !evidence calculator
@@ -167,21 +175,25 @@ program main
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 
+    ! Since we're running each of the nested sampling algorithms in linear mode,
+    ! one should set the stack size to the number of live points
     settings%nstack=settings%nlive
 
+    ! Get the processor ID...
     myrank = mpi_rank()
+    ! ... and the total number of processors
     nprocs = mpi_size()
 
-    allocate(output_info(5,nprocs*update))
+    ! Allocate the collecting array on root 
+    if(myrank==root) allocate(output_info(5,nprocs*update))
 
     do i=1,num_samples
 
-        if(myrank==root) write(*,*) i
+        ! Write to the local output_info array the results of a nested sampling run
         output_info_local(:,mod(i-1,update)+1) = NestedSamplingL(loglikelihood,priors,settings) 
 
         if(mod(i-1,update)+1 == update) then
-            if(myrank==root) write(*,*) 'gathering'
-
+            ! Gather all of the evidences every update iterations
             call MPI_GATHER(                 &  
                 output_info_local,           & ! sending array
                 5*update,                    & ! number of elements to be sent
@@ -193,12 +205,19 @@ program main
                 MPI_COMM_WORLD,              & ! communication info
                 mpierror)                      ! error (from module mpi_module)
 
-            if(myrank==root) write(*,*) 'writing'
-            if(myrank==root) open(111,file="evidences_2.dat", action='write', position="append", iostat=i_err)
-            do j=1,update*nprocs
-                if(myrank==root) write(111,'(2E17.8)') output_info(5,j), output_info(2,j)
-            end do
-            if(myrank==root) close(111)
+            if(myrank==root) then
+                write(*,*) i*nprocs
+                ! Open the output file for writing, appending to the end
+                open(111,file=trim(out_root), action='write', position="append", iostat=i_err)
+                ! Write all of the evidences we've recieved 
+                ! 5 contains the 'check' i.e. log(evidence*volume)
+                ! 2 contains the 'error' i.e. stdev in log(evidence)
+                do j=1,update*nprocs
+                    if(myrank==root) write(111,'(2E17.8)') output_info(5,j), output_info(2,j)
+                end do
+                ! Close the output file
+                close(111)
+            end if
         end if
 
     end do
