@@ -419,10 +419,6 @@ module nested_sampling_linear_module
         ! Set the initial trial values of the chords as the diagonal of the hypercube
         live_points(settings%last_chord,:) = sqrt(settings%nDims+0d0)
 
-        ! Initially, none of the points have been calculated yet
-        ! (only relevent in parallel mode)
-        live_points(settings%daughter,:) = flag_waiting
-
         ! Set the likelihood contours to logzero for now
         live_points(settings%l1,:) = logzero
 

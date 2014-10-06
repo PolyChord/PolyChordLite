@@ -98,7 +98,7 @@ module read_write_module
         open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err) 
 
         do i_live=1,settings%nstack
-            if(live_points(settings%l1,i_live)<=late_loglikelihood .and.  live_points(settings%daughter,i_live) >=0 ) then
+            if(live_points(settings%l1,i_live)<=late_loglikelihood) then ! .and.  live_points(settings%daughter,i_live) >=0 ) then
                 write(write_phys_unit,'(<settings%nDims+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(settings%p0:settings%p1,i_live),live_points(settings%l0,i_live)
             end if
         end do

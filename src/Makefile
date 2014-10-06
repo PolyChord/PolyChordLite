@@ -52,7 +52,7 @@ all: $(PROGRAMS)
 
 ifeq ($(PAR), 1)
 # Parallel mode
-NESTED_SAMPLING = nested_sampling_parallel.o nested_sampling_linear.o 
+NESTED_SAMPLING = nested_sampling_linear.o 
 MPI_UTILS = mpi_utils.o
 else
 # Serial mode

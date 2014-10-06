@@ -81,10 +81,6 @@ module chordal_module
 
         end do
 
-        ! Make sure to hand back any incubator information which has likely been
-        ! overwritten (this is only relevent in parallel mode)
-        baby_point(settings%daughter) = seed_point(settings%daughter)
-
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
         baby_point(settings%last_chord) = max_chord
@@ -317,9 +313,6 @@ module chordal_module
             if(grade==1) max_chord = max(max_chord,baby_point(settings%last_chord))
         end do
 
-        ! Make sure to hand back any incubator information which has likely been
-        ! overwritten (this is only relevent in parallel mode)
-        baby_point(settings%daughter) = seed_point(settings%daughter)
 
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
@@ -536,7 +529,7 @@ module chordal_module
 
         i_data=1
         do i_live=1,settings%nstack
-            if( live_points(settings%l1,i_live)<=loglikelihood_bound .and. live_points(settings%daughter,i_live)>=flag_waiting )  then
+            if( live_points(settings%l1,i_live)<=loglikelihood_bound) then
                 ! Extract the coordinates
                 live_data(:settings%nDims,i_data) = live_points(settings%h0:settings%h1,i_live) 
                 ! Recort that this is a point to be drawn from

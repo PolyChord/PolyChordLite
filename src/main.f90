@@ -15,7 +15,6 @@ program main
     use feedback_module
 #ifdef MPI
     use mpi_module
-    use nested_sampling_parallel_module, only: NestedSamplingP
 #endif
     use nested_sampling_linear_module,   only: NestedSamplingL
 
@@ -162,7 +161,7 @@ program main
 
 #ifdef MPI
     if (mpi_size()>1) then
-        output_info = NestedSamplingP(loglikelihood,priors,settings)
+        !output_info = NestedSamplingP(loglikelihood,priors,settings)
     else
         settings%nstack=settings%nlive
         output_info = NestedSamplingL(loglikelihood,priors,settings) 

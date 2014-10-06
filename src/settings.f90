@@ -101,9 +101,6 @@ module settings_module
         !> The last chord length used in calculating this point
         integer :: last_chord
 
-        !> Pointer to any daughter points
-        integer :: daughter
-
         !> likelihood index
         !!
         !! This is the likelihood evaluated at the position of the live point
@@ -342,10 +339,9 @@ module settings_module
         ! Algorithm indices
         settings%nlike=settings%d1+1
         settings%last_chord=settings%nlike+1
-        settings%daughter=settings%last_chord+1
 
         ! Loglikelihood indices
-        settings%l0=settings%daughter+1
+        settings%l0=settings%last_chord+1
         settings%l1=settings%l0+1
 
         ! Total number of parameters

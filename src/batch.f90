@@ -15,7 +15,6 @@ program main
     use feedback_module
 #ifdef MPI
     use mpi_module
-    use nested_sampling_parallel_module, only: NestedSamplingP
 #endif
     use nested_sampling_linear_module,   only: NestedSamplingL
 
