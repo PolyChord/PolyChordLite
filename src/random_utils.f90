@@ -338,105 +338,33 @@ module random_module
     !>  Random skewed direction vector
     !!
     !! Generate a randomly directed normalised vector in nDims dimensional space
-    !! according to the covariance matrix recieved. The vector is normalised
-    !! with respect to the [Mahalanobis_distance](http://en.wikipedia.org/wiki/Mahalanobis_distance)
-    !! defined by the variance-covariance matrix.
+    !! according to the covariance matrix recieved in the form of eigenvectors
+    !! and eigenvalues. 
     !!
-    !! We use the 
-    !! [VSL_RNG_METHOD_GAUSSIANMV_ICDF](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_7_GaussianMV_VSL_RNG_METHOD_GAUSSIANMV_ICDF.htm#9_3_7_GaussianMV_VSL_RNG) 
-    !! intel method to generate multivariate gaussian random numbers using the 
-    !! [vdrnggaussianmv](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F) function.
-
-    function random_skewed_direction(nDims,covmat) result(nhat)
+    function random_skewed_direction(nDims, eigen_info) result(nhat)
         use utils_module, only: distance
         implicit none
 
         !> Size of vector to be generated
         integer,intent(in) :: nDims
 
-        !> The cholesky decomposition of the variance-covariance matrix
-        double precision, dimension(nDims,nDims),intent(in) :: covmat
-
-        !> The cholesky decomposition of the variance-covariance matrix
-        double precision, allocatable, dimension(:,:),save :: cholesky
-
-        !> The inverse covariance matrix (for normalisation purposes)
-        double precision, allocatable,  dimension(:,:),save :: invcovmat
-
-        !> The saved covariance matrix
-        double precision, allocatable, dimension(:,:),save :: covmat_saved
+        !> The eigenvectors and eigenvalues
+        double precision, dimension(nDims,nDims+1),intent(in) :: eigen_info
 
         ! The output normalised vector
         double precision, dimension(nDims) :: nhat
 
-        ! Temporary length 1 vector of nDims vectors for passing to the routine
-        double precision, dimension(nDims,1) :: nhat_temp
+        ! Generate a random direction
+        nhat = random_gaussian(nDims)
 
-        ! Method to generate random numbers 
-        integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIANMV_ICDF
-        ! The type of matrix storage (this indicates 'full' storage, i.e. the
-        ! easy to understand kind)
-        integer,parameter       :: mstorage=VSL_MATRIX_STORAGE_FULL
+        ! Scale this by the eigenvalues
+        nhat = eigen_info(:,nDims+1) * nhat
 
-        double precision, dimension(nDims) :: mean
+        ! Transform via the eigenvectors
+        nhat = matmul(eigen_info(:nDims,:nDims),nhat)
 
-        double precision :: modulus
-
-        integer :: errcode ! Error code
-
-
-        if(.not. allocated(cholesky) ) then
-            allocate(cholesky(nDims,nDims)) 
-        else if (nDims /=size(cholesky,1) ) then
-            deallocate(cholesky)
-            allocate(cholesky(nDims,nDims))
-        end if
-
-        if(.not. allocated(invcovmat) ) then
-            allocate(invcovmat(nDims,nDims)) 
-        else if (nDims /=size(invcovmat,1) ) then
-            deallocate(invcovmat)
-            allocate(invcovmat(nDims,nDims))
-        end if
-
-        if(.not. allocated(covmat_saved) ) then
-            allocate(covmat_saved(nDims,nDims)) 
-        else if (nDims /=size(covmat_saved,1) ) then
-            deallocate(covmat_saved)
-            allocate(covmat_saved(nDims,nDims))
-        end if
-
-
-        if(any(covmat_saved/=covmat)) then
-            ! compute the cholesky factorisation of a the symmetric positive
-            ! definite matrix 
-            call dpotrf ('U',nDims,covmat,nDims,errcode)
-
-            ! Compute the inverse matrix
-            call dpotri ('U',nDims,cholesky,nDims,errcode)
-
-            covmat_saved=covmat
-        end if
-
-
-
-        mean =0
-
-        ! Compute a random gaussian vector subject to the matrix
-        errcode=vdrnggaussianmv( method, rng_stream, 1,nhat_temp, nDims, mstorage, mean, cholesky)
-
-        ! normalise it with respect to the malhalonobis distance
-        !
-        ! this subroutine computes the product of a vector and a symmetric
-        ! matrix
-        call dsymv('U',nDims,1d0,invcovmat,nDims,nhat_temp(:,1),1,0d0,nhat,1)
-        modulus = dot_product(nhat,nhat_temp(:,1))
-        if (modulus /= 0 ) then
-            nhat = nhat_temp(:,1)/sqrt(modulus)
-        else
-            nhat = random_direction(nDims)
-        end if
-
+        ! Normalise
+        nhat = nhat/sqrt(dot_product(nhat,nhat))
 
     end function random_skewed_direction
 

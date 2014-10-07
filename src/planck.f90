@@ -7,10 +7,6 @@ program main
     use settings_module,        only: program_settings,allocate_indices
     use random_module,          only: initialise_random, deinitialise_random
 
-    use chordal_module,         only: SliceSampling, SliceSampling_Graded, &
-                                      HitAndRun, Adaptive_Parallel, &
-                                      no_processing, get_live_coordinates
-    use evidence_module,        only: KeetonEvidence
     use example_likelihoods
     use feedback_module
 #ifdef MPI
@@ -201,11 +197,6 @@ program main
 
     settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
-    settings%sampler              => SliceSampling_Graded    !Sampler choice
-    settings%get_nhat             => Adaptive_Parallel       !Direction choice
-    settings%process_live_points  => get_live_coordinates    !no processing of live points needed
-
-    settings%evidence_calculator  => KeetonEvidence          !evidence calculator
     settings%feedback             =  1                       !degree of feedback
     settings%precision_criterion  =  1d-2                    !degree of precision in answer
     settings%max_ndead            =  -1                      !maximum number of samples

@@ -8,11 +8,12 @@ module nested_sampling_linear_module
     function NestedSamplingL(loglikelihood,priors,settings) result(output_info)
         use priors_module,     only: prior,prior_log_volume
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
-        use settings_module,   only: program_settings
+        use settings_module,   only: program_settings,phantom_type,blank_type,live_type
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
-        use evidence_module,   only: infer_evidence
+        use evidence_module,   only: infer_evidence,KeetonEvidence
+        use chordal_module,    only: SliceSampling
 
         implicit none
 
@@ -43,9 +44,9 @@ module nested_sampling_linear_module
         !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
         double precision, dimension(settings%nTotal,settings%nstack) :: live_points
 
-        double precision, allocatable, dimension(:,:) :: live_data
+        double precision, dimension(settings%nDims,settings%nDims+1) :: eigen_info
 
-        double precision, allocatable, dimension(:,:) :: posterior_array
+        double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
         double precision, dimension(settings%nDims+settings%nDerived+2) :: posterior_point
         integer :: nposterior
         integer :: insertion_index(1)
@@ -53,8 +54,8 @@ module nested_sampling_linear_module
 
         logical :: more_samples_needed
 
-        ! The new-born baby point
-        double precision,    dimension(settings%nTotal)   :: baby_point
+        ! The new-born baby points
+        double precision,    dimension(settings%nTotal,settings%chain_length)   :: baby_points
         double precision :: baby_likelihood
 
         ! The recently dead point
@@ -86,7 +87,12 @@ module nested_sampling_linear_module
 
         double precision, dimension(settings%max_ndead) :: dead_likes
 
-        logical :: issue
+        integer :: stack_size
+
+
+
+
+
 
 
         call write_opening_statement(settings) 
@@ -115,8 +121,16 @@ module nested_sampling_linear_module
         else !(not resume)
             call write_started_generating(settings%feedback)
 
+            ! Zero the array
+            live_points = 0
+
+            ! Set them all to blank initially
+            live_points(settings%point_type,:) = blank_type
+
             ! Otherwise generate them anew:
             live_points = GenerateLivePoints(loglikelihood,priors,settings,settings%nlive)
+
+            stack_size=settings%nlive
 
             call write_finished_generating(settings%feedback) !Flag to note that we're done generating
         end if !(resume)
@@ -138,7 +152,7 @@ module nested_sampling_linear_module
 
         ! (a)
             ! Allocate the evidence vector using the evidence function
-        more_samples_needed = settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,evidence_vec)
+        more_samples_needed = KeetonEvidence(settings,baby_likelihood,late_likelihood,ndead,evidence_vec)
         if(resume) then
             ! If resuming, get the accumulated stats to calculate the
             ! evidence from the resume file
@@ -164,15 +178,14 @@ module nested_sampling_linear_module
             read(read_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)') mean_likelihood_calls
             ! Also get the total likelihood calls
             read(read_resume_unit,'(I)') total_likelihood_calls
-        else
+        else !(not resume) 
             mean_likelihood_calls = 1d0
             total_likelihood_calls = settings%nlive
-        end if
+        end if !(resume) 
 
 
         ! (d) Posterior array
 
-        allocate(posterior_array(settings%nDims+settings%nDerived+2,settings%nmax_posterior))
         nposterior = 0
         ! set all of the loglikelihoods and logweights to be zero initially
         posterior_array(1:2,:) = logzero
@@ -228,31 +241,35 @@ module nested_sampling_linear_module
             ! Calculate the late logweight
             late_logweight = (ndead-1)*lognlive - ndead*lognlivep1 
 
-            ! (2) Generate a new baby point
+            ! Update the eigenvectors and eigenvalues of the distribution of
+            ! live points
+            eigen_info = compute_eigen_info( settings, live_points(settings%h0:settings%h1,:stack_size) )
+
+
+            ! (2) Generate a new set of baby points
             ! Select a seed point for the generator
-            !  -excluding the points which have likelihoods equal to the
-            !   loglikelihood bound
             seed_point = GenerateSeed(settings,live_points,seed_index)
 
             ! Record the likelihood bound which this seed will generate from
             seed_point(settings%l1) = late_likelihood
 
-            ! Process the live points into live_data (if necessary)
-            issue = settings%process_live_points(live_points,live_data,late_likelihood)
+            ! Generate a new set of points within the likelihood bound of the late point
+            baby_points = SliceSampling(loglikelihood,priors,settings,eigen_info,seed_point)
 
-            ! Generate a new point within the likelihood bound of the late
-            ! point, giving any additional data from the live_points that might
-            ! be required
-            baby_point = settings%sampler(loglikelihood,priors,live_data,seed_point)
-            baby_likelihood  = baby_point(settings%l0)
+            ! The new likelihood is the last point
+            baby_likelihood  = baby_points(settings%l0,settings%chain_length)
 
-
-
-            ! (3) Insert the baby point into the set of live points (over the
-            !     old position of the dead points
+            ! (3) Update the stack of live points and the posterior array
+            !     This function does multiple things:
+            !     1) Insert baby_points into live_points
+            !     2) Remove points from live_point that have died this round
+            !     3) Add any of these which are at a high enough likelihood to the posterior_array
+            !     4) re-calculate stack_size and nposterior
+            !     5) update the late_likelihood
+            call update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood)
 
             ! Insert the baby point over the late point
-            live_points(:,late_index(1)) = baby_point
+            !live_points(:,late_index(1)) = baby_point
 
             ! record that we have a new dead point
             ndead = ndead + 1
@@ -265,7 +282,7 @@ module nested_sampling_linear_module
             if (settings%infer_evidence) dead_likes(ndead) = late_likelihood
 
             ! (4) Calculate the new evidence (and check to see if we're accurate enough)
-            more_samples_needed = settings%evidence_calculator(baby_likelihood,late_likelihood,ndead,evidence_vec)
+            more_samples_needed = KeetonEvidence(settings,baby_likelihood,late_likelihood,ndead,evidence_vec)
 
 
             ! (5) Update the set of weighted posteriors
@@ -311,10 +328,10 @@ module nested_sampling_linear_module
             ! (6) Command line feedback
 
             ! update the mean number of likelihood calls
-            mean_likelihood_calls = mean_likelihood_calls + (baby_point(settings%nlike) - late_point(settings%nlike) ) / (settings%nlive + 0d0)
+            !mean_likelihood_calls = mean_likelihood_calls + (baby_point(settings%nlike) - late_point(settings%nlike) ) / (settings%nlive + 0d0)
 
             ! update the total number of likelihood calls
-            total_likelihood_calls = total_likelihood_calls + baby_point(settings%nlike)
+            !total_likelihood_calls = total_likelihood_calls + baby_point(settings%nlike)
 
             ! update ndead file if we're that way inclined
             if(settings%save_all) write(write_dead_unit,'(<2*settings%nDims+settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>,I8,3E<DBL_FMT(1)>.<DBL_FMT(2)>)')  late_point(settings%h0:settings%h1), late_point(settings%p0:settings%p1), late_point(settings%d0:settings%d1), late_point(settings%nlike),late_point(settings%last_chord), late_point(settings%l0:settings%l1)
@@ -368,7 +385,7 @@ module nested_sampling_linear_module
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
     function GenerateLivePoints(loglikelihood,priors,settings,nlive) result(live_points)
         use priors_module,    only: prior
-        use settings_module,  only: program_settings
+        use settings_module,  only: program_settings,live_type
         use random_module,    only: random_reals
         use utils_module,     only: logzero
         use calculate_module, only: calculate_point
@@ -422,6 +439,9 @@ module nested_sampling_linear_module
         ! Set the likelihood contours to logzero for now
         live_points(settings%l1,:) = logzero
 
+        ! These are all true live points
+        live_points(settings%point_type,:) = live_type
+
 
     end function GenerateLivePoints
 
@@ -443,5 +463,153 @@ module nested_sampling_linear_module
         seed_point = live_points(:,seed_pos)
 
     end function GenerateSeed
+
+
+
+    subroutine update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood) 
+        use settings_module,   only: program_settings,blank_type,live_type
+        implicit none
+        type(program_settings), intent(in)                                                                           :: settings
+        double precision,       intent(in),    dimension(settings%nTotal,settings%chain_length)                      :: baby_points
+        double precision,       intent(inout), dimension(settings%nTotal,settings%nstack)                            :: live_points
+        integer,                intent(inout)                                                                        :: stack_size
+        double precision,       intent(inout), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
+        integer,                intent(inout)                                                                        :: nposterior
+        double precision,       intent(out)                                                                          :: late_likelihood
+
+        integer :: late_index(2)
+
+        integer :: i_live
+
+        ! Start by finding the original lowest likelihood live point (about to be deleted)
+        late_index(1:1) = minloc(live_points(settings%l0,:stack_size), mask=nint(live_points(settings%point_type))==live_type)
+
+        ! Now find the new late likelihood position, excluding this one 
+        late_index(2:2) = minloc(live_points(settings%l0,late_index(1)+1:stack_size), mask=nint(live_points(settings%point_type))==live_type)
+        late_index(1:1) = minloc(live_points(settings%l0,:late_index(1)-1), mask=nint(live_points(settings%point_type))==live_type)
+
+        if(late_index(2)==0 ) then
+            late_likelihood = live_points(settings%l0,late_index(1))
+        else if(late_index(1)==0) then
+            late_likelihood = live_points(settings%l0,late_index(2))
+        else if(live_points(settings%l0,late_index(1)) < live_points(settings%l0,late_index(2)) ) then
+            late_likelihood = live_points(settings%l0,late_index(1))
+        else
+            late_likelihood = live_points(settings%l0,late_index(2))
+        end if
+
+
+        ! Update the late likelihood
+        late_likelihood = live_points(settings%l0,late_index(1))
+
+        ! Add the baby points to the end of the array, and update the stack size
+        stack_size=stack_size+settings%chain_length
+        live_points(:,stack_size-settings%chain_length+1:stack_size) = baby_points(:,:settings%chain_length)
+
+        ! Now run through the stack and strip out any points that are less
+        ! than the new late_likelihood,
+        do i_live=1,stack_size
+            if( live_points(settings%l0,i_live) < late_likelihood ) then
+            end if
+        end do
+
+    end subroutine update_stacks
+
+
+
+
+
+
+    function compute_eigen_info(settings,hypercube_coords) result(eigen_info)
+        use settings_module,   only: program_settings,blank_type
+        use random_module,     only: random_integer
+        implicit none
+        type(program_settings), intent(in) :: settings
+        double precision, intent(in), dimension(:,:) :: hypercube_coords
+
+        double precision, dimension(settings%nDims,settings%nDims+1) :: eigen_info
+
+        double precision, dimension(settings%nDims) :: mean
+
+        double precision, dimension(settings%nDims,settings%nDims) :: covmat
+
+        double precision, dimension(settings%nDims) :: eigenvalues
+
+        double precision, dimension(settings%nDims*3-1) :: work
+
+        integer :: nlive
+        integer :: i_live
+
+        integer :: info
+
+        ! Get the number of live and phantom points
+        nlive = size(hypercube_coords,dim=2) 
+
+        ! Compute the mean 
+        mean = sum(hypercube_coords,dim=2)/nlive
+
+        ! Compute the covariance matrix
+        covmat = matmul(hypercube_coords - spread(mean,dim=2,ncopies=nlive) , transpose(hypercube_coords - spread(mean,dim=2,ncopies=nlive) ) )/(nlive-1) 
+
+        ! Compute the eigenvectors and eigenvalues
+        call dsyev('V','U',settings%nDims,covmat,settings%nDims,eigenvalues,work,size(work),info)
+
+        ! Pass on the values in the output array
+        ! The first n rows are the eigenvectors
+        eigen_info(:,:settings%nDims) = covmat
+        ! The final n+1 row are the eigenvalues
+        eigen_info(:,settings%nDims+1) = eigenvalues
+
+    end function compute_eigen_info
+
+    !function compute_eigen_info(settings,live_points) result(eigen_info)
+    !    use settings_module,   only: program_settings,blank_type
+    !    use random_module,     only: random_integer
+    !    implicit none
+    !    type(program_settings), intent(in) :: settings
+    !    double precision, intent(in), dimension(settings%nTotal,settings%nstack) :: live_points
+
+    !    double precision, dimension(settings%nDims,settings%nDims+1) :: eigen_info
+
+    !    double precision, dimension(settings%nDims,1) :: mean
+
+    !    double precision, dimension(settings%nDims,settings%nDims) :: covmat
+
+    !    double precision, dimension(settings%nDims) :: eigenvalues
+
+    !    double precision, dimension(settings%nDims*3-1) :: work
+
+    !    integer :: nlive
+    !    integer :: i_live
+
+    !    integer :: info
+
+    !    ! Compute the mean and the number of live and phantom points
+    !    mean =0
+    !    do i_live=1,settings%nstack
+    !        if(nint( live_points(settings%point_type,i_live) ) /= blank_type) then
+    !            mean = mean + live_points(settings%h0:settings%h1,i_live:i_live)
+    !            nlive = nlive +1
+    !        end if
+    !    end do
+    !    mean = mean/nlive
+
+    !    ! Compute the covariance matrix
+    !    covmat =0
+    !    do i_live=1,settings%nstack
+    !        if(nint( live_points(settings%point_type,i_live) ) /= blank_type) then
+    !            covmat = covmat + matmul(   live_points(settings%h0:settings%h1,i_live:i_live) - mean     , &
+    !                              transpose(live_points(settings%h0:settings%h1,i_live:i_live) - mean ) )
+    !        end if
+    !    end do
+    !    covmat = covmat/(nlive-1)
+
+    !    ! Compute the eigenvectors and eigenvalues
+    !    call dsyev('V','U',settings%nDims,covmat,settings%nDims,eigenvalues,work,size(work),info)
+
+    !    eigen_info(:,:settings%nDims) = covmat
+    !    eigen_info(:,settings%nDims+1) = eigenvalues
+
+    !end function compute_eigen_info
 
 end module nested_sampling_linear_module

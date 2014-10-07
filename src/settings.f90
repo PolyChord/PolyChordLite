@@ -5,6 +5,10 @@ module settings_module
     use utils_module,   only: STR_LENGTH
     implicit none
 
+    integer, parameter :: live_type    = 1
+    integer, parameter :: blank_type   = 0
+    integer, parameter :: phantom_type =-1
+
     !> Type to contain all of the parameters involved in a nested sampling run
     Type :: program_settings
 
@@ -100,6 +104,15 @@ module settings_module
         integer :: nlike
         !> The last chord length used in calculating this point
         integer :: last_chord
+        !> Whether or not this is a 'true' live point
+        !!
+        !! index |    name      | meaning
+        !!-------|--------------|--------------------------------------------
+        !!   -1  | phantom_type | 'blank' live point (blank slot to be filled)
+        !!    0  | blank_type   | 'fake' live point (not independent)
+        !!    1  | live_type    | 'true' live point
+        !!
+        integer :: point_type
 
         !> likelihood index
         !!
@@ -121,203 +134,9 @@ module settings_module
         !> Save all dead points (can be very expensive in high dimensions)
         logical :: save_all = .false.
 
-
-        !> Pointer to the sampling procedure.
-        !!
-        !! e.g: MultiNest, Galilean Sampling, Hamiltonian sampling ...
-        !! 
-        !! If you wish to write a new sampling procedure, the best way is to
-        !! create a new module 'my_sampling_procedure_module' and program it in
-        !! there with the interface specified in samp. Once this is done you can
-        !! point to in it the main program by writing
-        !!
-        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !! settings%sampler => my_sampling_procedure
-        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !!
-        !! where settings is of type program_settings: 
-        !!
-        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !! type(program settings) :: settings
-        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !!
-        !! and should be passed to the NestedSampling algorithm 
-        !!
-        procedure(samp), pass(settings),       pointer :: sampler
-
-        procedure(dir), pass(settings),        pointer :: get_nhat
-
-
-        !> Pointer to the evidence calculator
-        !!
-        !! e.g: KeetonEvidence, SkillingEvidence
-        !!
-        !! @todo write a skilling evidence algorithm
-        !!
-        !! If you wish to write a evidence calculator, the best way is to
-        !! write a new subroutine 'my_evidence_calculator' with the interface
-        !! specified in ev. Once this is done you can point to in it the main
-        !! program by writing
-        !!
-        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !! settings%evidence_calculator => my_evidence_calculator
-        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !!
-        !! where settings is of type program_settings: 
-        !!
-        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !! type(program settings) :: settings
-        !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        !!
-        !! and should be passed to the NestedSampling algorithm 
-        !!
-        procedure(ev),   pass(settings), pointer :: evidence_calculator
-
-        !> Pointer to the subroutine that processes data for the sampler
-        !! 
-        !! (This prevents the need to pass all of the live points around, in
-        !!  case we don't need them)
-        procedure(process),   pass(settings), pointer :: process_live_points
-
     end type program_settings
 
-    interface
-        !> Interface to the sampling procedure
-        !!
-        !! The sampling procedure takes the details of the model (M) and the current
-        !! set of live points (live_points) in order to generate a baby_point
-        !! uniformly sampled from within the loglikelihood contour specifed by
-        !! loglikelihood bound contained at the settings%l1 index of seed_point
-        function samp(loglikelihood,priors,settings,live_data,seed_point) result(baby_point)
-
-            import :: program_settings   
-            import :: prior
-            implicit none
-            interface
-                function loglikelihood(theta,phi,context)
-                    double precision, intent(in),  dimension(:) :: theta
-                    double precision, intent(out),  dimension(:) :: phi
-                    integer,          intent(in)                 :: context
-                    double precision :: loglikelihood
-                end function
-            end interface
-
-            ! ------- Inputs -------
-            !> The prior information
-            type(prior), dimension(:), intent(in) :: priors
-
-            !> program settings (mostly useful to pass on the number of live points)
-            class(program_settings), intent(in) :: settings
-
-            !> The seed point
-            double precision, intent(in), dimension(:)   :: seed_point
-
-            !> Any data from the live points which is needed
-            double precision, intent(in), allocatable, dimension(:,:) :: live_data
-
-            ! ------- Outputs -------
-            !> The newly generated point
-            double precision,    dimension(size(seed_point))     :: baby_point
-
-
-        end function samp
-    end interface
-
-    interface
-        subroutine dir(settings,live_data,nhat)
-
-            import :: program_settings   
-            implicit none
-
-            !> program settings (mostly useful to pass on the number of live points)
-            class(program_settings), intent(in) :: settings
-
-            !> Any data from the live points which is needed
-            double precision, intent(in), allocatable, dimension(:,:) :: live_data
-
-            ! ------- Outputs -------
-            !> The newly generated point
-            double precision, intent(out),   dimension(:)     :: nhat
-
-
-        end subroutine dir
-    end interface
-
-    interface
-        !> Interface to an evidence calculator
-        !!
-        !! The evidence calculator recieves the relevent information, namely 
-        !! * the loglikelihood of the newly created point ( new_loglikelihood )
-        !! * the loglikelihood of the dying point  ( old_loglikelihood )
-        !! * number of iterations/dead points ( ndead )
-        !!
-        !! It ouputs 
-        !! * a length 2 vector ( evidence_vec ) with the [evidence, evidence error] in the value of the function
-        !! * whether more samples are needed in the logical variable more_samples_needed
-        !!
-        function ev(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec) result(more_samples_needed)
-
-            import :: program_settings
-
-            implicit none
-
-            ! ------- Inputs ------- 
-            !> program settings (mostly useful to pass on the number of live points)
-            class(program_settings), intent(in) :: settings
-            
-            !> loglikelihood of the newest created point
-            double precision,       intent(in) :: new_loglikelihood
-
-            !> loglikelihood of the most recently dead point
-            double precision,       intent(in) :: old_loglikelihood
-
-            !> number of dead points/ number of iterations
-            integer,                intent(in) :: ndead
-
-            ! vector containing [evidence, evidence error]
-            double precision,       intent(inout), allocatable, dimension(:) :: evidence_vec
-
-            ! ------- Outputs ------- 
-            !> Whether we have obtained enough samples for an accurate evidence
-            logical :: more_samples_needed
-
-
-        end function ev
-    end interface
-
-
-    interface
-        function process(settings,live_points,live_data,loglikelihood_bound) result(issue)
-            import :: program_settings
-            implicit none
-
-            ! ------- Inputs -------
-            !> program settings 
-            class(program_settings), intent(in) :: settings
-
-            !> The live points
-            double precision, intent(in), dimension(:,:) :: live_points
-
-            !> The loglikelihood bound to define the live points
-            double precision, intent(in) :: loglikelihood_bound
-
-            ! ------ Result -----------
-            !> The processed data
-            double precision, intent(out), allocatable, dimension(:,:) :: live_data
-
-            ! Whether we have enough live points to compute the task
-            ! return as true if there is an issue
-            logical :: issue
-
-
-
-        end function process
-    end interface
-
-
     contains
-
-
 
     subroutine allocate_indices(settings)
         implicit none
@@ -339,13 +158,17 @@ module settings_module
         ! Algorithm indices
         settings%nlike=settings%d1+1
         settings%last_chord=settings%nlike+1
+        settings%point_type=settings%last_chord+1
 
         ! Loglikelihood indices
-        settings%l0=settings%last_chord+1
+        settings%l0=settings%point_type+1
         settings%l1=settings%l0+1
 
         ! Total number of parameters
         settings%nTotal = settings%l1
+
+        ! Size of stack
+        settings%nstack = settings%nlive*settings%chain_length*2
 
         ! grades
         if(.not. allocated(settings%grade)) allocate(settings%grade(settings%nDims))
