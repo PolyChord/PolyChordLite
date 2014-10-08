@@ -167,9 +167,6 @@ module settings_module
         ! Total number of parameters
         settings%nTotal = settings%l1
 
-        ! Size of stack
-        settings%nstack = settings%nlive*settings%chain_length*2
-
         ! grades
         if(.not. allocated(settings%grade)) allocate(settings%grade(settings%nDims))
 

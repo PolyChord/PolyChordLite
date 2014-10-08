@@ -44,9 +44,6 @@ module chordal_module
         ! ------- Local Variables -------
         double precision,    dimension(settings%nDims)   :: nhat
 
-        double precision, dimension(settings%nDims) :: test_point
-        double precision                            :: test_distance
-
         double precision  :: max_chord
 
         double precision :: step_length
@@ -96,7 +93,7 @@ module chordal_module
         baby_points(settings%last_chord,:) = max_chord
 
         ! Set the last one to be a live type
-        baby_points(settings%point_type,i_chords) = live_type
+        baby_points(settings%point_type,settings%chain_length) = live_type
 
     end function SliceSampling
 

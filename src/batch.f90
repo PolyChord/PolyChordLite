@@ -23,7 +23,7 @@ program main
     ! How often to update from all the MPI cores
     integer, parameter :: update = 10
     ! The name of the file
-    character(STR_LENGTH) :: out_root='corr8_8_1.dat'
+    character(STR_LENGTH) :: out_root='corr20.dat'
 
     ! Output of the program
     ! 1) log(evidence)
@@ -100,7 +100,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 8                 ! Dimensionality of the space
+    settings%nDims= 20                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -131,7 +131,7 @@ program main
     settings%nlive                = 25*settings%nDims        !number of live points
     settings%chain_length         = settings%nDims           !Number of chords to draw
 
-    settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
+    settings%nstack               = settings%nlive*settings%chain_length*2
     settings%file_root            =  'chains/test'           !file root
 
     settings%feedback             =  -1                      !degree of feedback
@@ -165,9 +165,6 @@ program main
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 
-    ! Since we're running each of the nested sampling algorithms in linear mode,
-    ! one should set the stack size to the number of live points
-    settings%nstack=settings%nlive
 
     ! Get the processor ID...
     myrank = mpi_rank()
