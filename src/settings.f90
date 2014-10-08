@@ -9,6 +9,10 @@ module settings_module
     integer, parameter :: blank_type   = 0
     integer, parameter :: phantom_type =-1
 
+    ! Samplers
+    integer, parameter :: sampler_covariance=0
+    integer, parameter :: sampler_adaptive_parallel=1
+
     !> Type to contain all of the parameters involved in a nested sampling run
     Type :: program_settings
 
@@ -133,6 +137,9 @@ module settings_module
 
         !> Save all dead points (can be very expensive in high dimensions)
         logical :: save_all = .false.
+
+        !> Which sampling algorithm to use
+        integer :: sampler = sampler_covariance
 
     end type program_settings
 

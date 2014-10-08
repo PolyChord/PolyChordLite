@@ -8,12 +8,12 @@ module nested_sampling_linear_module
     function NestedSamplingL(loglikelihood,priors,settings) result(output_info)
         use priors_module,     only: prior,prior_log_volume
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
-        use settings_module,   only: program_settings,phantom_type,blank_type,live_type
+        use settings_module
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
         use evidence_module,   only: infer_evidence,KeetonEvidence
-        use chordal_module,    only: SliceSampling
+        use chordal_module,    only: SliceSampling,AdaptiveParallelSliceSampling
         use random_module,     only: random_integer
 
         implicit none
@@ -168,7 +168,10 @@ module nested_sampling_linear_module
         do while ( more_samples_needed )
 
             ! (1) Update the eigenvectors and eigenvalues of the distribution of live points
-            if(mod(ndead,settings%nlive) .eq.0) eigen_info = compute_eigen_info( settings, live_points(settings%h0:settings%h1,:stack_size) )
+            select case(settings%sampler)
+            case(sampler_covariance)
+                if(mod(ndead,settings%nlive) .eq.0) eigen_info = compute_eigen_info( settings, live_points(settings%h0:settings%h1,:stack_size) )
+            end select
 
             ! (2) Generate a new set of baby points
             ! Select a seed point for the generator
@@ -181,7 +184,12 @@ module nested_sampling_linear_module
             end do
 
             ! Generate a new set of points within the likelihood bound of the late point
-            baby_points = SliceSampling(loglikelihood,priors,settings,eigen_info,seed_point)
+            select case(settings%sampler)
+            case(sampler_covariance)
+                baby_points = SliceSampling(loglikelihood,priors,settings,eigen_info,seed_point)
+            case(sampler_adaptive_parallel)
+                baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
+            end select
 
             ! The new likelihood is the last point
             baby_likelihood  = baby_points(settings%l0,settings%chain_length)

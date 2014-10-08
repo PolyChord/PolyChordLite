@@ -23,7 +23,7 @@ program main
     ! How often to update from all the MPI cores
     integer, parameter :: update = 10
     ! The name of the file
-    character(STR_LENGTH) :: out_root='corr20.dat'
+    character(STR_LENGTH) :: out_root='corr20_5.dat'
 
     ! Output of the program
     ! 1) log(evidence)
@@ -100,7 +100,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20                 ! Dimensionality of the space
+    settings%nDims= 20                ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -129,7 +129,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
-    settings%chain_length         = settings%nDims           !Number of chords to draw
+    settings%chain_length         = settings%nDims*5         !Number of chords to draw
 
     settings%nstack               = settings%nlive*settings%chain_length*2
     settings%file_root            =  'chains/test'           !file root
