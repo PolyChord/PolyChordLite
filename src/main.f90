@@ -114,7 +114,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 250*settings%nDims        !number of live points
+    settings%nlive                = 25*settings%nDims        !number of live points
     settings%chain_length         = settings%nDims           !Number of chords to draw
 
     !settings%sampler              = sampler_graded_covariance
@@ -128,7 +128,7 @@ program main
     settings%max_ndead            =  100000                  !maximum number of samples
 
     ! posterior calculation
-    settings%nmax_posterior       = 100000                   !max number of posterior points
+    settings%nmax_posterior       = 1000000                  !max number of posterior points
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
 
     ! reading and writing

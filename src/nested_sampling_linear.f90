@@ -393,7 +393,7 @@ module nested_sampling_linear_module
 
         double precision :: late_logweight
 
-        double precision, dimension(settings%nDims+settings%nDerived+2,settings%chain_length) :: posterior_points
+        double precision, dimension(settings%nDims+settings%nDerived+2) :: posterior_point
 
         double precision :: lognmax_posterior
         double precision :: max_logweight
@@ -407,9 +407,19 @@ module nested_sampling_linear_module
         ! Update the late likelihood
         late_likelihood = live_points(settings%l0,late_index(1))
 
+        ! Add the discarded point to the posterior array
+        posterior_point(1)  = live_points(settings%l0,late_index(1)) + late_logweight
+        posterior_point(2)  = live_points(settings%l0,late_index(1))
+        posterior_point(2+1:2+settings%nDims) = live_points(settings%p0:settings%p1,late_index(1))
+        posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,late_index(1))
+
         ! Replace the late point with the new baby point
         live_points(:,late_index(1)) = baby_points(:,settings%chain_length)
 
+
+        nposterior=nposterior+1
+        posterior_array(:,nposterior) = posterior_point
+ 
         ! Add the remaining baby points to the end of the array, and update the stack size
         stack_size=stack_size+settings%chain_length-1
         live_points(:,stack_size-settings%chain_length+2:stack_size) = baby_points(:,:settings%chain_length-1)
@@ -421,6 +431,16 @@ module nested_sampling_linear_module
         i_live=1
         do while(i_live<=stack_size)
             if( live_points(settings%l0,i_live) < late_likelihood ) then
+
+                ! Add the discarded point to the posterior array
+                posterior_point(1)  = live_points(settings%l0,i_live) + late_logweight
+                posterior_point(2)  = live_points(settings%l0,i_live)
+                posterior_point(2+1:2+settings%nDims) = live_points(settings%p0:settings%p1,i_live)
+                posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,i_live)
+
+                nposterior=nposterior+1
+                posterior_array(:,nposterior) = posterior_point
+
                 ! Overwrite the discarded point with a point from the end...
                 live_points(:,i_live) = live_points(:,stack_size)
                 ! ...and reduce the stack size
@@ -430,28 +450,12 @@ module nested_sampling_linear_module
             end if
         end do
 
-        !posterior_points(1,:)  = baby_points(settings%l0,:) + late_logweight
-        !posterior_points(2,:)  = baby_points(settings%l0,:)
-        !posterior_points(2+1:2+settings%nDims,:) = baby_points(settings%p0:settings%p1,:)
-        !posterior_points(2+settings%nDims+1:2+settings%nDims+settings%nDerived,:) = baby_points(settings%d0:settings%d1,:)
-
-
-        !nposterior=nposterior+settings%chain_length
-        !posterior_array(:,nposterior-settings%chain_length+1:nposterior) = posterior_points
-        posterior_points(1,1)  = baby_points(settings%l0,settings%chain_length) + late_logweight
-        posterior_points(2,1)  = baby_points(settings%l0,settings%chain_length)
-        posterior_points(2+1:2+settings%nDims,1) = baby_points(settings%p0:settings%p1,settings%chain_length)
-        posterior_points(2+settings%nDims+1:2+settings%nDims+settings%nDerived,1) = baby_points(settings%d0:settings%d1,settings%chain_length)
-
-
-        nposterior=nposterior+1
-        posterior_array(:,nposterior) = posterior_points(:,1)
-
         if(nposterior>settings%nmax_posterior) write(*,*) 'over the top'
+
+        ! Clean out the posterior array
 
         ! Find the maximum weighted posterior point
         max_logweight = maxval(posterior_array(1,:nposterior))
-
 
         lognmax_posterior = log(settings%nmax_posterior+0d0)
 
@@ -466,9 +470,6 @@ module nested_sampling_linear_module
                 i_live=i_live+1
             end if
         end do
-
-
-
 
         live_points(settings%last_chord,:) = live_points(settings%last_chord,:)/  (1d0+1d0/(settings%nDims*settings%nlive) )
 
