@@ -52,14 +52,10 @@ all: $(PROGRAMS)
 
 ifeq ($(PAR), 1)
 # Parallel mode
-NESTED_SAMPLING = nested_sampling_linear.o 
 MPI_UTILS = mpi_utils.o
-else
-# Serial mode
-NESTED_SAMPLING = nested_sampling_linear.o
 endif
 
-OBJECTS = $(MPI_UTILS) utils.o priors.o settings.o calculate.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o $(NESTED_SAMPLING)
+OBJECTS = $(MPI_UTILS) utils.o priors.o grades.o settings.o calculate.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o nested_sampling_linear.o
 
 AR = ar r
 

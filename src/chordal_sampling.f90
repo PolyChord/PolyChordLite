@@ -98,6 +98,127 @@ module chordal_module
     end function SliceSampling
 
 
+    function GradedSliceSampling(loglikelihood,priors,settings,choleskys,seed_point)  result(baby_points)
+        use priors_module, only: prior
+        use settings_module, only: program_settings,phantom_type,live_type
+        use random_module, only: random_skewed_direction
+        use utils_module, only: distance
+
+        implicit none
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
+        ! ------- Inputs -------
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
+
+        !> program settings (mostly useful to pass on the number of live points)
+        class(program_settings), intent(in) :: settings
+
+        !> The seed point
+        double precision, intent(in), dimension(settings%nTotal)   :: seed_point
+
+        !> The directions of the chords
+        double precision, intent(in), dimension(settings%nDims,settings%nDims,settings%grades%min_grade:settings%grades%max_grade) :: choleskys
+
+        ! ------- Outputs -------
+        !> The newly generated point, plus the loglikelihood bound that
+        !! generated it
+        double precision,    dimension(settings%nTotal,settings%chain_length)   :: baby_points
+
+        
+        double precision, dimension(settings%nTotal)   :: previous_point
+
+
+        ! ------- Local Variables -------
+        double precision,    dimension(settings%nDims)   :: nhat
+
+        double precision  :: max_chord
+
+        double precision :: step_length
+
+        integer :: i_chords
+
+
+        baby_points=0d0
+        ! Start the baby point at the seed point
+        previous_point = seed_point
+
+        ! Set the number of likelihood evaluations to zero
+        previous_point(settings%nlike) = 0
+
+        ! Record the step length
+        step_length = seed_point(settings%last_chord)
+
+        ! Give the start point the step length
+        previous_point(settings%last_chord) = step_length
+
+        ! Initialise max_chord at 0
+        max_chord = 0
+        i_chords=0
+
+        call run_sub_chain(settings%grades%min_grade)
+
+        ! Hand back the maximum chord this time to be used as the step length
+        ! next time this point is drawn
+        baby_points(settings%last_chord,:) = max_chord
+
+        ! Set the last one to be a live type
+        baby_points(settings%point_type,settings%chain_length) = live_type
+
+
+        contains
+        recursive subroutine run_sub_chain(grade)
+            implicit none
+            integer, intent(in) :: grade
+
+            integer :: i_step
+
+            ! Skip over unused parameters
+            if(settings%grades%chain_lengths(grade)==0 .and. grade<settings%grades%max_grade) call run_sub_chain(grade+1)
+
+            do i_step=1,settings%grades%chain_lengths(grade)
+
+                ! Increment i_chords
+                i_chords = i_chords+1
+
+                ! Take a step
+                ! Get a new random direction
+                nhat = random_skewed_direction(settings%nDims,choleskys(:,:,grade))
+
+                ! Generate a new random point along the chord defined by the previous point and nhat
+                baby_points(:,i_chords) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
+
+                ! Set this one to be a phantom point
+                baby_points(settings%point_type,i_chords) = phantom_type
+
+                ! keep track of the largest chord
+                max_chord = max(max_chord,baby_points(settings%last_chord,i_chords))
+
+                ! Save this for the next loop
+                previous_point = baby_points(:,i_chords)
+
+                ! Give the previous point the step length
+                previous_point(settings%last_chord) = step_length
+
+                ! If we're not at the maximum grade, then recurse down one more
+                if(grade<settings%grades%max_grade) then
+                    call run_sub_chain(grade+1)
+                end if
+
+            end do
+
+        end subroutine run_sub_chain
+
+
+
+    end function GradedSliceSampling
 
 
 

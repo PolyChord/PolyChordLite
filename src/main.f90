@@ -4,10 +4,11 @@ program main
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
     use priors_module
-    use settings_module,        only: program_settings,allocate_indices
+    use settings_module
     use random_module,          only: initialise_random, deinitialise_random
     use example_likelihoods
     use feedback_module
+    use grades_module,          only: allocate_grades
 #ifdef MPI
     use mpi_module
 #endif
@@ -87,7 +88,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20                 ! Dimensionality of the space
+    settings%nDims= 6                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -115,6 +116,8 @@ program main
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
     settings%chain_length         = settings%nDims           !Number of chords to draw
+
+    settings%sampler              = sampler_graded_covariance
 
     settings%nstack               = settings%nlive*settings%chain_length*2
     settings%file_root            =  'chains/test'           !file root
@@ -144,6 +147,12 @@ program main
     ! Initialise the loglikelihood
     allocate(theta(settings%nDims),phi(settings%nDerived))
     loglike = loglikelihood(theta,phi,0)
+
+    ! Sort out the grades
+    !settings%chain_length= allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) )
+    settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3/) )
+    settings%nstack               = settings%nlive*settings%chain_length*2
+    !settings%chain_length= allocate_grades(settings%grades)
 
 
     ! ======= (2) Perform Nested Sampling =======

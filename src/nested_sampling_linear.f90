@@ -13,8 +13,10 @@ module nested_sampling_linear_module
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
         use evidence_module,   only: infer_evidence,KeetonEvidence
-        use chordal_module,    only: SliceSampling,AdaptiveParallelSliceSampling
+        use chordal_module,    only: SliceSampling,GradedSliceSampling,AdaptiveParallelSliceSampling
         use random_module,     only: random_integer
+
+        use grades_module,     only: calc_graded_choleskys
 
         implicit none
 
@@ -47,6 +49,7 @@ module nested_sampling_linear_module
 
         double precision, dimension(settings%nDims,settings%nDims) :: covmat
         double precision, dimension(settings%nDims,settings%nDims) :: cholesky
+        double precision, dimension(settings%nDims,settings%nDims,settings%grades%min_grade:settings%grades%max_grade) :: choleskys
 
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
         integer :: nposterior
@@ -169,15 +172,23 @@ module nested_sampling_linear_module
         do while ( more_samples_needed )
 
             ! (1) Update the covariance matrix of the distribution of live points
-            select case(settings%sampler)
-            case(sampler_covariance)
-                if(mod(ndead,settings%nlive) .eq.0) then
+            if(mod(ndead,settings%nlive) .eq.0) then
+                select case(settings%sampler)
+
+                case(sampler_covariance)
                     ! Calculate the covariance matrix
                     covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
                     ! Calculate the cholesky decomposition
                     cholesky = calc_cholesky(covmat,settings%nDims)
-                end if
-            end select
+
+                case(sampler_graded_covariance)
+                    ! Calculate the covariance matrix
+                    covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
+                    ! Calculate the graded cholesky matrices
+                    choleskys = calc_graded_choleskys(covmat,settings%nDims,settings%grades)
+
+                end select
+            end if
 
             ! (2) Generate a new set of baby points
             ! Select a seed point for the generator
@@ -194,6 +205,9 @@ module nested_sampling_linear_module
 
             case(sampler_covariance)
                 baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
+
+            case(sampler_graded_covariance)
+                baby_points = GradedSliceSampling(loglikelihood,priors,settings,choleskys,seed_point)
 
             case(sampler_adaptive_parallel)
                 baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)

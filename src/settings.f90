@@ -3,6 +3,7 @@
 module settings_module
     use priors_module,   only: prior
     use utils_module,   only: STR_LENGTH
+    use grades_module,  only: parameter_grades
     implicit none
 
     integer, parameter :: live_type    = 1
@@ -11,7 +12,8 @@ module settings_module
 
     ! Samplers
     integer, parameter :: sampler_covariance=0
-    integer, parameter :: sampler_adaptive_parallel=1
+    integer, parameter :: sampler_graded_covariance=1
+    integer, parameter :: sampler_adaptive_parallel=2
 
     !> Type to contain all of the parameters involved in a nested sampling run
     Type :: program_settings
@@ -130,10 +132,7 @@ module settings_module
         integer :: context
 
         !> Grades of parameters
-        !!
-        !! In the case of 'fast-slow' parameters, these indicate the 'grade' of
-        !! parameter. grade=1 is slowest, 
-        integer, dimension(:), allocatable :: grade
+        type(parameter_grades) :: grades
 
         !> Save all dead points (can be very expensive in high dimensions)
         logical :: save_all = .false.
@@ -173,9 +172,6 @@ module settings_module
 
         ! Total number of parameters
         settings%nTotal = settings%l1
-
-        ! grades
-        if(.not. allocated(settings%grade)) allocate(settings%grade(settings%nDims))
 
     end subroutine allocate_indices
 
