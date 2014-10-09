@@ -315,6 +315,36 @@ module utils_module
 
     end function abovetol
 
+    function calc_cholesky(matrix,nDims) result(cholesky)
+        implicit none
+        integer,intent(in) :: nDims
+        double precision, intent(in),dimension(nDims,nDims) :: matrix
+        double precision, dimension(nDims,nDims) :: cholesky
+        integer :: errcode
+
+        cholesky = matrix
+        call dpotrf ('U',nDims,cholesky,nDims,errcode)
+
+    end function calc_cholesky
+
+    function calc_covmat(data_set,nDims,nstack) result(covmat)
+        implicit none
+        integer, intent(in) :: nDims
+        integer, intent(in) :: nstack
+        double precision, intent(in), dimension(nDims,nstack) :: data_set
+
+        double precision, dimension(nDims,nDims) :: covmat
+
+        double precision, dimension(nDims) :: mean
+
+        ! Compute the mean 
+        mean = sum(data_set,dim=2)/nstack
+
+        ! Compute the covariance matrix
+        covmat = matmul(data_set - spread(mean,dim=2,ncopies=nstack) , transpose(data_set - spread(mean,dim=2,ncopies=nstack) ) )/(nstack-1) 
+
+    end function calc_covmat
+
 
 
 end module utils_module

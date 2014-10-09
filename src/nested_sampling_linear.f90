@@ -7,7 +7,7 @@ module nested_sampling_linear_module
     !> Main subroutine for computing a generic nested sampling algorithm
     function NestedSamplingL(loglikelihood,priors,settings) result(output_info)
         use priors_module,     only: prior,prior_log_volume
-        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit
+        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit,calc_cholesky,calc_covmat
         use settings_module
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
@@ -45,7 +45,8 @@ module nested_sampling_linear_module
         !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
         double precision, dimension(settings%nTotal,settings%nstack) :: live_points
 
-        double precision, dimension(settings%nDims,settings%nDims+1) :: eigen_info
+        double precision, dimension(settings%nDims,settings%nDims) :: covmat
+        double precision, dimension(settings%nDims,settings%nDims) :: cholesky
 
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
         integer :: nposterior
@@ -167,10 +168,15 @@ module nested_sampling_linear_module
 
         do while ( more_samples_needed )
 
-            ! (1) Update the eigenvectors and eigenvalues of the distribution of live points
+            ! (1) Update the covariance matrix of the distribution of live points
             select case(settings%sampler)
             case(sampler_covariance)
-                if(mod(ndead,settings%nlive) .eq.0) eigen_info = compute_eigen_info( settings, live_points(settings%h0:settings%h1,:stack_size) )
+                if(mod(ndead,settings%nlive) .eq.0) then
+                    ! Calculate the covariance matrix
+                    covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
+                    ! Calculate the cholesky decomposition
+                    cholesky = calc_cholesky(covmat,settings%nDims)
+                end if
             end select
 
             ! (2) Generate a new set of baby points
@@ -185,10 +191,13 @@ module nested_sampling_linear_module
 
             ! Generate a new set of points within the likelihood bound of the late point
             select case(settings%sampler)
+
             case(sampler_covariance)
-                baby_points = SliceSampling(loglikelihood,priors,settings,eigen_info,seed_point)
+                baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
+
             case(sampler_adaptive_parallel)
                 baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
+
             end select
 
             ! The new likelihood is the last point
@@ -452,114 +461,10 @@ module nested_sampling_linear_module
         ! Increment the number of dead points
         ndead=ndead+1
 
-
-
-
-
-
-
-
-
-
-
-
-
     end subroutine update_stacks
 
 
 
 
-
-
-    function compute_eigen_info(settings,hypercube_coords) result(eigen_info)
-        use settings_module,   only: program_settings,blank_type
-        use random_module,     only: random_integer
-        implicit none
-        type(program_settings), intent(in) :: settings
-        double precision, intent(in), dimension(:,:) :: hypercube_coords
-
-        double precision, dimension(settings%nDims,settings%nDims+1) :: eigen_info
-
-        double precision, dimension(settings%nDims) :: mean
-
-        double precision, dimension(settings%nDims,settings%nDims) :: covmat
-
-        double precision, dimension(settings%nDims) :: eigenvalues
-
-        double precision, dimension(settings%nDims*3-1) :: work
-
-        integer :: nlive
-
-        integer :: info
-
-        ! Get the number of live and phantom points
-        nlive = size(hypercube_coords,dim=2) 
-
-        ! Compute the mean 
-        mean = sum(hypercube_coords,dim=2)/nlive
-
-        ! Compute the covariance matrix
-        covmat = matmul(hypercube_coords - spread(mean,dim=2,ncopies=nlive) , transpose(hypercube_coords - spread(mean,dim=2,ncopies=nlive) ) )/(nlive-1) 
-
-        ! Compute the eigenvectors and eigenvalues
-        call dsyev('V','U',settings%nDims,covmat,settings%nDims,eigenvalues,work,size(work),info)
-
-        ! Pass on the values in the output array
-        ! The first n rows are the eigenvectors
-        eigen_info(:,:settings%nDims) = covmat
-        ! The final n+1 row are the eigenvalues
-        eigen_info(:,settings%nDims+1) = sqrt(eigenvalues/product(eigenvalues)**(1d0/settings%nDims))
-
-    end function compute_eigen_info
-
-    !function compute_eigen_info(settings,live_points) result(eigen_info)
-    !    use settings_module,   only: program_settings,blank_type
-    !    use random_module,     only: random_integer
-    !    implicit none
-    !    type(program_settings), intent(in) :: settings
-    !    double precision, intent(in), dimension(settings%nTotal,settings%nstack) :: live_points
-
-    !    double precision, dimension(settings%nDims,settings%nDims+1) :: eigen_info
-
-    !    double precision, dimension(settings%nDims,1) :: mean
-
-    !    double precision, dimension(settings%nDims,settings%nDims) :: covmat
-
-    !    double precision, dimension(settings%nDims) :: eigenvalues
-
-    !    double precision, dimension(settings%nDims*3-1) :: work
-
-    !    integer :: nlive
-    !    integer :: i_live
-
-    !    integer :: info
-
-    !    ! Compute the mean and the number of live and phantom points
-    !    mean =0
-    !    do i_live=1,settings%nstack
-    !        if(nint( live_points(settings%point_type,i_live) ) /= blank_type) then
-    !            mean = mean + live_points(settings%h0:settings%h1,i_live:i_live)
-    !            nlive = nlive +1
-    !        end if
-    !    end do
-    !    mean = mean/nlive
-
-    !    ! Compute the covariance matrix
-    !    covmat =0
-    !    do i_live=1,settings%nstack
-    !        if(nint( live_points(settings%point_type,i_live) ) /= blank_type) then
-    !            covmat = covmat + matmul(   live_points(settings%h0:settings%h1,i_live:i_live) - mean     , &
-    !                              transpose(live_points(settings%h0:settings%h1,i_live:i_live) - mean ) )
-    !        end if
-    !    end do
-    !    covmat = covmat/(nlive-1)
-
-    !    ! Compute the eigenvectors and eigenvalues
-    !    call dsyev('V','U',settings%nDims,covmat,settings%nDims,eigenvalues,work,size(work),info)
-
-    !    eigen_info(:,:settings%nDims) = covmat
-    !    eigen_info(:,settings%nDims+1) = eigenvalues
-
-    !end function compute_eigen_info
 
 end module nested_sampling_linear_module

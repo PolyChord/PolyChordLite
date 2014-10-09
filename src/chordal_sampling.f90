@@ -3,7 +3,7 @@ module chordal_module
 
     contains
 
-    function SliceSampling(loglikelihood,priors,settings,eigen_info,seed_point)  result(baby_points)
+    function SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)  result(baby_points)
         use priors_module, only: prior
         use settings_module, only: program_settings,phantom_type,live_type
         use random_module, only: random_skewed_direction
@@ -30,7 +30,7 @@ module chordal_module
         double precision, intent(in), dimension(settings%nTotal)   :: seed_point
 
         !> The directions of the chords
-        double precision, intent(in), dimension(settings%nDims,settings%nDims+1) :: eigen_info
+        double precision, intent(in), dimension(settings%nDims,settings%nDims) :: cholesky
 
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
@@ -69,7 +69,7 @@ module chordal_module
         do i_chords=1,settings%chain_length
 
             ! Get a new random direction
-            nhat = random_skewed_direction(settings%nDims,eigen_info)
+            nhat = random_skewed_direction(settings%nDims,cholesky)
 
             ! Generate a new random point along the chord defined by the previous point and nhat
             baby_points(:,i_chords) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
@@ -96,6 +96,12 @@ module chordal_module
         baby_points(settings%point_type,settings%chain_length) = live_type
 
     end function SliceSampling
+
+
+
+
+
+
 
     function AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points,seed_point)  result(baby_points)
         use priors_module, only: prior

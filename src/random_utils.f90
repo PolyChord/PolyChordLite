@@ -338,35 +338,62 @@ module random_module
     !>  Random skewed direction vector
     !!
     !! Generate a randomly directed normalised vector in nDims dimensional space
-    !! according to the covariance matrix recieved in the form of eigenvectors
-    !! and eigenvalues. 
+    !! according to the covariance matrix recieved. The vector is normalised
+    !! with respect to the [Mahalanobis_distance](http://en.wikipedia.org/wiki/Mahalanobis_distance)
+    !! defined by the variance-covariance matrix.
     !!
-    function random_skewed_direction(nDims, eigen_info) result(nhat)
+    !! We use the 
+    !! [VSL_RNG_METHOD_GAUSSIANMV_ICDF](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_7_GaussianMV_VSL_RNG_METHOD_GAUSSIANMV_ICDF.htm#9_3_7_GaussianMV_VSL_RNG) 
+    !! intel method to generate multivariate gaussian random numbers using the 
+    !! [vdrnggaussianmv](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F) function.
+
+    function random_skewed_direction(nDims,cholesky) result(nhat)
         use utils_module, only: distance
         implicit none
 
         !> Size of vector to be generated
         integer,intent(in) :: nDims
 
-        !> The eigenvectors and eigenvalues
-        double precision, dimension(nDims,nDims+1),intent(in) :: eigen_info
+        !> Cholesky decomposition of the covariance matrix
+        double precision, dimension(nDims,nDims) :: cholesky
 
         ! The output normalised vector
         double precision, dimension(nDims) :: nhat
 
-        ! Generate a random direction
-        nhat = random_gaussian(nDims)
+        ! Temporary length 1 vector of nDims vectors for passing to the routine
+        double precision, dimension(nDims,1) :: nhat_temp
 
-        ! Scale this by the eigenvalues
-        nhat = eigen_info(:,nDims+1) * nhat
+        ! Method to generate random numbers 
+        integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIANMV_ICDF
+        ! The type of matrix storage (this indicates 'full' storage, i.e. the
+        ! easy to understand kind)
+        integer,parameter       :: mstorage=VSL_MATRIX_STORAGE_FULL
 
-        ! Transform via the eigenvectors
-        nhat = matmul(eigen_info(:nDims,:nDims),nhat)
+        ! Mean of the vector produced
+        double precision, dimension(nDims) :: mean
 
-        ! Normalise
-        nhat = nhat/sqrt(dot_product(nhat,nhat))
+        ! Error code for output of intel routine
+        integer :: errcode
+
+        ! The modulus squared of the vector
+        double precision ::nhat2
+
+        mean =0
+        nhat2=0d0
+        do while(nhat2==0d0)
+            ! Compute a random gaussian vector subject to the matrix
+            errcode=vdrnggaussianmv( method, rng_stream, 1,nhat_temp, nDims, mstorage, mean, cholesky)
+
+            nhat2 = dot_product(nhat_temp(:,1),nhat_temp(:,1))
+        end do
+
+        nhat = nhat_temp(:,1)/sqrt(nhat2)
+        
 
     end function random_skewed_direction
+
+
+    ! ===========================================================================================
 
     ! ===========================================================================================
 
