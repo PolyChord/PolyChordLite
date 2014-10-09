@@ -2,10 +2,16 @@ module nested_sampling_linear_module
     use utils_module,      only: flag_blank,flag_gestating,flag_waiting  
     implicit none
 
+#ifdef MPI
+    integer, parameter :: RUNTAG=0
+    integer, parameter :: ENDTAG=1
+#endif
+
+
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    function NestedSamplingL(loglikelihood,priors,settings) result(output_info)
+    function NestedSampling(loglikelihood,priors,settings) result(output_info)
         use priors_module,     only: prior,prior_log_volume
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit,calc_cholesky,calc_covmat
         use settings_module
@@ -17,6 +23,9 @@ module nested_sampling_linear_module
         use random_module,     only: random_integer
 
         use grades_module,     only: calc_graded_choleskys
+#ifdef MPI
+        use mpi_module
+#endif
 
         implicit none
 
@@ -42,9 +51,7 @@ module nested_sampling_linear_module
 
 
 
-        !> This is a very important array. live_points(:,i) constitutes the
-        !! information in the ith live point in the unit hypercube:
-        !! ( <-hypercube coordinates->, <-physical coordinates->, <-derived parameters->, likelihood)
+        !> This is a very important array.
         double precision, dimension(settings%nTotal,settings%nstack) :: live_points
 
         double precision, dimension(settings%nDims,settings%nDims) :: covmat
@@ -83,6 +90,17 @@ module nested_sampling_linear_module
         integer :: stack_size
         logical :: first_loop
 
+#ifdef MPI
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+
+        integer :: send_start
+        integer :: nprocs
+        integer :: myrank
+
+        nprocs = mpi_size()  ! Get the number of MPI procedures
+        myrank = mpi_rank()  ! Get the MPI label of the current processor
+        send_start=nprocs-1
+#endif
 
         call write_opening_statement(settings) 
 
@@ -105,10 +123,14 @@ module nested_sampling_linear_module
 
         !~~~ (i) Generate Live Points ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         if(resume) then
+#ifdef MPI
+            if(myrank==root) then
+#endif
             ! If there is a resume file present, then load the live points from that
             open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
 
-            read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points
+            read(read_resume_unit,'(I)') stack_size
+            read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(:,:stack_size)
             read(read_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
             read(read_resume_unit,'(I)') ndead
             read(read_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)') mean_likelihood_calls
@@ -117,18 +139,17 @@ module nested_sampling_linear_module
             read(read_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
 
             close(read_resume_unit)
+#ifdef MPI
+            endif ! only root
+#endif
 
         else !(not resume)
-            call write_started_generating(settings%feedback)
-
-            ! Zero the array
-            live_points = 0
-
-            ! Set them all to blank initially
-            live_points(settings%point_type,:) = blank_type
 
             ! Otherwise generate them anew:
-            live_points = GenerateLivePoints(loglikelihood,priors,settings,settings%nlive)
+            live_points = GenerateLivePoints(loglikelihood,priors,settings)
+#ifdef MPI
+            if(myrank==root) then
+#endif 
 
             stack_size=settings%nlive
 
@@ -150,8 +171,15 @@ module nested_sampling_linear_module
 
             ! set the posterior coordinates to be zero initially
             posterior_array(3:,:) = 0d0
+#ifdef MPI
+            endif ! only root
+#endif
         end if !(resume)
 
+
+#ifdef MPI
+        if(myrank==root) then
+#endif
 
 
         ! Initialise the late likelihood
@@ -159,7 +187,7 @@ module nested_sampling_linear_module
 
 
         ! Write a resume file before we start
-        if(settings%write_resume) call write_resume_file(settings,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
+        if(settings%write_resume) call write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
 
 
         !======= 2) Main loop body =====================================
@@ -190,6 +218,7 @@ module nested_sampling_linear_module
                 end select
             end if
 
+
             ! (2) Generate a new set of baby points
             ! Select a seed point for the generator
             first_loop = .true.
@@ -200,6 +229,42 @@ module nested_sampling_linear_module
                 first_loop=.false.
             end do
 
+        write(*,'(<settings%nTotal>E13.4)') live_points(:,:stack_size)
+        write(*,*) '----------------------------'
+
+
+#ifdef MPI
+            if(send_start==0) then
+                ! (2) Recieve newly generated baby point from any slave
+                call MPI_RECV(baby_points,settings%nTotal*settings%chain_length,&
+                    MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+            else
+                mpi_status(MPI_SOURCE)=send_start
+                send_start=send_start-1
+            end if
+
+            ! Send a seed point back to that slave
+            call MPI_SEND(seed_point,settings%nTotal,&
+                MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,MPI_COMM_WORLD,mpierror)
+
+            ! Send the information needed
+            select case(settings%sampler)
+
+            case(sampler_covariance)
+                call MPI_SEND(cholesky,settings%nDims*settings%nDims,&
+                    MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,MPI_COMM_WORLD,mpierror)
+
+            case(sampler_graded_covariance)
+                call MPI_SEND(choleskys,settings%nDims*settings%nDims*settings%grades%num_grades,&
+                    MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,MPI_COMM_WORLD,mpierror)
+
+            case(sampler_adaptive_parallel)
+                call MPI_SEND(live_points,settings%nTotal*settings%nstack,&
+                    MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,MPI_COMM_WORLD,mpierror)
+
+            end select
+
+#else
             ! Generate a new set of points within the likelihood bound of the late point
             select case(settings%sampler)
 
@@ -213,6 +278,7 @@ module nested_sampling_linear_module
                 baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
 
             end select
+#endif
 
             ! The new likelihood is the last point
             baby_likelihood  = baby_points(settings%l0,settings%chain_length)
@@ -247,7 +313,7 @@ module nested_sampling_linear_module
 
                 ! (6) Update the resume and posterior files every update_resume iterations, or at program termination
                 if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-                    if(settings%write_resume) call write_resume_file(settings,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
+                    if(settings%write_resume) call write_resume_file(settings,stack_size,live_points(:,:stack_size),evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
                     if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
                     if(settings%write_live) call write_phys_live_points(settings,live_points(:,:stack_size),stack_size)
                 end if
@@ -281,19 +347,191 @@ module nested_sampling_linear_module
 
         call write_final_results(output_info,settings%feedback,priors)
 
+#ifdef MPI
+        else !(myrank/=root)
+            
+            do while(.true.)
+                ! Listen for a signal from the master
+                call MPI_RECV(seed_point,settings%nTotal, &
+                    MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
 
-    end function NestedSamplingL
+                ! If we receive a kill signal, then exit the loop
+                if(mpi_status(MPI_TAG)==ENDTAG) exit
+
+                select case(settings%sampler)
+
+                case(sampler_covariance)
+                    call MPI_RECV(cholesky,settings%nDims*settings%nDims, &
+                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                    baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
+
+                case(sampler_graded_covariance)
+                    ! Recieve the live_data
+                    call MPI_RECV(choleskys,settings%nDims*settings%nDims*settings%grades%num_grades, &
+                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                    baby_points = GradedSliceSampling(loglikelihood,priors,settings,choleskys,seed_point)
+
+                case(sampler_adaptive_parallel)
+                    ! Recieve the live_data
+                    call MPI_RECV(live_points,settings%nTotal*settings%nstack, &
+                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                    baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
+
+                end select
+
+                ! Send the baby points back
+                call MPI_SEND(baby_points,settings%nTotal*settings%chain_length, &
+                    MPI_DOUBLE_PRECISION,root,RUNTAG,MPI_COMM_WORLD,mpierror)
+
+            end do
+
+        end if
+
+#endif
+
+
+    end function NestedSampling
+
+#ifdef MPI
+    !> Generate an initial set of live points distributed uniformly in the unit hypercube
+    function GenerateLivePoints(loglikelihood,priors,settings) result(live_points)
+        use mpi_module 
+        use priors_module,    only: prior
+        use settings_module,  only: program_settings,live_type
+        use random_module,   only: random_reals
+        use utils_module,    only: logzero
+        use calculate_module, only: calculate_point
+        use read_write_module, only: write_phys_live_points
+        use feedback_module,  only: write_started_generating
+
+        implicit none
+        
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
+
+        !> Program settings
+        type(program_settings), intent(in) :: settings
+
+        !> The rank of the processor
+        integer :: myrank
+        integer :: nprocs
+        integer :: active_procs
+
+        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
+
+        !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
+        ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
+        double precision, dimension(settings%nTotal) :: live_point
+
+        ! Loop variable
+        integer i_live
+
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+
+        integer :: empty_buffer(0)
+
+        integer :: tag
+
+        nprocs = mpi_size()  ! Get the number of MPI procedures
+        myrank = mpi_rank()  ! Get the MPI label of the current processor
+
+        ! initialise live points at zero
+        live_points = 0d0
+
+        if(myrank==root) then
+
+            call write_started_generating(settings%feedback)
+
+            ! The root node just recieves data from all other processors
+            active_procs=nprocs-1
+            i_live=0
+            do while(active_procs>0) 
+
+                ! Recieve a point from any slave
+                call MPI_RECV(live_point,settings%nTotal, &
+                    MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+
+                ! If its valid, and we need more points, add it to the array
+                if(live_point(settings%l0)>logzero .and. i_live<settings%nlive) then
+                    i_live=i_live+1
+                    live_points(:,i_live) = live_point
+                    if(settings%write_live) call write_phys_live_points(settings,live_points(:,:i_live),i_live)
+                end if
+
+                ! If we still need more points, send a signal to have another go
+                if(i_live<settings%nlive) then
+                    tag=RUNTAG
+                else
+                    tag=ENDTAG
+                    active_procs=active_procs-1
+                end if
+
+                call MPI_SEND(empty_buffer,0,MPI_INT,mpi_status(MPI_SOURCE),tag,MPI_COMM_WORLD,mpierror)
+
+            end do
 
 
 
+        else
+
+            generating_loop: do while(.true.)
+
+                ! No likelihood calculations initially
+                live_point(settings%nlike) = 0
+
+                ! Set the initial trial values of the chords as the diagonal of the hypercube
+                live_point(settings%last_chord) = sqrt(settings%nDims+0d0)
+
+                ! This will be a 'real' point
+                live_point(settings%point_type) = live_type
+
+                ! Set the likelihood contours to logzero for now
+                live_point(settings%l1) = logzero
+
+                ! Generate a random hypercube coordinate
+                live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
+
+                ! Compute physical coordinates, likelihoods and derived parameters
+                call calculate_point( loglikelihood, priors, live_point, settings )
+
+                ! Send it to the root node
+                call MPI_SEND(live_point,settings%nTotal, &
+                    MPI_DOUBLE_PRECISION,root,0,MPI_COMM_WORLD,mpierror)
+
+                ! Recieve signal as to whether we should keep generating
+                call MPI_RECV(empty_buffer,0,MPI_INT,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+
+                if(mpi_status(MPI_TAG) == ENDTAG ) exit generating_loop
+
+            end do generating_loop
+
+        end if
+
+
+
+
+
+    end function GenerateLivePoints
+
+#else
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(loglikelihood,priors,settings,nlive) result(live_points)
+    function GenerateLivePoints(loglikelihood,priors,settings) result(live_points)
         use priors_module,    only: prior
         use settings_module,  only: program_settings,live_type
         use random_module,    only: random_reals
         use utils_module,     only: logzero
         use calculate_module, only: calculate_point
+        use feedback_module,  only: write_started_generating
 
         implicit none
 
@@ -312,20 +550,19 @@ module nested_sampling_linear_module
         !> Program settings
         type(program_settings), intent(in) :: settings
 
-        !> The number of points to be generated
-        integer, intent(in) :: nlive
-
         !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
         ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal,nlive) :: live_points
+        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
 
         ! Loop variable
         integer i_live
 
+        call write_started_generating(settings%feedback)
+
         ! initialise live points at zero
         live_points = 0d0
 
-        do i_live=1,nlive
+        do i_live=1,settings%nlive
 
             ! Generate a random coordinate
             live_points(:,i_live) = random_reals(settings%nDims)
@@ -350,29 +587,12 @@ module nested_sampling_linear_module
 
     end function GenerateLivePoints
 
-
-
-    function GenerateSeed(settings,live_points,seed_pos) result(seed_point)
-        use settings_module,   only: program_settings
-        use random_module,     only: random_integer
-        implicit none
-        type(program_settings), intent(in) :: settings
-        double precision, intent(inout), dimension(settings%nTotal,settings%nstack) :: live_points
-
-        integer, intent(out) :: seed_pos
-
-        ! Point to seed a new one from
-        double precision,    dimension(settings%nTotal)   :: seed_point
-
-        seed_pos =random_integer(settings%nlive)
-        seed_point = live_points(:,seed_pos)
-
-    end function GenerateSeed
+#endif
 
 
 
     function update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,evidence,ndead) result(more_samples_needed)
-        use settings_module,   only: program_settings,blank_type,live_type
+        use settings_module,   only: program_settings,live_type
         implicit none
         type(program_settings), intent(in)                                                                           :: settings
         double precision,       intent(in),    dimension(settings%nTotal,settings%chain_length)                      :: baby_points
@@ -387,7 +607,6 @@ module nested_sampling_linear_module
         logical :: more_samples_needed
 
         integer :: late_index(1)
-        integer :: insertion_index(1)
 
         integer :: i_live
 

@@ -12,7 +12,7 @@ program main
 #ifdef MPI
     use mpi_module
 #endif
-    use nested_sampling_linear_module,   only: NestedSamplingL
+    use nested_sampling_linear_module,   only: NestedSampling
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
@@ -88,7 +88,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 8                  ! Dimensionality of the space
+    settings%nDims= 2                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -149,7 +149,7 @@ program main
 
     ! Sort out the grades
     !settings%chain_length= allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) )
-    !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3/) )
+    !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
     !settings%nstack               = settings%nlive*settings%chain_length*2
     !settings%chain_length= allocate_grades(settings%grades)
 
@@ -157,15 +157,7 @@ program main
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 
-#ifdef MPI
-    if (mpi_size()>1) then
-        !output_info = NestedSamplingP(loglikelihood,priors,settings)
-    else
-        output_info = NestedSamplingL(loglikelihood,priors,settings) 
-    end if
-#else
-    output_info = NestedSamplingL(loglikelihood,priors,settings) 
-#endif 
+    output_info = NestedSampling(loglikelihood,priors,settings) 
 
 
 

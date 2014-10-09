@@ -4,7 +4,7 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)
+    subroutine write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)
         use utils_module, only: DBL_FMT,write_resume_unit
         use settings_module, only: program_settings
 
@@ -12,6 +12,7 @@ module read_write_module
 
 
         type(program_settings), intent(in) :: settings
+        integer,intent(in) :: stack_size
         double precision,intent(in), dimension(settings%nTotal,settings%nstack) :: live_points
         integer :: nposterior
         double precision :: mean_likelihood_calls
@@ -28,8 +29,10 @@ module read_write_module
         ! termination during this write
         open(write_resume_unit,file=trim(settings%file_root) // '.resume', action='write', iostat=i_err) 
 
+        ! Stack size
+        write(write_resume_unit,'(I)') stack_size
         ! Live points
-        write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points
+        write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(:,:stack_size)
         ! Evidence vector
         write(write_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         ! number of dead points
@@ -103,7 +106,7 @@ module read_write_module
 
         close(write_phys_unit)
 
-    end subroutine
+    end subroutine write_phys_live_points
 
 
 

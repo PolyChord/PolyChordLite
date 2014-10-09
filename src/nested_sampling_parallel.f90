@@ -332,7 +332,7 @@ module nested_sampling_parallel_module
                         !
                         call MPI_RECV(            &
                             baby_point,           & ! newly generated point to be receieved
-                            settings%nTotal,             & ! size of this data
+                            settings%nTotal,      & ! size of this data
                             MPI_DOUBLE_PRECISION, & ! type of this data
                             i_slaves,             & ! recieve it from i_slaves
                             MPI_ANY_TAG,          & ! tagging information (not important here)
