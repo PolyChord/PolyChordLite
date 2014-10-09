@@ -88,7 +88,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 6                  ! Dimensionality of the space
+    settings%nDims= 8                  ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -114,23 +114,22 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 25*settings%nDims        !number of live points
+    settings%nlive                = 250*settings%nDims        !number of live points
     settings%chain_length         = settings%nDims           !Number of chords to draw
 
-    settings%sampler              = sampler_graded_covariance
+    !settings%sampler              = sampler_graded_covariance
 
     settings%nstack               = settings%nlive*settings%chain_length*2
     settings%file_root            =  'chains/test'           !file root
     settings%feedback             =  1                       !degree of feedback
 
     ! stopping criteria
-    settings%precision_criterion  =  1d-1                    !degree of precision in answer
+    settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  100000                  !maximum number of samples
 
     ! posterior calculation
     settings%nmax_posterior       = 100000                   !max number of posterior points
-    settings%minimum_weight       = 1d-6                     !minimum weight of the posterior points
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
 
     ! reading and writing
     settings%read_resume          = .false.                  !whether or not to resume from file
@@ -150,8 +149,8 @@ program main
 
     ! Sort out the grades
     !settings%chain_length= allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) )
-    settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3/) )
-    settings%nstack               = settings%nlive*settings%chain_length*2
+    !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3/) )
+    !settings%nstack               = settings%nlive*settings%chain_length*2
     !settings%chain_length= allocate_grades(settings%grades)
 
 

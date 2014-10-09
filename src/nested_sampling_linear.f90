@@ -233,12 +233,13 @@ module nested_sampling_linear_module
                 !     4) re-calculate stack_size and nposterior
                 !     5) update the late_likelihood
                 !     6) Update ndead
-                call update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,evidence_vec(1),ndead)
+                more_samples_needed = more_samples_needed .or. update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,evidence_vec(1),ndead)
 
                 ! (5) Feedback to command line every nlive iterations
                 if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
                     write(stdout_unit,'("ndead     = ", I20                  )') ndead
                     write(stdout_unit,'("stack size= ", I20, "/", I20        )') stack_size, settings%nstack
+                    write(stdout_unit,'("nposterior= ", I20                  )') nposterior
                     !write(stdout_unit,'("efficiency= ", F20.2                )') mean_likelihood_calls
                     write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
                     write(stdout_unit,'("")')
@@ -248,7 +249,7 @@ module nested_sampling_linear_module
                 if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
                     if(settings%write_resume) call write_resume_file(settings,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
                     if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
-                    if(settings%write_live) call write_phys_live_points(settings,live_points,late_likelihood)
+                    if(settings%write_live) call write_phys_live_points(settings,live_points(:,:stack_size),stack_size)
                 end if
 
                 ! If we've put a limit on the maximum number of iterations, then
@@ -370,7 +371,7 @@ module nested_sampling_linear_module
 
 
 
-    subroutine update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,evidence,ndead) 
+    function update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,evidence,ndead) result(more_samples_needed)
         use settings_module,   only: program_settings,blank_type,live_type
         implicit none
         type(program_settings), intent(in)                                                                           :: settings
@@ -383,6 +384,8 @@ module nested_sampling_linear_module
         double precision,       intent(in)                                                                           :: evidence
         integer,                intent(inout)                                                                        :: ndead
 
+        logical :: more_samples_needed
+
         integer :: late_index(1)
         integer :: insertion_index(1)
 
@@ -390,17 +393,13 @@ module nested_sampling_linear_module
 
         double precision :: late_logweight
 
-        double precision, dimension(settings%nDims+settings%nDerived+2) :: posterior_point
+        double precision, dimension(settings%nDims+settings%nDerived+2,settings%chain_length) :: posterior_points
 
-        double precision :: logminimumweight 
-        double precision :: lognlive 
-        double precision :: lognlivep1 
+        double precision :: lognmax_posterior
+        double precision :: max_logweight
 
-        logminimumweight = log(settings%minimum_weight+0d0) 
-        lognlive = log(settings%nlive+0d0)                 
-        lognlivep1 = log(settings%nlive+1d0)               
 
-        late_logweight = (ndead-1)*lognlive - ndead*lognlivep1 
+        late_logweight = (ndead-1)*log(settings%nlive+0d0) - ndead*log(settings%nlive+1d0)                
 
         ! Start by finding the original lowest likelihood live point (about to be deleted)
         late_index = minloc(live_points(settings%l0,:stack_size), mask=nint(live_points(settings%point_type,:stack_size))==live_type)
@@ -418,53 +417,58 @@ module nested_sampling_linear_module
         ! Now run through the stack and strip out any points that are less
         ! than the new late_likelihood, replacing them with points drawn from
         ! the end 
-        do i_live=1,stack_size
+
+        i_live=1
+        do while(i_live<=stack_size)
             if( live_points(settings%l0,i_live) < late_likelihood ) then
-
-                ! Check to see if this point is worth saving as a posterior point
-                if( settings%calculate_posterior .and. live_points(settings%l0,i_live) + late_logweight - evidence > logminimumweight ) then
-                    ! If the late point has a sufficiently large weighting, then we
-                    ! should add it to the set of saved posterior points
-
-                    ! calculate a new point for insertion
-                    posterior_point(1)  = live_points(settings%l0,i_live) + late_logweight
-                    posterior_point(2)  = live_points(settings%l0,i_live)
-                    posterior_point(2+1:2+settings%nDims) = live_points(settings%p0:settings%p1,i_live)
-                    posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,i_live)
-
-                    if(nposterior<settings%nmax_posterior) then
-                        ! If we're still able to use a restricted array,
-
-                        ! Find the closest point in the array which is beneath the minimum weight
-                        insertion_index = minloc(posterior_array(1,:nposterior),mask=posterior_array(1,:nposterior)<logminimumweight+evidence)
-
-                        if(insertion_index(1)==0) then
-                            ! If there are no points to overwrite, then we should
-                            ! expand the available storage array
-                            nposterior=nposterior+1
-                            posterior_array(:,nposterior) = posterior_point
-                        else
-                            ! Otherwise overwrite a point which is too small
-                            posterior_array(:,insertion_index(1)) = posterior_point
-                        end if
-
-                    else
-                        ! Otherwise we have to overwrite the smallest element
-                        insertion_index = minloc(posterior_array(1,:nposterior))
-                        posterior_array(:,insertion_index(1)) = posterior_point
-                    end if
-
-
-                end if
-
-
-
                 ! Overwrite the discarded point with a point from the end...
                 live_points(:,i_live) = live_points(:,stack_size)
                 ! ...and reduce the stack size
                 stack_size=stack_size-1
+            else
+                i_live=i_live+1
             end if
         end do
+
+        !posterior_points(1,:)  = baby_points(settings%l0,:) + late_logweight
+        !posterior_points(2,:)  = baby_points(settings%l0,:)
+        !posterior_points(2+1:2+settings%nDims,:) = baby_points(settings%p0:settings%p1,:)
+        !posterior_points(2+settings%nDims+1:2+settings%nDims+settings%nDerived,:) = baby_points(settings%d0:settings%d1,:)
+
+
+        !nposterior=nposterior+settings%chain_length
+        !posterior_array(:,nposterior-settings%chain_length+1:nposterior) = posterior_points
+        posterior_points(1,1)  = baby_points(settings%l0,settings%chain_length) + late_logweight
+        posterior_points(2,1)  = baby_points(settings%l0,settings%chain_length)
+        posterior_points(2+1:2+settings%nDims,1) = baby_points(settings%p0:settings%p1,settings%chain_length)
+        posterior_points(2+settings%nDims+1:2+settings%nDims+settings%nDerived,1) = baby_points(settings%d0:settings%d1,settings%chain_length)
+
+
+        nposterior=nposterior+1
+        posterior_array(:,nposterior) = posterior_points(:,1)
+
+        if(nposterior>settings%nmax_posterior) write(*,*) 'over the top'
+
+        ! Find the maximum weighted posterior point
+        max_logweight = maxval(posterior_array(1,:nposterior))
+
+
+        lognmax_posterior = log(settings%nmax_posterior+0d0)
+
+        i_live=1
+        do while(i_live<=nposterior)
+            if( posterior_array(1,i_live) - max_logweight + lognmax_posterior < 0 ) then
+                ! Overwrite the discarded point with a point from the end...
+                posterior_array(:,i_live) = posterior_array(:,nposterior)
+                ! ...and reduce the stack size
+                nposterior=nposterior-1
+            else
+                i_live=i_live+1
+            end if
+        end do
+
+
+
 
         live_points(settings%last_chord,:) = live_points(settings%last_chord,:)/  (1d0+1d0/(settings%nDims*settings%nlive) )
 
@@ -475,7 +479,11 @@ module nested_sampling_linear_module
         ! Increment the number of dead points
         ndead=ndead+1
 
-    end subroutine update_stacks
+        ! Test to see if we need more samples
+        !more_samples_needed = any(posterior_points(1,:) - max_logweight+lognmax_posterior > 0 )
+        more_samples_needed = .false.
+
+    end function update_stacks
 
 
 

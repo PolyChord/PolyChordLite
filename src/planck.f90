@@ -4,11 +4,11 @@ program main
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
     use priors_module
-    use settings_module,        only: program_settings,allocate_indices
+    use settings_module
     use random_module,          only: initialise_random, deinitialise_random
-
     use example_likelihoods
     use feedback_module
+    use grades_module,          only: allocate_grades
 #ifdef MPI
     use mpi_module
 #endif
@@ -17,12 +17,21 @@ program main
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
 
+    ! Output of the program
+    ! 1) log(evidence)
+    ! 2) error(log(evidence))
+    ! 3) ndead
+    ! 4) number of likelihood calls
+    double precision, dimension(5) :: output_info
+
     type(program_settings)    :: settings  ! The program settings 
     type(prior), dimension(1) :: priors
 
-    double precision, dimension(5) :: output_info
-
     pointer loglikelihood
+    double precision :: loglike
+
+    double precision, allocatable, dimension(:) :: theta
+    double precision, allocatable, dimension(:) :: phi
 
     double precision, allocatable, dimension(:) :: minimums 
     double precision, allocatable, dimension(:) :: maximums
@@ -189,33 +198,42 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 500                      !number of live points
-    settings%chain_length         = 1                        !Number of chords to draw (after each randomisation)
-    settings%num_reflections      = 1                        !Number of randomisations to choose, 4 seems fine in most cases
 
-    settings%read_resume          = .false.                  !whether or not to resume from file
+    settings%sampler              = sampler_graded_covariance
 
-
-    settings%nstack               =  settings%nlive*10       !number of points in the 'stack'
     settings%file_root            =  'chains/test'           !file root
     settings%feedback             =  1                       !degree of feedback
-    settings%precision_criterion  =  1d-2                    !degree of precision in answer
-    settings%max_ndead            =  -1                      !maximum number of samples
-    settings%nmax_posterior       = 100000                   !max number of posterior points
-    settings%minimum_weight       = 1d-5                     !minimum weight of the posterior points
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+
+    ! stopping criteria
+    settings%precision_criterion  =  1d-1                    !degree of precision in answer
+    settings%max_ndead            =  100000                  !maximum number of samples
+
+    ! posterior calculation
+    settings%nmax_posterior       = 1000000                  !max number of posterior points
+    settings%minimum_weight       = 1d-6                     !minimum weight of the posterior points
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+
+    ! reading and writing
+    settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
+    settings%write_live           = .false.                  !write out the physical live points?
     settings%save_all             = .false.                  !Save all the dead points?
 
-    settings%grade(:4)=1
-    settings%grade(5:6)=2
-    settings%grade(7:)=4
+    ! Evidence inference
+    settings%infer_evidence       = .false.
+    settings%evidence_samples     = 100000 
 
-    allocate(settings%chain_lengths(maxval(settings%grade)))
-    settings%chain_lengths(1) = 4
-    settings%chain_lengths(2) = 10
-    settings%chain_lengths(3) = 0
-    settings%chain_lengths(4) = 10
+
+    ! Initialise the loglikelihood
+    allocate(theta(settings%nDims),phi(settings%nDerived))
+    loglike = loglikelihood(theta,phi,0)
+
+    ! Sort out the grades
+    settings%chain_length= allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) )
+    settings%nstack               = settings%nlive*settings%chain_length*2
+    !settings%chain_length= allocate_grades(settings%grades)
+
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
@@ -224,11 +242,9 @@ program main
     if (mpi_size()>1) then
 !        output_info = NestedSamplingP(loglikelihood,priors,settings)
     else
-        settings%nstack=settings%nlive
         output_info = NestedSamplingL(loglikelihood,priors,settings) 
     end if
 #else
-    settings%nstack=settings%nlive
     output_info = NestedSamplingL(loglikelihood,priors,settings) 
 #endif 
 

@@ -72,24 +72,24 @@ module read_write_module
         open(write_txt_unit,file=trim(settings%file_root) // '.txt' , action='write', iostat=i_err) 
 
         do i_posterior=1,nposterior
-
-            if (posterior_array(1,i_posterior)-evidence > logminimum_weight)                 &
+            if(posterior_array(1,i_posterior)-evidence < log(huge(1d0)) ) then
                 write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')   &
-                exp(posterior_array(1,i_posterior)-evidence),posterior_array(2:,i_posterior)
+                    exp(posterior_array(1,i_posterior)-evidence),posterior_array(2:,i_posterior)
+            end if
         end do
 
         close(write_txt_unit)
 
     end subroutine write_posterior_file
 
-    subroutine write_phys_live_points(settings,live_points,late_loglikelihood)
+    subroutine write_phys_live_points(settings,live_points,stack_size)
         use utils_module, only: DBL_FMT,write_phys_unit
         use settings_module, only: program_settings
         implicit none
 
         type(program_settings), intent(in) :: settings
-        double precision, intent(in), dimension(settings%nTotal,settings%nstack) :: live_points
-        double precision, intent(in) :: late_loglikelihood
+        integer, intent(in) :: stack_size
+        double precision, intent(in), dimension(settings%nTotal,stack_size) :: live_points
 
         integer i_err
 
@@ -97,10 +97,8 @@ module read_write_module
 
         open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err) 
 
-        do i_live=1,settings%nstack
-            if(live_points(settings%l1,i_live)<=late_loglikelihood) then ! .and.  live_points(settings%daughter,i_live) >=0 ) then
-                write(write_phys_unit,'(<settings%nDims+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(settings%p0:settings%p1,i_live),live_points(settings%l0,i_live)
-            end if
+        do i_live=1,stack_size
+            write(write_phys_unit,'(<settings%nDims+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(settings%p0:settings%p1,i_live),live_points(settings%l0,i_live)
         end do
 
         close(write_phys_unit)

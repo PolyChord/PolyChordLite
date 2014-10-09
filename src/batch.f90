@@ -4,10 +4,11 @@ program main
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
     use priors_module
-    use settings_module,        only: program_settings,allocate_indices
+    use settings_module
     use random_module,          only: initialise_random, deinitialise_random
     use example_likelihoods
     use feedback_module
+    use grades_module,          only: allocate_grades
 #ifdef MPI
     use mpi_module
 #endif
@@ -23,7 +24,7 @@ program main
     ! How often to update from all the MPI cores
     integer, parameter :: update = 10
     ! The name of the file
-    character(STR_LENGTH) :: out_root='corr20_5.dat'
+    character(STR_LENGTH) :: out_root='corr8.dat'
 
     ! Output of the program
     ! 1) log(evidence)
@@ -100,7 +101,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20                ! Dimensionality of the space
+    settings%nDims= 8                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -129,12 +130,14 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
-    settings%chain_length         = settings%nDims*5         !Number of chords to draw
+    settings%chain_length         = settings%nDims           !Number of chords to draw
+
+    !settings%sampler              = sampler_graded_covariance
 
     settings%nstack               = settings%nlive*settings%chain_length*2
     settings%file_root            =  'chains/test'           !file root
 
-    settings%feedback             =  -1                      !degree of feedback
+    settings%feedback             = -1                       !degree of feedback
 
     ! stopping criteria
     settings%precision_criterion  =  1d-1                    !degree of precision in answer
@@ -161,6 +164,9 @@ program main
     allocate(theta(settings%nDims),phi(settings%nDerived))
     loglike = loglikelihood(theta,phi,0)
 
+    ! Sort out the grades
+    !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
+    !settings%nstack               = settings%nlive*settings%chain_length*2
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
