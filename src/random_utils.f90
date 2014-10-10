@@ -15,9 +15,7 @@ module random_module
     use mkl_vsl_type
     use mkl_vsl
 
-#ifdef MPI
     use mpi_module
-#endif
 
     implicit none           
 
@@ -64,30 +62,21 @@ module random_module
         ! In this case it is a fast mersenne twister
         integer,parameter       :: basic_rng_type = VSL_BRNG_SFMT19937
 
+        integer :: myrank
+
+        ! Get the global ranking
+        call MPI_COMM_RANK(MPI_COMM_WORLD, myrank, mpierror)
 
         if (present(seed_input)) then
             ! If the seed argument is present, initialise stream with this
-#ifdef MPI
-            errcode=vslnewstream( rng_stream, basic_rng_type,  seed_input + mpi_rank() )
-#else
-            errcode=vslnewstream( rng_stream, basic_rng_type,  seed_input )
-#endif
+            errcode=vslnewstream( rng_stream, basic_rng_type,  seed_input + myrank)
         else
             ! Otherwise initialise it with the system time
             call system_clock(seed)
-#ifdef MPI
-            call MPI_BCAST(     &
-                seed,           & ! seed to be broadcast
-                1,              & ! size of the data
-                MPI_INTEGER,    & ! type of data
-                0,              & ! root node id
-                MPI_COMM_WORLD, & ! communication info
-                mpierror)         ! error (from mpiutils)
+            ! Broadcast the same seed to everybody from 'root' (0)
+            call MPI_BCAST(seed,1,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
 
-            errcode=vslnewstream( rng_stream, basic_rng_type,  seed + mpi_rank() )
-#else
-            errcode=vslnewstream( rng_stream, basic_rng_type,  seed )
-#endif
+            errcode=vslnewstream( rng_stream, basic_rng_type,  seed + myrank )
         end if
 
     end subroutine initialise_random

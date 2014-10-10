@@ -9,9 +9,7 @@ program main
     use example_likelihoods
     use feedback_module
     use grades_module,          only: allocate_grades
-#ifdef MPI
     use mpi_module
-#endif
     use nested_sampling_linear_module,   only: NestedSamplingL
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
@@ -63,9 +61,7 @@ program main
 
 
     ! ------- (1a) Initialise MPI threads -------------------
-#ifdef MPI
     call mpi_initialise()
-#endif
 
     ! ------- (1b) Initialise random number generator -------
     ! Initialise the random number generator with the system time
@@ -220,10 +216,6 @@ program main
     settings%write_live           = .false.                  !write out the physical live points?
     settings%save_all             = .false.                  !Save all the dead points?
 
-    ! Evidence inference
-    settings%infer_evidence       = .false.
-    settings%evidence_samples     = 100000 
-
 
     ! Initialise the loglikelihood
     allocate(theta(settings%nDims),phi(settings%nDerived))
@@ -238,15 +230,7 @@ program main
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 
-#ifdef MPI
-    if (mpi_size()>1) then
-!        output_info = NestedSamplingP(loglikelihood,priors,settings)
-    else
-        output_info = NestedSamplingL(loglikelihood,priors,settings) 
-    end if
-#else
     output_info = NestedSamplingL(loglikelihood,priors,settings) 
-#endif 
 
 
 
@@ -254,9 +238,7 @@ program main
     ! De-initialise the random number generator 
     call deinitialise_random()
 
-#ifdef MPI
     call mpi_finalise()
-#endif
 
 
 end program main

@@ -4,7 +4,6 @@ module mpi_module
     
     implicit none
     integer :: mpierror
-    integer, parameter :: root=0
 
     contains
 
@@ -13,23 +12,6 @@ module mpi_module
         integer :: i
         call MPI_ABORT(MPI_COMM_WORLD,i,mpierror)
     end subroutine abort
-
-
-    function mpi_rank
-        implicit none
-        integer :: mpi_rank
-        call MPI_COMM_RANK(MPI_COMM_WORLD, mpi_rank, mpierror)
-    end function mpi_rank
-
-    function mpi_size 
-        integer :: mpi_size
-        call MPI_COMM_SIZE(MPI_COMM_WORLD, mpi_size, mpierror)
-    end function mpi_size
-
-    subroutine mpi_synchronise
-        implicit none
-        call MPI_BARRIER(MPI_COMM_WORLD,mpierror)
-    end subroutine mpi_synchronise
 
     subroutine mpi_initialise
         implicit none

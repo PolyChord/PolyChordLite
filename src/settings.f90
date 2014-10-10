@@ -78,11 +78,6 @@ module settings_module
         !> 2*ndims + nDerived + 1
         integer :: nTotal      
 
-        !> Whether or not to do evidence samples
-        logical :: infer_evidence = .false.
-        !> Number of evidence samples to obtain for the posterior
-        integer :: evidence_samples = 1000
-
         ! Indices for the sections of a live_points array
 
         !> hypercube indices

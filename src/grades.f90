@@ -16,12 +16,10 @@ module grades_module
 
     contains
 
-    function allocate_grades(grades, grade_information) result(chain_length)
+    subroutine allocate_grades(grades, grade_information)
         implicit none
         type(parameter_grades),intent(out) :: grades
         integer,intent(in),optional,dimension(:) :: grade_information
-
-        integer chain_length
 
         integer :: i
 
@@ -43,8 +41,8 @@ module grades_module
             ! A null array for the grade information
             allocate(grades%grade_information(0))
             grades%min_grade=1
-            grades%max_grade=0
-            grades%num_grades=0
+            grades%max_grade=1
+            grades%num_grades=1
 
 
         end if
@@ -59,6 +57,15 @@ module grades_module
             grades%chain_lengths(i) = count(grade_information==i)
         end do
 
+    end subroutine allocate_grades
+
+    function calc_chain_length(grades) result(chain_length)
+        implicit none
+        type(parameter_grades),intent(in) :: grades
+        integer :: i
+
+        double precision :: chain_length
+
         chain_length=1
         do i=grades%max_grade,grades%min_grade,-1
             if(grades%chain_lengths(i)/=0) then
@@ -67,8 +74,7 @@ module grades_module
         end do
         chain_length=chain_length-1
 
-
-    end function allocate_grades
+    end function
 
 
     function calc_graded_choleskys(covmat,nDims,grades) result(choleskys)

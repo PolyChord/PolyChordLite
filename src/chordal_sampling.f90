@@ -86,6 +86,9 @@ module chordal_module
             ! Give the previous point the step length
             previous_point(settings%last_chord) = step_length
 
+            ! Zero the likelihood calls
+            previous_point(settings%nlike) = 0
+
         end do
 
         ! Hand back the maximum chord this time to be used as the step length
@@ -198,6 +201,9 @@ module chordal_module
                 ! Set this one to be a phantom point
                 baby_points(settings%point_type,i_chords) = phantom_type
 
+                ! Zero the likelihood calls if its not the slowest likelihood
+                if(grade/=settings%grades%min_grade) baby_points(settings%nlike,i_chords) = 0
+
                 ! keep track of the largest chord
                 max_chord = max(max_chord,baby_points(settings%last_chord,i_chords))
 
@@ -206,6 +212,9 @@ module chordal_module
 
                 ! Give the previous point the step length
                 previous_point(settings%last_chord) = step_length
+
+                ! Zero the likelihood calls
+                previous_point(settings%nlike) = 0
 
                 ! If we're not at the maximum grade, then recurse down one more
                 if(grade<settings%grades%max_grade) then
@@ -311,6 +320,9 @@ module chordal_module
 
             ! Give the previous point the step length
             previous_point(settings%last_chord) = step_length
+
+            ! Zero the likelihood calls
+            previous_point(settings%nlike) = 0
 
         end do
 

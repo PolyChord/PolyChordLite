@@ -1,14 +1,8 @@
-# whether its linear or parallel
-PAR ?= 1
 # Whether to run in debugging mode
 DEBUG ?= 0
 
 # The compiler
-ifeq ($(PAR), 1)
-	FC = mpif90
-else
-	FC = ifort
-endif
+FC = mpif90
 
 # flags
 # mkl  : use the mkl library
@@ -34,12 +28,6 @@ FCFLAGS += -O3 -xHost
 endif
 
 
-ifeq ($(PAR), 1)
-# Parallel mode, define MPI for use in preprocessing
-FCFLAGS += -DMPI
-endif
-
-
 
 # libraries needed for linking, unused in the examples
 LDFLAGS =
@@ -55,7 +43,7 @@ ifeq ($(PAR), 1)
 MPI_UTILS = mpi_utils.o
 endif
 
-OBJECTS = $(MPI_UTILS) utils.o priors.o grades.o settings.o calculate.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o nested_sampling_linear.o
+OBJECTS = $(MPI_UTILS) utils.o priors.o grades.o settings.o calculate.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o nested_sampling.o
 
 AR = ar r
 

@@ -1,31 +1,27 @@
-module nested_sampling_linear_module
+module nested_sampling_module
     use utils_module,      only: flag_blank,flag_gestating,flag_waiting  
     implicit none
 
-#ifdef MPI
     integer, parameter :: RUNTAG=0
     integer, parameter :: ENDTAG=1
-#endif
 
 
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    function NestedSampling(loglikelihood,priors,settings) result(output_info)
+    function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit,calc_cholesky,calc_covmat
         use settings_module
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
-        use evidence_module,   only: infer_evidence,KeetonEvidence
+        use evidence_module,   only: KeetonEvidence
         use chordal_module,    only: SliceSampling,GradedSliceSampling,AdaptiveParallelSliceSampling
         use random_module,     only: random_integer
 
         use grades_module,     only: calc_graded_choleskys
-#ifdef MPI
         use mpi_module
-#endif
 
         implicit none
 
@@ -40,6 +36,8 @@ module nested_sampling_linear_module
 
         type(prior), dimension(:), intent(in) :: priors
         type(program_settings), intent(in) :: settings
+
+        integer, intent(in) :: mpi_communicator
 
         ! Output of the program
         ! 1) log(evidence)
@@ -91,30 +89,33 @@ module nested_sampling_linear_module
         integer :: stack_size
         logical :: first_loop
 
-#ifdef MPI
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status
 
         integer :: send_start
         integer :: nprocs
         integer :: myrank
+        integer :: root
+        logical :: linear_mode
 
-        nprocs = mpi_size()  ! Get the number of MPI procedures
-        myrank = mpi_rank()  ! Get the MPI label of the current processor
+        ! Get the number of MPI procedures
+        call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
         send_start=nprocs-1
-#endif
+        linear_mode = nprocs==1
 
-#ifdef MPI
-        if(myrank==0) call write_opening_statement(settings) 
-#else
-        call write_opening_statement(settings) 
-#endif
+        ! Get the MPI label of the current processor
+        call MPI_COMM_RANK(mpi_communicator, myrank, mpierror)
 
-        ! Check to see whether there's a resume file present, and record in the
-        ! variable 'resume'
-        inquire(file=trim(settings%file_root)//'.resume',exist=resume)
+        ! Assign the root
+        call MPI_ALLREDUCE(myrank,root,1,MPI_INTEGER,MPI_MIN,mpi_communicator,mpierror)
 
-        ! Check if we actually want to resume
-        resume = settings%read_resume .and. resume
+        if(myrank==root) then
+            call write_opening_statement(settings) 
+
+            ! Allocate the evidence vector 
+            more_samples_needed = KeetonEvidence(settings,baby_likelihood,late_likelihood,ndead,evidence_vec)
+        end if
+
+
 
 
         !======= 1) Initialisation =====================================
@@ -122,246 +123,245 @@ module nested_sampling_linear_module
         !       randomly from the prior (i.e. unit hypercube)
         ! (ii)  Initialise all variables
 
-        ! Allocate the evidence vector 
-        more_samples_needed = KeetonEvidence(settings,baby_likelihood,late_likelihood,ndead,evidence_vec)
-
         !~~~ (i) Generate Live Points ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ! Check if we actually want to resume
+        resume = settings%read_resume .and. resume
+
         if(resume) then
-#ifdef MPI
             if(myrank==root) then
-#endif
-            if(settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
+                ! Check to see whether there's a resume file present, and record in the
+                ! variable 'resume'
+                inquire(file=trim(settings%file_root)//'.resume',exist=resume)
+                if(settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
 
-            ! If there is a resume file present, then load the live points from that
-            open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
+                ! If there is a resume file present, then load the live points from that
+                open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
 
-            read(read_resume_unit,'(I)') stack_size
-            read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(:,:stack_size)
-            read(read_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
-            read(read_resume_unit,'(I)') ndead
-            read(read_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)') mean_likelihood_calls
-            read(read_resume_unit,'(I)') total_likelihood_calls
-            read(read_resume_unit,'(I)') nposterior
-            read(read_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+                read(read_resume_unit,'(I)') stack_size
+                read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(:,:stack_size)
+                read(read_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
+                read(read_resume_unit,'(I)') ndead
+                read(read_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)') mean_likelihood_calls
+                read(read_resume_unit,'(I)') total_likelihood_calls
+                read(read_resume_unit,'(I)') nposterior
+                read(read_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
 
-            close(read_resume_unit)
-#ifdef MPI
+                close(read_resume_unit)
             endif ! only root
-#endif
 
         else !(not resume)
             ! Otherwise generate them anew:
-            live_points = GenerateLivePoints(loglikelihood,priors,settings)
-#ifdef MPI
-            if(myrank==root) then
-#endif 
-
-            stack_size=settings%nlive
-
-            call write_finished_generating(settings%feedback) !Flag to note that we're done generating
-
-            ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
-            evidence_vec = logzero
-            evidence_vec(4) = logsumexp(live_points(settings%l0,:settings%nlive)) - log(settings%nlive+0d0)
-
-            mean_likelihood_calls = 1d0
-            total_likelihood_calls = settings%nlive
-
-            ! Otherwise no dead points originally
-            ndead = 0
-
-            nposterior = 0
-            ! set all of the loglikelihoods and logweights to be zero initially
-            posterior_array(1:2,:) = logzero
-
-            ! set the posterior coordinates to be zero initially
-            posterior_array(3:,:) = 0d0
-#ifdef MPI
-            endif ! only root
-#endif
-        end if !(resume)
-
-
-#ifdef MPI
-        if(myrank==root) then
-#endif
-
-
-        ! Initialise the late likelihood
-        late_likelihood = minval(live_points(settings%l0,:stack_size), mask=nint(live_points(settings%point_type,:stack_size))==live_type) 
-
-
-        ! Write a resume file before we start
-        if(settings%write_resume) call write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
-
-
-        !======= 2) Main loop body =====================================
-
-        call write_started_sampling(settings%feedback)
-
-        ! definitely more samples needed than this
-        more_samples_needed = .true.
-
-        do while ( more_samples_needed )
-
-            ! (1) Update the covariance matrix of the distribution of live points
-            if(mod(ndead,settings%nlive) .eq.0) then
-                select case(settings%sampler)
-
-                case(sampler_covariance)
-                    ! Calculate the covariance matrix
-                    covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
-                    ! Calculate the cholesky decomposition
-                    cholesky = calc_cholesky(covmat,settings%nDims)
-
-                case(sampler_graded_covariance)
-                    ! Calculate the covariance matrix
-                    covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
-                    ! Calculate the graded cholesky matrices
-                    choleskys = calc_graded_choleskys(covmat,settings%nDims,settings%grades)
-
-                end select
-            end if
-
-
-            ! (2) Generate a new set of baby points
-            ! Select a seed point for the generator
-            first_loop = .true.
-            do while (seed_point(settings%l0)<late_likelihood .or. first_loop)
-                seed_point = live_points(:,random_integer(stack_size))
-                ! Record the likelihood bound which this seed will generate from
-                seed_point(settings%l1) = late_likelihood
-                first_loop=.false.
-            end do
-
-
-
-#ifdef MPI
-            if(send_start==0) then
-                ! (2) Recieve newly generated baby point from any slave
-                call MPI_RECV(baby_points,settings%nTotal*settings%chain_length,&
-                    MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
-                baby_made=.true.
+            if(linear_mode) then
+                live_points = GenerateLivePointsL(loglikelihood,priors,settings)
             else
-                mpi_status(MPI_SOURCE)=send_start
-                send_start=send_start-1
-                baby_made=.false.
+                live_points = GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root)
             end if
 
-            ! Send a seed point back to that slave
-            call MPI_SEND(seed_point,settings%nTotal,&
-                MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,MPI_COMM_WORLD,mpierror)
+            if(myrank==root) then
 
-            ! Send the information needed
-            select case(settings%sampler)
+                stack_size=settings%nlive
 
-            case(sampler_covariance)
-                call MPI_SEND(cholesky,settings%nDims*settings%nDims,&
-                    MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,MPI_COMM_WORLD,mpierror)
+                call write_finished_generating(settings%feedback) !Flag to note that we're done generating
 
-            case(sampler_graded_covariance)
-                call MPI_SEND(choleskys,settings%nDims*settings%nDims*settings%grades%num_grades,&
-                    MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,MPI_COMM_WORLD,mpierror)
+                ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
+                evidence_vec = logzero
+                evidence_vec(4) = logsumexp(live_points(settings%l0,:settings%nlive)) - log(settings%nlive+0d0)
 
-            case(sampler_adaptive_parallel)
-                call MPI_SEND(live_points,settings%nTotal*settings%nstack,&
-                    MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,MPI_COMM_WORLD,mpierror)
+                mean_likelihood_calls = 1d0
+                total_likelihood_calls = settings%nlive
 
-            end select
+                ! Otherwise no dead points originally
+                ndead = 0
 
-#else
-            ! Generate a new set of points within the likelihood bound of the late point
-            select case(settings%sampler)
+                nposterior = 0
+                ! set all of the loglikelihoods and logweights to be zero initially
+                posterior_array(1:2,:) = logzero
 
-            case(sampler_covariance)
-                baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
+                ! set the posterior coordinates to be zero initially
+                posterior_array(3:,:) = 0d0
+            endif ! only root
+        end if !(resume/not resume)
 
-            case(sampler_graded_covariance)
-                baby_points = GradedSliceSampling(loglikelihood,priors,settings,choleskys,seed_point)
 
-            case(sampler_adaptive_parallel)
-                baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
+        if(myrank==root) then
 
-            end select
-#endif
 
-            ! The new likelihood is the last point
-            baby_likelihood  = baby_points(settings%l0,settings%chain_length)
+            ! Initialise the late likelihood
+            late_likelihood = minval(live_points(settings%l0,:stack_size), mask=nint(live_points(settings%point_type,:stack_size))==live_type) 
 
-            if(baby_likelihood>late_likelihood .and. baby_made) then
 
-                ! (3) Calculate the new evidence (and check to see if we're accurate enough)
-                more_samples_needed = KeetonEvidence(settings,baby_likelihood,late_likelihood,ndead,evidence_vec)
+            ! Write a resume file before we start
+            if(settings%write_resume) call write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
 
-                ! Record the loglikelihoods if we're inferring the evidence
-                if (settings%infer_evidence) dead_likes(ndead) = late_likelihood
 
-                ! (4) Update the stack of live points and the posterior array
-                !     This function does multiple things:
-                !     1) Insert baby_points into live_points
-                !     2) Remove points from live_point that have died this round
-                !     3) Add any of these which are at a high enough likelihood to the posterior_array
-                !     4) re-calculate stack_size and nposterior
-                !     5) update the late_likelihood
-                !     6) Update ndead
-                more_samples_needed = more_samples_needed .or. update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,evidence_vec(1),ndead)
+            !======= 2) Main loop body =====================================
 
-                ! (5) Feedback to command line every nlive iterations
-                if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
-                    write(stdout_unit,'("ndead     = ", I20                  )') ndead
-                    write(stdout_unit,'("stack size= ", I20, "/", I20        )') stack_size, settings%nstack
-                    write(stdout_unit,'("nposterior= ", I20                  )') nposterior
-                    !write(stdout_unit,'("efficiency= ", F20.2                )') mean_likelihood_calls
-                    write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
-                    write(stdout_unit,'("")')
+            call write_started_sampling(settings%feedback)
+
+            ! definitely more samples needed than this
+            more_samples_needed = .true.
+
+            do while ( more_samples_needed )
+
+                ! (1) Update the covariance matrix of the distribution of live points
+                if(mod(ndead,settings%nlive) .eq.0) then
+                    select case(settings%sampler)
+
+                    case(sampler_covariance)
+                        ! Calculate the covariance matrix
+                        covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
+                        ! Calculate the cholesky decomposition
+                        cholesky = calc_cholesky(covmat,settings%nDims)
+
+                    case(sampler_graded_covariance)
+                        ! Calculate the covariance matrix
+                        covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
+                        ! Calculate the graded cholesky matrices
+                        choleskys = calc_graded_choleskys(covmat,settings%nDims,settings%grades)
+
+                    end select
                 end if
 
-                ! (6) Update the resume and posterior files every update_resume iterations, or at program termination
-                if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-                    if(settings%write_resume) call write_resume_file(settings,stack_size,live_points(:,:stack_size),evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
-                    if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
-                    if(settings%write_live) call write_phys_live_points(settings,live_points(:,:stack_size),stack_size)
+
+                ! (2) Generate a new set of baby points
+                ! Select a seed point for the generator
+                first_loop = .true.
+                do while (seed_point(settings%l0)<late_likelihood .or. first_loop)
+                    seed_point = live_points(:,random_integer(stack_size))
+                    ! Record the likelihood bound which this seed will generate from
+                    seed_point(settings%l1) = late_likelihood
+                    first_loop=.false.
+                end do
+
+
+
+                if(linear_mode) then
+
+                    ! Generate a new set of points within the likelihood bound of the late point
+                    select case(settings%sampler)
+
+                    case(sampler_covariance)
+                        baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
+
+                    case(sampler_graded_covariance)
+                        baby_points = GradedSliceSampling(loglikelihood,priors,settings,choleskys,seed_point)
+
+                    case(sampler_adaptive_parallel)
+                        baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
+
+                    end select
+
+                    baby_made=.true.
+                else
+                    if(send_start==0) then
+                        ! (2) Recieve newly generated baby point from any slave
+                        call MPI_RECV(baby_points,settings%nTotal*settings%chain_length,&
+                            MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
+                        baby_made=.true.
+                    else
+                        mpi_status(MPI_SOURCE)=send_start
+                        send_start=send_start-1
+                        baby_made=.false.
+                    end if
+
+                    ! Send a seed point back to that slave
+                    call MPI_SEND(seed_point,settings%nTotal,&
+                        MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
+
+                    ! Send the information needed
+                    select case(settings%sampler)
+
+                    case(sampler_covariance)
+                        call MPI_SEND(cholesky,settings%nDims*settings%nDims,&
+                            MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
+
+                    case(sampler_graded_covariance)
+                        call MPI_SEND(choleskys,settings%nDims*settings%nDims*settings%grades%num_grades,&
+                            MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
+
+                    case(sampler_adaptive_parallel)
+                        call MPI_SEND(live_points,settings%nTotal*settings%nstack,&
+                            MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
+
+                    end select
                 end if
 
-                ! If we've put a limit on the maximum number of iterations, then
-                ! check to see if we've reached this
-                if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
+                ! The new likelihood is the last point
+                baby_likelihood  = baby_points(settings%l0,settings%chain_length)
 
+                if(baby_likelihood>late_likelihood .and. baby_made) then
+
+                    ! (3) Calculate the new evidence (and check to see if we're accurate enough)
+                    more_samples_needed = KeetonEvidence(settings,baby_likelihood,late_likelihood,ndead,evidence_vec)
+
+                    ! (4) Update the stack of live points and the posterior array
+                    !     This function does multiple things:
+                    !     1) Insert baby_points into live_points
+                    !     2) Remove points from live_point that have died this round
+                    !     3) Add any of these which are at a high enough likelihood to the posterior_array
+                    !     4) re-calculate stack_size and nposterior
+                    !     5) update the late_likelihood
+                    !     6) Update ndead
+                    more_samples_needed = more_samples_needed .or. update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls)
+
+                    ! (5) Feedback to command line every nlive iterations
+                    if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
+                        mean_likelihood_calls = sum(live_points(settings%nlike,:stack_size))/(settings%nlive+0d0)
+                        write(stdout_unit,'("ndead     = ", I20                  )') ndead
+                        write(stdout_unit,'("stack size= ", I20, "/", I20        )') stack_size, settings%nstack
+                        if(settings%calculate_posterior) &
+                        write(stdout_unit,'("nposterior= ", I20                  )') nposterior
+                        write(stdout_unit,'("efficiency= ", F20.2                )') mean_likelihood_calls
+                        write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
+                        write(stdout_unit,'("")')
+                    end if
+
+                    ! (6) Update the resume and posterior files every update_resume iterations, or at program termination
+                    if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
+                        if(settings%write_resume) call write_resume_file(settings,stack_size,live_points(:,:stack_size),evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
+                        if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
+                        if(settings%write_live) call write_phys_live_points(settings,live_points(:,:stack_size),stack_size)
+                    end if
+
+                    ! If we've put a limit on the maximum number of iterations, then
+                    ! check to see if we've reached this
+                    if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
+
+                end if
+
+
+
+
+            end do ! End main loop
+
+            if(.not.linear_mode) then
+                ! Kill off the final slaves
+                ! If we're done, then clean up by receiving the last piece of
+                ! data from each node (and throw it away) and then send a kill signal back to it
+                do send_start=1,nprocs-1
+                    call MPI_RECV(baby_points,settings%nTotal*settings%chain_length, &
+                        MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
+                    call MPI_SEND(seed_point,settings%nTotal, &
+                        MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),ENDTAG,mpi_communicator,mpierror)
+                end do
             end if
 
 
+            ! Create the output array
+            ! (1) log evidence
+            ! (2) Error in the log evidence
+            ! (3) Number of dead points
+            ! (4) Number of likelihood calls
+            ! (5) log(evidence * prior volume)
+            output_info(1) = evidence_vec(1) - 0.5d0*log(1+exp(evidence_vec(2)-2*evidence_vec(1)))
+            output_info(2) = sqrt(log(1+exp(evidence_vec(2)-2*evidence_vec(1))))
+            output_info(3) = ndead
+            output_info(4) = total_likelihood_calls
+            output_info(5) = output_info(1)+prior_log_volume(priors)
+
+            call write_final_results(output_info,settings%feedback,priors)
 
 
-        end do ! End main loop
-
-
-        if(settings%infer_evidence) call infer_evidence(settings,dead_likes(:ndead))
-
-        ! Create the output array
-        ! (1) log evidence
-        ! (2) Error in the log evidence
-        ! (3) Number of dead points
-        ! (4) Number of likelihood calls
-        ! (5) log(evidence * prior volume)
-        output_info(1) = evidence_vec(1) - 0.5d0*log(1+exp(evidence_vec(2)-2*evidence_vec(1)))
-        output_info(2) = sqrt(log(1+exp(evidence_vec(2)-2*evidence_vec(1))))
-        output_info(3) = ndead
-        output_info(4) = total_likelihood_calls
-        output_info(5) = output_info(1)+prior_log_volume(priors)
-
-        call write_final_results(output_info,settings%feedback,priors)
-
-#ifdef MPI
-
-        ! Kill off the final slaves
-        ! If we're done, then clean up by receiving the last piece of
-        ! data from each node (and throw it away) and then send a kill signal back to it
-        do send_start=1,nprocs-1
-            call MPI_RECV(baby_points,settings%nTotal*settings%chain_length, &
-                MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
-            call MPI_SEND(seed_point,settings%nTotal, &
-                MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),ENDTAG,MPI_COMM_WORLD,mpierror)
-        end do
 
 
 
@@ -370,7 +370,7 @@ module nested_sampling_linear_module
             do while(.true.)
                 ! Listen for a signal from the master
                 call MPI_RECV(seed_point,settings%nTotal, &
-                    MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                    MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
 
                 ! If we receive a kill signal, then exit the loop
                 if(mpi_status(MPI_TAG)==ENDTAG) exit
@@ -379,39 +379,33 @@ module nested_sampling_linear_module
 
                 case(sampler_covariance)
                     call MPI_RECV(cholesky,settings%nDims*settings%nDims, &
-                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
                     baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
                 case(sampler_graded_covariance)
-                    ! Recieve the live_data
                     call MPI_RECV(choleskys,settings%nDims*settings%nDims*settings%grades%num_grades, &
-                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
                     baby_points = GradedSliceSampling(loglikelihood,priors,settings,choleskys,seed_point)
 
                 case(sampler_adaptive_parallel)
-                    ! Recieve the live_data
                     call MPI_RECV(live_points,settings%nTotal*settings%nstack, &
-                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
                     baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
 
                 end select
 
                 ! Send the baby points back
                 call MPI_SEND(baby_points,settings%nTotal*settings%chain_length, &
-                    MPI_DOUBLE_PRECISION,root,RUNTAG,MPI_COMM_WORLD,mpierror)
+                    MPI_DOUBLE_PRECISION,root,RUNTAG,mpi_communicator,mpierror)
 
             end do
 
         end if
 
-#endif
-
-
     end function NestedSampling
 
-#ifdef MPI
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(loglikelihood,priors,settings) result(live_points)
+    function GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root) result(live_points)
         use mpi_module 
         use priors_module,    only: prior
         use settings_module,  only: program_settings,live_type,blank_type
@@ -438,6 +432,10 @@ module nested_sampling_linear_module
         !> Program settings
         type(program_settings), intent(in) :: settings
 
+
+        integer, intent(in) :: mpi_communicator
+        integer, intent(in) :: root
+
         !> The rank of the processor
         integer :: myrank
         integer :: nprocs
@@ -460,8 +458,10 @@ module nested_sampling_linear_module
 
         integer :: nlike
 
-        nprocs = mpi_size()  ! Get the number of MPI procedures
-        myrank = mpi_rank()  ! Get the MPI label of the current processor
+        ! Get the number of MPI procedures
+        call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
+        ! Get the MPI label of the current processor
+        call MPI_COMM_RANK(mpi_communicator, myrank, mpierror)
 
         ! initialise live points at zero
         live_points = 0d0
@@ -478,7 +478,7 @@ module nested_sampling_linear_module
 
                 ! Recieve a point from any slave
                 call MPI_RECV(live_point,settings%nTotal, &
-                    MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                    MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
 
                 ! If its valid, and we need more points, add it to the array
                 if(live_point(settings%l0)>logzero .and. i_live<settings%nlive) then
@@ -499,7 +499,7 @@ module nested_sampling_linear_module
                     active_procs=active_procs-1
                 end if
 
-                call MPI_SEND(empty_buffer,0,MPI_INT,mpi_status(MPI_SOURCE),tag,MPI_COMM_WORLD,mpierror)
+                call MPI_SEND(empty_buffer,0,MPI_INT,mpi_status(MPI_SOURCE),tag,mpi_communicator,mpierror)
 
             end do
 
@@ -531,10 +531,10 @@ module nested_sampling_linear_module
 
                 ! Send it to the root node
                 call MPI_SEND(live_point,settings%nTotal, &
-                    MPI_DOUBLE_PRECISION,root,0,MPI_COMM_WORLD,mpierror)
+                    MPI_DOUBLE_PRECISION,root,0,mpi_communicator,mpierror)
 
                 ! Recieve signal as to whether we should keep generating
-                call MPI_RECV(empty_buffer,0,MPI_INT,root,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                call MPI_RECV(empty_buffer,0,MPI_INT,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
 
                 if(mpi_status(MPI_TAG) == ENDTAG ) exit generating_loop
 
@@ -546,12 +546,11 @@ module nested_sampling_linear_module
 
 
 
-    end function GenerateLivePoints
+    end function GenerateLivePointsP
 
-#else
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePoints(loglikelihood,priors,settings) result(live_points)
+    function GenerateLivePointsL(loglikelihood,priors,settings) result(live_points)
         use priors_module,    only: prior
         use settings_module,  only: program_settings,live_type,blank_type
         use random_module,    only: random_reals
@@ -612,13 +611,11 @@ module nested_sampling_linear_module
         live_points(settings%point_type,settings%nlive+1:) = blank_type
 
 
-    end function GenerateLivePoints
-
-#endif
+    end function GenerateLivePointsL
 
 
 
-    function update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,evidence,ndead) result(more_samples_needed)
+    function update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls) result(more_samples_needed)
         use settings_module,   only: program_settings,live_type
         implicit none
         type(program_settings), intent(in)                                                                           :: settings
@@ -628,8 +625,8 @@ module nested_sampling_linear_module
         double precision,       intent(inout), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
         integer,                intent(inout)                                                                        :: nposterior
         double precision,       intent(inout)                                                                        :: late_likelihood
-        double precision,       intent(in)                                                                           :: evidence
         integer,                intent(inout)                                                                        :: ndead
+        integer,                intent(inout)                                                                        :: total_likelihood_calls
 
         logical :: more_samples_needed
 
@@ -691,6 +688,9 @@ module nested_sampling_linear_module
                     posterior_array(:,nposterior) = posterior_point
                 end if
 
+                ! Update the total likelihood calls
+                total_likelihood_calls = total_likelihood_calls + live_points(settings%nlike,i_live)
+
                 ! Overwrite the discarded point with a point from the end...
                 live_points(:,i_live) = live_points(:,stack_size)
                 ! ...and reduce the stack size
@@ -742,4 +742,4 @@ module nested_sampling_linear_module
 
 
 
-end module nested_sampling_linear_module
+end module nested_sampling_module

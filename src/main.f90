@@ -8,11 +8,9 @@ program main
     use random_module,          only: initialise_random, deinitialise_random
     use example_likelihoods
     use feedback_module
-    use grades_module,          only: allocate_grades
-#ifdef MPI
+    use grades_module,          only: allocate_grades,calc_chain_length
     use mpi_module
-#endif
-    use nested_sampling_linear_module,   only: NestedSampling
+    use nested_sampling_module,   only: NestedSampling
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
@@ -63,9 +61,7 @@ program main
 
 
     ! ------- (1a) Initialise MPI threads -------------------
-#ifdef MPI
     call mpi_initialise()
-#endif
 
     ! ------- (1b) Initialise random number generator -------
     ! Initialise the random number generator with the system time
@@ -117,7 +113,7 @@ program main
     settings%nlive                = 25*settings%nDims        !number of live points
     settings%chain_length         = settings%nDims           !Number of chords to draw
 
-    !settings%sampler              = sampler_graded_covariance
+    settings%sampler              = sampler_graded_covariance
 
     settings%nstack               = settings%nlive*settings%chain_length*2
     settings%file_root            =  'chains/test'           !file root
@@ -138,26 +134,22 @@ program main
     settings%write_live           = .true.                   !write out the physical live points?
     settings%save_all             = .false.                  !Save all the dead points?
 
-    ! Evidence inference
-    settings%infer_evidence       = .false.
-    settings%evidence_samples     = 100000 
-
 
     ! Initialise the loglikelihood
     allocate(theta(settings%nDims),phi(settings%nDerived))
     loglike = loglikelihood(theta,phi,0)
 
     ! Sort out the grades
-    settings%chain_length= allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) )
+    call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
+    settings%chain_length= calc_chain_length(settings%grades)
     !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
     settings%nstack               = settings%nlive*settings%chain_length*2
-    !settings%chain_length= allocate_grades(settings%grades)
 
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 
-    output_info = NestedSampling(loglikelihood,priors,settings) 
+    output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
 
 
 
@@ -165,9 +157,7 @@ program main
     ! De-initialise the random number generator 
     call deinitialise_random()
 
-#ifdef MPI
     call mpi_finalise()
-#endif
 
 
 end program main

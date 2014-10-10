@@ -2,9 +2,7 @@
 
 module example_likelihoods
     use utils_module,    only: logzero,TwoPi,stdout_unit,Hypergeometric1F1,Hypergeometric2F1,Pochhammer 
-#ifdef MPI
     use mpi_module
-#endif
 
     contains
 
@@ -512,9 +510,8 @@ module example_likelihoods
 
             ! Create a mean vector at the center of the space
             mu = 0.5d0
-#ifdef MPI
             ! Generate a random covariance matrix, its inverse and logdet on the root node
-            if(mpi_rank()==0) call generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
+            call generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
             ! Broadcast the covariance matrix and normalisation data to the
             ! rest of the nodes
             ! Covariance matrix:
@@ -533,10 +530,6 @@ module example_likelihoods
                 0,                    & ! root node id
                 MPI_COMM_WORLD,       & ! communication info
                 mpierror)               ! error (from mpiutils)
-#else
-            ! Generate a random covariance matrix, its inverse and logdet
-            call generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
-#endif
             initialised=.true.
         end if
 
@@ -562,9 +555,7 @@ module example_likelihoods
     function gaussian_loglikelihood_cluster(theta,phi,context)
         use random_module, only: random_reals
         use utils_module,  only: logsumexp
-#ifdef MPI
         use mpi_module
-#endif
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -599,18 +590,15 @@ module example_likelihoods
                 log_likelihoods(num_peaks)           &
                 )
 
-#ifdef MPI
-
-            if(mpi_rank()==0) then
-                ! Generate num_peaks random mean vectors, localised around the center on the root node
-                do i=1,num_peaks
+            ! Generate num_peaks random mean vectors, localised around the center on the root node
+            do i=1,num_peaks
                 mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(nDims) -1d0)
-                end do
-                ! Generate num_peaks random covariance matrices, their inverses and logdets on the root node
-                do i=1,num_peaks
+            end do
+            ! Generate num_peaks random covariance matrices, their inverses and logdets on the root node
+            do i=1,num_peaks
                 call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,nDims)
-                end do
-            end if
+            end do
+
             ! Broadcast the means, covariances and normalisation data to the
             ! rest of the nodes
             ! Means:
@@ -639,17 +627,6 @@ module example_likelihoods
                 0,                         & ! root node id
                 MPI_COMM_WORLD,            & ! communication info
                 mpierror)                    ! error (from mpiutils)
-#else
-            ! Generate num_peaks random mean vectors, localised around the center 
-            do i=1,num_peaks
-            mu(:,i) = 0.5d0 + 10*sigma*(2d0*random_reals(nDims) -1d0)
-            end do
-
-            ! Generate num_peaks random covariance matrices, their inverses and logdets
-            do i=1,num_peaks
-            call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,nDims)
-            end do
-#endif
 
             initialised=.true.
         end if
