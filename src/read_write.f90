@@ -4,7 +4,7 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array)
+    subroutine write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array)
         use utils_module, only: DBL_FMT,write_resume_unit
         use settings_module, only: program_settings
 
@@ -15,7 +15,6 @@ module read_write_module
         integer,intent(in) :: stack_size
         double precision,intent(in), dimension(settings%nTotal,settings%nstack) :: live_points
         integer :: nposterior
-        double precision :: mean_likelihood_calls
         integer :: total_likelihood_calls
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
         double precision, dimension(:)             :: evidence_vec
@@ -37,8 +36,6 @@ module read_write_module
         write(write_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         ! number of dead points
         write(write_resume_unit,'(I)') ndead
-        ! mean likelihood calls
-        write(write_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)') mean_likelihood_calls
         ! total likelihood calls
         write(write_resume_unit,'(I)') total_likelihood_calls
         ! Number of saved posterior points
@@ -65,10 +62,6 @@ module read_write_module
         integer :: i_err
 
         integer :: i_posterior
-
-        double precision :: logminimum_weight
-
-        logminimum_weight = log(settings%minimum_weight)
         
         ! Open the .txt file, note the presence of iostat prevents program
         ! termination during this write

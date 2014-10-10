@@ -31,7 +31,7 @@ module settings_module
         integer :: feedback = 1
 
         !> The degree of precision in the final answer
-        double precision :: precision_criterion = 1d-5
+        double precision :: precision_criterion = 1d-3
 
         !> The maximum number of dead points/samples
         !!
@@ -43,9 +43,6 @@ module settings_module
         !! This is for memory allocation purposes, it won't necessarily have
         !! this many points if they're not 'good enough'
         integer :: nmax_posterior = 100000
-
-        !> The minimum weight of the posterior points
-        double precision :: minimum_weight = 1d-15
 
         !> Whether or not to calculate the posterior
         logical :: calculate_posterior = .true.
@@ -59,17 +56,11 @@ module settings_module
         !> The number of chords to draw
         integer :: chain_length
 
-        !> The number of chords to draw if we're doing a fast-slow algorithm
-        integer, dimension(:), allocatable :: chain_lengths
-
         !> Whether or not to resume from file
         logical :: read_resume = .true.
 
         !> Whether or not to write phys_live points
         logical :: write_live = .false.
-
-        !> The number of reflection step in between randomisation steps
-        integer :: num_reflections = 4
 
         !> Dimensionality of the space
         integer :: nDims = 1
@@ -128,9 +119,6 @@ module settings_module
 
         !> Grades of parameters
         type(parameter_grades) :: grades
-
-        !> Save all dead points (can be very expensive in high dimensions)
-        logical :: save_all = .false.
 
         !> Which sampling algorithm to use
         integer :: sampler = sampler_covariance

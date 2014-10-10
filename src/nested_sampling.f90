@@ -84,8 +84,6 @@ module nested_sampling_module
 
         integer :: ndead
 
-        double precision, dimension(settings%max_ndead) :: dead_likes
-
         integer :: stack_size
         logical :: first_loop
 
@@ -126,13 +124,13 @@ module nested_sampling_module
 
         !~~~ (i) Generate Live Points ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! Check if we actually want to resume
+        inquire(file=trim(settings%file_root)//'.resume',exist=resume)
         resume = settings%read_resume .and. resume
 
         if(resume) then
             if(myrank==root) then
                 ! Check to see whether there's a resume file present, and record in the
                 ! variable 'resume'
-                inquire(file=trim(settings%file_root)//'.resume',exist=resume)
                 if(settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
 
                 ! If there is a resume file present, then load the live points from that
@@ -142,7 +140,6 @@ module nested_sampling_module
                 read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(:,:stack_size)
                 read(read_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
                 read(read_resume_unit,'(I)') ndead
-                read(read_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)') mean_likelihood_calls
                 read(read_resume_unit,'(I)') total_likelihood_calls
                 read(read_resume_unit,'(I)') nposterior
                 read(read_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
@@ -168,8 +165,7 @@ module nested_sampling_module
                 evidence_vec = logzero
                 evidence_vec(4) = logsumexp(live_points(settings%l0,:settings%nlive)) - log(settings%nlive+0d0)
 
-                mean_likelihood_calls = 1d0
-                total_likelihood_calls = settings%nlive
+                total_likelihood_calls = sum(live_points(settings%nlike,:stack_size))
 
                 ! Otherwise no dead points originally
                 ndead = 0
@@ -181,6 +177,7 @@ module nested_sampling_module
                 ! set the posterior coordinates to be zero initially
                 posterior_array(3:,:) = 0d0
             endif ! only root
+
         end if !(resume/not resume)
 
 
@@ -192,7 +189,7 @@ module nested_sampling_module
 
 
             ! Write a resume file before we start
-            if(settings%write_resume) call write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
+            if(settings%write_resume) call write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
 
 
             !======= 2) Main loop body =====================================
@@ -233,7 +230,6 @@ module nested_sampling_module
                     seed_point(settings%l1) = late_likelihood
                     first_loop=.false.
                 end do
-
 
 
                 if(linear_mode) then
@@ -303,7 +299,7 @@ module nested_sampling_module
                     !     4) re-calculate stack_size and nposterior
                     !     5) update the late_likelihood
                     !     6) Update ndead
-                    more_samples_needed = more_samples_needed .or. update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls)
+                    more_samples_needed = more_samples_needed .or. update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls,mpi_communicator)
 
                     ! (5) Feedback to command line every nlive iterations
                     if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
@@ -319,7 +315,7 @@ module nested_sampling_module
 
                     ! (6) Update the resume and posterior files every update_resume iterations, or at program termination
                     if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-                        if(settings%write_resume) call write_resume_file(settings,stack_size,live_points(:,:stack_size),evidence_vec,ndead,mean_likelihood_calls,total_likelihood_calls,nposterior,posterior_array) 
+                        if(settings%write_resume) call write_resume_file(settings,stack_size,live_points(:,:stack_size),evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
                         if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
                         if(settings%write_live) call write_phys_live_points(settings,live_points(:,:stack_size),stack_size)
                     end if
@@ -616,7 +612,7 @@ module nested_sampling_module
 
 
 
-    function update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls) result(more_samples_needed)
+    function update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls,mpi_communicator) result(more_samples_needed)
         use settings_module,   only: program_settings,live_type
         implicit none
         type(program_settings), intent(in)                                                                           :: settings
@@ -628,6 +624,7 @@ module nested_sampling_module
         double precision,       intent(inout)                                                                        :: late_likelihood
         integer,                intent(inout)                                                                        :: ndead
         integer,                intent(inout)                                                                        :: total_likelihood_calls
+        integer,                intent(in)                                                                           :: mpi_communicator
 
         logical :: more_samples_needed
 
@@ -641,6 +638,8 @@ module nested_sampling_module
 
         double precision :: lognmax_posterior
         double precision :: max_logweight
+        integer :: errorcode
+        integer :: mpierror
 
 
         late_logweight = (ndead-1)*log(settings%nlive+0d0) - ndead*log(settings%nlive+1d0)                
@@ -659,6 +658,10 @@ module nested_sampling_module
             posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,late_index(1))
 
             nposterior=nposterior+1
+            if(nposterior>settings%nmax_posterior) then
+                write(*,'(" Too many posterior points. Consider increasing nmax_posterior ")')
+                call MPI_ABORT(mpi_communicator,errorcode,mpierror)
+            end if
             posterior_array(:,nposterior) = posterior_point
         end if
 
@@ -668,6 +671,10 @@ module nested_sampling_module
 
         ! Add the remaining baby points to the end of the array, and update the stack size
         stack_size=stack_size+settings%chain_length-1
+        if(stack_size>settings%nstack) then
+            write(*,'(" Stack size too small, increase nstack ")')
+            call MPI_ABORT(mpi_communicator,errorcode,mpierror)
+        end if
         live_points(:,stack_size-settings%chain_length+2:stack_size) = baby_points(:,:settings%chain_length-1)
 
         ! Now run through the stack and strip out any points that are less
@@ -686,6 +693,10 @@ module nested_sampling_module
                     posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,i_live)
 
                     nposterior=nposterior+1
+                    if(nposterior>settings%nmax_posterior) then
+                        write(*,'(" Too many posterior points. Consider increasing nmax_posterior ")')
+                        call MPI_ABORT(mpi_communicator,errorcode,mpierror)
+                    end if
                     posterior_array(:,nposterior) = posterior_point
                 end if
 
@@ -702,7 +713,6 @@ module nested_sampling_module
         end do
 
         if(settings%calculate_posterior) then
-            if(nposterior>settings%nmax_posterior) write(*,*) 'over the top'
 
             ! Clean out the posterior array
 

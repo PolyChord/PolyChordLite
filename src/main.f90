@@ -134,7 +134,6 @@ program main
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%write_live           = .true.                   !write out the physical live points?
-    settings%save_all             = .false.                  !Save all the dead points?
 
 
     ! Initialise the loglikelihood
@@ -145,7 +144,7 @@ program main
     call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
     settings%chain_length= calc_chain_length(settings%grades)
     !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
-    settings%nstack               = settings%nlive*settings%chain_length*2
+    settings%nstack               = settings%nlive*settings%chain_length*1.3
 
 
     ! ======= (2) Perform Nested Sampling =======
