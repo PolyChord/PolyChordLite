@@ -44,6 +44,9 @@ module settings_module
         !! this many points if they're not 'good enough'
         integer :: nmax_posterior = 100000
 
+        !> What to thin the posterior points by
+        integer :: thin_posterior = 1
+
         !> Whether or not to calculate the posterior
         logical :: calculate_posterior = .true.
 

@@ -614,6 +614,7 @@ module nested_sampling_module
 
     function update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls,mpi_communicator) result(more_samples_needed)
         use settings_module,   only: program_settings,live_type
+        use random_module, only: random_real
         implicit none
         type(program_settings), intent(in)                                                                           :: settings
         double precision,       intent(in),    dimension(settings%nTotal,settings%chain_length)                      :: baby_points
@@ -685,7 +686,7 @@ module nested_sampling_module
         do while(i_live<=stack_size)
             if( live_points(settings%l0,i_live) < late_likelihood ) then
 
-                if(settings%calculate_posterior) then
+                if(settings%calculate_posterior .and. random_real() < 1d0/settings%thin_posterior) then
                     ! Add the discarded point to the posterior array
                     posterior_point(1)  = live_points(settings%l0,i_live) + late_logweight
                     posterior_point(2)  = live_points(settings%l0,i_live)

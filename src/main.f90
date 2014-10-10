@@ -127,7 +127,8 @@ program main
 
     ! posterior calculation
     settings%nmax_posterior       = 1000000                  !max number of posterior points
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%thin_posterior       = 2*14
 
     ! reading and writing
     settings%read_resume          = .false.                  !whether or not to resume from file
