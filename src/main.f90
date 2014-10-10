@@ -88,7 +88,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 2                  ! Dimensionality of the space
+    settings%nDims= 20                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -129,7 +129,7 @@ program main
 
     ! posterior calculation
     settings%nmax_posterior       = 1000000                  !max number of posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
 
     ! reading and writing
     settings%read_resume          = .false.                  !whether or not to resume from file
@@ -148,9 +148,9 @@ program main
     loglike = loglikelihood(theta,phi,0)
 
     ! Sort out the grades
-    !settings%chain_length= allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) )
+    settings%chain_length= allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) )
     !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
-    !settings%nstack               = settings%nlive*settings%chain_length*2
+    settings%nstack               = settings%nlive*settings%chain_length*2
     !settings%chain_length= allocate_grades(settings%grades)
 
 

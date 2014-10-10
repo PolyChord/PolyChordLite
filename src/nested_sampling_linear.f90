@@ -78,6 +78,7 @@ module nested_sampling_linear_module
         double precision, allocatable, dimension(:) :: evidence_vec
 
 
+        logical :: baby_made
         logical :: resume=.false.
         ! Means to be calculated
         double precision :: mean_likelihood_calls
@@ -102,7 +103,11 @@ module nested_sampling_linear_module
         send_start=nprocs-1
 #endif
 
+#ifdef MPI
+        if(myrank==0) call write_opening_statement(settings) 
+#else
         call write_opening_statement(settings) 
+#endif
 
         ! Check to see whether there's a resume file present, and record in the
         ! variable 'resume'
@@ -110,7 +115,6 @@ module nested_sampling_linear_module
 
         ! Check if we actually want to resume
         resume = settings%read_resume .and. resume
-        if(resume .and. settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
 
 
         !======= 1) Initialisation =====================================
@@ -126,6 +130,8 @@ module nested_sampling_linear_module
 #ifdef MPI
             if(myrank==root) then
 #endif
+            if(settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
+
             ! If there is a resume file present, then load the live points from that
             open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
 
@@ -144,7 +150,6 @@ module nested_sampling_linear_module
 #endif
 
         else !(not resume)
-
             ! Otherwise generate them anew:
             live_points = GenerateLivePoints(loglikelihood,priors,settings)
 #ifdef MPI
@@ -157,7 +162,7 @@ module nested_sampling_linear_module
 
             ! Otherwise compute the average loglikelihood and initialise the evidence vector accordingly
             evidence_vec = logzero
-            evidence_vec(4) = logsumexp(live_points(settings%l0,:)) - log(settings%nlive+0d0)
+            evidence_vec(4) = logsumexp(live_points(settings%l0,:settings%nlive)) - log(settings%nlive+0d0)
 
             mean_likelihood_calls = 1d0
             total_likelihood_calls = settings%nlive
@@ -229,8 +234,6 @@ module nested_sampling_linear_module
                 first_loop=.false.
             end do
 
-        write(*,'(<settings%nTotal>E13.4)') live_points(:,:stack_size)
-        write(*,*) '----------------------------'
 
 
 #ifdef MPI
@@ -238,9 +241,11 @@ module nested_sampling_linear_module
                 ! (2) Recieve newly generated baby point from any slave
                 call MPI_RECV(baby_points,settings%nTotal*settings%chain_length,&
                     MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+                baby_made=.true.
             else
                 mpi_status(MPI_SOURCE)=send_start
                 send_start=send_start-1
+                baby_made=.false.
             end if
 
             ! Send a seed point back to that slave
@@ -283,7 +288,7 @@ module nested_sampling_linear_module
             ! The new likelihood is the last point
             baby_likelihood  = baby_points(settings%l0,settings%chain_length)
 
-            if(baby_likelihood>late_likelihood) then
+            if(baby_likelihood>late_likelihood .and. baby_made) then
 
                 ! (3) Calculate the new evidence (and check to see if we're accurate enough)
                 more_samples_needed = KeetonEvidence(settings,baby_likelihood,late_likelihood,ndead,evidence_vec)
@@ -344,10 +349,22 @@ module nested_sampling_linear_module
         output_info(4) = total_likelihood_calls
         output_info(5) = output_info(1)+prior_log_volume(priors)
 
-
         call write_final_results(output_info,settings%feedback,priors)
 
 #ifdef MPI
+
+        ! Kill off the final slaves
+        ! If we're done, then clean up by receiving the last piece of
+        ! data from each node (and throw it away) and then send a kill signal back to it
+        do send_start=1,nprocs-1
+            call MPI_RECV(baby_points,settings%nTotal*settings%chain_length, &
+                MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,mpi_status,mpierror)
+            call MPI_SEND(seed_point,settings%nTotal, &
+                MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),ENDTAG,MPI_COMM_WORLD,mpierror)
+        end do
+
+
+
         else !(myrank/=root)
             
             do while(.true.)
@@ -397,7 +414,7 @@ module nested_sampling_linear_module
     function GenerateLivePoints(loglikelihood,priors,settings) result(live_points)
         use mpi_module 
         use priors_module,    only: prior
-        use settings_module,  only: program_settings,live_type
+        use settings_module,  only: program_settings,live_type,blank_type
         use random_module,   only: random_reals
         use utils_module,    only: logzero
         use calculate_module, only: calculate_point
@@ -426,7 +443,7 @@ module nested_sampling_linear_module
         integer :: nprocs
         integer :: active_procs
 
-        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
+        double precision, dimension(settings%nTotal,settings%nstack) :: live_points
 
         !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
         ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
@@ -441,6 +458,8 @@ module nested_sampling_linear_module
 
         integer :: tag
 
+        integer :: nlike
+
         nprocs = mpi_size()  ! Get the number of MPI procedures
         myrank = mpi_rank()  ! Get the MPI label of the current processor
 
@@ -454,6 +473,7 @@ module nested_sampling_linear_module
             ! The root node just recieves data from all other processors
             active_procs=nprocs-1
             i_live=0
+            nlike=0
             do while(active_procs>0) 
 
                 ! Recieve a point from any slave
@@ -464,7 +484,11 @@ module nested_sampling_linear_module
                 if(live_point(settings%l0)>logzero .and. i_live<settings%nlive) then
                     i_live=i_live+1
                     live_points(:,i_live) = live_point
+                    live_points(settings%nlike,i_live) = live_points(settings%nlike,i_live) + nlike
                     if(settings%write_live) call write_phys_live_points(settings,live_points(:,:i_live),i_live)
+                    nlike=0
+                else
+                    nlike = nlike+live_point(settings%nlike)
                 end if
 
                 ! If we still need more points, send a signal to have another go
@@ -480,22 +504,24 @@ module nested_sampling_linear_module
             end do
 
 
+            ! Set the initial trial values of the chords as the diagonal of the hypercube
+            live_points(settings%last_chord,:) = sqrt(settings%nDims+0d0)
+
+
+            ! Set the likelihood contours to logzero for now
+            live_points(settings%l1,:) = logzero
+
+            ! These are all true live points
+            live_points(settings%point_type,:settings%nlive) = live_type
+            live_points(settings%point_type,settings%nlive+1:) = blank_type
+
 
         else
 
             generating_loop: do while(.true.)
 
-                ! No likelihood calculations initially
+                ! Zero the likelihood calls 
                 live_point(settings%nlike) = 0
-
-                ! Set the initial trial values of the chords as the diagonal of the hypercube
-                live_point(settings%last_chord) = sqrt(settings%nDims+0d0)
-
-                ! This will be a 'real' point
-                live_point(settings%point_type) = live_type
-
-                ! Set the likelihood contours to logzero for now
-                live_point(settings%l1) = logzero
 
                 ! Generate a random hypercube coordinate
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
@@ -527,7 +553,7 @@ module nested_sampling_linear_module
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
     function GenerateLivePoints(loglikelihood,priors,settings) result(live_points)
         use priors_module,    only: prior
-        use settings_module,  only: program_settings,live_type
+        use settings_module,  only: program_settings,live_type,blank_type
         use random_module,    only: random_reals
         use utils_module,     only: logzero
         use calculate_module, only: calculate_point
@@ -552,7 +578,7 @@ module nested_sampling_linear_module
 
         !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
         ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
+        double precision, dimension(settings%nTotal,settings%nstack) :: live_points
 
         ! Loop variable
         integer i_live
@@ -582,7 +608,8 @@ module nested_sampling_linear_module
         live_points(settings%l1,:) = logzero
 
         ! These are all true live points
-        live_points(settings%point_type,:) = live_type
+        live_points(settings%point_type,:settings%nlive) = live_type
+        live_points(settings%point_type,settings%nlive+1:) = blank_type
 
 
     end function GenerateLivePoints
@@ -626,19 +653,21 @@ module nested_sampling_linear_module
         ! Update the late likelihood
         late_likelihood = live_points(settings%l0,late_index(1))
 
-        ! Add the discarded point to the posterior array
-        posterior_point(1)  = live_points(settings%l0,late_index(1)) + late_logweight
-        posterior_point(2)  = live_points(settings%l0,late_index(1))
-        posterior_point(2+1:2+settings%nDims) = live_points(settings%p0:settings%p1,late_index(1))
-        posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,late_index(1))
+        if(settings%calculate_posterior) then
+            ! Add the discarded point to the posterior array
+            posterior_point(1)  = live_points(settings%l0,late_index(1)) + late_logweight
+            posterior_point(2)  = live_points(settings%l0,late_index(1))
+            posterior_point(2+1:2+settings%nDims) = live_points(settings%p0:settings%p1,late_index(1))
+            posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,late_index(1))
+
+            nposterior=nposterior+1
+            posterior_array(:,nposterior) = posterior_point
+        end if
 
         ! Replace the late point with the new baby point
         live_points(:,late_index(1)) = baby_points(:,settings%chain_length)
 
 
-        nposterior=nposterior+1
-        posterior_array(:,nposterior) = posterior_point
- 
         ! Add the remaining baby points to the end of the array, and update the stack size
         stack_size=stack_size+settings%chain_length-1
         live_points(:,stack_size-settings%chain_length+2:stack_size) = baby_points(:,:settings%chain_length-1)
@@ -651,14 +680,16 @@ module nested_sampling_linear_module
         do while(i_live<=stack_size)
             if( live_points(settings%l0,i_live) < late_likelihood ) then
 
-                ! Add the discarded point to the posterior array
-                posterior_point(1)  = live_points(settings%l0,i_live) + late_logweight
-                posterior_point(2)  = live_points(settings%l0,i_live)
-                posterior_point(2+1:2+settings%nDims) = live_points(settings%p0:settings%p1,i_live)
-                posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,i_live)
+                if(settings%calculate_posterior) then
+                    ! Add the discarded point to the posterior array
+                    posterior_point(1)  = live_points(settings%l0,i_live) + late_logweight
+                    posterior_point(2)  = live_points(settings%l0,i_live)
+                    posterior_point(2+1:2+settings%nDims) = live_points(settings%p0:settings%p1,i_live)
+                    posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,i_live)
 
-                nposterior=nposterior+1
-                posterior_array(:,nposterior) = posterior_point
+                    nposterior=nposterior+1
+                    posterior_array(:,nposterior) = posterior_point
+                end if
 
                 ! Overwrite the discarded point with a point from the end...
                 live_points(:,i_live) = live_points(:,stack_size)
@@ -669,26 +700,28 @@ module nested_sampling_linear_module
             end if
         end do
 
-        if(nposterior>settings%nmax_posterior) write(*,*) 'over the top'
+        if(settings%calculate_posterior) then
+            if(nposterior>settings%nmax_posterior) write(*,*) 'over the top'
 
-        ! Clean out the posterior array
+            ! Clean out the posterior array
 
-        ! Find the maximum weighted posterior point
-        max_logweight = maxval(posterior_array(1,:nposterior))
+            ! Find the maximum weighted posterior point
+            max_logweight = maxval(posterior_array(1,:nposterior))
 
-        lognmax_posterior = log(settings%nmax_posterior+0d0)
+            lognmax_posterior = log(settings%nmax_posterior+0d0)
 
-        i_live=1
-        do while(i_live<=nposterior)
-            if( posterior_array(1,i_live) - max_logweight + lognmax_posterior < 0 ) then
-                ! Overwrite the discarded point with a point from the end...
-                posterior_array(:,i_live) = posterior_array(:,nposterior)
-                ! ...and reduce the stack size
-                nposterior=nposterior-1
-            else
-                i_live=i_live+1
-            end if
-        end do
+            i_live=1
+            do while(i_live<=nposterior)
+                if( posterior_array(1,i_live) - max_logweight + lognmax_posterior < 0 ) then
+                    ! Overwrite the discarded point with a point from the end...
+                    posterior_array(:,i_live) = posterior_array(:,nposterior)
+                    ! ...and reduce the stack size
+                    nposterior=nposterior-1
+                else
+                    i_live=i_live+1
+                end if
+            end do
+        end if
 
         live_points(settings%last_chord,:) = live_points(settings%last_chord,:)/  (1d0+1d0/(settings%nDims*settings%nlive) )
 
