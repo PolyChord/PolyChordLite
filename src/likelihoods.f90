@@ -2,7 +2,7 @@
 
 module example_likelihoods
     use utils_module,    only: logzero,TwoPi,stdout_unit,Hypergeometric1F1,Hypergeometric2F1,Pochhammer 
-    use mpi_module
+    use mpi
 
     contains
 
@@ -501,6 +501,8 @@ module example_likelihoods
 
         double precision, parameter :: sigma = 0.01 ! width of peak
 
+        integer :: mpierror
+
 
         nDims = size(theta)
 
@@ -555,7 +557,6 @@ module example_likelihoods
     function gaussian_loglikelihood_cluster(theta,phi,context)
         use random_module, only: random_reals
         use utils_module,  only: logsumexp
-        use mpi_module
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -580,6 +581,7 @@ module example_likelihoods
         double precision, parameter :: sigma = 0.01 ! width of peak
         integer, parameter :: num_peaks = 10
         integer :: i !iterator
+        integer :: mpierror
 
         nDims=size(theta)
 

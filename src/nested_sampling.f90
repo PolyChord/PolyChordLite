@@ -1,5 +1,6 @@
 module nested_sampling_module
-    use utils_module,      only: flag_blank,flag_gestating,flag_waiting  
+    use mpi
+
     implicit none
 
     integer, parameter :: RUNTAG=0
@@ -21,7 +22,6 @@ module nested_sampling_module
         use random_module,     only: random_integer
 
         use grades_module,     only: calc_graded_choleskys
-        use mpi_module
 
         implicit none
 
@@ -96,6 +96,7 @@ module nested_sampling_module
         integer :: myrank
         integer :: root
         logical :: linear_mode
+        integer :: mpierror
 
         ! Get the number of MPI procedures
         call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
@@ -406,7 +407,6 @@ module nested_sampling_module
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
     function GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root) result(live_points)
-        use mpi_module 
         use priors_module,    only: prior
         use settings_module,  only: program_settings,live_type,blank_type
         use random_module,   only: random_reals
@@ -440,6 +440,7 @@ module nested_sampling_module
         integer :: myrank
         integer :: nprocs
         integer :: active_procs
+        integer :: mpierror
 
         double precision, dimension(settings%nTotal,settings%nstack) :: live_points
 

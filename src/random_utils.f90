@@ -15,7 +15,7 @@ module random_module
     use mkl_vsl_type
     use mkl_vsl
 
-    use mpi_module
+    use mpi
 
     implicit none           
 
@@ -57,6 +57,7 @@ module random_module
 
         integer :: errcode ! Error code
         integer :: seed    ! seed to be generated from system time
+        integer :: mpierror
 
         ! The choice of random number generator
         ! In this case it is a fast mersenne twister

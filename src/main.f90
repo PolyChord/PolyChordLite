@@ -9,8 +9,8 @@ program main
     use example_likelihoods
     use feedback_module
     use grades_module,          only: allocate_grades,calc_chain_length
-    use mpi_module
     use nested_sampling_module,   only: NestedSampling
+    use mpi
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
@@ -37,6 +37,8 @@ program main
     integer, allocatable, dimension(:) :: physical_indices
     integer :: i
 
+    integer :: mpierror
+
 
 
     interface
@@ -61,7 +63,7 @@ program main
 
 
     ! ------- (1a) Initialise MPI threads -------------------
-    call mpi_initialise()
+    call MPI_INIT(mpierror)
 
     ! ------- (1b) Initialise random number generator -------
     ! Initialise the random number generator with the system time
@@ -157,7 +159,7 @@ program main
     ! De-initialise the random number generator 
     call deinitialise_random()
 
-    call mpi_finalise()
+    call MPI_FINALIZE(mpierror)
 
 
 end program main
