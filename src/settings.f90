@@ -57,7 +57,7 @@ module settings_module
         integer :: update_resume = 10000
 
         !> The number of chords to draw
-        integer :: chain_length
+        integer :: num_repeats
 
         !> Whether or not to resume from file
         logical :: read_resume = .true.

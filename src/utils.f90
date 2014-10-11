@@ -321,9 +321,17 @@ module utils_module
         double precision, intent(in),dimension(nDims,nDims) :: matrix
         double precision, dimension(nDims,nDims) :: cholesky
         integer :: errcode
+        integer :: i,j
 
         cholesky = matrix
-        call dpotrf ('U',nDims,cholesky,nDims,errcode)
+        call dpotrf ('L',nDims,cholesky,nDims,errcode)
+
+        ! Zero out the upper half
+        do i=1,nDims
+            do j=i+1,nDims
+                cholesky(i,j)=0d0
+            end do
+        end do
 
     end function calc_cholesky
 

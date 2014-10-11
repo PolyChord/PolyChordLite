@@ -6,7 +6,7 @@ module chordal_module
     function SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)  result(baby_points)
         use priors_module, only: prior
         use settings_module, only: program_settings,phantom_type,live_type
-        use random_module, only: random_skewed_direction
+        use random_module, only: random_orthonormal_basis
         use utils_module, only: distance
 
         implicit none
@@ -35,10 +35,12 @@ module chordal_module
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(settings%nTotal,settings%chain_length)   :: baby_points
+        double precision,    dimension(settings%nTotal,settings%nDims*settings%num_repeats)   :: baby_points
 
         
         double precision, dimension(settings%nTotal)   :: previous_point
+
+        double precision, dimension(settings%nDims,settings%nDims) :: basis
 
 
         ! ------- Local Variables -------
@@ -47,8 +49,10 @@ module chordal_module
         double precision  :: max_chord
 
         double precision :: step_length
+        double precision :: modulus
 
         integer :: i_chords
+        integer :: i_repeat
 
 
         ! Start the baby point at the seed point
@@ -66,28 +70,36 @@ module chordal_module
         ! Initialise max_chord at 0
         max_chord = 0
 
-        do i_chords=1,settings%chain_length
 
-            ! Get a new random direction
-            nhat = random_skewed_direction(settings%nDims,cholesky)
+        do i_repeat=1,settings%num_repeats
+            ! Generate a random orthonormal set of vectors
+            basis = random_orthonormal_basis(settings%nDims)
 
-            ! Generate a new random point along the chord defined by the previous point and nhat
-            baby_points(:,i_chords) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
+            do i_chords=(i_repeat-1)*settings%nDims+1,(i_repeat-1)*settings%nDims+settings%nDims
+                ! Get a new random direction
+                nhat =basis(:,1+mod(i_chords-1,settings%nDims) ) 
+                nhat = matmul(cholesky,nhat)
+                modulus = sqrt(dot_product(nhat,nhat))
+                nhat = nhat/modulus
 
-            ! Set this one to be a phantom point
-            baby_points(settings%point_type,i_chords) = phantom_type
+                ! Generate a new random point along the chord defined by the previous point and nhat
+                baby_points(:,i_chords) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
 
-            ! keep track of the largest chord
-            max_chord = max(max_chord,baby_points(settings%last_chord,i_chords))
+                ! Set this one to be a phantom point
+                baby_points(settings%point_type,i_chords) = phantom_type
 
-            ! Save this for the next loop
-            previous_point = baby_points(:,i_chords)
+                ! keep track of the largest chord
+                max_chord = max(max_chord,baby_points(settings%last_chord,i_chords))
 
-            ! Give the previous point the step length
-            previous_point(settings%last_chord) = step_length
+                ! Save this for the next loop
+                previous_point = baby_points(:,i_chords)
 
-            ! Zero the likelihood calls
-            previous_point(settings%nlike) = 0
+                ! Give the previous point the step length
+                previous_point(settings%last_chord) = step_length
+
+                ! Zero the likelihood calls
+                previous_point(settings%nlike) = 0
+            end do
 
         end do
 
@@ -96,7 +108,7 @@ module chordal_module
         baby_points(settings%last_chord,:) = max_chord
 
         ! Set the last one to be a live type
-        baby_points(settings%point_type,settings%chain_length) = live_type
+        baby_points(settings%point_type,size(baby_points,2)) = live_type
 
     end function SliceSampling
 
@@ -133,7 +145,7 @@ module chordal_module
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(settings%nTotal,settings%chain_length)   :: baby_points
+        double precision,    dimension(settings%nTotal,settings%nDims*settings%num_repeats)   :: baby_points
 
         
         double precision, dimension(settings%nTotal)   :: previous_point
@@ -173,7 +185,7 @@ module chordal_module
         baby_points(settings%last_chord,:) = max_chord
 
         ! Set the last one to be a live type
-        baby_points(settings%point_type,settings%chain_length) = live_type
+        baby_points(settings%point_type,size(baby_points,2)) = live_type
 
 
         contains
@@ -265,7 +277,7 @@ module chordal_module
         ! ------- Outputs -------
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(settings%nTotal,settings%chain_length)   :: baby_points
+        double precision, dimension(settings%nTotal,settings%nDims*settings%num_repeats)   :: baby_points
 
         
         double precision, dimension(settings%nTotal)   :: previous_point
@@ -298,7 +310,7 @@ module chordal_module
         ! Initialise max_chord at 0
         max_chord = 0
 
-        do i_chords=1,settings%chain_length
+        do i_chords=1,settings%nDims*settings%num_repeats
 
             random_pair=random_distinct_integers(size(live_points,2),2)
 
@@ -331,7 +343,7 @@ module chordal_module
         baby_points(settings%last_chord,:) = max_chord
 
         ! Set the last one to be a live type
-        baby_points(settings%point_type,settings%chain_length) = live_type
+        baby_points(settings%point_type,size(baby_points,2)) = live_type
 
     end function AdaptiveParallelSliceSampling
 

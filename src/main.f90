@@ -86,7 +86,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20                 ! Dimensionality of the space
+    settings%nDims= 20                ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -113,11 +113,11 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 25*settings%nDims        !number of live points
-    settings%chain_length         = settings%nDims           !Number of chords to draw
+    settings%num_repeats          = 1                        !Number of chords to draw
 
-    settings%sampler              = sampler_graded_covariance
+    !settings%sampler              = sampler_graded_covariance
 
-    settings%nstack               = settings%nlive*settings%chain_length*2
+    settings%nstack               = settings%nlive*settings%nDims*settings%num_repeats*1.3
     settings%file_root            =  'chains/test'           !file root
     settings%feedback             =  1                       !degree of feedback
 
@@ -127,7 +127,7 @@ program main
 
     ! posterior calculation
     settings%nmax_posterior       = 1000000                  !max number of posterior points
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
     settings%thin_posterior       = 2*14
 
     ! reading and writing
@@ -142,10 +142,10 @@ program main
     loglike = loglikelihood(theta,phi,0)
 
     ! Sort out the grades
-    call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
-    settings%chain_length= calc_chain_length(settings%grades)
+    !call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
+    !settings%chain_length= calc_chain_length(settings%grades)
     !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
-    settings%nstack               = settings%nlive*settings%chain_length*1.3
+    !settings%nstack               = settings%nlive*settings%chain_length*1.3
 
 
     ! ======= (2) Perform Nested Sampling =======
