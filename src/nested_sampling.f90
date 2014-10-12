@@ -62,7 +62,7 @@ module nested_sampling_module
         logical :: more_samples_needed
 
         ! The new-born baby points
-        double precision, dimension(settings%nTotal,settings%nDims*settings%num_repeats)   :: baby_points
+        double precision, dimension(settings%nTotal,settings%num_babies)   :: baby_points
         double precision :: baby_likelihood
 
         ! The recently dead point
@@ -214,8 +214,8 @@ module nested_sampling_module
                     case(sampler_graded_covariance)
                         ! Calculate the covariance matrix
                         covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
-                        ! Calculate the graded cholesky matrices
-                        choleskys = calc_graded_choleskys(covmat,settings%nDims,settings%grades)
+                        ! Calculate the cholesky decomposition
+                        cholesky = calc_cholesky(covmat,settings%nDims)
 
                     end select
                 end if
@@ -241,7 +241,7 @@ module nested_sampling_module
                         baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
                     case(sampler_graded_covariance)
-                        baby_points = GradedSliceSampling(loglikelihood,priors,settings,choleskys,seed_point)
+                        baby_points = GradedSliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
                     case(sampler_adaptive_parallel)
                         baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
@@ -252,7 +252,7 @@ module nested_sampling_module
                 else
                     if(send_start==0) then
                         ! (2) Recieve newly generated baby point from any slave
-                        call MPI_RECV(baby_points,settings%nTotal*settings%nDims*settings%num_repeats,&
+                        call MPI_RECV(baby_points,settings%nTotal*settings%num_babies,&
                             MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
                         baby_made=.true.
                     else
@@ -284,7 +284,7 @@ module nested_sampling_module
                 end if
 
                 ! The new likelihood is the last point
-                baby_likelihood  = baby_points(settings%l0,size(baby_points,2))
+                baby_likelihood  = baby_points(settings%l0,settings%num_babies)
 
                 if(baby_likelihood>late_likelihood .and. baby_made) then
 
@@ -336,7 +336,7 @@ module nested_sampling_module
                 ! If we're done, then clean up by receiving the last piece of
                 ! data from each node (and throw it away) and then send a kill signal back to it
                 do send_start=1,nprocs-1
-                    call MPI_RECV(baby_points,settings%nTotal*settings%nDims*settings%num_repeats, &
+                    call MPI_RECV(baby_points,settings%nTotal*settings%num_babies, &
                         MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
                     call MPI_SEND(seed_point,settings%nTotal, &
                         MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),ENDTAG,mpi_communicator,mpierror)
@@ -392,7 +392,7 @@ module nested_sampling_module
                 end select
 
                 ! Send the baby points back
-                call MPI_SEND(baby_points,settings%nTotal*settings%nDims*settings%num_repeats, &
+                call MPI_SEND(baby_points,settings%nTotal*settings%num_babies, &
                     MPI_DOUBLE_PRECISION,root,RUNTAG,mpi_communicator,mpierror)
 
             end do
@@ -617,7 +617,7 @@ module nested_sampling_module
         use random_module, only: random_real
         implicit none
         type(program_settings), intent(in)                                                                           :: settings
-        double precision,       intent(in),    dimension(settings%nTotal,settings%nDims*settings%num_repeats)        :: baby_points
+        double precision,       intent(in),    dimension(settings%nTotal,settings%num_babies)                        :: baby_points
         double precision,       intent(inout), dimension(settings%nTotal,settings%nstack)                            :: live_points
         integer,                intent(inout)                                                                        :: stack_size
         double precision,       intent(inout), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
@@ -667,16 +667,16 @@ module nested_sampling_module
         end if
 
         ! Replace the late point with the new baby point
-        live_points(:,late_index(1)) = baby_points(:,size(baby_points,2))
+        live_points(:,late_index(1)) = baby_points(:,settings%num_babies)
 
 
         ! Add the remaining baby points to the end of the array, and update the stack size
-        stack_size=stack_size+size(baby_points,2)-1
+        stack_size=stack_size+settings%num_babies-1
         if(stack_size>settings%nstack) then
             write(*,'(" Stack size too small, increase nstack ")')
             call MPI_ABORT(mpi_communicator,errorcode,mpierror)
         end if
-        live_points(:,stack_size-size(baby_points,2)+2:stack_size) = baby_points(:,:size(baby_points,2)-1)
+        live_points(:,stack_size-settings%num_babies+2:stack_size) = baby_points(:,:settings%num_babies-1)
 
         ! Now run through the stack and strip out any points that are less
         ! than the new late_likelihood, replacing them with points drawn from

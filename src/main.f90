@@ -86,7 +86,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20                ! Dimensionality of the space
+    settings%nDims= 10                ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -117,16 +117,17 @@ program main
 
     !settings%sampler              = sampler_graded_covariance
 
-    settings%nstack               = settings%nlive*settings%nDims*settings%num_repeats*1.3
+    settings%num_babies           = settings%nDims*settings%num_repeats
+    settings%nstack               = settings%nlive*settings%num_babies*2
     settings%file_root            =  'chains/test'           !file root
-    settings%feedback             =  1                       !degree of feedback
+    settings%feedback             = -1                       !degree of feedback
 
     ! stopping criteria
-    settings%precision_criterion  =  1d-3                    !degree of precision in answer
+    settings%precision_criterion  =  1d-8                    !degree of precision in answer
     settings%max_ndead            =  100000                  !maximum number of samples
 
     ! posterior calculation
-    settings%nmax_posterior       = 1000000                  !max number of posterior points
+    settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
     settings%thin_posterior       = 2*14
 
@@ -134,7 +135,7 @@ program main
     settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
-    settings%write_live           = .true.                   !write out the physical live points?
+    settings%write_live           = .false.                  !write out the physical live points?
 
 
     ! Initialise the loglikelihood
@@ -151,7 +152,10 @@ program main
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 
-    output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
+    do i=1,10000
+        output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
+        write(*,'(2E17.8)') output_info(5),output_info(2)
+    end do
 
 
 

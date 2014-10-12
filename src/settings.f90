@@ -56,6 +56,9 @@ module settings_module
         !> How often to update the resume file
         integer :: update_resume = 10000
 
+        !> How many baby points are generated in each iteration
+        integer :: num_babies
+
         !> The number of chords to draw
         integer :: num_repeats
 
