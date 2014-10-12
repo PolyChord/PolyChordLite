@@ -8,7 +8,7 @@ program main
     use random_module,          only: initialise_random, deinitialise_random
     use example_likelihoods
     use feedback_module
-    use grades_module,          only: allocate_grades,calc_chain_length
+    use grades_module,          only: allocate_grades,calc_num_babies
     use nested_sampling_module,   only: NestedSampling
     use mpi
 
@@ -86,7 +86,7 @@ program main
     loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 10                ! Dimensionality of the space
+    settings%nDims= 20                ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -115,15 +115,15 @@ program main
     settings%nlive                = 25*settings%nDims        !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw
 
-    !settings%sampler              = sampler_graded_covariance
+    settings%sampler              = sampler_graded_covariance
 
     settings%num_babies           = settings%nDims*settings%num_repeats
     settings%nstack               = settings%nlive*settings%num_babies*2
     settings%file_root            =  'chains/test'           !file root
-    settings%feedback             = -1                       !degree of feedback
+    settings%feedback             = 1                        !degree of feedback
 
     ! stopping criteria
-    settings%precision_criterion  =  1d-8                    !degree of precision in answer
+    settings%precision_criterion  =  1d-3                    !degree of precision in answer
     settings%max_ndead            =  100000                  !maximum number of samples
 
     ! posterior calculation
@@ -143,16 +143,19 @@ program main
     loglike = loglikelihood(theta,phi,0)
 
     ! Sort out the grades
-    !call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
+    call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
+    settings%grades%num_repeats(2)= 5
+    settings%grades%num_repeats(4)= 5
+    settings%num_babies = calc_num_babies(settings%grades)
     !settings%chain_length= calc_chain_length(settings%grades)
     !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
-    !settings%nstack               = settings%nlive*settings%chain_length*1.3
+    settings%nstack               = settings%nlive*settings%num_babies*2
 
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 
-    do i=1,10000
+    do i=1,1
         output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
         write(*,'(2E17.8)') output_info(5),output_info(2)
     end do

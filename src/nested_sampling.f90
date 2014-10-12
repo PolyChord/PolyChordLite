@@ -21,8 +21,6 @@ module nested_sampling_module
         use chordal_module,    only: SliceSampling,GradedSliceSampling,AdaptiveParallelSliceSampling
         use random_module,     only: random_integer
 
-        use grades_module,     only: calc_graded_choleskys
-
         implicit none
 
         interface
@@ -273,7 +271,7 @@ module nested_sampling_module
                             MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
 
                     case(sampler_graded_covariance)
-                        call MPI_SEND(choleskys,settings%nDims*settings%nDims*settings%grades%num_grades,&
+                        call MPI_SEND(cholesky,settings%nDims*settings%nDims,&
                             MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
 
                     case(sampler_adaptive_parallel)
@@ -380,7 +378,7 @@ module nested_sampling_module
                     baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
                 case(sampler_graded_covariance)
-                    call MPI_RECV(choleskys,settings%nDims*settings%nDims*settings%grades%num_grades, &
+                    call MPI_RECV(cholesky,settings%nDims*settings%nDims, &
                         MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
                     baby_points = GradedSliceSampling(loglikelihood,priors,settings,choleskys,seed_point)
 
@@ -615,6 +613,7 @@ module nested_sampling_module
     function update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls,mpi_communicator) result(more_samples_needed)
         use settings_module,   only: program_settings,live_type
         use random_module, only: random_real
+        use utils_module, only: stdout_unit
         implicit none
         type(program_settings), intent(in)                                                                           :: settings
         double precision,       intent(in),    dimension(settings%nTotal,settings%num_babies)                        :: baby_points
@@ -660,7 +659,7 @@ module nested_sampling_module
 
             nposterior=nposterior+1
             if(nposterior>settings%nmax_posterior) then
-                write(*,'(" Too many posterior points. Consider increasing nmax_posterior ")')
+                write(stdout_unit,'(" Too many posterior points. Consider increasing nmax_posterior ")')
                 call MPI_ABORT(mpi_communicator,errorcode,mpierror)
             end if
             posterior_array(:,nposterior) = posterior_point
@@ -673,8 +672,8 @@ module nested_sampling_module
         ! Add the remaining baby points to the end of the array, and update the stack size
         stack_size=stack_size+settings%num_babies-1
         if(stack_size>settings%nstack) then
-            write(*,'(" Stack size too small, increase nstack ")')
-            call MPI_ABORT(mpi_communicator,errorcode,mpierror)
+            write(stdout_unit,'(" Stack size too small, increase nstack ")')
+            call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
         end if
         live_points(:,stack_size-settings%num_babies+2:stack_size) = baby_points(:,:settings%num_babies-1)
 
@@ -695,8 +694,8 @@ module nested_sampling_module
 
                     nposterior=nposterior+1
                     if(nposterior>settings%nmax_posterior) then
-                        write(*,'(" Too many posterior points. Consider increasing nmax_posterior ")')
-                        call MPI_ABORT(mpi_communicator,errorcode,mpierror)
+                        write(stdout_unit,'(" Too many posterior points. Consider increasing nmax_posterior ")')
+                        call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
                     end if
                     posterior_array(:,nposterior) = posterior_point
                 end if

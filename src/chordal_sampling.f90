@@ -75,7 +75,7 @@ module chordal_module
             ! Generate a random orthonormal set of vectors
             basis = random_orthonormal_basis(settings%nDims)
 
-            do i_chords=(i_repeat-1)*settings%nDims+1,(i_repeat-1)*settings%nDims+settings%nDims
+            do i_chords=(i_repeat-1)*settings%nDims+1,i_repeat*settings%nDims
                 ! Get a new random direction
                 nhat =basis(:,1+mod(i_chords-1,settings%nDims) ) 
                 nhat = matmul(cholesky,nhat)
@@ -162,7 +162,11 @@ module chordal_module
         double precision :: modulus
 
         integer :: i_chords
-        integer :: i_repeat
+
+        integer, dimension(sum(settings%grades%num_repeats)) :: grade_order
+        integer :: i
+        integer :: ind
+        integer :: grade_nDims
 
 
         ! Start the baby point at the seed point
@@ -180,29 +184,37 @@ module chordal_module
         ! Initialise max_chord at 0
         max_chord = 0
 
+        ! Generate a choice of grades
+        grade_order = generate_grade_order(settings%grades)
 
-        do i_repeat=1,settings%num_repeats
+        ind=0
+        do i=1,sum(settings%grades%num_repeats) 
+            grade_nDims = settings%grades%grade_nDims(grade_order(i))
             ! Generate a random orthonormal set of vectors
-            basis = random_orthonormal_basis(settings%nDims)
+            basis = 0d0
+            basis(:grade_nDims,:grade_nDims) = random_orthonormal_basis(grade_nDims)
 
-            do i_chords=(i_repeat-1)*settings%nDims+1,(i_repeat-1)*settings%nDims+settings%nDims
+            do i_chords=1,grade_nDims
                 ! Get a new random direction
-                nhat =basis(:,1+mod(i_chords-1,settings%nDims) ) 
+                nhat = 0d0
+                nhat(settings%grades%grade_index(grade_order(i)):) = basis(:,i_chords)
                 nhat = matmul(cholesky,nhat)
                 modulus = sqrt(dot_product(nhat,nhat))
                 nhat = nhat/modulus
 
                 ! Generate a new random point along the chord defined by the previous point and nhat
-                baby_points(:,i_chords) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
+                baby_points(:,ind+i_chords) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
 
                 ! Set this one to be a phantom point
-                baby_points(settings%point_type,i_chords) = phantom_type
+                baby_points(settings%point_type,ind+i_chords) = phantom_type
+
+                if(grade_order(i)/=settings%grades%min_grade) baby_points(settings%nlike,ind+i_chords) = 0
 
                 ! keep track of the largest chord
-                max_chord = max(max_chord,baby_points(settings%last_chord,i_chords))
+                max_chord = max(max_chord,baby_points(settings%last_chord,ind+i_chords))
 
                 ! Save this for the next loop
-                previous_point = baby_points(:,i_chords)
+                previous_point = baby_points(:,ind+i_chords)
 
                 ! Give the previous point the step length
                 previous_point(settings%last_chord) = step_length
@@ -210,6 +222,8 @@ module chordal_module
                 ! Zero the likelihood calls
                 previous_point(settings%nlike) = 0
             end do
+
+            ind=ind+grade_nDims
 
         end do
 
@@ -222,6 +236,28 @@ module chordal_module
 
     end function GradedSliceSampling
 
+
+    function generate_grade_order(grades) result(grade_order)
+        use random_module, only: shuffle_deck
+        use grades_module, only: parameter_grades
+        implicit none
+
+        type(parameter_grades),intent(in) :: grades
+        integer, dimension(sum(grades%num_repeats)) :: grade_order
+
+        integer :: ind
+        integer :: i
+
+        ind=0
+        do i=grades%min_grade,grades%max_grade
+            grade_order(ind+1:ind+grades%num_repeats(i)) = i
+            ind = ind+grades%num_repeats(i)
+        end do
+
+        ! Randomise all but the upper half
+        call shuffle_deck(grade_order(2:))
+
+    end function generate_grade_order
 
 
 
