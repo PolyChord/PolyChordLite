@@ -40,8 +40,6 @@ module chordal_module
         
         double precision, dimension(settings%nTotal)   :: previous_point
 
-        double precision, dimension(settings%nDims,settings%nDims) :: basis
-
 
         ! ------- Local Variables -------
         double precision,    dimension(settings%nDims)   :: nhat
@@ -50,16 +48,12 @@ module chordal_module
         double precision  :: max_chord
 
         double precision :: step_length
-        double precision :: modulus
 
         integer :: i_babies
 
         double precision,dimension(settings%grades%min_grade:settings%grades%max_grade) :: timers
         double precision :: time0,time1
         integer, dimension(settings%num_babies) :: grade_order
-        integer :: i
-        integer :: ind
-        integer :: grade_nDims
 
         logical do_timing
 
@@ -115,7 +109,7 @@ module chordal_module
             baby_points(settings%point_type,i_babies) = phantom_type
 
             if(settings%do_grades) then
-                if(grade_order(i)/=settings%grades%min_grade) baby_points(settings%nlike,i_babies) = 0
+                if(grade_order(i_babies)/=settings%grades%min_grade) baby_points(settings%nlike,i_babies) = 0
             end if
 
             ! keep track of the largest chord
@@ -145,7 +139,7 @@ module chordal_module
         baby_points(settings%last_chord,:) = max_chord
 
         ! Set the last one to be a live type
-        baby_points(settings%point_type,size(baby_points,2)) = live_type
+        baby_points(settings%point_type,settings%num_babies) = live_type
 
     end function SliceSampling
 
@@ -173,10 +167,10 @@ module chordal_module
         ! Initialise at 0
         nhats=0d0
 
+        i_babies=1
         if(present(grade_order)) then
 
             ! Generate a sequence of random bases
-            i_babies=1
             do i_grade=settings%grades%min_grade,settings%grades%max_grade
 
                 grade_nDims = settings%grades%grade_nDims(i_grade)
@@ -191,6 +185,7 @@ module chordal_module
 
             end do
         else
+            ! Generate a sequence of random bases
             do i_repeat=1, settings%num_repeats
                 nhats(:,i_babies:i_babies+settings%nDims-1) = random_orthonormal_basis(settings%nDims)
                 i_babies = i_babies + settings%nDims
