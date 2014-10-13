@@ -6,7 +6,7 @@ module chordal_module
     function SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)  result(baby_points)
         use priors_module, only: prior
         use settings_module, only: program_settings,phantom_type,live_type
-        use random_module, only: random_orthonormal_basis
+        use random_module, only: random_orthonormal_basis,random_real
         use utils_module, only: distance
 
         implicit none
@@ -45,14 +45,23 @@ module chordal_module
 
         ! ------- Local Variables -------
         double precision,    dimension(settings%nDims)   :: nhat
+        double precision,    dimension(settings%nDims,settings%num_babies)   :: nhats
 
         double precision  :: max_chord
 
         double precision :: step_length
         double precision :: modulus
 
-        integer :: i_chords
-        integer :: i_repeat
+        integer :: i_babies
+
+        double precision,dimension(settings%grades%min_grade:settings%grades%max_grade) :: timers
+        double precision :: time0,time1
+        integer, dimension(settings%num_babies) :: grade_order
+        integer :: i
+        integer :: ind
+        integer :: grade_nDims
+
+        logical do_timing
 
 
         ! Start the baby point at the seed point
@@ -70,38 +79,66 @@ module chordal_module
         ! Initialise max_chord at 0
         max_chord = 0
 
+        if(settings%do_timing) then
+            do_timing = random_real()<1d0/settings%print_timing
+        else
+            do_timing=.false.
+        end if
 
-        do i_repeat=1,settings%num_repeats
-            ! Generate a random orthonormal set of vectors
-            basis = random_orthonormal_basis(settings%nDims)
+        ! Generate a choice of nhats in the orthogonalised space
+        if(settings%do_grades) then
+            nhats = generate_nhats(settings,grade_order)
+            if(do_timing) timers=0
+        else
+            nhats = generate_nhats(settings)
+        end if
 
-            do i_chords=(i_repeat-1)*settings%nDims+1,i_repeat*settings%nDims
-                ! Get a new random direction
-                nhat =basis(:,1+mod(i_chords-1,settings%nDims) ) 
-                nhat = matmul(cholesky,nhat)
-                modulus = sqrt(dot_product(nhat,nhat))
-                nhat = nhat/modulus
+        ! Transform to the unit hypercube
+        nhats = matmul(cholesky,nhats)
 
-                ! Generate a new random point along the chord defined by the previous point and nhat
-                baby_points(:,i_chords) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
 
-                ! Set this one to be a phantom point
-                baby_points(settings%point_type,i_chords) = phantom_type
 
-                ! keep track of the largest chord
-                max_chord = max(max_chord,baby_points(settings%last_chord,i_chords))
+        do i_babies=1,settings%num_babies
+            ! Zero the timer
+            if(do_timing) call cpu_time(time0)
 
-                ! Save this for the next loop
-                previous_point = baby_points(:,i_chords)
+            ! Get a new random direction
+            nhat = nhats(:,i_babies)
 
-                ! Give the previous point the step length
-                previous_point(settings%last_chord) = step_length
+            ! Normalise it
+            nhat = nhat/sqrt(dot_product(nhat,nhat))
 
-                ! Zero the likelihood calls
-                previous_point(settings%nlike) = 0
-            end do
+            ! Generate a new random point along the chord defined by the previous point and nhat
+            baby_points(:,i_babies) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
 
+            ! Set this one to be a phantom point
+            baby_points(settings%point_type,i_babies) = phantom_type
+
+            if(settings%do_grades) then
+                if(grade_order(i)/=settings%grades%min_grade) baby_points(settings%nlike,i_babies) = 0
+            end if
+
+            ! keep track of the largest chord
+            max_chord = max(max_chord,baby_points(settings%last_chord,i_babies))
+
+            ! Save this for the next loop
+            previous_point = baby_points(:,i_babies)
+
+            ! Give the previous point the step length
+            previous_point(settings%last_chord) = step_length
+
+            ! Zero the likelihood calls
+            previous_point(settings%nlike) = 0
+
+            ! Note the time for this grade
+            if(do_timing) then
+                call cpu_time(time1)
+                if(settings%do_grades) timers(grade_order(i_babies)) = timers(grade_order(i_babies)) + time1-time0
+            end if
         end do
+        if(do_timing) then 
+            write(*, '( <settings%grades%max_grade-settings%grades%min_grade+1>(F8.2, "% "), "(Total time:", F8.2, "seconds)" )') timers/sum(timers)*100, sum(timers)
+        end if
 
         ! Hand back the maximum chord this time to be used as the step length
         ! next time this point is drawn
@@ -112,152 +149,66 @@ module chordal_module
 
     end function SliceSampling
 
-
-    function GradedSliceSampling(loglikelihood,priors,settings,cholesky,seed_point)  result(baby_points)
-        use priors_module, only: prior
-        use settings_module, only: program_settings,phantom_type,live_type
-        use random_module, only: random_orthonormal_basis
-        use utils_module, only: distance
-
+    function generate_nhats(settings,grade_order) result(nhats)
+        use settings_module, only: program_settings
+        use random_module, only: random_orthonormal_basis,shuffle_deck
         implicit none
-        interface
-            function loglikelihood(theta,phi,context)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
-                double precision :: loglikelihood
-            end function
-        end interface
-
-        ! ------- Inputs -------
-        !> The prior information
-        type(prior), dimension(:), intent(in) :: priors
-
-        !> program settings (mostly useful to pass on the number of live points)
         class(program_settings), intent(in) :: settings
 
-        !> The seed point
-        double precision, intent(in), dimension(settings%nTotal)   :: seed_point
+        integer, dimension(settings%num_babies), intent(out),optional :: grade_order
 
-        !> The directions of the chords
-        double precision, intent(in), dimension(settings%nDims,settings%nDims) :: cholesky
-
-        ! ------- Outputs -------
-        !> The newly generated point, plus the loglikelihood bound that
-        !! generated it
-        double precision,    dimension(settings%nTotal,settings%num_babies)   :: baby_points
-
-        
-        double precision, dimension(settings%nTotal)   :: previous_point
-
-        double precision, dimension(settings%nDims,settings%nDims) :: basis
+        double precision,    dimension(settings%nDims,settings%num_babies)   :: nhats
 
 
-        ! ------- Local Variables -------
-        double precision,    dimension(settings%nDims)   :: nhat
-
-        double precision  :: max_chord
-
-        double precision :: step_length
-        double precision :: modulus
-
-        integer :: i_chords
-
-        integer, dimension(sum(settings%grades%num_repeats)) :: grade_order
-        integer :: i
-        integer :: ind
+        integer :: i_grade
         integer :: grade_nDims
+        integer :: grade_index
+        integer :: num_repeats
+        integer :: i_repeat
 
+        integer :: i_babies
 
-        ! Start the baby point at the seed point
-        previous_point = seed_point
+        integer, dimension(settings%num_babies) :: deck
 
-        ! Set the number of likelihood evaluations to zero
-        previous_point(settings%nlike) = 0
+        ! Initialise at 0
+        nhats=0d0
 
-        ! Record the step length
-        step_length = seed_point(settings%last_chord)
+        if(present(grade_order)) then
 
-        ! Give the start point the step length
-        previous_point(settings%last_chord) = step_length
+            ! Generate a sequence of random bases
+            i_babies=1
+            do i_grade=settings%grades%min_grade,settings%grades%max_grade
 
-        ! Initialise max_chord at 0
-        max_chord = 0
+                grade_nDims = settings%grades%grade_nDims(i_grade)
+                grade_index = settings%grades%grade_index(i_grade) 
+                num_repeats = settings%grades%num_repeats(i_grade) 
 
-        ! Generate a choice of grades
-        grade_order = generate_grade_order(settings%grades)
+                do i_repeat=1, num_repeats
+                    nhats(grade_index:grade_index+grade_nDims-1,i_babies:i_babies+grade_nDims-1) = random_orthonormal_basis(grade_nDims)
+                    grade_order(i_babies:i_babies+grade_nDims-1)=i_grade
+                    i_babies = i_babies + grade_nDims
+                end do
 
-        ind=0
-        do i=1,sum(settings%grades%num_repeats) 
-            grade_nDims = settings%grades%grade_nDims(grade_order(i))
-            ! Generate a random orthonormal set of vectors
-            basis = 0d0
-            basis(:grade_nDims,:grade_nDims) = random_orthonormal_basis(grade_nDims)
-
-            do i_chords=1,grade_nDims
-                ! Get a new random direction
-                nhat = 0d0
-                nhat(settings%grades%grade_index(grade_order(i)):) = basis(:,i_chords)
-                nhat = matmul(cholesky,nhat)
-                modulus = sqrt(dot_product(nhat,nhat))
-                nhat = nhat/modulus
-
-                ! Generate a new random point along the chord defined by the previous point and nhat
-                baby_points(:,ind+i_chords) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
-
-                ! Set this one to be a phantom point
-                baby_points(settings%point_type,ind+i_chords) = phantom_type
-
-                if(grade_order(i)/=settings%grades%min_grade) baby_points(settings%nlike,ind+i_chords) = 0
-
-                ! keep track of the largest chord
-                max_chord = max(max_chord,baby_points(settings%last_chord,ind+i_chords))
-
-                ! Save this for the next loop
-                previous_point = baby_points(:,ind+i_chords)
-
-                ! Give the previous point the step length
-                previous_point(settings%last_chord) = step_length
-
-                ! Zero the likelihood calls
-                previous_point(settings%nlike) = 0
             end do
+        else
+            do i_repeat=1, settings%num_repeats
+                nhats(:,i_babies:i_babies+settings%nDims-1) = random_orthonormal_basis(settings%nDims)
+                i_babies = i_babies + settings%nDims
+            end do
+        end if
 
-            ind=ind+grade_nDims
+        ! Create a shuffled deck
+        deck = (/ (i_babies,i_babies=1,settings%num_babies) /)
+        call shuffle_deck(deck(2:settings%num_babies))
 
-        end do
+        ! Shuffle the nhats
+        nhats = nhats(:,deck)
 
-        ! Hand back the maximum chord this time to be used as the step length
-        ! next time this point is drawn
-        baby_points(settings%last_chord,:) = max_chord
-
-        ! Set the last one to be a live type
-        baby_points(settings%point_type,size(baby_points,2)) = live_type
-
-    end function GradedSliceSampling
+        ! Shuffle the grade order
+        if(present(grade_order)) grade_order = grade_order(deck)
 
 
-    function generate_grade_order(grades) result(grade_order)
-        use random_module, only: shuffle_deck
-        use grades_module, only: parameter_grades
-        implicit none
-
-        type(parameter_grades),intent(in) :: grades
-        integer, dimension(sum(grades%num_repeats)) :: grade_order
-
-        integer :: ind
-        integer :: i
-
-        ind=0
-        do i=grades%min_grade,grades%max_grade
-            grade_order(ind+1:ind+grades%num_repeats(i)) = i
-            ind = ind+grades%num_repeats(i)
-        end do
-
-        ! Randomise all but the upper half
-        call shuffle_deck(grade_order(2:))
-
-    end function generate_grade_order
+    end function generate_nhats
 
 
 
@@ -463,11 +414,13 @@ module chordal_module
             ! The output finish point
             double precision,    dimension(S%nTotal)   :: x1
 
-            double precision :: random_temp
+            double precision :: LRdistance
+            
+            ! Find the distance between L and R
+            LRdistance = distance(L(S%h0:S%h1),R(S%h0:S%h1))
 
             ! Draw a random point within L and R
-            random_temp =random_real()
-            x1(S%h0:S%h1) = L(S%h0:S%h1)*(1d0-random_temp) + random_temp * R(S%h0:S%h1)
+            x1(S%h0:S%h1) = L(S%h0:S%h1)+ random_real() * LRdistance * nhat 
 
             ! Pass on the number of likelihood calls that have been made
             x1(S%nlike) = L(S%nlike) + R(S%nlike)

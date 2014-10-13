@@ -14,7 +14,7 @@ module utils_module
     !> The default double format
     !!
     !! should have write statements along the lines of 
-    !! write(unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)')
+    !! write(*,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)')
     integer, parameter, dimension(2) :: DBL_FMT=(/17,8/)
 
     !> unit for stdout

@@ -18,7 +18,7 @@ module nested_sampling_module
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
         use evidence_module,   only: KeetonEvidence
-        use chordal_module,    only: SliceSampling,GradedSliceSampling,AdaptiveParallelSliceSampling
+        use chordal_module,    only: SliceSampling,AdaptiveParallelSliceSampling
         use random_module,     only: random_integer
 
         implicit none
@@ -52,7 +52,6 @@ module nested_sampling_module
 
         double precision, dimension(settings%nDims,settings%nDims) :: covmat
         double precision, dimension(settings%nDims,settings%nDims) :: cholesky
-        double precision, dimension(settings%nDims,settings%nDims,settings%grades%min_grade:settings%grades%max_grade) :: choleskys
 
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
         integer :: nposterior
@@ -189,6 +188,16 @@ module nested_sampling_module
             ! Write a resume file before we start
             if(settings%write_resume) call write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
 
+            select case(settings%sampler)
+
+            case(sampler_covariance)
+                ! Calculate the covariance matrix
+                covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
+                ! Calculate the cholesky decomposition
+                cholesky = calc_cholesky(covmat,settings%nDims)
+
+            end select
+
 
             !======= 2) Main loop body =====================================
 
@@ -204,12 +213,6 @@ module nested_sampling_module
                     select case(settings%sampler)
 
                     case(sampler_covariance)
-                        ! Calculate the covariance matrix
-                        covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
-                        ! Calculate the cholesky decomposition
-                        cholesky = calc_cholesky(covmat,settings%nDims)
-
-                    case(sampler_graded_covariance)
                         ! Calculate the covariance matrix
                         covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
                         ! Calculate the cholesky decomposition
@@ -238,9 +241,6 @@ module nested_sampling_module
                     case(sampler_covariance)
                         baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
-                    case(sampler_graded_covariance)
-                        baby_points = GradedSliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
-
                     case(sampler_adaptive_parallel)
                         baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
 
@@ -267,10 +267,6 @@ module nested_sampling_module
                     select case(settings%sampler)
 
                     case(sampler_covariance)
-                        call MPI_SEND(cholesky,settings%nDims*settings%nDims,&
-                            MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
-
-                    case(sampler_graded_covariance)
                         call MPI_SEND(cholesky,settings%nDims*settings%nDims,&
                             MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
 
@@ -376,11 +372,6 @@ module nested_sampling_module
                     call MPI_RECV(cholesky,settings%nDims*settings%nDims, &
                         MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
                     baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
-
-                case(sampler_graded_covariance)
-                    call MPI_RECV(cholesky,settings%nDims*settings%nDims, &
-                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
-                    baby_points = GradedSliceSampling(loglikelihood,priors,settings,choleskys,seed_point)
 
                 case(sampler_adaptive_parallel)
                     call MPI_RECV(live_points,settings%nTotal*settings%nstack, &

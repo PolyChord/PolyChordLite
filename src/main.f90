@@ -115,8 +115,6 @@ program main
     settings%nlive                = 25*settings%nDims        !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw
 
-    settings%sampler              = sampler_graded_covariance
-
     settings%num_babies           = settings%nDims*settings%num_repeats
     settings%nstack               = settings%nlive*settings%num_babies*2
     settings%file_root            =  'chains/test'           !file root
@@ -150,6 +148,8 @@ program main
     !settings%chain_length= calc_chain_length(settings%grades)
     !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
     settings%nstack               = settings%nlive*settings%num_babies*2
+    settings%do_grades=.true.
+    settings%do_timing=.false.
 
 
     ! ======= (2) Perform Nested Sampling =======
