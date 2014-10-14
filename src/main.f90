@@ -83,7 +83,7 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => gaussian_loglikelihood_corr
+    loglikelihood => twin_gaussian_loglikelihood
 
     ! (ii) Set the dimensionality
     settings%nDims= 20                ! Dimensionality of the space
@@ -98,8 +98,8 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    minimums=0.5-1d-2*5
-    maximums=0.5+1d-2*5
+    minimums=0.5-1d-2*10
+    maximums=0.5+1d-2*10
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -121,13 +121,10 @@ program main
     settings%feedback             = 1                        !degree of feedback
 
     ! stopping criteria
-    settings%precision_criterion  =  1d-3                    !degree of precision in answer
-    settings%max_ndead            =  100000                  !maximum number of samples
-
+    settings%precision_criterion  =  1d-3                    !degree of precision in answer settings%max_ndead            =  100000                  !maximum number of samples 
     ! posterior calculation
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
-    settings%thin_posterior       = 2*14
 
     ! reading and writing
     settings%read_resume          = .false.                  !whether or not to resume from file
@@ -135,21 +132,29 @@ program main
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%write_live           = .false.                  !write out the physical live points?
 
+    settings%do_clustering = .true.
+    settings%SNN_k = settings%nDims*2
+    settings%SNN_kt = 1
+
 
     ! Initialise the loglikelihood
     allocate(theta(settings%nDims),phi(settings%nDerived))
     loglike = loglikelihood(theta,phi,0)
 
     ! Sort out the grades
-    call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
-    settings%grades%num_repeats(2)= 5
-    settings%grades%num_repeats(4)= 5
-    settings%num_babies = calc_num_babies(settings%grades)
+    !call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
+    !settings%grades%num_repeats(2)= 5
+    !settings%grades%num_repeats(4)= 5
+    !settings%num_babies = calc_num_babies(settings%grades)
     !settings%chain_length= calc_chain_length(settings%grades)
     !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
-    settings%nstack               = settings%nlive*settings%num_babies*2
-    settings%do_grades=.true.
+    !settings%nstack               = settings%nlive*settings%num_babies*2
+    !settings%do_grades=.true.
     settings%do_timing=.false.
+    !nest_settings%thin_posterior = max(0d0,&
+    !    nest_settings%grades%num_repeats(1)*nest_settings%grades%grade_nDims(1)/&
+    !    (sum(nest_settings%grades%num_repeats*nest_settings%grades%grade_nDims)+0d0)&
+    !    )
 
 
     ! ======= (2) Perform Nested Sampling =======

@@ -44,7 +44,7 @@ module settings_module
         integer :: nmax_posterior = 100000
 
         !> What to thin the posterior points by
-        integer :: thin_posterior = 1
+        double precision :: thin_posterior = 1
 
         !> Whether or not to calculate the posterior
         logical :: calculate_posterior = .true.
@@ -111,6 +111,9 @@ module settings_module
         !!
         integer :: point_type
 
+        !> The cluster number
+        integer :: cluster
+
         !> likelihood index
         !!
         !! This is the likelihood evaluated at the position of the live point
@@ -133,6 +136,13 @@ module settings_module
 
         !> Which sampling algorithm to use
         integer :: sampler = sampler_covariance
+
+        !> Whether to do clustering or not
+        logical :: do_clustering = .true.
+
+        !> Clustering parameters
+        integer :: SNN_k
+        integer :: SNN_kt =1
 
     end type program_settings
 
@@ -159,9 +169,10 @@ module settings_module
         settings%nlike=settings%d1+1
         settings%last_chord=settings%nlike+1
         settings%point_type=settings%last_chord+1
+        settings%cluster=settings%point_type+1
 
         ! Loglikelihood indices
-        settings%l0=settings%point_type+1
+        settings%l0=settings%cluster+1
         settings%l1=settings%l0+1
 
         ! Total number of parameters

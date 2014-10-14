@@ -20,6 +20,7 @@ module nested_sampling_module
         use evidence_module,   only: KeetonEvidence
         use chordal_module,    only: SliceSampling,AdaptiveParallelSliceSampling
         use random_module,     only: random_integer
+        use cluster_module,    only: SNN_clustering
 
         implicit none
 
@@ -210,6 +211,8 @@ module nested_sampling_module
 
                 ! (1) Update the covariance matrix of the distribution of live points
                 if(mod(ndead,settings%nlive) .eq.0) then
+                    if(settings%do_clustering) call SNN_clustering(settings,live_points(:,:stack_size),stack_size)
+
                     select case(settings%sampler)
 
                     case(sampler_covariance)
@@ -217,6 +220,7 @@ module nested_sampling_module
                         covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
                         ! Calculate the cholesky decomposition
                         cholesky = calc_cholesky(covmat,settings%nDims)
+
 
                     end select
                 end if
@@ -676,7 +680,7 @@ module nested_sampling_module
         do while(i_live<=stack_size)
             if( live_points(settings%l0,i_live) < late_likelihood ) then
 
-                if(settings%calculate_posterior .and. random_real() < 1d0/settings%thin_posterior) then
+                if(settings%calculate_posterior .and. random_real() < settings%thin_posterior) then
                     ! Add the discarded point to the posterior array
                     posterior_point(1)  = live_points(settings%l0,i_live) + late_logweight
                     posterior_point(2)  = live_points(settings%l0,i_live)
