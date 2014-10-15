@@ -142,7 +142,6 @@ module settings_module
 
         !> Clustering parameters
         integer :: SNN_k
-        integer :: SNN_kt =1
 
     end type program_settings
 

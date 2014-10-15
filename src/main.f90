@@ -133,8 +133,7 @@ program main
     settings%write_live           = .false.                  !write out the physical live points?
 
     settings%do_clustering = .true.
-    settings%SNN_k = settings%nDims*2
-    settings%SNN_kt = 1
+    settings%SNN_k = settings%nDims
 
 
     ! Initialise the loglikelihood

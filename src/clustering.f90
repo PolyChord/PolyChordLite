@@ -38,8 +38,9 @@ module cluster_module
 
                 ! If they're not in the same cluster already...
                 if(cluster_orig_i/=cluster_orig_j) then
-                    ! ... check to see if they share kt nearest neighbors and each other
-                    if(same_cluster(knn(:,i_point),knn(:,j_point),settings%SNN_kt) ) then
+                    ! ... check to see if they're within each others k nearest
+                    ! neighbors
+                    if(same_cluster(knn(:,i_point),knn(:,j_point)) ) then
                         ! If they do, then set all of the points in the higher
                         ! cluster type to the points in the lower cluster type
                         if(cluster_orig_i>cluster_orig_j) then
@@ -109,11 +110,10 @@ module cluster_module
     end function compute_knn
 
 
-    function same_cluster(knn1,knn2,threshold)
+    function same_cluster(knn1,knn2)
         implicit none
         integer,intent(in), dimension(:)          :: knn1
         integer,intent(in), dimension(size(knn1)) :: knn2
-        integer,intent(in)                        :: threshold
 
         logical :: same_cluster
 
@@ -130,17 +130,7 @@ module cluster_module
         same_list = minloc(knn2,mask=knn2==knn1(1))
         if(same_list(1)==0) return
 
-        matches=0
-        do i=1,size(knn1)
-            do j=1,size(knn1)
-                if(knn1(i)==knn2(j)) matches = matches+1
-                if(matches>=threshold) then
-                    same_cluster=.true.
-                    return
-                end if
-            end do
-        end do
-
+        same_cluster=.true.
 
 
     end function same_cluster
