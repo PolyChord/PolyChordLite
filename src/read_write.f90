@@ -94,7 +94,7 @@ module read_write_module
         open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err) 
 
         do i_live=1,stack_size
-            write(write_phys_unit,'(<settings%nDims+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(settings%p0:settings%p1,i_live),live_points(settings%l0,i_live)
+            write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(settings%p0:settings%d1,i_live),live_points(settings%l0,i_live)
         end do
 
         close(write_phys_unit)

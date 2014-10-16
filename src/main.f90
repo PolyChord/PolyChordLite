@@ -98,8 +98,8 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    minimums=0.5-1d-2*10
-    maximums=0.5+1d-2*10
+    minimums=0.5-1d-2*20
+    maximums=0.5+1d-2*20
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -130,7 +130,7 @@ program main
     settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
-    settings%write_live           = .false.                  !write out the physical live points?
+    settings%write_live           = .true.                   !write out the physical live points?
 
     settings%do_clustering = .true.
     settings%SNN_k = settings%nDims
@@ -141,14 +141,12 @@ program main
     loglike = loglikelihood(theta,phi,0)
 
     ! Sort out the grades
-    !call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
-    !settings%grades%num_repeats(2)= 5
-    !settings%grades%num_repeats(4)= 5
-    !settings%num_babies = calc_num_babies(settings%grades)
-    !settings%chain_length= calc_chain_length(settings%grades)
-    !settings%chain_length= allocate_grades(settings%grades,(/1,1,2,2,3,3,4,4/) )
-    !settings%nstack               = settings%nlive*settings%num_babies*2
-    !settings%do_grades=.true.
+    call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
+    settings%grades%num_repeats(2)= 5
+    settings%grades%num_repeats(4)= 5
+    settings%num_babies = calc_num_babies(settings%grades)
+    settings%nstack               = settings%nlive*settings%num_babies*2
+    settings%do_grades=.true.
     settings%do_timing=.false.
     !nest_settings%thin_posterior = max(0d0,&
     !    nest_settings%grades%num_repeats(1)*nest_settings%grades%grade_nDims(1)/&
