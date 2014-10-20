@@ -312,7 +312,6 @@ module nested_sampling_module
                         write(stdout_unit,'("efficiency= ", F20.2                )') mean_likelihood_calls
                         write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
                         write(stdout_unit,'("")')
-                        call sleep(1)
                     end if
 
                     ! (6) Update the resume and posterior files every update_resume iterations, or at program termination

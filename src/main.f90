@@ -84,10 +84,10 @@ program main
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
     !       - twin_gaussian_loglikelihood 
-    loglikelihood => rastrigin_loglikelihood 
+    loglikelihood => twin_gaussian_loglikelihood 
 
     ! (ii) Set the dimensionality
-    settings%nDims= 2                 ! Dimensionality of the space
+    settings%nDims= 20                ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -101,8 +101,6 @@ program main
 
     minimums=0.5-1d-2*20
     maximums=0.5+1d-2*20
-    minimums=-5
-    maximums=5
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -115,7 +113,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 2500*settings%nDims       !number of live points
+    settings%nlive                = 25*settings%nDims        !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw
 
     settings%num_babies           = settings%nDims*settings%num_repeats
@@ -136,7 +134,7 @@ program main
     settings%write_live           = .true.                   !write out the physical live points?
 
     settings%do_clustering = .true.
-    settings%SNN_k = settings%nDims*100
+    settings%SNN_k = settings%nDims
 
 
     ! Initialise the loglikelihood
