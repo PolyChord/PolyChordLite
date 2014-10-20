@@ -4,7 +4,7 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array)
+    subroutine write_resume_file(settings,live_points,stack_size,phantom_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array)
         use utils_module, only: DBL_FMT,write_resume_unit
         use settings_module, only: program_settings
 
@@ -13,7 +13,8 @@ module read_write_module
 
         type(program_settings), intent(in) :: settings
         integer,intent(in) :: stack_size
-        double precision,intent(in), dimension(settings%nTotal,settings%nstack) :: live_points
+        double precision,intent(in), dimension(settings%nTotal,settings%nlive) :: live_points
+        double precision,intent(in), dimension(settings%nTotal,settings%nstack) :: phantom_points
         integer :: nposterior
         integer :: total_likelihood_calls
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
@@ -28,10 +29,12 @@ module read_write_module
         ! termination during this write
         open(write_resume_unit,file=trim(settings%file_root) // '.resume', action='write', iostat=i_err) 
 
+        ! Live points
+        write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points
         ! Stack size
         write(write_resume_unit,'(I)') stack_size
-        ! Live points
-        write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(:,:stack_size)
+        ! Phantom points
+        write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') phantom_points(:,:stack_size)
         ! Evidence vector
         write(write_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
         ! number of dead points
@@ -78,14 +81,13 @@ module read_write_module
 
     end subroutine write_posterior_file
 
-    subroutine write_phys_live_points(settings,live_points,stack_size)
+    subroutine write_phys_live_points(settings,live_points)
         use utils_module, only: DBL_FMT,write_phys_unit
         use settings_module, only: program_settings
         implicit none
 
         type(program_settings), intent(in) :: settings
-        integer, intent(in) :: stack_size
-        double precision, intent(in), dimension(settings%nTotal,stack_size) :: live_points
+        double precision, intent(in), dimension(settings%nTotal,settings%nstack) :: live_points
 
         integer i_err
 
@@ -93,7 +95,7 @@ module read_write_module
 
         open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err) 
 
-        do i_live=1,stack_size
+        do i_live=1,settings%nlive
             write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(settings%p0:settings%d1,i_live),live_points(settings%l0,i_live)
         end do
 

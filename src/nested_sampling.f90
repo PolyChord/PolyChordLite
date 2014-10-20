@@ -49,7 +49,8 @@ module nested_sampling_module
 
 
         !> This is a very important array.
-        double precision, dimension(settings%nTotal,settings%nstack) :: live_points
+        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
+        double precision, dimension(settings%nTotal,settings%nstack) :: phantom_points
 
         double precision, dimension(settings%nDims,settings%nDims) :: covmat
         double precision, dimension(settings%nDims,settings%nDims) :: cholesky
@@ -134,8 +135,9 @@ module nested_sampling_module
                 ! If there is a resume file present, then load the live points from that
                 open(read_resume_unit,file=trim(settings%file_root)//'.resume',action='read')
 
+                read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points
                 read(read_resume_unit,'(I)') stack_size
-                read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(:,:stack_size)
+                read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') phantom_points(:,:stack_size)
                 read(read_resume_unit,'(<size(evidence_vec)>E<DBL_FMT(1)>.<DBL_FMT(2)>)') evidence_vec
                 read(read_resume_unit,'(I)') ndead
                 read(read_resume_unit,'(I)') total_likelihood_calls
@@ -183,17 +185,17 @@ module nested_sampling_module
 
 
             ! Initialise the late likelihood
-            late_likelihood = minval(live_points(settings%l0,:stack_size), mask=nint(live_points(settings%point_type,:stack_size))==live_type) 
+            late_likelihood = minval(live_points(settings%l0,:))
 
 
             ! Write a resume file before we start
-            if(settings%write_resume) call write_resume_file(settings,stack_size,live_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
+            if(settings%write_resume) call write_resume_file(settings,live_points,stack_size,phantom_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
 
             select case(settings%sampler)
 
             case(sampler_covariance)
                 ! Calculate the covariance matrix
-                covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
+                covmat = calc_covmat( (/ live_points(settings%h0:settings%h1,:),phantom_points(settings%h0:settings%h1,:stack_size)/), settings%nDims,stack_size+settings%nlive )
                 ! Calculate the cholesky decomposition
                 cholesky = calc_cholesky(covmat,settings%nDims)
 
@@ -211,18 +213,19 @@ module nested_sampling_module
 
                 ! (1) Update the covariance matrix of the distribution of live points
                 if(mod(ndead,settings%nlive) .eq.0) then
-                    if(settings%do_clustering) call SNN_clustering(settings,live_points(:,:stack_size),stack_size)
 
                     select case(settings%sampler)
 
                     case(sampler_covariance)
                         ! Calculate the covariance matrix
-                        covmat = calc_covmat( live_points(settings%h0:settings%h1,:stack_size), settings%nDims,stack_size )
+                        covmat = calc_covmat( (/ live_points(settings%h0:settings%h1,:),phantom_points(settings%h0:settings%h1,:stack_size)/), settings%nDims,stack_size+settings%nlive )
                         ! Calculate the cholesky decomposition
                         cholesky = calc_cholesky(covmat,settings%nDims)
 
 
                     end select
+
+                    if(settings%do_clustering) call SNN_clustering(settings,live_points)
                 end if
 
 
@@ -230,7 +233,7 @@ module nested_sampling_module
                 ! Select a seed point for the generator
                 first_loop = .true.
                 do while (seed_point(settings%l0)<late_likelihood .or. nint(seed_point(settings%point_type)) /= live_type .or. first_loop)
-                    seed_point = live_points(:,random_integer(stack_size))
+                    seed_point = live_points(:,random_integer(settings%nlive))
                     ! Record the likelihood bound which this seed will generate from
                     seed_point(settings%l1) = late_likelihood
                     first_loop=.false.
@@ -297,11 +300,11 @@ module nested_sampling_module
                     !     4) re-calculate stack_size and nposterior
                     !     5) update the late_likelihood
                     !     6) Update ndead
-                    more_samples_needed = more_samples_needed .or. update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls,mpi_communicator)
+                    more_samples_needed = more_samples_needed .or. update_stacks(settings,baby_points,live_points,stack_size,phantom_points,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls,mpi_communicator)
 
                     ! (5) Feedback to command line every nlive iterations
                     if (settings%feedback>=1 .and. mod(ndead,settings%nlive) .eq.0 ) then
-                        mean_likelihood_calls = sum(live_points(settings%nlike,:stack_size))/(settings%nlive+0d0)
+                        mean_likelihood_calls = sum( (/live_points(settings%nlike,:),phantom_points(settings%nlike,:stack_size) /) )/(settings%nlive+0d0)
                         write(stdout_unit,'("ndead     = ", I20                  )') ndead
                         write(stdout_unit,'("stack size= ", I20, "/", I20        )') stack_size, settings%nstack
                         if(settings%calculate_posterior) &
@@ -309,13 +312,14 @@ module nested_sampling_module
                         write(stdout_unit,'("efficiency= ", F20.2                )') mean_likelihood_calls
                         write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') evidence_vec(1), exp(0.5*evidence_vec(2)-evidence_vec(1)) 
                         write(stdout_unit,'("")')
+                        call sleep(1)
                     end if
 
                     ! (6) Update the resume and posterior files every update_resume iterations, or at program termination
                     if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-                        if(settings%write_resume) call write_resume_file(settings,stack_size,live_points(:,:stack_size),evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
+                        if(settings%write_resume) call write_resume_file(settings,live_points,stack_size,phantom_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
                         if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
-                        if(settings%write_live) call write_phys_live_points(settings,live_points(:,:stack_size),stack_size)
+                        if(settings%write_live) call write_phys_live_points(settings,live_points)
                     end if
 
                     ! If we've put a limit on the maximum number of iterations, then
@@ -431,7 +435,7 @@ module nested_sampling_module
         integer :: active_procs
         integer :: mpierror
 
-        double precision, dimension(settings%nTotal,settings%nstack) :: live_points
+        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
 
         !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
         ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
@@ -475,7 +479,7 @@ module nested_sampling_module
                     i_live=i_live+1
                     live_points(:,i_live) = live_point
                     live_points(settings%nlike,i_live) = live_points(settings%nlike,i_live) + nlike
-                    if(settings%write_live) call write_phys_live_points(settings,live_points(:,:i_live),i_live)
+                    if(settings%write_live) call write_phys_live_points(settings,live_points)
                     nlike=0
                 else
                     nlike = nlike+live_point(settings%nlike)
@@ -567,7 +571,7 @@ module nested_sampling_module
 
         !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
         ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal,settings%nstack) :: live_points
+        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
 
         ! Loop variable
         integer i_live
@@ -605,15 +609,16 @@ module nested_sampling_module
 
 
 
-    function update_stacks(settings,baby_points,live_points,stack_size,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls,mpi_communicator) result(more_samples_needed)
+    function update_stacks(settings,baby_points,live_points,stack_size,phantom_points,posterior_array,nposterior,late_likelihood,ndead,total_likelihood_calls,mpi_communicator) result(more_samples_needed)
         use settings_module,   only: program_settings,live_type
         use random_module, only: random_real
         use utils_module, only: stdout_unit
         implicit none
         type(program_settings), intent(in)                                                                           :: settings
         double precision,       intent(in),    dimension(settings%nTotal,settings%num_babies)                        :: baby_points
-        double precision,       intent(inout), dimension(settings%nTotal,settings%nstack)                            :: live_points
+        double precision,       intent(inout), dimension(settings%nTotal,settings%nlive)                             :: live_points
         integer,                intent(inout)                                                                        :: stack_size
+        double precision,       intent(inout), dimension(settings%nTotal,settings%nstack)                            :: phantom_points
         double precision,       intent(inout), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
         integer,                intent(inout)                                                                        :: nposterior
         double precision,       intent(inout)                                                                        :: late_likelihood
@@ -640,7 +645,7 @@ module nested_sampling_module
         late_logweight = (ndead-1)*log(settings%nlive+0d0) - ndead*log(settings%nlive+1d0)                
 
         ! Start by finding the original lowest likelihood live point (about to be deleted)
-        late_index = minloc(live_points(settings%l0,:stack_size), mask=nint(live_points(settings%point_type,:stack_size))==live_type)
+        late_index = minloc(live_points(settings%l0,:))
 
         ! Update the late likelihood
         late_likelihood = live_points(settings%l0,late_index(1))
@@ -670,7 +675,7 @@ module nested_sampling_module
             write(stdout_unit,'(" Stack size too small, increase nstack ")')
             call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
         end if
-        live_points(:,stack_size-settings%num_babies+2:stack_size) = baby_points(:,:settings%num_babies-1)
+        phantom_points(:,stack_size-settings%num_babies+2:stack_size) = baby_points(:,:settings%num_babies-1)
 
         ! Now run through the stack and strip out any points that are less
         ! than the new late_likelihood, replacing them with points drawn from
@@ -678,14 +683,14 @@ module nested_sampling_module
 
         i_live=1
         do while(i_live<=stack_size)
-            if( live_points(settings%l0,i_live) < late_likelihood ) then
+            if( phantom_points(settings%l0,i_live) < late_likelihood ) then
 
                 if(settings%calculate_posterior .and. random_real() < settings%thin_posterior) then
                     ! Add the discarded point to the posterior array
-                    posterior_point(1)  = live_points(settings%l0,i_live) + late_logweight
-                    posterior_point(2)  = live_points(settings%l0,i_live)
-                    posterior_point(2+1:2+settings%nDims) = live_points(settings%p0:settings%p1,i_live)
-                    posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = live_points(settings%d0:settings%d1,i_live)
+                    posterior_point(1)  = phantom_points(settings%l0,i_live) + late_logweight
+                    posterior_point(2)  = phantom_points(settings%l0,i_live)
+                    posterior_point(2+1:2+settings%nDims) = phantom_points(settings%p0:settings%p1,i_live)
+                    posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = phantom_points(settings%d0:settings%d1,i_live)
 
                     nposterior=nposterior+1
                     if(nposterior>settings%nmax_posterior) then
@@ -696,10 +701,10 @@ module nested_sampling_module
                 end if
 
                 ! Update the total likelihood calls
-                total_likelihood_calls = total_likelihood_calls + live_points(settings%nlike,i_live)
+                total_likelihood_calls = total_likelihood_calls + phantom_points(settings%nlike,i_live)
 
                 ! Overwrite the discarded point with a point from the end...
-                live_points(:,i_live) = live_points(:,stack_size)
+                phantom_points(:,i_live) = phantom_points(:,stack_size)
                 ! ...and reduce the stack size
                 stack_size=stack_size-1
             else
@@ -733,7 +738,7 @@ module nested_sampling_module
 
 
         ! Find the new late likelihood
-        late_likelihood = minval(live_points(settings%l0,:stack_size), mask=nint(live_points(settings%point_type,:stack_size))==live_type) 
+        late_likelihood = minval(live_points(settings%l0,:))
 
         ! Increment the number of dead points
         ndead=ndead+1

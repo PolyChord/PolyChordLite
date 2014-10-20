@@ -333,7 +333,7 @@ module example_likelihoods
         ! The return value
         double precision :: loglikelihood
 
-        loglikelihood =  loglikelihood  -  sum( log(4991.217507308888d0) + theta**2 - A*cos(TwoPi*theta) )
+        loglikelihood =  - sum( log(4991.217507308888d0) + theta**2 - A*cos(TwoPi*theta) )
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then

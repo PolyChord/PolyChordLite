@@ -83,10 +83,11 @@ program main
     !       - eggbox_loglikelihood
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
-    loglikelihood => twin_gaussian_loglikelihood
+    !       - twin_gaussian_loglikelihood 
+    loglikelihood => rastrigin_loglikelihood 
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20                ! Dimensionality of the space
+    settings%nDims= 2                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -100,6 +101,8 @@ program main
 
     minimums=0.5-1d-2*20
     maximums=0.5+1d-2*20
+    minimums=-5
+    maximums=5
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -112,7 +115,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 25*settings%nDims        !number of live points
+    settings%nlive                = 2500*settings%nDims       !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw
 
     settings%num_babies           = settings%nDims*settings%num_repeats
@@ -133,7 +136,7 @@ program main
     settings%write_live           = .true.                   !write out the physical live points?
 
     settings%do_clustering = .true.
-    settings%SNN_k = settings%nDims
+    settings%SNN_k = settings%nDims*100
 
 
     ! Initialise the loglikelihood
@@ -141,12 +144,12 @@ program main
     loglike = loglikelihood(theta,phi,0)
 
     ! Sort out the grades
-    call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
-    settings%grades%num_repeats(2)= 5
-    settings%grades%num_repeats(4)= 5
-    settings%num_babies = calc_num_babies(settings%grades)
-    settings%nstack               = settings%nlive*settings%num_babies*2
-    settings%do_grades=.true.
+    !call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
+    !settings%grades%num_repeats(2)= 5
+    !settings%grades%num_repeats(4)= 5
+    !settings%num_babies = calc_num_babies(settings%grades)
+    !settings%nstack               = settings%nlive*settings%num_babies*2
+    settings%do_grades=.false.
     settings%do_timing=.false.
     !nest_settings%thin_posterior = max(0d0,&
     !    nest_settings%grades%num_repeats(1)*nest_settings%grades%grade_nDims(1)/&
