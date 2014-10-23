@@ -12,15 +12,15 @@ module nested_sampling_module
     !> Main subroutine for computing a generic nested sampling algorithm
     function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
-        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit,calc_cholesky,calc_covmat
+        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit,calc_cholesky,calc_covmat,TwoPi
         use settings_module
         use utils_module,      only: logsumexp
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
         use evidence_module,   only: KeetonEvidence
         use chordal_module,    only: SliceSampling,AdaptiveParallelSliceSampling
-        use random_module,     only: random_integer
-        use cluster_module,    only: SNN_clustering
+        use random_module,     only: random_integer,random_direction
+        use cluster_module,    only: Skilling_clustering
 
         implicit none
 
@@ -94,6 +94,9 @@ module nested_sampling_module
         integer :: root
         logical :: linear_mode
         integer :: mpierror
+
+        integer :: i
+        double precision :: mu1(2), mu2(2), radius,sigma
 
         ! Get the number of MPI procedures
         call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
@@ -224,8 +227,6 @@ module nested_sampling_module
 
 
                     end select
-
-                    if(settings%do_clustering) call SNN_clustering(settings,live_points)
                 end if
 
 
@@ -316,9 +317,22 @@ module nested_sampling_module
 
                     ! (6) Update the resume and posterior files every update_resume iterations, or at program termination
                     if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
+                        if(settings%do_clustering) call Skilling_clustering(settings,live_points,cholesky)
+
                         if(settings%write_resume) call write_resume_file(settings,live_points,stack_size,phantom_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
                         if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  
                         if(settings%write_live) call write_phys_live_points(settings,live_points)
+
+                        open(100, file='chains/circle.dat') 
+                        sigma=0.01
+                        mu1 = (/5d-1 - 10*sigma,5d-1/)
+                        mu2 = (/5d-1 + 10*sigma,5d-1/)
+                        radius = sqrt(-2 *(log(2d0) + late_likelihood + settings%nDims*log( sqrt(TwoPi)* sigma)))*sigma
+                        do i=1,500
+                            write(100,'(2E17.8)') mu1 + random_direction(2)*radius
+                            write(100,'(2E17.8)') mu2 + random_direction(2)*radius
+                        end do
+                        close(100) 
                     end if
 
                     ! If we've put a limit on the maximum number of iterations, then

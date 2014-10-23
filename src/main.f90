@@ -87,7 +87,7 @@ program main
     loglikelihood => twin_gaussian_loglikelihood 
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20                ! Dimensionality of the space
+    settings%nDims= 40               ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors

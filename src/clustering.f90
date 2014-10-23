@@ -6,7 +6,7 @@ module cluster_module
 
 
 
-    subroutine Skilling_clustering(settings,live_points)
+    subroutine Skilling_clustering(settings,live_points,cholesky)
         use settings_module, only: program_settings
         use utils_module, only: logzero,distance2
         use random_module, only: random_distinct_integers
@@ -15,6 +15,7 @@ module cluster_module
 
         type(program_settings), intent(in) :: settings
         double precision, dimension(settings%nTotal,settings%nlive),intent(inout) :: live_points
+        double precision, dimension(settings%nDims,settings%nDims), intent(in) :: cholesky
 
         double precision :: similarity_matrix(settings%nlive,settings%nlive)
         integer :: i,j
@@ -36,15 +37,30 @@ module cluster_module
         
         integer, dimension(settings%nlive) :: random_deck
 
+        double precision, dimension(settings%nDims) :: displacement
+        double precision, dimension(settings%nDims,settings%nDims) :: invcovmat
+        !double precision, dimension(settings%nDims,settings%nDims) :: covmat
+        integer :: info
+
 
         similarity_matrix = logzero
 
+        invcovmat=cholesky
+        call dpotri('L',settings%nDims,invcovmat,settings%nDims,info)
+        do i=1,settings%nDims
+            do j=i+1,settings%nDims
+                invcovmat(i,j) = invcovmat(j,i)
+            end do
+        end do
+        !covmat = matmul(transpose(cholesky),cholesky)
+        !write(*,'(<settings%nDims>I3)') nint(matmul(covmat,invcovmat))
 
 
         ! Start by computing the similarity matrix
         do i=1,settings%nlive
             do j= i+1,settings%nlive
-                similarity_matrix(i,j) = 0.5d0 * log(distance2(live_points(settings%h0:settings%h1,i),live_points(settings%h0:settings%h1,j)))
+                displacement = live_points(settings%h0:settings%h1,i)-live_points(settings%h0:settings%h1,j)
+                similarity_matrix(i,j) = 0.5d0 * log(dot_product(displacement,matmul(invcovmat,displacement)))
                 similarity_matrix(j,i) = similarity_matrix(i,j)
             end do
         end do
