@@ -4,6 +4,123 @@ module cluster_module
     contains
 
 
+
+
+    subroutine Skilling_clustering(settings,live_points)
+        use settings_module, only: program_settings
+        use utils_module, only: logzero,distance2
+        use random_module, only: random_distinct_integers
+
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        double precision, dimension(settings%nTotal,settings%nlive),intent(inout) :: live_points
+
+        double precision :: similarity_matrix(settings%nlive,settings%nlive)
+        integer :: i,j
+
+        double precision :: logsum_d
+        double precision :: logsum_m
+        double precision :: logsum_m_new
+        double precision :: logprod_d
+        double precision :: logprod_d_new
+        double precision :: threshold
+
+        integer :: numsub,numadd 
+        double precision :: logprod_dadd,logprod_dsub
+        logical :: keep_going
+
+        double precision, parameter :: max_clusters=sqrt(1.5d0)
+
+        logical, dimension(settings%nlive) :: cluster
+        
+        integer, dimension(settings%nlive) :: random_deck
+
+
+        similarity_matrix = logzero
+
+
+
+        ! Start by computing the similarity matrix
+        do i=1,settings%nlive
+            do j= i+1,settings%nlive
+                similarity_matrix(i,j) = 0.5d0 * log(distance2(live_points(settings%h0:settings%h1,i),live_points(settings%h0:settings%h1,j)))
+                similarity_matrix(j,i) = similarity_matrix(i,j)
+            end do
+        end do
+
+        ! Compute our threshold
+        logsum_d= log(sum(exp(similarity_matrix)))
+        threshold = logsum_d-log(max_clusters+0d0)*2
+
+        ! Assign them all to the initial cluster
+        cluster = .true.
+
+        ! Initially the sum_mij=0
+        logprod_d = 1
+        logsum_m = logzero
+
+        keep_going=.true.
+
+        do while(keep_going)
+
+            keep_going=.false.
+
+            ! Loop over the points in the cluster
+
+            ! Generate a random ordering to go through
+            random_deck = random_distinct_integers(settings%nlive,settings%nlive)
+
+
+            do j=1,settings%nlive
+                i = random_deck(j)
+                numsub = count(cluster==cluster(i)) - 1
+                numadd = count(cluster/=cluster(i)) + 1
+
+                ! Find the contributions to subtract
+                logprod_dsub = sum(similarity_matrix(:i-1,i),mask=cluster(:i-1)/=cluster(i)) + sum(similarity_matrix(i+1:,i),mask=cluster(i+1:)/=cluster(i)) 
+                ! Find the contributions to add
+                logprod_dadd = sum(similarity_matrix(:i-1,i),mask=cluster(:i-1)==cluster(i)) + sum(similarity_matrix(i+1:,i),mask=cluster(i+1:)==cluster(i)) 
+
+                ! calculate the change in logprod_d
+                logprod_d_new = logprod_d + logprod_dadd - logprod_dsub
+
+                ! Calculate the new sum on the model values
+                logsum_m_new = logprod_d_new/(numsub*numadd) + log(numsub+0d0) + log(numadd+0d0) + log(2d0)
+
+                if(logsum_m_new>logsum_m) then
+                    keep_going=.true.
+                    cluster(i) = .not.cluster(i)
+
+                    logsum_m = logsum_m_new
+                    logprod_d = logprod_d_new
+                end if
+
+            end do
+        end do
+
+        if(.true.) then 
+            !write(*,'("Cost: ", F10.4,"/",F10.4)') 2-1 + max_clusters**2  * (1 - exp(logsum_m-logsum_d) ), max_clusters**2
+            write(*,'(F10.4)') exp(logsum_d-logsum_m) 
+            if(2-1 + max_clusters**2  * (1 - exp(logsum_m-logsum_d) ) < max_clusters**2) write(*,*) 'cluster found'
+            do i=1,settings%nlive
+                if(cluster(i)) then
+                    live_points(settings%cluster,i) = 1d0 
+                else
+                    live_points(settings%cluster,i) = 0d0 
+                end if
+            end do
+        else
+            live_points(settings%cluster,:) = 0
+        end if
+        !call sleep(1)
+
+
+    end subroutine Skilling_clustering
+
+
+
+
     subroutine SNN_clustering(settings,live_points)
         use settings_module, only: program_settings
         implicit none
@@ -16,8 +133,6 @@ module cluster_module
         integer, dimension(settings%nlive) :: cluster_list_final
 
         integer :: i_point,j_point
-
-        integer :: cluster_orig_i,cluster_orig_j
 
         integer, dimension(settings%SNN_k+1) :: cluster_indices
         integer :: max_cluster_index
@@ -138,9 +253,6 @@ module cluster_module
         integer,intent(in), dimension(size(knn1)) :: knn2
 
         logical :: same_cluster
-
-        integer i,j
-        integer :: matches
 
         integer :: same_list(1)
 
