@@ -14,3 +14,4 @@ batch
 getdist/getdist
 getdist/plot_data/*
 getdist/plots/*
+*.pyc

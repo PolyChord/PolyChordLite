@@ -7,7 +7,7 @@ module chordal_module
         use priors_module, only: prior
         use settings_module, only: program_settings,phantom_type,live_type
         use random_module, only: random_orthonormal_basis,random_real
-        use utils_module, only: distance
+        use utils_module, only: logzero
 
         implicit none
         interface
@@ -104,6 +104,11 @@ module chordal_module
 
             ! Generate a new random point along the chord defined by the previous point and nhat
             baby_points(:,i_babies) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
+
+            if(baby_points(settings%l0,i_babies)<=logzero) then
+                baby_points(settings%l0,settings%num_babies)=logzero
+                return
+            end if
 
             ! Set this one to be a phantom point
             baby_points(settings%point_type,i_babies) = phantom_type
@@ -360,6 +365,10 @@ module chordal_module
 
         double precision :: w
 
+        double precision :: temp_random
+
+        integer :: i_step
+
         ! estimate at an appropriate chord
         w = x0(S%last_chord)
 
@@ -369,26 +378,34 @@ module chordal_module
 
 
         ! Select initial start and end points
-        L(S%h0:S%h1) = x0(S%h0:S%h1) - random_real() * w * nhat 
-        R(S%h0:S%h1) = L(S%h0:S%h1) + w * nhat 
+        temp_random = random_real()
+        L(S%h0:S%h1) = x0(S%h0:S%h1) -   temp_random   * w * nhat 
+        R(S%h0:S%h1) = x0(S%h0:S%h1) + (1-temp_random) * w * nhat 
 
         ! Calculate initial likelihoods
         call calculate_point(loglikelihood,priors,R,S)
         call calculate_point(loglikelihood,priors,L,S)
 
         ! expand R until it's outside the likelihood region
+        i_step=0
         do while(R(S%l0) >= x0(S%l1) .and. R(S%l0) > logzero )
-            R(S%h0:S%h1) = R(S%h0:S%h1) + nhat * w
+            i_step=i_step+1
+            R(S%h0:S%h1) = x0(S%h0:S%h1) + nhat * w * i_step
             call calculate_point(loglikelihood,priors,R,S)
+            if(i_step>100) write(*,*) ' too many R steps '
         end do
 
         ! expand L until it's outside the likelihood region
+        i_step=0
         do while(L(S%l0) >= x0(S%l1) .and. L(S%l0) > logzero )
-            L(S%h0:S%h1) = L(S%h0:S%h1) - nhat * w
+            i_step=i_step+1
+            L(S%h0:S%h1) = x0(S%h0:S%h1) - nhat * w * i_step
             call calculate_point(loglikelihood,priors,L,S)
+            if(i_step>100) write(*,*) ' too many L steps '
         end do
 
         ! Sample within this bound
+        i_step=0
         baby_point = find_positive_within(L,R)
 
         ! Pass on the loglikelihood bound
@@ -409,13 +426,23 @@ module chordal_module
             ! The output finish point
             double precision,    dimension(S%nTotal)   :: x1
 
-            double precision :: LRdistance
+            double precision :: x0Rd
+            double precision :: x0Ld
+
+            i_step=i_step+1
+            if (i_step>100) then
+                write(*,*) 'Polychord Warning: Non deterministic loglikelihood'
+                x1(S%l0) = logzero
+                return
+            end if
             
-            ! Find the distance between L and R
-            LRdistance = distance(L(S%h0:S%h1),R(S%h0:S%h1))
+            ! Find the distance between x0 and L 
+            x0Ld= distance(x0(S%h0:S%h1),L(S%h0:S%h1))
+            ! Find the distance between x0 and R 
+            x0Rd= distance(x0(S%h0:S%h1),R(S%h0:S%h1))
 
             ! Draw a random point within L and R
-            x1(S%h0:S%h1) = L(S%h0:S%h1)+ random_real() * LRdistance * nhat 
+            x1(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 
 
             ! Pass on the number of likelihood calls that have been made
             x1(S%nlike) = L(S%nlike) + R(S%nlike)
