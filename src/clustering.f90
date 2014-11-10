@@ -31,7 +31,7 @@ module cluster_module
         double precision :: logprod_dadd,logprod_dsub
         logical :: keep_going
 
-        double precision, parameter :: max_clusters=sqrt(1.5d0)
+        double precision, parameter :: max_clusters=sqrt(1.8d0)
 
         logical, dimension(settings%nlive) :: cluster
         
@@ -39,28 +39,29 @@ module cluster_module
 
         double precision, dimension(settings%nDims) :: displacement
         double precision, dimension(settings%nDims,settings%nDims) :: invcovmat
-        !double precision, dimension(settings%nDims,settings%nDims) :: covmat
+        double precision, dimension(settings%nDims,settings%nDims) :: covmat
         integer :: info
 
 
-        similarity_matrix = logzero
 
-        invcovmat=cholesky
-        call dpotri('L',settings%nDims,invcovmat,settings%nDims,info)
-        do i=1,settings%nDims
-            do j=i+1,settings%nDims
-                invcovmat(i,j) = invcovmat(j,i)
-            end do
-        end do
-        !covmat = matmul(transpose(cholesky),cholesky)
+        !invcovmat=cholesky
+        !call dpotri('L',settings%nDims,invcovmat,settings%nDims,info)
+        !do i=1,settings%nDims
+        !    do j=i+1,settings%nDims
+        !        invcovmat(i,j) = invcovmat(j,i)
+        !    end do
+        !end do
+        !covmat = matmul(cholesky,transpose(cholesky))
         !write(*,'(<settings%nDims>I3)') nint(matmul(covmat,invcovmat))
 
 
         ! Start by computing the similarity matrix
+        similarity_matrix = logzero
         do i=1,settings%nlive
             do j= i+1,settings%nlive
-                displacement = live_points(settings%h0:settings%h1,i)-live_points(settings%h0:settings%h1,j)
-                similarity_matrix(i,j) = 0.5d0 * log(dot_product(displacement,matmul(invcovmat,displacement)))
+                !displacement = live_points(settings%h0:settings%h1,i)-live_points(settings%h0:settings%h1,j)
+                !similarity_matrix(i,j) = 0.5d0 * log(dot_product(displacement,matmul(invcovmat,displacement)))
+                similarity_matrix(i,j) = 0.5d0 * log(distance2(live_points(settings%h0:settings%h1,i),live_points(settings%h0:settings%h1,j)))
                 similarity_matrix(j,i) = similarity_matrix(i,j)
             end do
         end do
@@ -117,7 +118,7 @@ module cluster_module
 
         if(.true.) then 
             !write(*,'("Cost: ", F10.4,"/",F10.4)') 2-1 + max_clusters**2  * (1 - exp(logsum_m-logsum_d) ), max_clusters**2
-            write(*,'(F10.4)') exp(logsum_d-logsum_m) 
+            write(*,'(F10.4)') 2-1 + max_clusters**2  * (1 - exp(logsum_m-logsum_d) ) - max_clusters**2 
             if(2-1 + max_clusters**2  * (1 - exp(logsum_m-logsum_d) ) < max_clusters**2) write(*,*) 'cluster found'
             do i=1,settings%nlive
                 if(cluster(i)) then
@@ -129,7 +130,7 @@ module cluster_module
         else
             live_points(settings%cluster,:) = 0
         end if
-        !call sleep(1)
+        call sleep(1)
 
 
     end subroutine Skilling_clustering

@@ -38,7 +38,7 @@ PROGRAMS = libchord.a main planck batch
 # "make" builds all
 all: $(PROGRAMS)
 
-OBJECTS = utils.o priors.o grades.o settings.o clustering.o calculate.o feedback.o read_write.o random_utils.o evidence.o likelihoods.o chordal_sampling.o nested_sampling.o
+OBJECTS = utils.o priors.o grades.o settings.o calculate.o feedback.o read_write.o random_utils.o clustering.o evidence.o likelihoods.o chordal_sampling.o nested_sampling.o
 
 AR = ar r
 
