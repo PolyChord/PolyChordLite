@@ -18,7 +18,7 @@ module nested_sampling_module
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points
         use feedback_module
         use evidence_module,   only: KeetonEvidence
-        use chordal_module,    only: SliceSampling,AdaptiveParallelSliceSampling
+        use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: SNN_clustering,NN_clustering
 
@@ -209,15 +209,10 @@ module nested_sampling_module
             ! Write a resume file before we start
             if(settings%write_resume) call write_resume_file(settings,live_points,stack_size,phantom_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
 
-            select case(settings%sampler)
-
-            case(sampler_covariance)
-                ! Calculate the covariance matrix
-                covmat = calc_covmat( (/ live_points(settings%h0:settings%h1,:),phantom_points(settings%h0:settings%h1,:stack_size)/), settings%nDims,stack_size+settings%nlive )
-                ! Calculate the cholesky decomposition
-                cholesky = calc_cholesky(covmat,settings%nDims)
-
-            end select
+            ! Calculate the covariance matrix
+            covmat = calc_covmat( (/ live_points(settings%h0:settings%h1,:),phantom_points(settings%h0:settings%h1,:stack_size)/), settings%nDims,stack_size+settings%nlive )
+            ! Calculate the cholesky decomposition
+            cholesky = calc_cholesky(covmat,settings%nDims)
 
 
             !======= 2) Main loop body =====================================
@@ -232,16 +227,12 @@ module nested_sampling_module
                 ! (1) Update the covariance matrix of the distribution of live points
                 if(mod(ndead,settings%nlive) .eq.0) then
 
-                    select case(settings%sampler)
-
-                    case(sampler_covariance)
-                        ! Calculate the covariance matrix
-                        covmat = calc_covmat( (/ live_points(settings%h0:settings%h1,:),phantom_points(settings%h0:settings%h1,:stack_size)/), settings%nDims,stack_size+settings%nlive )
-                        ! Calculate the cholesky decomposition
-                        cholesky = calc_cholesky(covmat,settings%nDims)
+                    ! Calculate the covariance matrix
+                    covmat = calc_covmat( (/ live_points(settings%h0:settings%h1,:),phantom_points(settings%h0:settings%h1,:stack_size)/), settings%nDims,stack_size+settings%nlive )
+                    ! Calculate the cholesky decomposition
+                    cholesky = calc_cholesky(covmat,settings%nDims)
 
 
-                    end select
                 end if
 
 
@@ -259,15 +250,7 @@ module nested_sampling_module
                 if(linear_mode) then
 
                     ! Generate a new set of points within the likelihood bound of the late point
-                    select case(settings%sampler)
-
-                    case(sampler_covariance)
-                        baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
-
-                    case(sampler_adaptive_parallel)
-                        baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
-
-                    end select
+                    baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
                     baby_made=.true.
                 else
@@ -287,17 +270,9 @@ module nested_sampling_module
                         MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
 
                     ! Send the information needed
-                    select case(settings%sampler)
+                    call MPI_SEND(cholesky,settings%nDims*settings%nDims,&
+                        MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
 
-                    case(sampler_covariance)
-                        call MPI_SEND(cholesky,settings%nDims*settings%nDims,&
-                            MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
-
-                    case(sampler_adaptive_parallel)
-                        call MPI_SEND(live_points,settings%nTotal*settings%nstack,&
-                            MPI_DOUBLE_PRECISION,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
-
-                    end select
                 end if
 
                 ! The new likelihood is the last point
@@ -409,19 +384,11 @@ module nested_sampling_module
                 ! If we receive a kill signal, then exit the loop
                 if(mpi_status(MPI_TAG)==ENDTAG) exit
 
-                select case(settings%sampler)
+                call MPI_RECV(cholesky,settings%nDims*settings%nDims, &
+                    MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
 
-                case(sampler_covariance)
-                    call MPI_RECV(cholesky,settings%nDims*settings%nDims, &
-                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
-                    baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
+                baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
-                case(sampler_adaptive_parallel)
-                    call MPI_RECV(live_points,settings%nTotal*settings%nstack, &
-                        MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
-                    baby_points = AdaptiveParallelSliceSampling(loglikelihood,priors,settings,live_points(:,:stack_size),seed_point)
-
-                end select
 
                 ! Send the baby points back
                 call MPI_SEND(baby_points,settings%nTotal*settings%num_babies, &
