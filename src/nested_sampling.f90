@@ -20,7 +20,7 @@ module nested_sampling_module
         use evidence_module,   only: KeetonEvidence
         use chordal_module,    only: SliceSampling,AdaptiveParallelSliceSampling
         use random_module,     only: random_integer,random_direction
-        use cluster_module,    only: Skilling_clustering
+        use cluster_module,    only: SNN_clustering
 
         implicit none
 
@@ -97,6 +97,20 @@ module nested_sampling_module
 
         integer :: i
         double precision :: mu1(2), mu2(2), radius,sigma
+
+
+        integer :: clusters(settings%nlive)
+
+
+
+
+
+
+
+
+
+
+
 
         ! Get the number of MPI procedures
         call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
@@ -317,7 +331,10 @@ module nested_sampling_module
 
                     ! (6) Update the resume and posterior files every update_resume iterations, or at program termination
                     if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-                        if(settings%do_clustering) call Skilling_clustering(settings,live_points,cholesky)
+                        if(settings%do_clustering) then 
+                            clusters = SNN_clustering(settings,live_points)
+                            write (*,'(<settings%nlive>I4)') clusters
+                        end if
 
                         if(settings%write_resume) call write_resume_file(settings,live_points,stack_size,phantom_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 
                         if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,evidence_vec(1),nposterior)  

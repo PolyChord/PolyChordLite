@@ -135,6 +135,7 @@ program main
 
     settings%do_clustering = .true.
     settings%SNN_k = settings%nDims
+    settings%SNN_kt = 5
 
 
     ! Initialise the loglikelihood
