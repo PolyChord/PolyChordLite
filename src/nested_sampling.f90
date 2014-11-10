@@ -20,7 +20,7 @@ module nested_sampling_module
         use evidence_module,   only: KeetonEvidence
         use chordal_module,    only: SliceSampling,AdaptiveParallelSliceSampling
         use random_module,     only: random_integer,random_direction
-        use cluster_module,    only: SNN_clustering
+        use cluster_module,    only: SNN_clustering,NN_clustering
 
         implicit none
 
@@ -100,6 +100,7 @@ module nested_sampling_module
 
 
         integer :: clusters(settings%nlive)
+        double precision, dimension(settings%nlive,settings%nlive) :: similarity_matrix
 
 
 
@@ -332,8 +333,12 @@ module nested_sampling_module
                     ! (6) Update the resume and posterior files every update_resume iterations, or at program termination
                     if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
                         if(settings%do_clustering) then 
-                            clusters = SNN_clustering(settings,live_points)
-                            write (*,'(<settings%nlive>I4)') clusters
+
+                            ! Compute the similarity matrix
+                            similarity_matrix = spread( [( dot_product(live_points(settings%h0:settings%h1,i),live_points(settings%h0:settings%h1,i)),i=1,settings%nlive )], dim=2,ncopies=settings%nlive )
+                            similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(live_points(settings%h0:settings%h1,:)),live_points(settings%h0:settings%h1,:) )
+
+                            clusters = NN_clustering(similarity_matrix,settings%SNN_k)
                         end if
 
                         if(settings%write_resume) call write_resume_file(settings,live_points,stack_size,phantom_points,evidence_vec,ndead,total_likelihood_calls,nposterior,posterior_array) 

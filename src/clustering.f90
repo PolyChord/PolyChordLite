@@ -4,40 +4,39 @@ module cluster_module
     contains
 
 
-    function SNN_clustering(settings,live_points) result(cluster_list)
-        use settings_module, only: program_settings
+    function SNN_clustering(similarity_matrix,k,kt) result(cluster_list_final)
         implicit none
-        type(program_settings), intent(in) :: settings
-        double precision, dimension(settings%nTotal,settings%nlive),intent(in) :: live_points
+        double precision, intent(in), dimension(:,:) :: similarity_matrix
+        integer, intent(in) :: k
+        integer, intent(in) :: kt
 
-        integer, dimension(settings%nlive) :: cluster_list
+        integer, dimension(size(similarity_matrix,1)) :: cluster_list
+        integer, dimension(size(similarity_matrix,1)) :: cluster_list_final
 
-        integer, dimension(settings%SNN_k,settings%nlive) :: knn
+        integer, dimension(k,size(similarity_matrix,1)) :: knn
 
-        integer :: i_point,j_point
+        integer :: i_point,j_point,i_cluster
 
         integer :: cluster_orig_i,cluster_orig_j
 
-        integer :: clusters(10)
+        integer :: nlive
 
-        double precision, dimension(settings%nlive,settings%nlive) :: similarity_matrix
+        integer :: num_clusters
+        integer :: clusters(size(similarity_matrix,1))
 
 
-        ! Compute the similarity matrix
-        similarity_matrix = spread( [( dot_product(live_points(settings%h0:settings%h1,i_point),live_points(settings%h0:settings%h1,i_point)),i_point=1,settings%nlive )], dim=2,ncopies=settings%nlive )
-        similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(live_points(settings%h0:settings%h1,:)),live_points(settings%h0:settings%h1,:) )
+        nlive=size(similarity_matrix,1)
 
-        ! computing the k nearest neighbors for each point
-        knn = compute_knn(similarity_matrix,settings%SNN_k)
+
+        ! compute the k nearest neighbors for each point
+        knn = compute_knn(similarity_matrix,k)
 
         ! Set up the cluster list
-        cluster_list = [( i_point,i_point=1,settings%nlive )]
+        cluster_list = [( i_point,i_point=1,nlive )]
 
         ! Loop through all pairs of points
-        ! But skip points that are already in the same cluster
-
-        do i_point=1,settings%nlive
-            do j_point=i_point+1,settings%nlive
+        do i_point=1,nlive
+            do j_point=i_point+1,nlive
 
                 cluster_orig_i = cluster_list(i_point)
                 cluster_orig_j = cluster_list(j_point)
@@ -47,7 +46,7 @@ module cluster_module
                     ! ... check to see if they are each others nearest neihbors...
                     if( neighbors( knn(:,i_point),knn(:,j_point) ) ) then
                         ! ... and check to see if they share n nearest neighbors
-                        if( matches( knn(:,i_point),knn(:,j_point) ) > settings%SNN_kt ) then
+                        if( matches( knn(:,i_point),knn(:,j_point) ) > kt ) then
 
                             if(cluster_orig_i>cluster_orig_j) then
                                 where(cluster_list==cluster_orig_i) cluster_list=cluster_orig_j
@@ -61,8 +60,93 @@ module cluster_module
             end do
         end do
 
+        ! Set clusters of the form 1,2,3
+        num_clusters=1
+        clusters(1) = cluster_list(1)
+
+        do i_point=1,nlive
+            if(all(cluster_list(i_point)/=clusters(1:num_clusters))) then
+                num_clusters=num_clusters+1
+                clusters(num_clusters) = cluster_list(i_point)
+            end if
+        end do
+
+        do i_cluster=1,num_clusters
+            where(cluster_list==clusters(i_cluster)) cluster_list_final=i_cluster
+        end do
+
     end function SNN_clustering
 
+
+    function NN_clustering(similarity_matrix,k) result(cluster_list_final)
+        implicit none
+        double precision, intent(in), dimension(:,:) :: similarity_matrix
+        integer, intent(in) :: k
+
+        integer, dimension(size(similarity_matrix,1)) :: cluster_list
+        integer, dimension(size(similarity_matrix,1)) :: cluster_list_final
+
+        integer, dimension(k,size(similarity_matrix,1)) :: knn
+
+        integer :: i_point,j_point,i_cluster
+
+        integer :: cluster_orig_i,cluster_orig_j
+
+        integer :: nlive
+
+        integer :: num_clusters
+        integer :: clusters(size(similarity_matrix,1))
+
+
+        nlive=size(similarity_matrix,1)
+
+
+        ! compute the k nearest neighbors for each point
+        knn = compute_knn(similarity_matrix,k)
+
+        ! Set up the cluster list
+        cluster_list = [( i_point,i_point=1,nlive )]
+
+        ! Loop through all pairs of points
+        do i_point=1,nlive
+            do j_point=i_point+1,nlive
+
+                cluster_orig_i = cluster_list(i_point)
+                cluster_orig_j = cluster_list(j_point)
+
+                ! If they're not in the same cluster already...
+                if(cluster_orig_i/=cluster_orig_j) then
+                    ! ... check to see if they are within each others k nearest neihbors...
+                    if( neighbors( knn(:k,i_point),knn(:k,j_point) ) ) then
+                        if(cluster_orig_i>cluster_orig_j) then
+                            where(cluster_list==cluster_orig_i) cluster_list=cluster_orig_j
+                        else
+                            where(cluster_list==cluster_orig_j) cluster_list=cluster_orig_i
+                        end if
+                    end if
+                end if
+
+            end do
+        end do
+
+        ! Set clusters of the form 1,2,3
+        num_clusters=1
+        clusters(1) = cluster_list(1)
+
+        do i_point=1,nlive
+            if(all(cluster_list(i_point)/=clusters(1:num_clusters))) then
+                num_clusters=num_clusters+1
+                clusters(num_clusters) = cluster_list(i_point)
+            end if
+        end do
+
+        do i_cluster=1,num_clusters
+            where(cluster_list==clusters(i_cluster)) cluster_list_final=i_cluster
+        end do
+        cluster_list = cluster_list_final
+
+
+    end function NN_clustering
 
 
 
