@@ -57,6 +57,10 @@ module chordal_module
 
         logical do_timing
 
+        integer :: nlike
+
+        double precision :: w
+
 
         ! Start the baby point at the seed point
         previous_point = seed_point
@@ -100,18 +104,16 @@ module chordal_module
             nhat = nhats(:,i_babies)
 
             ! Normalise it
-            nhat = nhat/sqrt(dot_product(nhat,nhat))
+            w = sqrt(dot_product(nhat,nhat))
+            nhat = nhat/w
 
             ! Generate a new random point along the chord defined by the previous point and nhat
-            baby_points(:,i_babies) = slice_sample(loglikelihood,priors, nhat, previous_point, settings)
+            baby_points(:,i_babies) = slice_sample(loglikelihood,priors, nhat, previous_point, w, settings)
 
             if(baby_points(settings%l0,i_babies)<=logzero) then
                 baby_points(settings%l0,settings%num_babies)=logzero
                 return
             end if
-
-            ! Set this one to be a phantom point
-            baby_points(settings%point_type,i_babies) = phantom_type
 
             if(settings%do_grades) then
                 if(grade_order(i_babies)/=settings%grades%min_grade) baby_points(settings%nlike,i_babies) = 0
@@ -135,6 +137,7 @@ module chordal_module
                 if(settings%do_grades) timers(grade_order(i_babies)) = timers(grade_order(i_babies)) + time1-time0
             end if
         end do
+
         if(do_timing) then 
             write(*, '( <settings%grades%max_grade-settings%grades%min_grade+1>(F8.2, "% "), "(Total time:", F8.2, "seconds)" )') timers/sum(timers)*100, sum(timers)
         end if
@@ -143,8 +146,10 @@ module chordal_module
         ! next time this point is drawn
         baby_points(settings%last_chord,:) = max_chord
 
-        ! Set the last one to be a live type
-        baby_points(settings%point_type,settings%num_babies) = live_type
+        ! Give all the likelihood calls to the baby point
+        nlike = sum(baby_points(settings%nlike,:) )
+        baby_points(settings%nlike,:) = 0
+        baby_points(settings%nlike,settings%num_babies) = nlike
 
     end function SliceSampling
 
@@ -226,7 +231,7 @@ module chordal_module
     !!
     !! Each seed point x0 contains an initial estimate of the width w.
     !!
-    function slice_sample(loglikelihood,priors,nhat,x0,S) result(baby_point)
+    function slice_sample(loglikelihood,priors,nhat,x0,w,S) result(baby_point)
         use settings_module, only: program_settings
         use priors_module, only: prior
         use utils_module,  only: logzero, distance
@@ -250,6 +255,8 @@ module chordal_module
         double precision, intent(in),    dimension(S%nDims)   :: nhat
         !> The start point
         double precision, intent(in),    dimension(S%nTotal)   :: x0
+        !> The initial width
+        double precision, intent(in) :: w
 
         ! The output finish point
         double precision,    dimension(S%nTotal)   :: baby_point
@@ -259,14 +266,13 @@ module chordal_module
         ! The lower bound
         double precision,    dimension(S%nTotal)   :: L
 
-        double precision :: w
 
         double precision :: temp_random
 
         integer :: i_step
 
         ! estimate at an appropriate chord
-        w = x0(S%last_chord)
+        !w = x0(S%last_chord)
 
         ! record the number of likelihood calls
         R(S%nlike) = x0(S%nlike)
@@ -288,8 +294,8 @@ module chordal_module
             i_step=i_step+1
             R(S%h0:S%h1) = x0(S%h0:S%h1) + nhat * w * i_step
             call calculate_point(loglikelihood,priors,R,S)
-            if(i_step>100) write(*,*) ' too many R steps '
         end do
+        if(i_step>100) write(*,'(" too many R steps (",I10,")")') i_step
 
         ! expand L until it's outside the likelihood region
         i_step=0
@@ -297,8 +303,8 @@ module chordal_module
             i_step=i_step+1
             L(S%h0:S%h1) = x0(S%h0:S%h1) - nhat * w * i_step
             call calculate_point(loglikelihood,priors,L,S)
-            if(i_step>100) write(*,*) ' too many L steps '
         end do
+        if(i_step>100) write(*,'(" too many L steps (",I10,")")') i_step
 
         ! Sample within this bound
         i_step=0

@@ -588,6 +588,51 @@ module random_module
 
     end subroutine shuffle_deck
 
+
+    !> This function generates a random integer with variable probability
+    !!
+    !! The probability is defined by the input array, and need not be
+    !! normalised.
+    !!
+    !! E.g: If one reieves an array (/ 50.0, 120.0, 30.0 /), this function will
+    !! return:
+    !! |---|-----------------|
+    !! | 1 | 25% of the time |
+    !! | 2 | 60% of the time |
+    !! | 3 | 15% of the time |
+    !! |---|-----------------|
+    !!
+    function random_integer_P(probabilities)
+        implicit none
+        double precision, dimension(:),intent(in) :: probabilities
+
+        integer :: random_integer_P
+
+        double precision :: norm
+        double precision :: cdf
+        double precision :: rand
+
+
+        ! Calculate normalisation constant
+        norm = sum(probabilities)
+
+        ! Generate a random real number
+        rand = random_real()
+
+        ! Initialise the cumulative probability at 0
+        cdf=0d0
+
+        ! iterate through the array, returning when the cdf is bigger than the
+        ! random real.
+        do random_integer_P=1,size(probabilities)
+            cdf = cdf + probabilities(random_integer_P)/norm
+            if(rand<cdf) return
+        end do
+
+
+    end function random_integer_P
+
+
     !> De-initialise the random number generators
 
     subroutine deinitialise_random

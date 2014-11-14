@@ -2,195 +2,299 @@
 module evidence_module
     implicit none
 
+    type :: run_time_info
+
+        ! Number of active clusters
+        integer :: ncluster_A
+        ! Number of passive clusters
+        integer :: ncluster_T
+
+        ! Global evidence, and evidence squared
+        ! log(Z)
+        double precision :: logevidence
+        ! log(Z^2)
+        double precision :: logevidence2
+
+        ! local cluster variables
+        ! n_i - live points in each cluster
+        integer, allocatable, dimension(:)            :: n
+        ! log(L_i) - log likelihood contour of each cluster
+        double precision, allocatable, dimension(:)   :: logL
+        ! log(X_i) - log volume for the cluster (since splitting)
+        double precision, allocatable, dimension(:)   :: logX
+        ! log(Z_i) - log evidence for the cluster (since splitting)
+        double precision, allocatable, dimension(:)   :: logZ
+        ! log(Z_i^2) - log evidence for the cluster (since splitting)
+        double precision, allocatable, dimension(:)   :: logZ2
+
+        ! local cluster correlations
+        ! log(X_iX_j)
+        double precision, allocatable, dimension(:,:) :: logXX
+        ! log(Z_iX_j)
+        double precision, allocatable, dimension(:,:) :: logZX
+        
+    end type run_time_info
+
+
     contains
 
-
-    !> Moments-based Evidence calculator based on Keeton's paper ([arXiv:1102.0996](http://arxiv.org/abs/1102.0996))
-    !!
-    !! The evidence calculator recieves the relevent information, namely 
-    !! * the loglikelihood of the newly created point ( new_loglikelihood )
-    !! * the loglikelihood of the dying point  ( old_loglikelihood )
-    !! * number of iterations/dead points ( ndead )
-    !!
-    !! It ouputs 
-    !! * a length 6 vector ( evidence_vec ) with the [logevidence, logevidence error] in the value of the first two positions
-    !!   (the remainder of the vector contains data which needs to be accumulated in order to make the calculation)
-    !! * whether more samples are needed in the logical variable more_samples_needed
-    !!
-    !! The Keeton evidence calculates using the algorithm outlined in ([arXiv:1102.0996](http://arxiv.org/abs/1102.0996)),
-    !! using a moment-based error analysis.
-    !!
-    !! Let \f$M\f$ be the number of live points and \f$N\f$ be the number of dead points.
-    !! Effectively we wish to evaluate the evidence composed of two contributions:
-    !! \f[ Z = Z_\mathrm{dead} + Z_\mathrm{live}\f]
-    !!
-    !! where:
-    !!
-    !! \f[ Z_\mathrm{dead} = \frac{1}{M} \sum_{i=1}^{N} L_i\left(\frac{M}{M+1}\right)^{i} \qquad
-    !!     Z_\mathrm{live} = \frac{1}{M} \left(\frac{M}{M+1}\right)^{N}\sum_{i=1}^{M} L_i^\mathrm{live} = X_N\langle L^\mathrm{live}\rangle \f]
-    !!
-    !! In addition, we wish to calculate the error, which can be expressed as:
-    !! \f[ \sigma_Z^2 =  \sigma_\mathrm{dead}^2 +\sigma_\mathrm{cross}^2 + \sigma_\mathrm{live}^2 \f]
-    !! where
-    !! \f[ \sigma_\mathrm{dead}^2 = \frac{2}{M(M+1)} \sum_{k=1}^{N} L_k \left(\frac{M}{M+1}\right)^{k} \sum_{i=1}^{k} L_i \left(\frac{M+1}{M+2}\right)^{i} - \frac{1}{M^2} \left[\sum_{i=1}^{N} L_i \left(\frac{M}{M+1}\right)^{i}\right]^2 \f]
-    !! \f[ \sigma_\mathrm{cross}^2 = 2 \langle L^\mathrm{live}\rangle \left(\frac{M}{M+1}\right)^N \sum_{i=1}^{N} L_i \left[ \frac{1}{M+1}\left(\frac{M+1}{M+2}\right)^i - \frac{1}{M}\left(\frac{M}{M+1}\right)^i \right]  \f]
-    !! \f[ \sigma_\mathrm{live}^2 = \langle L^\mathrm{live}\rangle^2 \left(\frac{M}{M+1}\right)^N \left[ \left(\frac{M+1}{M+2}\right)^N - \left(\frac{M}{M+1}\right)^N \right]  \f]
-    !!
-    !! These rather impenetrable expressions may be simplified by defining:
-    !! \f[ X_k = \left(\frac{M}{M+1}\right)^k \qquad
-    !!  Y_k = \left(\frac{M+1}{M+2}\right)^k \qquad
-    !!  Z_\mathrm{dead}^\prime  = \frac{1}{M+1} \sum_{i=1}^{N} L_i Y_i \qquad
-    !!  \hat{Z}_\mathrm{dead} = \sum_{k=1}^{N} \frac{1}{M}L_k X_k \sum_{i=1}^{k} \frac{1}{M+1}L_i Y_i \f]
-    !! so that they become
-    !! \f[ \sigma_\mathrm{dead}^2 = 2\hat{Z}_\mathrm{dead} - Z_\mathrm{dead}^2 \f]
-    !! \f[ \sigma_\mathrm{cross}^2 = 2 \langle L^\mathrm{live}\rangle X_N (Z_\mathrm{dead}^\prime-Z_\mathrm{dead}) \f]
-    !! \f[ \sigma_\mathrm{live}^2 = \langle L^\mathrm{live}\rangle^2 X_N \left[ Y_N - X_N \right]  \f]
-    !! 
-    !! We can update these accordingly at each iteration:
-    !! \f[ Z_\mathrm{live} \rightarrow Z_\mathrm{live} + X_M\frac{L_\mathrm{new}}{M} - X_M\frac{L_\mathrm{old}}{M} \f]
-    !! \f[ Z_\mathrm{dead} \rightarrow Z_\mathrm{dead} + \frac{1}{M}L_\mathrm{old}X_N \f]
-    !! \f[ Z_\mathrm{dead}^\prime \rightarrow Z_\mathrm{dead}^\prime + \frac{1}{M+1}L_\mathrm{old}Y_N \f]
-    !! \f[ \hat{Z}_\mathrm{dead} \rightarrow \hat{Z}_\mathrm{dead} + \frac{1}{M}L_\mathrm{old}X_N Z_\mathrm{dead}^\prime\f]
-    !! and ensure that we save both the dead and live evidences for future use. The dead evidence is stored in 
-    !! evidence_vec(3), and the live evidence is stored in evidence_vec(6)
-    !!
-    !! Also note that in order to prevent floating point errors, all of these are done with the logarithmic values
-    !!
-    function KeetonEvidence(settings,new_loglikelihood,old_loglikelihood,ndead,evidence_vec) result(more_samples_needed)
-        use settings_module
-        use utils_module, only: logzero,logaddexp,logsubexp
+    subroutine allocate_run_time_info(settings,info)
+        use utils_module,    only: logzero
+        use settings_module, only: program_settings
 
         implicit none
+        type(program_settings), intent(in) :: settings
+        type(run_time_info),intent(out) :: info
 
-        ! ------- Inputs ------- 
-        !> program settings (mostly useful to pass on the number of live points)
-        class(program_settings), intent(in) :: settings
+        allocate(                                               &
+            info%n(settings%ncluster),                          &
+            info%logL(settings%ncluster),                       &
+            info%logX(settings%ncluster),                       &
+            info%logZ(settings%nclustertot),                    &
+            info%logZ2(settings%nclustertot),                   &
+            info%logXX(settings%ncluster,settings%ncluster),    &
+            info%logZX(settings%nclustertot,settings%ncluster)  &
+            )
 
-        !> loglikelihood of the newest created point
-        double precision,       intent(in) :: new_loglikelihood
+        ! Initially there is one active cluster, and no inactive ones
+        info%ncluster_A = 1
+        info%ncluster_T = info%ncluster_A
 
-        !> loglikelihood of the most recently dead point
-        double precision,       intent(in) :: old_loglikelihood
+        ! All live points in the first cluster to start with
+        info%n=0
+        info%n(1) = settings%nlive
 
-        !> number of dead points/ number of iterations
-        integer,                intent(in) :: ndead
+        ! All evidences set to logzero
+        info%logevidence=logzero
+        info%logevidence2=logzero
+        info%logZ=logzero
+        info%logZ2=logzero
 
-        !> vector containing [logevidence, logevidence error,logZ_dead,logZhat_dead,logZp_dead,logmean_loglike_live]
-        double precision,       intent(inout), allocatable, dimension(:) :: evidence_vec
+        ! All volumes set to logzero, apart from first cluster where they're set to log(1)=0
+        info%logX       = logzero
+        info%logXX      = logzero
+        info%logX(1)    = 0
+        info%logXX(1,1) = 0
 
-        ! ------- Outputs ------- 
-        !> Whether we have obtained enough samples for an accurate evidence
-        logical :: more_samples_needed
+        ! Cross correlation set to logzero
+        info%logZX = logzero
 
+        ! Initial error bounds set to logzero
+        info%logL = logzero
 
-
-        ! ------- Local Variables -------
-
-        ! The accumulated evidence associated with the dead points
-        ! Z_dead = 1/nlive  sum_k L_k  (nlive/(nlive+1))^k
-        double precision :: logZ_dead = logzero
-
-        ! The accumulated evidence squared Z^2
-        ! Z2_dead = 1/nlive  sum_k L_k  (nlive/(nlive+1))^k * Z2_deadp_k
-        double precision :: logZhat_dead = logzero
-
-        ! part of the accumulated evidence squared
-        ! Z2_deadp = 1/(nlive+1)  sum_k L_k  ((nlive+1)/(nlive+2))^k
-        double precision :: logZp_dead = logzero
-
-        ! the mean log likelihood of the live points
-        ! mean_log_like_live = 1/nlive * sum(L_live)
-        double precision :: logmean_loglike_live=0
-
-        ! Two measures of volume at the kth iteration 
-        ! logX_k = (  nlive  /(nlive+1))^k
-        ! logY_k = ((nlive+1)/(nlive+2))^k
-        double precision :: logX_k,logY_k
-
-        ! The temporary mean and variance to eventually be output in evidence_vec 
-        double precision :: logmean, logvariance
-
-        ! number of live points in double precision (taken from settings%nlive)
-        double precision :: lognlive 
-        double precision :: lognlivep1 
-        double precision :: lognlivep2 
-
-        double precision,parameter :: log2 = log(2d0)
-
-        if(.not.allocated(evidence_vec)) then
-            allocate(evidence_vec(6))
-            more_samples_needed = .true.
-            return
-        end if
+    end subroutine allocate_run_time_info
 
 
-        ! Get the number of live points (and convert to double precision implicitly)
-        lognlive   = log(settings%nlive+0d0)
-        lognlivep1 = log(settings%nlive+1d0)
-        lognlivep2 = log(settings%nlive+2d0)
+    subroutine write_cluster_info(info)
+        implicit none
+        type(run_time_info), intent(in) :: info
 
 
-        ! Calculate the volumes
-        logX_k = ndead * (lognlive  -lognlivep1)
-        logY_k = ndead * (lognlivep1-lognlivep2) 
+        write(*,'("ncluster_A:", I4)') info%ncluster_A
+        write(*,'("ncluster_T:", I4)') info%ncluster_T
+        !write(*,'("logevidence:", E17.6)') info%logevidence
+        !write(*,'("logevidence2:", E17.6)') info%logevidence2
+        write(*,'("n:", <size(info%n)>I4)') info%n
+        !write(*,'("logL:", <size(info%logL)>E17.6)') info%logL
+        !write(*,'("logX:", <size(info%logX)>E17.6)') info%logX
+        !write(*,'("logZ:", <size(info%logZ)>E17.6)') info%logZ
+        !write(*,'("logZ2:", <size(info%logZ2)>E17.6)') info%logZ2
+        !write(*,'("logXX:", <size(info%logXX,1)>E17.6)') info%logXX
+        !write(*,'("logZX:", <size(info%logZX,1)>E17.6)') info%logZX
 
-        ! Grab the accumulated values
-        logZ_dead           = evidence_vec(3)
-        logmean_loglike_live= evidence_vec(4)
-        logZhat_dead          = evidence_vec(5)
-        logZp_dead         = evidence_vec(6)
-
-        ! Add the evidence contribution of the kth dead point to the accumulated dead evidence
-        logZ_dead = logaddexp(logZ_dead , old_loglikelihood+ logX_k -lognlive )
-
-        ! Accumulate part of the dead evidence^2
-        logZp_dead = logaddexp(logZp_dead, old_loglikelihood + logY_k -lognlivep1  )
-
-        ! Accumulate the rest of the dead evidence^2
-        logZhat_dead = logaddexp(logZhat_dead, old_loglikelihood + logX_k + logZp_dead- lognlive )
-
-
-        ! Add the contribution of the new_loglikelihood from the mean ...
-        logmean_loglike_live = logaddexp(logmean_loglike_live, new_loglikelihood -lognlive )
-
-        ! ... and take away the contribution of the 0d0 from the mean
-        logmean_loglike_live = logsubexp(logmean_loglike_live, old_loglikelihood -lognlive )
+    end subroutine write_cluster_info
 
 
 
-        ! Calculate the mean evidence as a sum of contributions from the dead
-        ! and live evidence
-        logmean = logaddexp(logZ_dead, logmean_loglike_live + logX_k) 
-
-        ! Calculate the variance in the evidence
-        logvariance = logsubexp(log2 +logZhat_dead,2*logZ_dead)                                         ! dead contribution
-
-        logvariance = logaddexp(logvariance,2*logmean_loglike_live + logX_k+ logsubexp(logY_k,logX_k))    ! live contribution
-
-        logvariance = logaddexp(logvariance, log2 + logmean_loglike_live + logX_k + logZp_dead ) ! cross correlation
-        logvariance = logsubexp(logvariance, log2 + logmean_loglike_live + logX_k + logZ_dead       )
-
-        ! Pass the mean and variance to evidence_vec in order to be outputted
-        evidence_vec(1) = logmean 
-        evidence_vec(2) = logvariance 
-        evidence_vec(3) = logZ_dead            
-        evidence_vec(4) = logmean_loglike_live 
-        evidence_vec(5) = logZhat_dead           
-        evidence_vec(6) = logZp_dead          
 
 
-        ! Test to see whether we have enough samples. If the contribution from
-        ! the live evidence is less than a fraction of the dead evidence, then
-        ! we have reached convergence of the algorithm
-        if (logmean_loglike_live  + logX_k < log(settings%precision_criterion) + logZ_dead) then
-            more_samples_needed = .false.
-        else
-            more_samples_needed = .true.
-        end if
+    subroutine update_evidence(r,i,newloglike)
+        use utils_module, only: logsumexp,logincexp
+        implicit none
+
+        ! The variable containing all of the runtime information
+        type(run_time_info), intent(inout) :: r
+
+        !> The cluster index to update
+        integer,intent(in) :: i
+        !> The loglikelihood to update
+        double precision,intent(in) :: newloglike
+
+        ! Iterator
+        integer :: j
+
+        ! Temporary variables for notational ease
+        double precision :: log2
+        double precision :: logni
+        double precision :: logni1
+        double precision :: logni2
+        double precision :: logLi
+        double precision :: logXi
+        double precision :: logXi2
+        double precision :: logZiXi
+        double precision :: logZXi
+
+        log2  = log(2d0)
+        logni = log( r%n(i) +0d0 )
+        logni1= log( r%n(i) +1d0 )
+        logni2= log( r%n(i) +2d0 )
+
+        logLi = r%logL(i) 
+        logXi = r%logX(i) 
+        logXi2= r%logXX(i,i) 
+
+        logZiXi = r%logZX(i,i)
+        logZXi =  logsumexp( r%logZX(:r%ncluster_T,i) )
+
+        ! Local evidence
+        call logincexp( r%logZ(i), logXi+logLi-logni1  )
+        ! Global evidence
+        call logincexp( r%logevidence   , logXi+logLi-logni1  )
+
+        ! Local evidence error
+        call logincexp( r%logZ2(i),      log2 + logZiXi + logLi - logni1, log2 + logXi2  + 2*logLi - logni1 - logni2)
+        ! Global evidence error
+        call logincexp( r%logevidence2 , log2 + logZXi  + logLi - logni1, log2 + logXi2  + 2*logLi - logni1 - logni2)
+
+        ! Update cross correlations logZX for all clusters
+        r%logZX(i,i) = r%logZX(i,i) + logni - logni1
+        call logincexp( r%logZX(i,i) , logXi2 + logLi + logni - logni1 - logni2 )
+
+        do j=1,r%ncluster_A
+            if(j/=i) call logincexp( r%logZX(i,j) , r%logXX(i,j) + logLi - logni1 )
+        end do
+
+        do j=1,r%ncluster_T
+            if(j/=i) r%logZX(j,i) = r%logZX(j,i) + logni - logni1
+        end do
+
+
+        ! Update local volumes and cross correlations
+        r%logX(i)  = r%logX(i) + logni - logni1
+
+        do j=1,r%ncluster_A
+            if(j/=i) then
+                r%logXX(i,j) = r%logXX(i,j) + logni - logni1
+                r%logXX(j,i) = r%logXX(j,i) + logni - logni1
+            else
+                r%logXX(i,i) = r%logXX(i,i) + logni - logni2
+            end if
+        end do
+
+
+        ! Decrease the number of live points in cluster i
+        r%n(i) = r%n(i) - 1
+
+        ! Update the loglikelihood
+        r%logL(i) = newloglike
+
+
+    end subroutine update_evidence
+
+
+    subroutine bifurcate_evidence(r,i,ni) 
+        use utils_module, only: logzero
+        implicit none
+
+        ! The variable containing all of the runtime information
+        type(run_time_info), intent(inout) :: r
+
+        !> The new cluster indices
+        !! NOTE: this is an array
+        integer,intent(in),dimension(:) :: i
+        !> The numbers in each new clusters
+        integer,intent(in),dimension(:) :: ni
+
+        ! Iterator
+        integer :: j,k
+
+        integer old_ncluster_A
+
+        ! Temporary variables for notational ease
+        double precision                     :: logn
+        double precision                     :: logn1
+        double precision,dimension(size(ni)) :: logni
+        double precision,dimension(size(ni)) :: logni1
+        double precision                     :: logX
+
+        logn  = log( sum(ni) +0d0 ) 
+        logn1 = log( sum(ni) +1d0 ) 
+        logni = log( ni +0d0 )
+        logni1= log( ni +1d0 )
+        logX  = r%logX(i(1)) 
 
 
 
-    end function KeetonEvidence
+        ! Note that we now have new clusters
+        old_ncluster_A = r%ncluster_A
+        r%ncluster_A = r%ncluster_A + size(ni) -1
+        r%ncluster_T = r%ncluster_T + size(ni)
+
+
+        ! Make room for them in the r variable by pushing the passive cluster
+        ! r up a few places (mostly evidence r)
+        r%logZX(r%ncluster_A+2:,:) = r%logZX(old_ncluster_A+1:,:)
+        r%logZ( r%ncluster_A+2:)   = r%logZ( old_ncluster_A+1:)
+        r%logZ2(r%ncluster_A+2:)   = r%logZ2(old_ncluster_A+1:)
+
+        ! Copy up the details in cluster i(1) to r%ncluster_A+1
+        r%logZX(r%ncluster_A+1:,:) = r%logZX(i(1):,:)
+        r%logZ( r%ncluster_A+1:)   = r%logZ( i(1):)
+        r%logZ2(r%ncluster_A+1:)   = r%logZ2(i(1):)
+
+        ! Now update the volumes 
+        ! NOTE: i here is an array of indices
+        r%logX(i) = logni - logn + logX
+
+        ! Update the cross correlations 
+        do j=1,size(i)
+            do k=1,size(i)
+
+                if(k==j) then
+                    r%logXX(i(j),i(j)) = logni(j)+logni1(j)-logn-logn1 + logX
+                else
+                    r%logXX(i(j),i(k)) = logni(j)+logni(k)-logn-logn1  + logX
+                end if
+
+            end do
+        end do
+
+        ! Update the cross correlations that are uncorrelated
+        do j=1,size(i)
+            do k=1,r%ncluster_A
+
+                if(all(k/=i(:))) then
+                    r%logXX(i(j),k) = r%logX(i(j)) * r%logX(k)
+                    r%logXX(k,i(j)) = r%logXX(i(j),k)
+                end if
+
+            end do
+        end do
+
+        ! Initialise the remaining variables
+        r%logL(i) = r%logL(i(1)) 
+
+        r%logZ(i) = logzero
+        r%logZ2(i) = logzero
+        r%logZX(:,i) = logzero
+
+        r%n(i) = ni
+
+
+
+    end subroutine bifurcate_evidence
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 end module evidence_module

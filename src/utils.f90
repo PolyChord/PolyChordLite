@@ -1,9 +1,9 @@
 module utils_module
 
     !> The effective value of \f$ log(0) \f$
-    double precision, parameter :: logzero = -huge(0d0)
+    double precision, parameter :: logzero = -sqrt(huge(0d0))
     !> The effective value of \f$ log(\inf) \f$
-    double precision, parameter :: loginf = +huge(0d0) 
+    double precision, parameter :: loginf = +sqrt(huge(0d0))
 
     !> The maximum character length
     integer, parameter :: STR_LENGTH = 100
@@ -29,10 +29,12 @@ module utils_module
     integer, parameter :: write_dead_unit = 13
     !> unit for reading covariance matrices
     integer, parameter :: read_covmat_unit = 14
-    !> unit for reading covariance matrices
+    !> unit for writing live points
     integer, parameter :: write_phys_unit = 15
+    !> unit for writing clusters of live points
+    integer, parameter :: write_phys_cluster_unit = 16
     !> unit for writing evidence distribution
-    integer, parameter :: write_ev_unit = 16
+    integer, parameter :: write_ev_unit = 17
 
     ! All series used to approximate F are computed with relative
     ! tolerance:
@@ -217,6 +219,28 @@ module utils_module
 
     end function logsubexp
 
+    !> This function increases loga by logb (and by log c if present)
+    subroutine logincexp(loga,logb,logc)
+        implicit none
+        double precision,intent(inout)       :: loga
+        double precision,intent(in)          :: logb
+        double precision,intent(in),optional :: logc
+
+        if (loga>logb) then
+            loga = loga + log(exp(logb-loga) + 1)
+        else
+            loga = logb + log(exp(loga-logb) + 1)
+        end if
+
+        if(present(logc)) then
+            if (loga>logc) then
+                loga = loga + log(exp(logc-loga) + 1)
+            else
+                loga = logc + log(exp(loga-logc) + 1)
+            end if
+        end if
+
+    end subroutine logincexp
 
     !> Hypergeometric function 1F1
     !!
@@ -315,43 +339,76 @@ module utils_module
 
     end function abovetol
 
-    function calc_cholesky(matrix,nDims) result(cholesky)
+    function calc_cholesky(matrix) result(cholesky)
         implicit none
-        integer,intent(in) :: nDims
-        double precision, intent(in),dimension(nDims,nDims) :: matrix
-        double precision, dimension(nDims,nDims) :: cholesky
+        double precision, intent(in),dimension(:,:) :: matrix
+        double precision, dimension(size(matrix,1),size(matrix,2)) :: cholesky
         integer :: errcode
         integer :: i,j
 
         cholesky = matrix
-        call dpotrf ('L',nDims,cholesky,nDims,errcode)
+        call dpotrf ('L',size(matrix,1),cholesky,size(matrix,1),errcode)
 
         ! Zero out the upper half
-        do i=1,nDims
-            do j=i+1,nDims
+        do i=1,size(matrix,1)
+            do j=i+1,size(matrix,2)
                 cholesky(i,j)=0d0
             end do
         end do
 
     end function calc_cholesky
 
-    function calc_covmat(data_set,nDims,nstack) result(covmat)
+    function calc_covmat(lives,phantoms) result(covmat)
         implicit none
-        integer, intent(in) :: nDims
-        integer, intent(in) :: nstack
-        double precision, intent(in), dimension(nDims,nstack) :: data_set
+        double precision, intent(in), dimension(:,:) :: lives
+        double precision, intent(in), dimension(:,:) :: phantoms
 
-        double precision, dimension(nDims,nDims) :: covmat
+        double precision, dimension(size(lives,1),size(lives,1)) :: covmat
 
-        double precision, dimension(nDims) :: mean
+        double precision, dimension(size(lives,1)) :: mean
+
+        integer :: nDims,nlive,nphantom
+
+        nDims = size(lives,1)
+        nlive = size(lives,2)
+        nphantom = size(phantoms,2)
 
         ! Compute the mean 
-        mean = sum(data_set,dim=2)/nstack
+        mean = ( sum(lives,dim=2) + sum(phantoms,dim=2) ) 
+        mean = mean / (nlive + nphantom)
 
         ! Compute the covariance matrix
-        covmat = matmul(data_set - spread(mean,dim=2,ncopies=nstack) , transpose(data_set - spread(mean,dim=2,ncopies=nstack) ) )/(nstack-1) 
+        covmat = matmul(lives    - spread(mean,dim=2,ncopies=nlive) ,    transpose(lives    - spread(mean,dim=2,ncopies=nlive)    ) ) &
+            +    matmul(phantoms - spread(mean,dim=2,ncopies=nphantom) , transpose(phantoms - spread(mean,dim=2,ncopies=nphantom) ) )   
+        covmat = covmat / (nlive + nphantom -1)
 
     end function calc_covmat
+
+    !> This function computes the similarity matrix of an array of data.
+    !!
+    !! Assume that the data_array can be considered an indexed array of vectors
+    !! V = ( v_i : i=1,n )
+    !!
+    !! The similarity matrix can be expressed very neatly as
+    !! d_ij = (v_i-v_j) . (v_i-v_j)
+    !!      = v_i.v_i + v_j.v_j - 2 v_i.v_j
+    !!
+    !! The final term can be written as a data_array^T data_array, and the first
+    !! two are easy to write. We can therefore calculate this in two lines with
+    !! instrisic functions
+    function calc_similarity_matrix(data_array) result(similarity_matrix)
+
+        double precision, intent(in), dimension(:,:) :: data_array
+
+        double precision, dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
+
+
+
+        similarity_matrix = spread( [( dot_product(data_array(:,i),data_array(:,i)),i=1,size(data_array,2) )], dim=2,ncopies=size(data_array,2) )
+
+        similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(data_array),data_array )
+
+    end function calc_similarity_matrix
 
 
 

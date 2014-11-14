@@ -87,7 +87,7 @@ program main
     loglikelihood => twin_gaussian_loglikelihood 
 
     ! (ii) Set the dimensionality
-    settings%nDims= 40               ! Dimensionality of the space
+    settings%nDims= 20               ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -122,7 +122,8 @@ program main
     settings%feedback             = 1                        !degree of feedback
 
     ! stopping criteria
-    settings%precision_criterion  =  1d-3                    !degree of precision in answer settings%max_ndead            =  100000                  !maximum number of samples 
+    settings%precision_criterion  =  1d-3                    !degree of precision in answer 
+    settings%max_ndead            = -1                       !maximum number of samples 
     ! posterior calculation
     settings%nmax_posterior       = 100000                   !max number of posterior points
     settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)

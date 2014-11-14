@@ -97,18 +97,6 @@ module settings_module
         integer :: nlike
         !> The last chord length used in calculating this point
         integer :: last_chord
-        !> Whether or not this is a 'true' live point
-        !!
-        !! index |    name      | meaning
-        !!-------|--------------|--------------------------------------------
-        !!   -1  | phantom_type | 'blank' live point (blank slot to be filled)
-        !!    0  | blank_type   | 'fake' live point (not independent)
-        !!    1  | live_type    | 'true' live point
-        !!
-        integer :: point_type
-
-        !> The cluster number
-        integer :: cluster
 
         !> likelihood index
         !!
@@ -137,6 +125,10 @@ module settings_module
         integer :: SNN_k
         integer :: SNN_kt
 
+        !> Memory storage considerations; The maximum number of active clusters
+        integer :: ncluster = 5
+        integer :: nclustertot = 10
+
     end type program_settings
 
     contains
@@ -161,11 +153,9 @@ module settings_module
         ! Algorithm indices
         settings%nlike=settings%d1+1
         settings%last_chord=settings%nlike+1
-        settings%point_type=settings%last_chord+1
-        settings%cluster=settings%point_type+1
 
         ! Loglikelihood indices
-        settings%l0=settings%cluster+1
+        settings%l0=settings%last_chord+1
         settings%l1=settings%l0+1
 
         ! Total number of parameters

@@ -22,7 +22,7 @@ module cluster_module
         integer :: nlive
 
         integer :: num_clusters
-        integer :: clusters(size(similarity_matrix,1))
+        integer :: cluster_map(size(similarity_matrix,1))
 
 
         nlive=size(similarity_matrix,1)
@@ -62,29 +62,33 @@ module cluster_module
 
         ! Set clusters of the form 1,2,3
         num_clusters=1
-        clusters(1) = cluster_list(1)
+        cluster_map(1) = cluster_list(1)
 
         do i_point=1,nlive
-            if(all(cluster_list(i_point)/=clusters(1:num_clusters))) then
+            if(all(cluster_list(i_point)/=cluster_map(1:num_clusters))) then
                 num_clusters=num_clusters+1
-                clusters(num_clusters) = cluster_list(i_point)
+                cluster_map(num_clusters) = cluster_list(i_point)
             end if
         end do
 
         do i_cluster=1,num_clusters
-            where(cluster_list==clusters(i_cluster)) cluster_list_final=i_cluster
+            where(cluster_list==cluster_map(i_cluster)) cluster_list_final=i_cluster
         end do
 
     end function SNN_clustering
 
 
-    function NN_clustering(similarity_matrix,k) result(cluster_list_final)
+    function NN_clustering(similarity_matrix,k,cluster_list_final) result(num_clusters)
         implicit none
         double precision, intent(in), dimension(:,:) :: similarity_matrix
         integer, intent(in) :: k
+        integer, dimension(size(similarity_matrix,1)),intent(out) :: cluster_list_final
+
+        integer :: num_clusters
+
+
 
         integer, dimension(size(similarity_matrix,1)) :: cluster_list
-        integer, dimension(size(similarity_matrix,1)) :: cluster_list_final
 
         integer, dimension(k,size(similarity_matrix,1)) :: knn
 
@@ -94,8 +98,7 @@ module cluster_module
 
         integer :: nlive
 
-        integer :: num_clusters
-        integer :: clusters(size(similarity_matrix,1))
+        integer :: cluster_map(size(similarity_matrix,1))
 
 
         nlive=size(similarity_matrix,1)
@@ -129,21 +132,32 @@ module cluster_module
             end do
         end do
 
-        ! Set clusters of the form 1,2,3
+        ! We now wish to relabel the cluster_list that we've got out, so that it
+        ! uses integers 1,2,3,..., rather than a set of random integers between
+        ! 1 and the number of points
+        !
+        ! The array cluster_map will detail this mapping between them
+
+        ! Initialise the counter for the number of clusters
         num_clusters=1
-        clusters(1) = cluster_list(1)
+        ! We will re-label the cluster type in cluster_list(1) with the integer 1
+        cluster_map(num_clusters) = cluster_list(1)
 
         do i_point=1,nlive
-            if(all(cluster_list(i_point)/=clusters(1:num_clusters))) then
+            ! If the cluster type for i_point is not already included in the
+            ! cluster_map, then add it
+            if(all(cluster_list(i_point)/=cluster_map(1:num_clusters))) then
                 num_clusters=num_clusters+1
-                clusters(num_clusters) = cluster_list(i_point)
+                cluster_map(num_clusters) = cluster_list(i_point)
             end if
         end do
 
+        ! cluster_map now contains the random integers that are found in cluster_list
+
+        ! We now relabel according to 
         do i_cluster=1,num_clusters
-            where(cluster_list==clusters(i_cluster)) cluster_list_final=i_cluster
+            where(cluster_list==cluster_map(i_cluster)) cluster_list_final=i_cluster
         end do
-        cluster_list = cluster_list_final
 
 
     end function NN_clustering
@@ -202,18 +216,9 @@ module cluster_module
         integer,intent(in), dimension(:) :: knn2 
 
         logical :: same_list
-        integer :: same_list_arr(1)
 
         ! Check to see if they're in each others neighbors lists
-        same_list=.false.
-
-        same_list_arr = minloc(knn1,mask=knn1==knn2(1))
-        if(same_list_arr(1)==0) return
-
-        same_list_arr = minloc(knn2,mask=knn2==knn1(1))
-        if(same_list_arr(1)==0) return
-
-        same_list=.true.
+        same_list= any(knn1==knn2(1)) .or. any(knn2==knn1(1))
 
     end function neighbors
 

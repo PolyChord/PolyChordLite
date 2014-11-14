@@ -175,6 +175,34 @@ module feedback_module
 
     end subroutine write_started_sampling
 
+    !> Intermediate results
+    subroutine write_intermediate_results(settings,info,ndead,nphantom,nposterior)
+        use evidence_module, only: run_time_info
+        use settings_module, only: program_settings
+        use utils_module,    only: stdout_unit
+        implicit none
+        type(program_settings), intent(in) :: settings
+        type(run_time_info),intent(in)     :: info
+        integer,intent(in)                 :: ndead
+        integer,intent(in),dimension(:)    :: nphantom
+        integer,intent(in)                 :: nposterior
+
+        if (settings%feedback>=1) then
+            !mean_likelihood_calls = sum( (/live_points(settings%nlike,:),phantom_points(settings%nlike,:stack_size) /) )/(settings%nlive+0d0)
+            write(stdout_unit,'("ndead     = ", I20                  )') ndead
+            write(stdout_unit,'("lives     = ", <info%ncluster_A>I20)')  info%n(:info%ncluster_A)
+            write(stdout_unit,'("phantoms  = ", <info%ncluster_A>I20)')  nphantom(:info%ncluster_A)
+            if(settings%calculate_posterior) &
+                write(stdout_unit,'("nposterior= ", I20                  )') nposterior
+            !write(stdout_unit,'("efficiency= ", F20.2                )') mean_likelihood_calls
+            write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') info%logevidence, exp(0.5*info%logevidence2-info%logevidence) 
+            write(stdout_unit,'("")')
+        end if
+
+
+    end subroutine write_intermediate_results
+
+
 
     !> Nicely formatted final output statement
     subroutine write_final_results(output_info,feedback,priors)
