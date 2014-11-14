@@ -187,6 +187,8 @@ module feedback_module
         integer,intent(in),dimension(:)    :: nphantom
         integer,intent(in)                 :: nposterior
 
+        integer :: i
+
         if (settings%feedback>=1) then
             !mean_likelihood_calls = sum( (/live_points(settings%nlike,:),phantom_points(settings%nlike,:stack_size) /) )/(settings%nlive+0d0)
             write(stdout_unit,'("ndead     = ", I20                  )') ndead
@@ -195,7 +197,13 @@ module feedback_module
             if(settings%calculate_posterior) &
                 write(stdout_unit,'("nposterior= ", I20                  )') nposterior
             !write(stdout_unit,'("efficiency= ", F20.2                )') mean_likelihood_calls
-            write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') info%logevidence, exp(0.5*info%logevidence2-info%logevidence) 
+            write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') info%logevidence - 0.5d0*log(1+exp(info%logevidence2-2*info%logevidence)) ,sqrt(log(1+exp(info%logevidence2-2*info%logevidence))) 
+            do i=1,info%ncluster_A  
+                write(stdout_unit,'("log(Z_",I3,")= ", F20.5, " +/- ", F12.5)') i, info%logZ(i) - 0.5d0*log(1+exp(info%logZ2(i)-2*info%logZ(i))) ,sqrt(log(1+exp(info%logZ2(i)-2*info%logZ(i)))) 
+            end do
+
+
+
             write(stdout_unit,'("")')
         end if
 

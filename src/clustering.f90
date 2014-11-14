@@ -100,6 +100,8 @@ module cluster_module
 
         integer :: cluster_map(size(similarity_matrix,1))
 
+        integer :: n
+
 
         nlive=size(similarity_matrix,1)
 

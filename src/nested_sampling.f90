@@ -378,7 +378,6 @@ module nested_sampling_module
                                         write(*,*) 'Cluster Found!!!'
                                         write(*,'(<size(clusters)>I2)') clusters
                                         call create_new_clusters(settings,info,live_points,phantom_points,nphantom,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
-                                        call write_cluster_info(info)
                                     else
                                         ! Otherwise move on to the next cluster
                                         i_cluster=i_cluster+1
@@ -388,7 +387,6 @@ module nested_sampling_module
                                 end do
 
                             end if
-
                             ! Calculate the covariance matrices
                             covmats = calc_covmats(settings,info,live_points,phantom_points,nphantom)
                             ! Calculate the cholesky decomposition
@@ -841,18 +839,20 @@ module nested_sampling_module
 
 
 
-        ! Now update the posterior information for the dead point
-        !   - calculate the new posterior point
-        posterior_point = calc_posterior_point(settings,dead_point,logweight)
-        !   - increase the number of posterior points by 1, and check that we're
-        !     not over the limit
-        nposterior=nposterior+1
-        if(nposterior>settings%nmax_posterior) then
-            write(stdout_unit,'(" Too many posterior points. Consider increasing nmax_posterior ")')
-            call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
+        if(settings%calculate_posterior) then
+            ! Now update the posterior information for the dead point
+            !   - calculate the new posterior point
+            posterior_point = calc_posterior_point(settings,dead_point,logweight)
+            !   - increase the number of posterior points by 1, and check that we're
+            !     not over the limit
+            nposterior=nposterior+1
+            if(nposterior>settings%nmax_posterior) then
+                write(stdout_unit,'(" Too many posterior points. Consider increasing nmax_posterior ")')
+                call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
+            end if
+            !   - add the posterior point to the array
+            posterior_array(:,nposterior) = posterior_point
         end if
-        !   - add the posterior point to the array
-        posterior_array(:,nposterior) = posterior_point
 
 
 

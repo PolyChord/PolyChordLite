@@ -92,15 +92,15 @@ module evidence_module
 
         write(*,'("ncluster_A:", I4)') info%ncluster_A
         write(*,'("ncluster_T:", I4)') info%ncluster_T
-        !write(*,'("logevidence:", E17.6)') info%logevidence
-        !write(*,'("logevidence2:", E17.6)') info%logevidence2
+        write(*,'("logevidence:", E17.6)') info%logevidence
+        write(*,'("logevidence2:", E17.6)') info%logevidence2
         write(*,'("n:", <size(info%n)>I4)') info%n
-        !write(*,'("logL:", <size(info%logL)>E17.6)') info%logL
-        !write(*,'("logX:", <size(info%logX)>E17.6)') info%logX
-        !write(*,'("logZ:", <size(info%logZ)>E17.6)') info%logZ
-        !write(*,'("logZ2:", <size(info%logZ2)>E17.6)') info%logZ2
-        !write(*,'("logXX:", <size(info%logXX,1)>E17.6)') info%logXX
-        !write(*,'("logZX:", <size(info%logZX,1)>E17.6)') info%logZX
+        write(*,'("logL:", <info%ncluster_A>E17.6)') info%logL(:info%ncluster_A)
+        write(*,'("logX:", <info%ncluster_A>E17.6)') info%logX(:info%ncluster_A)
+        write(*,'("logZ:", <info%ncluster_T>E17.6)') info%logZ(:info%ncluster_T)
+        write(*,'("logZ2:", <info%ncluster_T>E17.6)') info%logZ2(:info%ncluster_T)
+        write(*,'("logXX:", <info%ncluster_A>E17.6)') info%logXX(:info%ncluster_A,:info%ncluster_A)
+        write(*,'("logZX:", <info%ncluster_T>E17.6)') info%logZX(:info%ncluster_T,:info%ncluster_A)
 
     end subroutine write_cluster_info
 
@@ -216,12 +216,14 @@ module evidence_module
         double precision,dimension(size(ni)) :: logni
         double precision,dimension(size(ni)) :: logni1
         double precision                     :: logX
+        double precision                     :: logX2
 
         logn  = log( sum(ni) +0d0 ) 
         logn1 = log( sum(ni) +1d0 ) 
         logni = log( ni +0d0 )
         logni1= log( ni +1d0 )
         logX  = r%logX(i(1)) 
+        logX2 = r%logXX(i(1),i(1)) 
 
 
 
@@ -233,14 +235,14 @@ module evidence_module
 
         ! Make room for them in the r variable by pushing the passive cluster
         ! r up a few places (mostly evidence r)
-        r%logZX(r%ncluster_A+2:,:) = r%logZX(old_ncluster_A+1:,:)
         r%logZ( r%ncluster_A+2:)   = r%logZ( old_ncluster_A+1:)
         r%logZ2(r%ncluster_A+2:)   = r%logZ2(old_ncluster_A+1:)
+        r%logZX(r%ncluster_A+2:,:) = r%logZX(old_ncluster_A+1:,:)
 
         ! Copy up the details in cluster i(1) to r%ncluster_A+1
-        r%logZX(r%ncluster_A+1:,:) = r%logZX(i(1):,:)
-        r%logZ( r%ncluster_A+1:)   = r%logZ( i(1):)
-        r%logZ2(r%ncluster_A+1:)   = r%logZ2(i(1):)
+        r%logZ( r%ncluster_A+1)   = r%logZ( i(1))
+        r%logZ2(r%ncluster_A+1)   = r%logZ2(i(1))
+        r%logZX(r%ncluster_A+1,i) = r%logZX(i(1),i(1)) + logni - logn
 
         ! Now update the volumes 
         ! NOTE: i here is an array of indices
@@ -251,9 +253,9 @@ module evidence_module
             do k=1,size(i)
 
                 if(k==j) then
-                    r%logXX(i(j),i(j)) = logni(j)+logni1(j)-logn-logn1 + logX
+                    r%logXX(i(j),i(j)) = logni(j)+logni1(j)-logn-logn1 + logX2
                 else
-                    r%logXX(i(j),i(k)) = logni(j)+logni(k)-logn-logn1  + logX
+                    r%logXX(i(j),i(k)) = logni(j)+logni(k) -logn-logn1 + logX2
                 end if
 
             end do
@@ -276,7 +278,7 @@ module evidence_module
 
         r%logZ(i) = logzero
         r%logZ2(i) = logzero
-        r%logZX(:,i) = logzero
+        r%logZX(i,:) = logzero
 
         r%n(i) = ni
 

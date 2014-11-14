@@ -87,7 +87,7 @@ program main
     loglikelihood => twin_gaussian_loglikelihood 
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20               ! Dimensionality of the space
+    settings%nDims= 40               ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -137,6 +137,9 @@ program main
     settings%do_clustering = .true.
     settings%SNN_k = settings%nDims
     settings%SNN_kt = 5
+
+    settings%ncluster = 10
+    settings%nclustertot = 100
 
 
     ! Initialise the loglikelihood

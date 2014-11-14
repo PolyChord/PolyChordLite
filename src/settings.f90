@@ -126,8 +126,8 @@ module settings_module
         integer :: SNN_kt
 
         !> Memory storage considerations; The maximum number of active clusters
-        integer :: ncluster = 5
-        integer :: nclustertot = 10
+        integer :: ncluster = 10
+        integer :: nclustertot = 100
 
     end type program_settings
 
