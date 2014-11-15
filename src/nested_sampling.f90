@@ -1,5 +1,5 @@
 module nested_sampling_module
-    use mpi
+    use mpi_module
 
     implicit none
 
@@ -94,7 +94,6 @@ module nested_sampling_module
         integer :: myrank
         integer :: root
         logical :: linear_mode
-        integer :: mpierror
 
 
         integer :: i_cluster
@@ -110,6 +109,8 @@ module nested_sampling_module
         double precision, allocatable, dimension(:,:,:) :: baby_incubator
         integer :: nincubator
         integer :: i_incubator
+
+        integer :: i_dims
 
 
 
@@ -231,6 +232,13 @@ module nested_sampling_module
 
 
 
+            ! Initialise the covmats at the identity
+            covmats = 0d0
+            choleskys=0d0
+            do i_dims=1,settings%nDims
+                covmats(i_dims,i_dims,:) = 1d0
+                choleskys(i_dims,i_dims,:) = 1d0
+            end do
 
             ! Calculate the covariance matrices
             covmats = calc_covmats(settings,info,live_points,phantom_points,nphantom)
@@ -326,34 +334,6 @@ module nested_sampling_module
                         ! Record that we have a new dead point
                         ndead = ndead + 1
 
-                        ! (3) Feedback to command line every nlive iterations
-
-                        ! (4) Update the resume and posterior files every update_resume iterations, or at program termination
-                        if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
-
-                            ! Test to see if we need to finish
-                            more_samples_needed =  (live_logZ(settings,info,live_points) > log(settings%precision_criterion) + info%logevidence ) 
-
-                            ! ---------------------------------------------------------------------- !
-                            write(*,'("Mean likelihood calls ", I10 )') mean_likelihood_calls(settings,info,live_points)
-                            !write(*,'("Mean likelihood calls ", 3E17.8 )') mean_w(settings,info,live_points)
-                            call write_intermediate_results(settings,info,ndead,nphantom,nposterior) 
-                            ! ---------------------------------------------------------------------- !
-
-                            if(settings%feedback>=2) write(stdout_unit,'(" Writing resume files ")')
-                            if(settings%write_resume)        call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
-                                                                                    ndead,total_likelihood_calls,nposterior,posterior_array)
-                            if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,info%logevidence,nposterior)  
-                            if(settings%write_live)          call write_phys_live_points(settings,info,live_points)
-
-                        end if
-
-                        ! If we've put a limit on the maximum number of iterations, then
-                        ! check to see if we've reached this
-                        if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
-
-
-
                         ! (5) Update the covariance matrix of the distribution of live points
                         if(mod(ndead,settings%nlive) .eq.0) then
 
@@ -375,9 +355,16 @@ module nested_sampling_module
 
                                     ! If we've found new clusters, then we should bifurcate the algorithm at this point
                                     if(num_new_clusters>1) then
-                                        write(*,*) 'Cluster Found!!!'
-                                        write(*,'(<size(clusters)>I2)') clusters
-                                        call create_new_clusters(settings,info,live_points,phantom_points,nphantom,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
+
+                                        if( num_new_clusters+info%ncluster_A>settings%ncluster ) then
+                                            call abort_all(" Too many clusters. Consider increasing settings%ncluster")
+                                        else if (num_new_clusters + info%ncluster_T > settings%nclustertot ) then
+                                            call abort_all(" Too many clusters. Consider increasing settings%nclustertot")
+                                        else
+                                            write(stdout_unit,'( I, " new clusters found at iteration ", I)') num_new_clusters, ndead
+                                            write(*,'(<info%n(i_cluster)>I2)') clusters(:info%n(i_cluster))
+                                            call create_new_clusters(settings,info,live_points,phantom_points,nphantom,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
+                                        end if
                                     else
                                         ! Otherwise move on to the next cluster
                                         i_cluster=i_cluster+1
@@ -393,6 +380,37 @@ module nested_sampling_module
                             choleskys = calc_choleskys(covmats)
 
                         end if
+
+
+
+
+
+
+                        ! (3) Feedback to command line every nlive iterations
+
+                        ! (4) Update the resume and posterior files every update_resume iterations, or at program termination
+                        if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
+
+                            ! Test to see if we need to finish
+                            more_samples_needed =  (live_logZ(settings,info,live_points) > log(settings%precision_criterion) + info%logevidence ) 
+
+                            ! ---------------------------------------------------------------------- !
+                            call write_intermediate_results(settings,info,ndead,nphantom,nposterior,&
+                                mean_likelihood_calls(settings,info,live_points) ) 
+                            ! ---------------------------------------------------------------------- !
+
+                            if(settings%feedback>=2) write(stdout_unit,'(" Writing resume files ")')
+                            if(settings%write_resume)        call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
+                                                                                    ndead,total_likelihood_calls,nposterior,posterior_array)
+                            if(settings%calculate_posterior) call write_posterior_file(settings,posterior_array,info%logevidence,nposterior)  
+                            if(settings%write_live)          call write_phys_live_points(settings,info,live_points)
+
+                        end if
+
+                        ! If we've put a limit on the maximum number of iterations, then
+                        ! check to see if we've reached this
+                        if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
+
 
 
                         ! (6] delete the next outer point.
@@ -434,8 +452,8 @@ module nested_sampling_module
             ! (3) Number of dead points
             ! (4) Number of likelihood calls
             ! (5) log(evidence * prior volume)
-            output_info(1) = info%logevidence - 0.5d0*log(1+exp(info%logevidence2-2*info%logevidence))
-            output_info(2) = sqrt(log(1+exp(info%logevidence2-2*info%logevidence)))
+            output_info(1) = 2*info%logevidence - 0.5*info%logevidence2
+            output_info(2) = sqrt(info%logevidence2 - 2*info%logevidence)
             output_info(3) = ndead
             output_info(4) = total_likelihood_calls
             output_info(5) = output_info(1)+prior_log_volume(priors)
@@ -504,6 +522,9 @@ module nested_sampling_module
 
 
 
+
+
+
     subroutine create_new_clusters(settings,info,live_points,phantom_points,nphantom,i_cluster,clusters,num_new_clusters)
         use settings_module,   only: program_settings
         use evidence_module,   only: run_time_info,bifurcate_evidence
@@ -533,45 +554,38 @@ module nested_sampling_module
         integer :: j_cluster,k_cluster
 
         integer, dimension(num_new_clusters) :: ni
-        integer, dimension(num_new_clusters) :: new_clusters
         integer :: ncluster_A_old
 
         ! Get the lives to split
         nlives = info%n(i_cluster)
         lives  = live_points(:,:,i_cluster)
 
-        ncluster_A_old  = info%ncluster_A
+        ! Create a temporary set of phantom points for re-assigning to clusters
+        ncluster_A_old= info%ncluster_A
+        temp_phantoms = phantom_points
+        temp_nphantom = nphantom
 
-        ! choose the position of the new clusters
-        ! We overwrite the original cluster, and then place the remainder at the
-        ! end of the active clusters
-        new_clusters= (/ i_cluster, ( j_cluster, j_cluster=info%ncluster_A+1,info%ncluster_A+num_new_clusters-1) /)
 
         ! Set the number of points in the new clusters to 0 initially
         ni = 0
 
-
         ! Split the live points stored in lives into their new clusters
         do i_live=1,nlives
+
             ! Iterate the number of points in cluster 'clusters(i_live)'
             ni(clusters(i_live))= ni(clusters(i_live)) + 1
 
-            ! Add the 'i_live' point to the 'clusters(i_live)' cluster
-            live_points(:,ni(clusters(i_live)),clusters(i_live)) = lives(:,i_live)
+            ! Add the 'i_live' point to the 'clusters(i_live)' cluster from the end
+            live_points(:,ni(clusters(i_live)),clusters(i_live) + info%ncluster_A) = lives(:,i_live)
         end do
 
         ! Update the info variable for these new clusters
-        call bifurcate_evidence(info,new_clusters,ni)
+        call bifurcate_evidence(info,i_cluster,ni)
 
+        ! Delete the old cluster
+        call reorganise_clusters(settings,info,live_points,phantom_points,nphantom,i_cluster) 
 
-
-
-
-
-        ! Create a temporary set of phantom points for re-assigning to clusters
-        temp_phantoms = phantom_points
-        temp_nphantom = nphantom
-
+        ! Reassign all of the phantom points
         ! set the number of phantoms to zero
         nphantom=0
 
@@ -705,7 +719,7 @@ module nested_sampling_module
 
     subroutine delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_array,nposterior) 
         use settings_module,   only: program_settings
-        use evidence_module,   only: run_time_info,update_evidence
+        use evidence_module,   only: run_time_info,update_evidence,delete_evidence
         implicit none
 
         type(program_settings), intent(in) :: settings
@@ -738,11 +752,43 @@ module nested_sampling_module
 
         ! Update the posterior and phantom_arrays
         call update_posterior_and_phantom(settings,posterior_array,nposterior,dead_point,phantom_points,nphantom,min_cluster,min_loglike,logweight) 
-
         ! Decrease the chord estimate for this cluster
-        live_points(settings%last_chord,:,min_cluster) = live_points(settings%last_chord,:,min_cluster) *info%n(min_cluster) / (info%n(min_cluster) + 1d0) 
+        !live_points(settings%last_chord,:,min_cluster) = live_points(settings%last_chord,:,min_cluster) *info%n(min_cluster) / (info%n(min_cluster) + 1d0) 
+
+        ! If we've deleted a cluster, we should re-organise live and phantom points
+        if(info%n(min_cluster)==0) then
+            write(*,'(" Deleting cluster", I4)') min_cluster
+            call reorganise_clusters(settings,info,live_points,phantom_points,nphantom,min_cluster)
+        end if
 
     end subroutine delete_outer_point
+
+
+    subroutine reorganise_clusters(settings,info,live_points,phantom_points,nphantom,min_cluster)
+        use settings_module,   only: program_settings
+        use evidence_module,   only: run_time_info,delete_evidence
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        type(run_time_info), intent(inout) :: info
+
+        double precision, dimension(settings%nTotal,settings%nlive,settings%ncluster),intent(inout)   :: live_points
+        double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
+        integer, dimension(settings%ncluster),intent(inout) :: nphantom
+
+        integer,intent(in) :: min_cluster
+
+
+        ! Cyclically shift the active points down one
+        live_points(   :,:,min_cluster:info%ncluster_A) = cshift(live_points(   :,:,min_cluster:info%ncluster_A),shift=1,dim=3)
+        phantom_points(:,:,min_cluster:info%ncluster_A) = cshift(phantom_points(:,:,min_cluster:info%ncluster_A),shift=1,dim=3)
+        nphantom(          min_cluster:info%ncluster_A) = cshift(nphantom(          min_cluster:info%ncluster_A),shift=1,dim=1) 
+
+        ! Update the evidence
+        call delete_evidence(info,min_cluster)
+
+    end subroutine reorganise_clusters
+
 
 
 
@@ -832,8 +878,6 @@ module nested_sampling_module
         integer :: i_phantom
         integer :: i_posterior
 
-        integer :: mpierror
-        integer :: errorcode
 
 
 
@@ -846,10 +890,9 @@ module nested_sampling_module
             !   - increase the number of posterior points by 1, and check that we're
             !     not over the limit
             nposterior=nposterior+1
-            if(nposterior>settings%nmax_posterior) then
-                write(stdout_unit,'(" Too many posterior points. Consider increasing nmax_posterior ")')
-                call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
-            end if
+            
+            if(nposterior>settings%nmax_posterior) call abort_all(" Too many posterior points. Consider increasing nmax_posterior ")
+
             !   - add the posterior point to the array
             posterior_array(:,nposterior) = posterior_point
         end if
@@ -872,10 +915,9 @@ module nested_sampling_module
                     !   - increase the number of posterior points by 1, and check that we're
                     !     not over the limit
                     nposterior=nposterior+1
-                    if(nposterior>settings%nmax_posterior) then
-                        write(stdout_unit,'(" Too many posterior points. Consider increasing nmax_posterior ")')
-                        call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
-                    end if
+
+                    if(nposterior>settings%nmax_posterior) call abort_all(" Too many posterior points. Consider increasing nmax_posterior ")
+
                     !   - add the posterior point to the array
                     posterior_array(:,nposterior) = posterior_point
                 end if
@@ -973,10 +1015,12 @@ module nested_sampling_module
         covmats = 0 
 
         do i=1,info%ncluster_A
-            covmats(:,:,i) = calc_covmat(&
-                live_points(settings%h0:settings%h1,:info%n(i),i),&
-                phantom_points(settings%h0:settings%h1,:nphantom(i),i)&
-                )
+            if(info%n(i)+nphantom(i) >= settings%nDims*(settings%nDims+1)/2) then
+                covmats(:,:,i) = calc_covmat(&
+                    live_points(settings%h0:settings%h1,:info%n(i),i),&
+                    phantom_points(settings%h0:settings%h1,:nphantom(i),i)&
+                    )
+            end if
         end do
 
     end function calc_covmats
@@ -1006,16 +1050,16 @@ module nested_sampling_module
         type(run_time_info),intent(in) :: info
         double precision, dimension(settings%nTotal,settings%nlive,settings%ncluster),intent(in) :: live_points
         
-        integer mean_likelihood_calls
+        double precision mean_likelihood_calls
         integer i_cluster
 
-        mean_likelihood_calls=0
+        mean_likelihood_calls=0d0
 
         do i_cluster=1,info%ncluster_A
             mean_likelihood_calls = mean_likelihood_calls + sum(live_points(settings%nlike,:info%n(i_cluster),i_cluster))
         end do
 
-        mean_likelihood_calls = nint(mean_likelihood_calls/(settings%nlive + 0d0))
+        mean_likelihood_calls = mean_likelihood_calls/(settings%nlive + 0d0)
 
 
     end function mean_likelihood_calls 

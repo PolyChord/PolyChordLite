@@ -1,5 +1,5 @@
 module grades_module
-    use mpi
+    use mpi_module, only: abort_all
     implicit none
 
     type :: parameter_grades
@@ -22,7 +22,6 @@ module grades_module
         implicit none
         type(parameter_grades),intent(out) :: grades
         integer,intent(in),optional,dimension(:) :: grade_information
-        integer :: errorcode,mpierror
 
         integer :: i
 
@@ -40,10 +39,8 @@ module grades_module
                 )
 
             do i=2,size(grade_information)
-                if( grade_information(i)<grade_information(i-1) ) then
-                    write(stdout_unit,'(" Parameters must be ordered in terms of grade, lowest to highest")')
-                    call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
-                end if
+                if( grade_information(i)<grade_information(i-1) ) call abort_all&
+                    (" Parameters must be ordered in terms of grade, lowest to highest")
             end do
             do i=grades%min_grade,grades%max_grade
                 grades%grade_index(i:i)=minloc(grade_information,mask=grade_information==i)

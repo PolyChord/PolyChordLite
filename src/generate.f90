@@ -6,7 +6,7 @@
 !! * GenerateLivePointsL
 module generate_module
 
-    use mpi
+    use mpi_module
 
     implicit none
 

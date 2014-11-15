@@ -24,7 +24,7 @@ else
 # --------------
 # O3         : maximum optimisation
 # xHost      : maximise architecture usage
-FCFLAGS += -O3 -xHost
+FCFLAGS += -O3 -xHost -traceback -check bounds -fpe0 -fp-stack-check
 endif
 
 
@@ -38,7 +38,7 @@ PROGRAMS = libchord.a main planck batch
 # "make" builds all
 all: $(PROGRAMS)
 
-OBJECTS = utils.o random_utils.o priors.o grades.o settings.o calculate.o evidence.o feedback.o read_write.o clustering.o likelihoods.o chordal_sampling.o generate.o nested_sampling.o
+OBJECTS = utils.o mpi_utils.o random_utils.o priors.o grades.o settings.o calculate.o evidence.o feedback.o read_write.o clustering.o likelihoods.o chordal_sampling.o generate.o nested_sampling.o
 
 AR = ar r
 

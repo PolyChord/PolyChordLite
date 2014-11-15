@@ -15,7 +15,7 @@ module random_module
     use mkl_vsl_type
     use mkl_vsl
 
-    use mpi
+    use mpi_module
 
     implicit none           
 

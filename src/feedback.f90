@@ -176,31 +176,59 @@ module feedback_module
     end subroutine write_started_sampling
 
     !> Intermediate results
-    subroutine write_intermediate_results(settings,info,ndead,nphantom,nposterior)
+    subroutine write_intermediate_results(settings,info,ndead,nphantom,nposterior,mean_likelihood_calls)
         use evidence_module, only: run_time_info
         use settings_module, only: program_settings
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,logzero
         implicit none
         type(program_settings), intent(in) :: settings
         type(run_time_info),intent(in)     :: info
         integer,intent(in)                 :: ndead
         integer,intent(in),dimension(:)    :: nphantom
         integer,intent(in)                 :: nposterior
+        double precision,intent(in)        :: mean_likelihood_calls
 
         integer :: i
 
+        double precision, dimension(info%ncluster_A) :: mu
+        double precision, dimension(info%ncluster_A) :: sigma
+
+
         if (settings%feedback>=1) then
-            !mean_likelihood_calls = sum( (/live_points(settings%nlike,:),phantom_points(settings%nlike,:stack_size) /) )/(settings%nlive+0d0)
-            write(stdout_unit,'("ndead     = ", I20                  )') ndead
-            write(stdout_unit,'("lives     = ", <info%ncluster_A>I20)')  info%n(:info%ncluster_A)
-            write(stdout_unit,'("phantoms  = ", <info%ncluster_A>I20)')  nphantom(:info%ncluster_A)
+            write(stdout_unit,'("ndead      = ", I20                  )') ndead
+            write(stdout_unit,'("lives      = ", <info%ncluster_A>I7)')  info%n(:info%ncluster_A)
+            write(stdout_unit,'("phantoms   = ", <info%ncluster_A>I7)')  nphantom(:info%ncluster_A)
+
             if(settings%calculate_posterior) &
-                write(stdout_unit,'("nposterior= ", I20                  )') nposterior
-            !write(stdout_unit,'("efficiency= ", F20.2                )') mean_likelihood_calls
-            write(stdout_unit,'("log(Z)    = ", F20.5, " +/- ", F12.5)') info%logevidence - 0.5d0*log(1+exp(info%logevidence2-2*info%logevidence)) ,sqrt(log(1+exp(info%logevidence2-2*info%logevidence))) 
-            do i=1,info%ncluster_A  
-                write(stdout_unit,'("log(Z_",I3,")= ", F20.5, " +/- ", F12.5)') i, info%logZ(i) - 0.5d0*log(1+exp(info%logZ2(i)-2*info%logZ(i))) ,sqrt(log(1+exp(info%logZ2(i)-2*info%logZ(i)))) 
-            end do
+                write(stdout_unit,'("nposterior = ", I20                  )') nposterior
+
+            write(stdout_unit,'("efficiency = ", F20.2                )') mean_likelihood_calls
+            
+
+            mu(1)    = 2*info%logevidence - 0.5*info%logevidence2              
+            sigma(1) = sqrt(info%logevidence2 - 2*info%logevidence)
+
+            ! Truncate them both to the closest sigma can tell us
+            !write(*,*) sigma, exponent(sigma)
+            !sigma = nint(10**(floor(log10(sigma))) * sigma) * 10**(-floor(log10(sigma)))
+            !mu = nint(10**(floor(log10(sigma))) * mu) * 10**(-floor(log10(sigma)))
+
+            if(info%logevidence>logzero) then
+                write(stdout_unit,'("log(Z)     = ", F10.5, " +/- ", F10.5)') mu(1),sigma(1)
+            end if
+
+            mu    = 2*info%logZ - 0.5*info%logZ2              
+            sigma = sqrt(info%logZ2 - 2*info%logZ)
+
+            if(info%ncluster_A>1) then
+                do i=1,info%ncluster_A  
+                    if(info%logZ(i)>logzero) then
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F10.5, " +/- ", F10.5)') i, mu(i),sigma(i)
+                    else
+                        write(stdout_unit,'("log(Z_",I3,")  = ?")') i
+                    end if
+                end do
+            end if
 
 
 

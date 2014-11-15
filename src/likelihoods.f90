@@ -2,7 +2,7 @@
 
 module example_likelihoods
     use utils_module,    only: logzero,TwoPi,stdout_unit,Hypergeometric1F1,Hypergeometric2F1,Pochhammer 
-    use mpi
+    use mpi_module
 
     contains
 

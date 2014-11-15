@@ -27,7 +27,6 @@ module cluster_module
 
         nlive=size(similarity_matrix,1)
 
-
         ! compute the k nearest neighbors for each point
         knn = compute_knn(similarity_matrix,k)
 
@@ -78,17 +77,20 @@ module cluster_module
     end function SNN_clustering
 
 
-    function NN_clustering(similarity_matrix,k,cluster_list_final) result(num_clusters)
+    function NN_clustering(similarity_matrix,k,cluster_list_output) result(num_clusters_output)
         implicit none
         double precision, intent(in), dimension(:,:) :: similarity_matrix
         integer, intent(in) :: k
-        integer, dimension(size(similarity_matrix,1)),intent(out) :: cluster_list_final
+        integer, dimension(size(similarity_matrix,1)),intent(out) :: cluster_list_output
 
-        integer :: num_clusters
+        integer :: num_clusters_output
 
 
 
-        integer, dimension(size(similarity_matrix,1)) :: cluster_list
+        integer, dimension(size(similarity_matrix,1),k) :: cluster_list
+        integer, dimension(size(similarity_matrix,1),k) :: cluster_list_final
+
+        integer, dimension(k) :: num_clusters
 
         integer, dimension(k,size(similarity_matrix,1)) :: knn
 
@@ -105,61 +107,81 @@ module cluster_module
 
         nlive=size(similarity_matrix,1)
 
+        if(nlive<k) then
+            cluster_list_output=1
+            num_clusters_output=1
+        end if
+
 
         ! compute the k nearest neighbors for each point
         knn = compute_knn(similarity_matrix,k)
 
         ! Set up the cluster list
-        cluster_list = [( i_point,i_point=1,nlive )]
+        cluster_list = spread([( i_point,i_point=1,nlive )],dim=2,ncopies=n)
 
         ! Loop through all pairs of points
-        do i_point=1,nlive
-            do j_point=i_point+1,nlive
+        do n=1,k
 
-                cluster_orig_i = cluster_list(i_point)
-                cluster_orig_j = cluster_list(j_point)
+            do i_point=1,nlive
+                do j_point=i_point+1,nlive
 
-                ! If they're not in the same cluster already...
-                if(cluster_orig_i/=cluster_orig_j) then
-                    ! ... check to see if they are within each others k nearest neihbors...
-                    if( neighbors( knn(:k,i_point),knn(:k,j_point) ) ) then
-                        if(cluster_orig_i>cluster_orig_j) then
-                            where(cluster_list==cluster_orig_i) cluster_list=cluster_orig_j
-                        else
-                            where(cluster_list==cluster_orig_j) cluster_list=cluster_orig_i
+                    cluster_orig_i = cluster_list(i_point,n)
+                    cluster_orig_j = cluster_list(j_point,n)
+
+                    ! If they're not in the same cluster already...
+                    if(cluster_orig_i/=cluster_orig_j) then
+                        ! ... check to see if they are within each others k nearest neihbors...
+                        if( neighbors( knn(:n,i_point),knn(:n,j_point) ) ) then
+                            if(cluster_orig_i>cluster_orig_j) then
+                                where(cluster_list(:,n)==cluster_orig_i) cluster_list(:,n)=cluster_orig_j
+                            else
+                                where(cluster_list(:,n)==cluster_orig_j) cluster_list(:,n)=cluster_orig_i
+                            end if
                         end if
                     end if
-                end if
 
+                end do
             end do
-        end do
 
-        ! We now wish to relabel the cluster_list that we've got out, so that it
-        ! uses integers 1,2,3,..., rather than a set of random integers between
-        ! 1 and the number of points
-        !
-        ! The array cluster_map will detail this mapping between them
+            ! We now wish to relabel the cluster_list that we've got out, so that it
+            ! uses integers 1,2,3,..., rather than a set of random integers between
+            ! 1 and the number of points
+            !
+            ! The array cluster_map will detail this mapping between them
 
-        ! Initialise the counter for the number of clusters
-        num_clusters=1
-        ! We will re-label the cluster type in cluster_list(1) with the integer 1
-        cluster_map(num_clusters) = cluster_list(1)
+            ! Initialise the counter for the number of clusters
+            num_clusters(n)=1
+            ! We will re-label the cluster type in cluster_list(1) with the integer 1
+            cluster_map(1) = cluster_list(1,n)
 
-        do i_point=1,nlive
-            ! If the cluster type for i_point is not already included in the
-            ! cluster_map, then add it
-            if(all(cluster_list(i_point)/=cluster_map(1:num_clusters))) then
-                num_clusters=num_clusters+1
-                cluster_map(num_clusters) = cluster_list(i_point)
+            do i_point=1,nlive
+                ! If the cluster type for i_point is not already included in the
+                ! cluster_map, then add it
+                if(all(cluster_list(i_point,n)/=cluster_map(1:num_clusters(n)))) then
+                    num_clusters(n)=num_clusters(n)+1
+                    cluster_map(num_clusters(n)) = cluster_list(i_point,n)
+                end if
+            end do
+
+            ! cluster_map now contains the random integers that are found in cluster_list
+
+            ! We now relabel according to 
+            do i_cluster=1,num_clusters(n)
+                where(cluster_list(:,n)==cluster_map(i_cluster)) cluster_list_final(:,n)=i_cluster
+            end do
+
+            if(n>5) then
+                if( num_clusters(n)==num_clusters(n-1) .and. num_clusters(n)==num_clusters(n-1) ) then
+                    if( all( cluster_list_final(:,n) == cluster_list_final(:,n-1) .and. cluster_list_final(:,n) == cluster_list_final(:,n-2)) ) exit
+                else if(n==k) then
+                    exit
+                end if
             end if
+
         end do
 
-        ! cluster_map now contains the random integers that are found in cluster_list
-
-        ! We now relabel according to 
-        do i_cluster=1,num_clusters
-            where(cluster_list==cluster_map(i_cluster)) cluster_list_final=i_cluster
-        end do
+        num_clusters_output = num_clusters(n)
+        cluster_list_output = cluster_list_final(:,n)
 
 
     end function NN_clustering

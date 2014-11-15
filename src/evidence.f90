@@ -92,15 +92,15 @@ module evidence_module
 
         write(*,'("ncluster_A:", I4)') info%ncluster_A
         write(*,'("ncluster_T:", I4)') info%ncluster_T
-        write(*,'("logevidence:", E17.6)') info%logevidence
-        write(*,'("logevidence2:", E17.6)') info%logevidence2
-        write(*,'("n:", <size(info%n)>I4)') info%n
-        write(*,'("logL:", <info%ncluster_A>E17.6)') info%logL(:info%ncluster_A)
-        write(*,'("logX:", <info%ncluster_A>E17.6)') info%logX(:info%ncluster_A)
-        write(*,'("logZ:", <info%ncluster_T>E17.6)') info%logZ(:info%ncluster_T)
-        write(*,'("logZ2:", <info%ncluster_T>E17.6)') info%logZ2(:info%ncluster_T)
-        write(*,'("logXX:", <info%ncluster_A>E17.6)') info%logXX(:info%ncluster_A,:info%ncluster_A)
-        write(*,'("logZX:", <info%ncluster_T>E17.6)') info%logZX(:info%ncluster_T,:info%ncluster_A)
+        write(*,'("logevidence:", E10.2)') info%logevidence
+        write(*,'("logevidence2:", E10.2)') info%logevidence2
+        write(*,'("n:", <info%ncluster_A>I4)') info%n(:info%ncluster_A)
+        write(*,'("logL:", <info%ncluster_A>E10.2)') info%logL(:info%ncluster_A)
+        write(*,'("logX:", <info%ncluster_A>E10.2)') info%logX(:info%ncluster_A)
+        write(*,'("logZ:", <info%ncluster_T>E10.2)') info%logZ(:info%ncluster_T)
+        write(*,'("logZ2:", <info%ncluster_T>E10.2)') info%logZ2(:info%ncluster_T)
+        write(*,'("logXX:", <info%ncluster_A>E10.2)') info%logXX(:info%ncluster_A,:info%ncluster_A)
+        write(*,'("logZX:", <info%ncluster_T>E10.2)') info%logZX(:info%ncluster_T,:info%ncluster_A)
 
     end subroutine write_cluster_info
 
@@ -175,23 +175,57 @@ module evidence_module
         do j=1,r%ncluster_A
             if(j/=i) then
                 r%logXX(i,j) = r%logXX(i,j) + logni - logni1
-                r%logXX(j,i) = r%logXX(j,i) + logni - logni1
+                r%logXX(j,i) = r%logXX(i,j)
             else
                 r%logXX(i,i) = r%logXX(i,i) + logni - logni2
             end if
         end do
 
+        ! Update the loglikelihood
+        r%logL(i) = newloglike
 
         ! Decrease the number of live points in cluster i
         r%n(i) = r%n(i) - 1
 
-        ! Update the loglikelihood
-        r%logL(i) = newloglike
-
 
     end subroutine update_evidence
 
+    subroutine delete_evidence(r,i) 
+        implicit none
+        ! The variable containing all of the runtime information
+        type(run_time_info), intent(inout) :: r
 
+        !> The cluster index to update
+        integer,intent(in) :: i
+        
+
+        ! move everything to the end by a cyclic shift
+        r%n(    i:r%ncluster_A)  = cshift(r%n(    i:r%ncluster_A),shift=1)
+        r%logL( i:r%ncluster_A)  = cshift(r%logL( i:r%ncluster_A),shift=1)
+        r%logX( i:r%ncluster_A)  = cshift(r%logX( i:r%ncluster_A),shift=1)
+        r%logZ( i:r%ncluster_A)  = cshift(r%logZ( i:r%ncluster_A),shift=1)
+        r%logZ2(i:r%ncluster_A)  = cshift(r%logZ2(i:r%ncluster_A),shift=1)
+
+        r%logXX(i:r%ncluster_A,:) = cshift(r%logXX(i:r%ncluster_A,:),shift=1,dim=1)
+        r%logXX(:,i:r%ncluster_A) = cshift(r%logXX(:,i:r%ncluster_A),shift=1,dim=2)
+
+        r%logZX(i:r%ncluster_A,:) = cshift(r%logZX(i:r%ncluster_A,:),shift=1,dim=1)
+        r%logZX(:,i:r%ncluster_A) = cshift(r%logZX(:,i:r%ncluster_A),shift=1,dim=2)
+
+        ! Now decrease the number of active points and increase the number
+        ! of passive points
+        r%ncluster_A= r%ncluster_A - 1
+
+    end subroutine delete_evidence
+
+
+    !> This function takes the evidence info in cluster i and splits it into
+    !! several clusters according to the cluster numbers ni.
+    !!
+    !! It places these new clusters at the end of the active array, but it does
+    !! not delete the old cluster. This will be done by the delete_clusters
+    !! routine below.
+    !!
     subroutine bifurcate_evidence(r,i,ni) 
         use utils_module, only: logzero
         implicit none
@@ -199,16 +233,17 @@ module evidence_module
         ! The variable containing all of the runtime information
         type(run_time_info), intent(inout) :: r
 
-        !> The new cluster indices
-        !! NOTE: this is an array
-        integer,intent(in),dimension(:) :: i
+        !> The cluster index to be split
+        integer,intent(in)              :: i
         !> The numbers in each new clusters
         integer,intent(in),dimension(:) :: ni
 
+
+
         ! Iterator
         integer :: j,k
-
-        integer old_ncluster_A
+        ! Addresses of new clusters
+        integer, dimension(size(ni)) :: ii
 
         ! Temporary variables for notational ease
         double precision                     :: logn
@@ -217,71 +252,73 @@ module evidence_module
         double precision,dimension(size(ni)) :: logni1
         double precision                     :: logX
         double precision                     :: logX2
+        double precision                     :: logZX
 
+        ! End-off shift the existing passive clusters to make room for the size(ni) 
+        ! new active clusters.
+        r%logZ (r%ncluster_A+1:r%ncluster_T)   = eoshift(r%logZ( r%ncluster_A+1:r%ncluster_T),   shift=-size(ni),dim=1)
+        r%logZ2(r%ncluster_A+1:r%ncluster_T)   = eoshift(r%logZ2(r%ncluster_A+1:r%ncluster_T),   shift=-size(ni),dim=1)
+        r%logZX(r%ncluster_A+1:r%ncluster_T,:) = eoshift(r%logZX(r%ncluster_A+1:r%ncluster_T,:), shift=-size(ni),dim=1)
+
+        ! For notational convenience, create an array of integers detailing the
+        ! addresses of the new clusters
+        ii = [ ( j, j=r%ncluster_A+1,r%ncluster_A+size(ni) ) ]
+
+        ! Define some useful shorthands
         logn  = log( sum(ni) +0d0 ) 
         logn1 = log( sum(ni) +1d0 ) 
         logni = log( ni +0d0 )
         logni1= log( ni +1d0 )
-        logX  = r%logX(i(1)) 
-        logX2 = r%logXX(i(1),i(1)) 
+        logX  = r%logX(i) 
+        logX2 = r%logXX(i,i) 
+        logZX = r%logZX(i,i) 
 
 
 
-        ! Note that we now have new clusters
-        old_ncluster_A = r%ncluster_A
-        r%ncluster_A = r%ncluster_A + size(ni) -1
-        r%ncluster_T = r%ncluster_T + size(ni)
 
+        ! Now initialise the volumes 
+        ! NOTE: ii here is an array of indices
+        r%logX(ii) = logni - logn + logX
 
-        ! Make room for them in the r variable by pushing the passive cluster
-        ! r up a few places (mostly evidence r)
-        r%logZ( r%ncluster_A+2:)   = r%logZ( old_ncluster_A+1:)
-        r%logZ2(r%ncluster_A+2:)   = r%logZ2(old_ncluster_A+1:)
-        r%logZX(r%ncluster_A+2:,:) = r%logZX(old_ncluster_A+1:,:)
-
-        ! Copy up the details in cluster i(1) to r%ncluster_A+1
-        r%logZ( r%ncluster_A+1)   = r%logZ( i(1))
-        r%logZ2(r%ncluster_A+1)   = r%logZ2(i(1))
-        r%logZX(r%ncluster_A+1,i) = r%logZX(i(1),i(1)) + logni - logn
-
-        ! Now update the volumes 
-        ! NOTE: i here is an array of indices
-        r%logX(i) = logni - logn + logX
-
-        ! Update the cross correlations 
-        do j=1,size(i)
-            do k=1,size(i)
+        ! initialise the cross correlations 
+        do j=1,size(ii)
+            do k=1,size(ii)
 
                 if(k==j) then
-                    r%logXX(i(j),i(j)) = logni(j)+logni1(j)-logn-logn1 + logX2
-                else
-                    r%logXX(i(j),i(k)) = logni(j)+logni(k) -logn-logn1 + logX2
+                    r%logXX(ii(j),ii(j)) = logni(j)+logni1(j)-logn-logn1 + logX2
+                else 
+                    r%logXX(ii(j),ii(k)) = logni(j)+logni(k) -logn-logn1 + logX2
                 end if
 
             end do
         end do
 
-        ! Update the cross correlations that are uncorrelated
-        do j=1,size(i)
+        ! initialise the cross correlations that are uncorrelated
+        do j=1,size(ii)
             do k=1,r%ncluster_A
 
-                if(all(k/=i(:))) then
-                    r%logXX(i(j),k) = r%logX(i(j)) * r%logX(k)
-                    r%logXX(k,i(j)) = r%logXX(i(j),k)
+                if(all(k/=ii)) then
+                    r%logXX(ii(j),k) = r%logX(ii(j)) * r%logX(k)
+                    r%logXX(k,ii(j)) = r%logXX(ii(j),k)
                 end if
 
             end do
         end do
 
         ! Initialise the remaining variables
-        r%logL(i) = r%logL(i(1)) 
+        r%logL(ii) = r%logL(i) 
 
-        r%logZ(i) = logzero
-        r%logZ2(i) = logzero
-        r%logZX(i,:) = logzero
+        r%logZ(ii) = logzero
+        r%logZ2(ii) = logzero
+        r%logZX(ii,:) = logzero
 
-        r%n(i) = ni
+        r%logZX(i,ii) = logni - logn + logZX
 
+        r%n(ii) = ni
+
+        ! Note that we now have new clusters
+        r%ncluster_A = r%ncluster_A + size(ni)
+        r%ncluster_T = r%ncluster_T + size(ni)
 
 
     end subroutine bifurcate_evidence
