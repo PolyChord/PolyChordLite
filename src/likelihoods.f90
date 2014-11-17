@@ -579,7 +579,7 @@ module example_likelihoods
         logical,save :: initialised=.false.
 
         double precision, parameter :: sigma = 0.01 ! width of peak
-        integer, parameter :: num_peaks = 10
+        integer, parameter :: num_peaks = 2
         integer :: i !iterator
         integer :: mpierror
 
@@ -666,7 +666,7 @@ module example_likelihoods
         double precision, dimension(nDims)       :: eigenvalues
         double precision, dimension(nDims,nDims) :: eigenvectors
         integer :: j
-        double precision, parameter :: rng=1e-2
+        double precision, parameter :: rng=1e-1
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)

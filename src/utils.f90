@@ -1,4 +1,8 @@
+
 module utils_module
+
+    implicit none
+include 'mkl_vml.f90'  
 
     !> The effective value of \f$ log(0) \f$
     double precision, parameter :: logzero = -sqrt(huge(0d0))
@@ -50,6 +54,27 @@ module utils_module
 
 
     contains
+
+    !> Wrapper for the intel vml lgamma function
+    !!
+    !! This function returns log(gamma(x))
+    function lgamma(x)
+        implicit none
+        double precision :: x
+
+        double precision :: lgamma
+
+        double precision, dimension(1) :: input
+        double precision, dimension(1) :: output
+
+        input(1) = x
+        call vdlgamma(1,input,output)
+        lgamma = output(1)
+
+    end function lgamma
+
+
+
 
 
 
@@ -401,6 +426,8 @@ module utils_module
         double precision, intent(in), dimension(:,:) :: data_array
 
         double precision, dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
+
+        integer :: i
 
 
 

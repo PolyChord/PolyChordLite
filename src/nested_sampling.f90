@@ -23,7 +23,7 @@ module nested_sampling_module
         use evidence_module,   only: run_time_info,allocate_run_time_info,write_cluster_info
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
-        use cluster_module,    only: SNN_clustering,NN_clustering
+        use cluster_module,    only: NN_clustering
         use generate_module,   only: GenerateLivePointsP,GenerateLivePointsL,GenerateSeed
 
         implicit none
@@ -358,12 +358,11 @@ module nested_sampling_module
 
                                         if( num_new_clusters+info%ncluster_A>settings%ncluster ) then
                                             call abort_all(" Too many clusters. Consider increasing settings%ncluster")
-                                        else if (num_new_clusters + info%ncluster_T > settings%nclustertot ) then
+                                        else if (num_new_clusters + info%ncluster_T > settings%ncluster*2 ) then
                                             call abort_all(" Too many clusters. Consider increasing settings%nclustertot")
                                         else
-                                            write(stdout_unit,'( I, " new clusters found at iteration ", I)') num_new_clusters, ndead
-                                            write(*,'(<info%n(i_cluster)>I2)') clusters(:info%n(i_cluster))
                                             call create_new_clusters(settings,info,live_points,phantom_points,nphantom,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
+                                            write(stdout_unit,'( I, " clusters found at iteration ", I)') info%ncluster_A, ndead
                                         end if
                                     else
                                         ! Otherwise move on to the next cluster
@@ -719,7 +718,7 @@ module nested_sampling_module
 
     subroutine delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_array,nposterior) 
         use settings_module,   only: program_settings
-        use evidence_module,   only: run_time_info,update_evidence,delete_evidence
+        use evidence_module,   only: run_time_info,update_evidence
         implicit none
 
         type(program_settings), intent(in) :: settings

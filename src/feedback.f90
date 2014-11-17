@@ -195,23 +195,20 @@ module feedback_module
 
 
         if (settings%feedback>=1) then
-            write(stdout_unit,'("ndead      = ", I20                  )') ndead
-            write(stdout_unit,'("lives      = ", <info%ncluster_A>I7)')  info%n(:info%ncluster_A)
-            write(stdout_unit,'("phantoms   = ", <info%ncluster_A>I7)')  nphantom(:info%ncluster_A)
+            write(stdout_unit,'("ndead      =",  I8                   )') ndead
+            write(stdout_unit,'("ncluster_A = ", I7                   )') info%ncluster_A
+            write(stdout_unit,'("ncluster_T = ", I7                   )') info%ncluster_T
+            write(stdout_unit,'("lives      =   ", <info%ncluster_A>I5)')  info%n(:info%ncluster_A)
+            write(stdout_unit,'("phantoms   =   ", <info%ncluster_A>I5)')  nphantom(:info%ncluster_A)
 
             if(settings%calculate_posterior) &
-                write(stdout_unit,'("nposterior = ", I20                  )') nposterior
+                write(stdout_unit,'("nposterior = ", I7                   )') nposterior
 
-            write(stdout_unit,'("efficiency = ", F20.2                )') mean_likelihood_calls
+            write(stdout_unit,'("efficiency = ", F7.2, "    (",F5.2," per slice)")') mean_likelihood_calls, mean_likelihood_calls/settings%num_babies
             
 
             mu(1)    = 2*info%logevidence - 0.5*info%logevidence2              
             sigma(1) = sqrt(info%logevidence2 - 2*info%logevidence)
-
-            ! Truncate them both to the closest sigma can tell us
-            !write(*,*) sigma, exponent(sigma)
-            !sigma = nint(10**(floor(log10(sigma))) * sigma) * 10**(-floor(log10(sigma)))
-            !mu = nint(10**(floor(log10(sigma))) * mu) * 10**(-floor(log10(sigma)))
 
             if(info%logevidence>logzero) then
                 write(stdout_unit,'("log(Z)     = ", F10.5, " +/- ", F10.5)') mu(1),sigma(1)
@@ -225,7 +222,7 @@ module feedback_module
                     if(info%logZ(i)>logzero) then
                         write(stdout_unit,'("log(Z_",I2,")  = ", F10.5, " +/- ", F10.5)') i, mu(i),sigma(i)
                     else
-                        write(stdout_unit,'("log(Z_",I3,")  = ?")') i
+                        write(stdout_unit,'("log(Z_",I2,")  = ?")') i
                     end if
                 end do
             end if

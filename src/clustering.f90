@@ -3,80 +3,14 @@ module cluster_module
     implicit none
     contains
 
-
-    function SNN_clustering(similarity_matrix,k,kt) result(cluster_list_final)
-        implicit none
-        double precision, intent(in), dimension(:,:) :: similarity_matrix
-        integer, intent(in) :: k
-        integer, intent(in) :: kt
-
-        integer, dimension(size(similarity_matrix,1)) :: cluster_list
-        integer, dimension(size(similarity_matrix,1)) :: cluster_list_final
-
-        integer, dimension(k,size(similarity_matrix,1)) :: knn
-
-        integer :: i_point,j_point,i_cluster
-
-        integer :: cluster_orig_i,cluster_orig_j
-
-        integer :: nlive
-
-        integer :: num_clusters
-        integer :: cluster_map(size(similarity_matrix,1))
-
-
-        nlive=size(similarity_matrix,1)
-
-        ! compute the k nearest neighbors for each point
-        knn = compute_knn(similarity_matrix,k)
-
-        ! Set up the cluster list
-        cluster_list = [( i_point,i_point=1,nlive )]
-
-        ! Loop through all pairs of points
-        do i_point=1,nlive
-            do j_point=i_point+1,nlive
-
-                cluster_orig_i = cluster_list(i_point)
-                cluster_orig_j = cluster_list(j_point)
-
-                ! If they're not in the same cluster already...
-                if(cluster_orig_i/=cluster_orig_j) then
-                    ! ... check to see if they are each others nearest neihbors...
-                    if( neighbors( knn(:,i_point),knn(:,j_point) ) ) then
-                        ! ... and check to see if they share n nearest neighbors
-                        if( matches( knn(:,i_point),knn(:,j_point) ) > kt ) then
-
-                            if(cluster_orig_i>cluster_orig_j) then
-                                where(cluster_list==cluster_orig_i) cluster_list=cluster_orig_j
-                            else
-                                where(cluster_list==cluster_orig_j) cluster_list=cluster_orig_i
-                            end if
-                        endif
-                    end if
-                end if
-
-            end do
-        end do
-
-        ! Set clusters of the form 1,2,3
-        num_clusters=1
-        cluster_map(1) = cluster_list(1)
-
-        do i_point=1,nlive
-            if(all(cluster_list(i_point)/=cluster_map(1:num_clusters))) then
-                num_clusters=num_clusters+1
-                cluster_map(num_clusters) = cluster_list(i_point)
-            end if
-        end do
-
-        do i_cluster=1,num_clusters
-            where(cluster_list==cluster_map(i_cluster)) cluster_list_final=i_cluster
-        end do
-
-    end function SNN_clustering
-
-
+    !> This function returns a clustering from a similarity matrix based on
+    !! 'nearest neighbor' clustering.
+    !!
+    !! Points belong to the same cluster if they are in either of each others k
+    !! nearest neighbor sets. 
+    !!
+    !! The algorithm computes the k nearest neihbor sets from the similarity
+    !! matrix, and then tests
     function NN_clustering(similarity_matrix,k,cluster_list_output) result(num_clusters_output)
         implicit none
         double precision, intent(in), dimension(:,:) :: similarity_matrix
@@ -116,11 +50,11 @@ module cluster_module
         ! compute the k nearest neighbors for each point
         knn = compute_knn(similarity_matrix,k)
 
-        ! Set up the cluster list
-        cluster_list = spread([( i_point,i_point=1,nlive )],dim=2,ncopies=n)
-
         ! Loop through all pairs of points
-        do n=1,k
+        do n=2,k
+
+            ! Set up the cluster list
+            cluster_list = spread([( i_point,i_point=1,nlive )],dim=2,ncopies=n)
 
             do i_point=1,nlive
                 do j_point=i_point+1,nlive
@@ -170,18 +104,25 @@ module cluster_module
                 where(cluster_list(:,n)==cluster_map(i_cluster)) cluster_list_final(:,n)=i_cluster
             end do
 
-            if(n>5) then
-                if( num_clusters(n)==num_clusters(n-1) .and. num_clusters(n)==num_clusters(n-1) ) then
-                    if( all( cluster_list_final(:,n) == cluster_list_final(:,n-1) .and. cluster_list_final(:,n) == cluster_list_final(:,n-2)) ) exit
-                else if(n==k) then
-                    exit
+
+            if(num_clusters(n) == 1 ) then
+                ! If we're down to a single cluster, then just return
+                exit
+            else if(n>3) then
+                ! Otherwise, check that the clustering hasn't changed for the
+                ! past 3 passes.
+
+                if( num_clusters(n)==num_clusters(n-1) .and. num_clusters(n)==num_clusters(n-2) ) then
+                    if( all( cluster_list_final(:,n) == cluster_list_final(:,n-1) &
+                        .and. cluster_list_final(:,n) == cluster_list_final(:,n-2)) ) exit
                 end if
+
             end if
 
         end do
 
-        num_clusters_output = num_clusters(n)
-        cluster_list_output = cluster_list_final(:,n)
+        num_clusters_output = num_clusters(min(k,n))
+        cluster_list_output = cluster_list_final(:,min(k,n))
 
 
     end function NN_clustering

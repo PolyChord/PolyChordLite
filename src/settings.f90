@@ -119,15 +119,13 @@ module settings_module
         logical :: print_timing = 100
 
         !> Whether to do clustering or not
-        logical :: do_clustering = .true.
+        logical :: do_clustering = .false.
 
         !> Clustering parameters
-        integer :: SNN_k
-        integer :: SNN_kt
+        integer :: SNN_k = 20
 
         !> Memory storage considerations; The maximum number of active clusters
-        integer :: ncluster = 10
-        integer :: nclustertot = 100
+        integer :: ncluster = 1 
 
     end type program_settings
 

@@ -82,10 +82,10 @@ program main
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
     !       - twin_gaussian_loglikelihood 
-    loglikelihood => rastrigin_loglikelihood!gaussian_loglikelihood_corr!rastrigin_loglikelihood
+    loglikelihood => gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 2                ! Dimensionality of the space
+    settings%nDims= 20               ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -97,12 +97,8 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    !minimums=0.5-1d-2*5
-    !maximums=0.5+1d-2*5
-    !minimums=0.5-1d-2*20
-    !maximums=0.5+1d-2*20
-    minimums = -5
-    maximums =  5
+    minimums=0.5-1d-2*5
+    maximums=0.5+1d-2*5
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -115,7 +111,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 5000!25*settings%nDims        !number of live points
+    settings%nlive                = 25*settings%nDims        !number of live points
     settings%num_repeats          = 5                        !Number of chords to draw
 
     settings%num_babies           = settings%nDims*settings%num_repeats
@@ -136,12 +132,10 @@ program main
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%write_live           = .true.                   !write out the physical live points?
 
-    settings%do_clustering = .true.
-    settings%SNN_k = 10 !settings%nDims
-    settings%SNN_kt = 5
+    settings%do_clustering = .true.                          !whether or not to do clustering
+    settings%ncluster = 100                                  !maximum number of clusters + 1
+    settings%SNN_k = 20                                      !maximum number of nearest neighbors to check
 
-    settings%ncluster = 100
-    settings%nclustertot = 400
 
 
     ! Initialise the loglikelihood

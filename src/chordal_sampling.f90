@@ -7,7 +7,7 @@ module chordal_module
         use priors_module, only: prior
         use settings_module, only: program_settings,phantom_type,live_type
         use random_module, only: random_orthonormal_basis,random_real
-        use utils_module, only: logzero
+        use utils_module, only: logzero,lgamma
 
         implicit none
         interface
@@ -106,6 +106,7 @@ module chordal_module
             ! Normalise it
             w = sqrt(dot_product(nhat,nhat))
             nhat = nhat/w
+            w = w * 3d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
 
             ! Generate a new random point along the chord defined by the previous point and nhat
             baby_points(:,i_babies) = slice_sample(loglikelihood,priors, nhat, previous_point, w, settings)
