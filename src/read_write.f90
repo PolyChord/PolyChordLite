@@ -23,7 +23,7 @@ module read_write_module
         integer,intent(in) :: ndead
         integer,intent(in) :: total_likelihood_calls
 
-        integer,intent(in),dimension(0:settings%ncluster) :: nposterior
+        integer,intent(in),dimension(0:settings%ncluster*2) :: nposterior
         double precision,intent(in), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2) :: posterior_points
 
         integer :: i_err
@@ -41,7 +41,9 @@ module read_write_module
 
         ! Number of Active clusters
         write(write_resume_unit,'(I)') info%ncluster_A
-        ! Number of Active + Passive clusters
+        ! Number of Passive clusters
+        write(write_resume_unit,'(I)') info%ncluster_P
+        ! Total amount of evidence information
         write(write_resume_unit,'(I)') info%ncluster_T
         ! global log evidence and evidence^2
         write(write_resume_unit,'(2E<DBL_FMT(1)>.<DBL_FMT(2)>)') info%logevidence, info%logevidence2
@@ -78,9 +80,9 @@ module read_write_module
         ! total likelihood calls
         write(write_resume_unit,'(I)') total_likelihood_calls
         ! Number of saved posterior points
-        write(write_resume_unit,'(<info%ncluster_A+1>I)') nposterior(0:info%ncluster_A) 
+        write(write_resume_unit,'(<info%ncluster_A+1>I)') nposterior(0:info%ncluster_A+info%ncluster_P) 
         ! posterior points
-        do i_cluster=0,info%ncluster_A
+        do i_cluster=0,info%ncluster_A+info%ncluster_P
             write(write_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_points(:,:nposterior(i_cluster),i_cluster)
         end do
 
@@ -107,7 +109,7 @@ module read_write_module
         integer,intent(out) :: ndead
         integer,intent(out) :: total_likelihood_calls
 
-        integer,intent(out),dimension(0:settings%ncluster) :: nposterior
+        integer,intent(out),dimension(0:settings%ncluster*2) :: nposterior
         double precision,intent(out), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2) :: posterior_points
 
         integer :: i_err
@@ -125,7 +127,9 @@ module read_write_module
 
         ! Number of Active clusters
         read(read_resume_unit,'(I)') info%ncluster_A
-        ! Number of Active + Passive clusters
+        ! Number of Passive clusters
+        read(read_resume_unit,'(I)') info%ncluster_P
+        ! Total amount of evidence information
         read(read_resume_unit,'(I)') info%ncluster_T
         ! global log evidence and evidence^2
         read(read_resume_unit,'(2E<DBL_FMT(1)>.<DBL_FMT(2)>)') info%logevidence, info%logevidence2
@@ -161,9 +165,9 @@ module read_write_module
         ! total likelihood calls
         read(read_resume_unit,'(I)') total_likelihood_calls
         ! Number of saved posterior points
-        read(read_resume_unit,'(<info%ncluster_A+1>I)') nposterior(0:info%ncluster_A)
+        read(read_resume_unit,'(<info%ncluster_A+1>I)') nposterior(0:info%ncluster_A+info%ncluster_P)
         ! posterior points
-        do i_cluster=0,info%ncluster_A
+        do i_cluster=0,info%ncluster_A+info%ncluster_P
             read(read_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_points(:,:nposterior(i_cluster),i_cluster)
         end do
 
@@ -182,7 +186,7 @@ module read_write_module
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(in) :: info
         double precision,intent(in), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2) :: posterior_points
-        integer,intent(in),dimension(0:settings%ncluster) :: nposterior
+        integer,intent(in),dimension(0:settings%ncluster*2) :: nposterior
         integer,intent(in)                :: active_clusters
 
         integer :: i_err

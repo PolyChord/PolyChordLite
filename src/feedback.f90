@@ -199,6 +199,7 @@ module feedback_module
             if(settings%calculate_posterior) &
             write(stdout_unit,'("nposterior =",  I8                   )') nposterior(0)
             write(stdout_unit,'("ncluster   = ", I7                   )') info%ncluster_A
+            write(stdout_unit,'("nclustertot= ", I7                   )') info%ncluster_A+info%ncluster_P
             write(stdout_unit,'("lives      =   ", <info%ncluster_A>I5)')  info%n(:info%ncluster_A)
             write(stdout_unit,'("phantoms   =   ", <info%ncluster_A>I5)')  nphantom(:info%ncluster_A)
             if(settings%calculate_posterior) &

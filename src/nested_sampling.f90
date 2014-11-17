@@ -59,7 +59,7 @@ module nested_sampling_module
         ! The number of phantom points in each cluster
         integer, dimension(settings%ncluster) :: nphantom
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2) :: posterior_points
-        integer, dimension(0:settings%ncluster) :: nposterior
+        integer, dimension(0:settings%ncluster*2) :: nposterior
 
         ! The evidence storage
         type(run_time_info) :: info
@@ -189,16 +189,10 @@ module nested_sampling_module
                 ! count up the number of likelihood calls
                 total_likelihood_calls = sum(live_points(settings%nlike,:,1))
 
-                ! no dead points 
-                ndead = 0
-
-                ! Posterior array
-                nposterior = 0                   ! number of points
-                posterior_points(1:2,:,:) = logzero ! loglikelihoods and logweights
-                posterior_points(3:,:,:) = 0d0      ! posterior coordinates
-
-                ! no phantom points
-                nphantom = 0
+                
+                ndead = 0       ! no dead points 
+                nposterior = 0  ! nothing in the posterior array
+                nphantom = 0    ! no phantom points
 
                 ! Delete the first outer point
                 call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
@@ -361,6 +355,7 @@ module nested_sampling_module
                                             call abort_all(" Too many clusters. Consider increasing settings%nclustertot")
                                         else
                                             call create_new_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
+
                                             write(stdout_unit,'( I, " clusters found at iteration ", I)') info%ncluster_A, ndead
                                         end if
                                     else
@@ -535,11 +530,12 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2),intent(inout) :: posterior_points
-        integer, dimension(0:settings%ncluster),intent(inout) :: nposterior
+        integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
 
         integer, intent(in)                             :: i_cluster
         integer,dimension(info%n(i_cluster)),intent(in) :: clusters
         integer, intent(in)                             :: num_new_clusters
+        
 
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster) :: temp_phantoms
         integer, dimension(settings%ncluster) :: temp_nphantom
@@ -582,12 +578,13 @@ module nested_sampling_module
         ! Move up the posterior points
         posterior_points(:,:,info%ncluster_A+1+size(ni):info%ncluster_T+size(ni)) = posterior_points(:,:,info%ncluster_A+1:info%ncluster_T)
         nposterior(info%ncluster_A+1+size(ni):info%ncluster_T+size(ni)) = nposterior(info%ncluster_A+1:info%ncluster_T)
+        nposterior(info%ncluster_A+1:info%ncluster_A+size(ni))=0
 
         ! Update the info variable for these new clusters
         call bifurcate_evidence(info,i_cluster,ni)
 
         ! Delete the old cluster
-        call reorganise_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,i_cluster) 
+        call reorganise_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,i_cluster,.false.) 
 
         ! Reassign all of the phantom points
         ! set the number of phantoms to zero
@@ -735,7 +732,7 @@ module nested_sampling_module
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
 
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2),intent(inout) :: posterior_points
-        integer, dimension(0:settings%ncluster),intent(inout) :: nposterior
+        integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
 
         double precision :: min_loglike
         integer :: min_cluster
@@ -763,13 +760,13 @@ module nested_sampling_module
         ! If we've deleted a cluster, we should re-organise live and phantom points
         if(info%n(min_cluster)==0) then
             write(*,'(" Deleting cluster", I4)') min_cluster
-            call reorganise_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,min_cluster)
+            call reorganise_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,min_cluster,.true.)
         end if
 
     end subroutine delete_outer_point
 
 
-    subroutine reorganise_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,min_cluster)
+    subroutine reorganise_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,min_cluster,deleted)
         use settings_module,   only: program_settings
         use evidence_module,   only: run_time_info,delete_evidence
         implicit none
@@ -782,22 +779,28 @@ module nested_sampling_module
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
 
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2),intent(inout) :: posterior_points
-        integer, dimension(0:settings%ncluster),intent(inout) :: nposterior
+        integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
 
         integer,intent(in) :: min_cluster
+        logical,intent(in) :: deleted
 
+        integer :: top_bound
+        
+        top_bound = info%ncluster_A
 
         ! Cyclically shift the active points down one
-        live_points(     :,:,min_cluster:info%ncluster_A) = cshift(live_points(     :,:,min_cluster:info%ncluster_A),shift=1,dim=3)
+        live_points(     :,:,min_cluster:top_bound) = cshift(live_points(     :,:,min_cluster:top_bound),shift=1,dim=3)
 
-        phantom_points(  :,:,min_cluster:info%ncluster_A) = cshift(phantom_points(  :,:,min_cluster:info%ncluster_A),shift=1,dim=3)
-        nphantom(            min_cluster:info%ncluster_A) = cshift(nphantom(            min_cluster:info%ncluster_A),shift=1,dim=1) 
+        phantom_points(  :,:,min_cluster:top_bound) = cshift(phantom_points(  :,:,min_cluster:top_bound),shift=1,dim=3)
+        nphantom(            min_cluster:top_bound) = cshift(nphantom(            min_cluster:top_bound),shift=1,dim=1) 
 
-        posterior_points(:,:,min_cluster:info%ncluster_A) = cshift(posterior_points(:,:,min_cluster:info%ncluster_A),shift=1,dim=3)
-        nposterior(          min_cluster:info%ncluster_A) = cshift(nposterior(          min_cluster:info%ncluster_A),shift=1,dim=1) 
+        if(.not. deleted) top_bound = top_bound + info%ncluster_P
+
+        posterior_points(:,:,min_cluster:top_bound) = cshift(posterior_points(:,:,min_cluster:top_bound),shift=1,dim=3)
+        nposterior(          min_cluster:top_bound) = cshift(nposterior(          min_cluster:top_bound),shift=1,dim=1) 
 
         ! Update the evidence
-        call delete_evidence(info,min_cluster)
+        call delete_evidence(info,min_cluster,deleted)
 
     end subroutine reorganise_clusters
 
@@ -877,7 +880,7 @@ module nested_sampling_module
 
         ! Outputs
         double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2),intent(inout) :: posterior_points
-        integer, dimension(0:settings%ncluster),intent(inout) :: nposterior
+        integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
 
@@ -1050,9 +1053,9 @@ module nested_sampling_module
 
         double precision, dimension(settings%nDims,settings%nDims,settings%ncluster) :: covmats
 
-        integer :: i
+        integer :: i,j
 
-        covmats = 0 
+        covmats = 0d0
 
         do i=1,info%ncluster_A
             if(info%n(i)+nphantom(i) >= settings%nDims*(settings%nDims+1)/2) then
@@ -1060,6 +1063,10 @@ module nested_sampling_module
                     live_points(settings%h0:settings%h1,:info%n(i),i),&
                     phantom_points(settings%h0:settings%h1,:nphantom(i),i)&
                     )
+            else
+                do j=1,settings%nDims
+                    covmats(j,j,i) = 1d0
+                end do
             end if
         end do
 

@@ -97,8 +97,8 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    !minimums=0.5-1d-2*5
-    !maximums=0.5+1d-2*5
+    !minimums=0.5-1d-2*50
+    !maximums=0.5+1d-2*50
     minimums=-2
     maximums= 2
 
@@ -113,7 +113,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 40*25*settings%nDims        !number of live points
+    settings%nlive                = 2000!3*25*settings%nDims        !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw
 
     settings%num_babies           = settings%nDims*settings%num_repeats

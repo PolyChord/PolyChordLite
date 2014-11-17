@@ -4,9 +4,14 @@ module evidence_module
 
     type :: run_time_info
 
-        ! Number of active clusters
+        ! Number of active clusters 
+        ! These are clusters that are currently evolving
         integer :: ncluster_A
         ! Number of passive clusters
+        ! These are clusters that have 'died'
+        integer :: ncluster_P
+        ! Total number of clusters, including pieces of clusters before
+        ! splitting
         integer :: ncluster_T
 
         ! Global evidence, and evidence squared
@@ -58,6 +63,7 @@ module evidence_module
 
         ! Initially there is one active cluster, and no inactive ones
         info%ncluster_A = 1
+        info%ncluster_P = 0
         info%ncluster_T = info%ncluster_A
 
         ! All live points in the first cluster to start with
@@ -92,6 +98,7 @@ module evidence_module
 
 
         write(stdout_unit,'("ncluster_A:", I4)') info%ncluster_A
+        write(stdout_unit,'("ncluster_P:", I4)') info%ncluster_P
         write(stdout_unit,'("ncluster_T:", I4)') info%ncluster_T
         write(stdout_unit,'("logevidence:", E10.2)') info%logevidence
         write(stdout_unit,'("logevidence2:", E10.2)') info%logevidence2
@@ -191,7 +198,7 @@ module evidence_module
 
     end subroutine update_evidence
 
-    subroutine delete_evidence(r,i) 
+    subroutine delete_evidence(r,i,deleted) 
         implicit none
         ! The variable containing all of the runtime information
         type(run_time_info), intent(inout) :: r
@@ -199,23 +206,33 @@ module evidence_module
         !> The cluster index to update
         integer,intent(in) :: i
 
+        !> Whether or not we're bifurcating or deleting. .true. => deleting
+        logical, intent(in) :: deleted
+
+        integer :: top_bound
+
+        top_bound = r%ncluster_A
+
+        if(.not. deleted) top_bound = top_bound + r%ncluster_P
 
         ! move everything to the end by a cyclic shift
-        r%n(    i:r%ncluster_A)  = cshift(r%n(    i:r%ncluster_A),shift=1)
-        r%logL( i:r%ncluster_A)  = cshift(r%logL( i:r%ncluster_A),shift=1)
-        r%logX( i:r%ncluster_A)  = cshift(r%logX( i:r%ncluster_A),shift=1)
-        r%logZ( i:r%ncluster_A)  = cshift(r%logZ( i:r%ncluster_A),shift=1)
-        r%logZ2(i:r%ncluster_A)  = cshift(r%logZ2(i:r%ncluster_A),shift=1)
+        r%n(    i:top_bound)  = cshift(r%n(    i:top_bound),shift=1)
+        r%logL( i:top_bound)  = cshift(r%logL( i:top_bound),shift=1)
+        r%logX( i:top_bound)  = cshift(r%logX( i:top_bound),shift=1)
+        r%logZ( i:top_bound)  = cshift(r%logZ( i:top_bound),shift=1)
+        r%logZ2(i:top_bound)  = cshift(r%logZ2(i:top_bound),shift=1)
 
-        r%logXX(i:r%ncluster_A,:) = cshift(r%logXX(i:r%ncluster_A,:),shift=1,dim=1)
-        r%logXX(:,i:r%ncluster_A) = cshift(r%logXX(:,i:r%ncluster_A),shift=1,dim=2)
+        r%logXX(i:top_bound,:) = cshift(r%logXX(i:top_bound,:),shift=1,dim=1)
+        r%logXX(:,i:top_bound) = cshift(r%logXX(:,i:top_bound),shift=1,dim=2)
 
-        r%logZX(i:r%ncluster_A,:) = cshift(r%logZX(i:r%ncluster_A,:),shift=1,dim=1)
-        r%logZX(:,i:r%ncluster_A) = cshift(r%logZX(:,i:r%ncluster_A),shift=1,dim=2)
+        r%logZX(i:top_bound,:) = cshift(r%logZX(i:top_bound,:),shift=1,dim=1)
+        r%logZX(:,i:top_bound) = cshift(r%logZX(:,i:top_bound),shift=1,dim=2)
 
         ! Now decrease the number of active points and increase the number
         ! of passive points
         r%ncluster_A= r%ncluster_A - 1
+        if(deleted) r%ncluster_P = r%ncluster_P + 1
+
 
     end subroutine delete_evidence
 
