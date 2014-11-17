@@ -113,12 +113,13 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 2000!3*25*settings%nDims        !number of live points
+    settings%nlive                = 2000                     !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw
 
     settings%num_babies           = settings%nDims*settings%num_repeats
     settings%nstack               = settings%nlive*settings%num_babies*2
-    settings%file_root            =  'chains/test'           !file root
+    settings%file_root            =  'test'                  !file root
+    settings%base_dir             =  'chains'                !base_dir
     settings%feedback             = 1                        !degree of feedback
 
     ! stopping criteria

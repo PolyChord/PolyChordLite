@@ -34,7 +34,7 @@ module read_write_module
         
         ! Open the .resume file, note the presence of iostat prevents program
         ! termination during this write
-        open(write_resume_unit,file=trim(settings%file_root) // '.resume', action='write', iostat=i_err) 
+        open(write_resume_unit,file=trim(resume_file(settings)), action='write', iostat=i_err) 
 
 
         ! Cluster information: 
@@ -120,7 +120,7 @@ module read_write_module
         
         ! Open the .resume file, note the presence of iostat prevents program
         ! termination during this read
-        open(read_resume_unit,file=trim(settings%file_root) // '.resume', action='read', iostat=i_err) 
+        open(read_resume_unit,file=trim(resume_file(settings)), action='read', iostat=i_err) 
 
 
         ! Cluster information: 
@@ -177,7 +177,7 @@ module read_write_module
 
 
 
-    subroutine write_posterior_file(settings,info,posterior_points,nposterior,active_clusters) 
+    subroutine write_posterior_file(settings,info,posterior_points,nposterior) 
         use utils_module, only: DBL_FMT,write_txt_unit,logzero,STR_LENGTH
         use settings_module, only: program_settings
         use evidence_module, only: run_time_info 
@@ -187,46 +187,49 @@ module read_write_module
         type(run_time_info),    intent(in) :: info
         double precision,intent(in), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2) :: posterior_points
         integer,intent(in),dimension(0:settings%ncluster*2) :: nposterior
-        integer,intent(in)                :: active_clusters
 
         integer :: i_err
 
         integer :: i_posterior
-        integer i_cluster
-        character(STR_LENGTH) :: cluster_num
+        integer :: i_cluster
         
         ! Open the .txt file, note the presence of iostat prevents program
         ! termination during this write
-        open(write_txt_unit,file=trim(settings%file_root) // '.txt' , action='write', iostat=i_err) 
+        open(write_txt_unit,file=trim(posterior_file(settings)), action='write', iostat=i_err) 
 
-        do i_posterior=1,nposterior(i_cluster)
-            if(posterior_points(1,i_posterior,i_cluster)-info%logevidence < log(huge(1d0)) ) then
+        do i_posterior=1,nposterior(0)
+            if(posterior_points(1,i_posterior,0)-info%logevidence < log(huge(1d0)) ) then
                 write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')   &
-                    exp(posterior_points(1,i_posterior,i_cluster)-info%logevidence),posterior_points(2:,i_posterior,i_cluster)
+                    exp(posterior_points(1,i_posterior,0)-info%logevidence),posterior_points(2:,i_posterior,0)
             end if
         end do
 
         close(write_txt_unit)
 
 
+        if(settings%do_clustering) then
+            call makedirqq(trim(cluster_dir(settings)))
 
-        do i_cluster=1,settings%ncluster
+            do i_cluster=1,info%ncluster_A+info%ncluster_P
 
-            if(nposterior(i_cluster) >= 1) then
-                write(cluster_num,'(I5)') i_cluster
-                open(write_txt_unit,file=trim(settings%file_root) // "_cluster_" //trim(adjustl(cluster_num))// '.txt' , action='write', iostat=i_err) 
+                if(nposterior(i_cluster) >= 1) then
 
-                do i_posterior=1,nposterior(i_cluster)
-                    if(posterior_points(1,i_posterior,i_cluster)-info%logZ(i_cluster) < log(huge(1d0)) ) then
-                        write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')   &
-                            exp(posterior_points(1,i_posterior,i_cluster)-info%logevidence),posterior_points(2:,i_posterior,i_cluster)
-                    end if
-                end do
+                    open(write_txt_unit,file= trim(posterior_file(settings,i_cluster)), action='write', iostat=i_err) 
 
-                close(write_txt_unit)
-            end if
+                    do i_posterior=1,nposterior(i_cluster)
+                        if(posterior_points(1,i_posterior,i_cluster)-info%logZ(i_cluster) < log(huge(1d0)) ) then
+                            write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')   &
+                                exp(posterior_points(1,i_posterior,i_cluster)-info%logevidence),posterior_points(2:,i_posterior,i_cluster)
+                        end if
+                    end do
 
-        end do
+                    close(write_txt_unit)
+
+                end if
+
+            end do
+
+        end if
 
 
     end subroutine write_posterior_file
@@ -245,26 +248,27 @@ module read_write_module
 
         integer i_live
         integer i_cluster
-        character(STR_LENGTH) :: cluster_num
 
         ! Delete the old files
-        open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err) 
+        open(write_phys_unit,file=trim(phys_live_file(settings)), action='write', iostat=i_err) 
         if(i_err.eq.0) close(write_phys_unit,status='delete')
 
-        do i_cluster=1,settings%ncluster
-            write(cluster_num,'(I5)') i_cluster
-            open(write_phys_cluster_unit,file=trim(settings%file_root) // '_phys_live_' //trim(adjustl(cluster_num))//'.txt' , action='write', iostat=i_err) 
-            if(i_err.eq.0) close(write_phys_cluster_unit,status='delete')
-        end do
+        if(settings%do_clustering) then
+            call makedirqq(trim(cluster_dir(settings)))
+
+            do i_cluster=1,settings%ncluster
+                open(write_phys_cluster_unit,file=trim(phys_live_file(settings,i_cluster)), action='write', iostat=i_err) 
+                if(i_err.eq.0) close(write_phys_cluster_unit,status='delete')
+            end do
+        end if
 
         ! Open a new file for appending to
-        open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err, position="append")
+        open(write_phys_unit,file=trim(phys_live_file(settings)), action='write', iostat=i_err, position="append")
 
         do i_cluster = 1,info%ncluster_A
 
             if(settings%do_clustering) then
-                write(cluster_num,'(I5)') i_cluster
-                open(write_phys_cluster_unit,file=trim(settings%file_root) // '_phys_live_' //trim(adjustl(cluster_num))//'.txt' , action='write', iostat=i_err) 
+                open(write_phys_cluster_unit,file=trim(phys_live_file(settings,i_cluster)), action='write', iostat=i_err) 
             end if
 
             do i_live=1,info%n(i_cluster)
@@ -291,4 +295,71 @@ module read_write_module
 
 
 
-end module read_write_module
+
+    ! File namers
+    function resume_file(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '.resume'
+
+    end function resume_file
+
+    function cluster_dir(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/clusters'
+
+    end function cluster_dir
+
+    function posterior_file(settings,i) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+        integer,intent(in),optional :: i
+
+        character(STR_LENGTH) :: file_name
+
+        character(STR_LENGTH) :: cluster_num
+
+        if(present(i)) then
+            write(cluster_num,'(I5)') i
+            file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) // '_' // trim(adjustl(cluster_num)) //'.txt'
+        else 
+            file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '.txt'
+        end if
+
+    end function posterior_file
+
+    function phys_live_file(settings,i) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+        integer,intent(in),optional :: i
+
+        character(STR_LENGTH) :: file_name
+
+        character(STR_LENGTH) :: cluster_num
+
+        if(present(i)) then
+            write(cluster_num,'(I5)') i
+            file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) // '_phys_live_' // trim(adjustl(cluster_num)) //'.txt'
+        else 
+            file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_phys_live.txt'
+        end if
+
+    end function phys_live_file
+
+
+end module

@@ -13,8 +13,10 @@ module settings_module
     !> Type to contain all of the parameters involved in a nested sampling run
     Type :: program_settings
 
+        !> The directory to put outputs in
+        character(STR_LENGTH) :: base_dir='chains'
         !> The file root for outputs
-        character(STR_LENGTH) :: file_root='chains/test'
+        character(STR_LENGTH) :: file_root='test'
 
         !> The number of live points
         integer :: nlive =500

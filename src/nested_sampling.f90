@@ -18,7 +18,7 @@ module nested_sampling_module
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit,TwoPi
         use settings_module
         use utils_module,      only: logsumexp,calc_similarity_matrix
-        use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points,read_resume_file
+        use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points,read_resume_file,resume_file
         use feedback_module
         use evidence_module,   only: run_time_info,allocate_run_time_info,write_cluster_info
         use chordal_module,    only: SliceSampling
@@ -159,7 +159,7 @@ module nested_sampling_module
 
         !~~~ (i) Generate Live Points ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! Check if we actually want to resume
-        inquire(file=trim(settings%file_root)//'.resume',exist=resume)
+        inquire(file=trim(resume_file(settings)),exist=resume)
         resume = settings%read_resume .and. resume
 
         if(resume) then
@@ -395,7 +395,7 @@ module nested_sampling_module
                             if(settings%feedback>=2) write(stdout_unit,'(" Writing resume files ")')
                             if(settings%write_resume)        call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
                                                                                     ndead,total_likelihood_calls,nposterior,posterior_points)
-                            if(settings%calculate_posterior) call write_posterior_file(settings,info,posterior_points,nposterior,info%ncluster_A)  
+                            if(settings%calculate_posterior) call write_posterior_file(settings,info,posterior_points,nposterior)  
                             if(settings%write_live)          call write_phys_live_points(settings,info,live_points)
 
                         end if
