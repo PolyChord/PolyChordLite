@@ -113,8 +113,8 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 100*25*settings%nDims        !number of live points
-    settings%num_repeats          = 5                        !Number of chords to draw
+    settings%nlive                = 40*25*settings%nDims        !number of live points
+    settings%num_repeats          = 1                        !Number of chords to draw
 
     settings%num_babies           = settings%nDims*settings%num_repeats
     settings%nstack               = settings%nlive*settings%num_babies*2
@@ -125,8 +125,8 @@ program main
     settings%precision_criterion  =  1d-3                    !degree of precision in answer 
     settings%max_ndead            = -1                       !maximum number of samples 
     ! posterior calculation
-    settings%nmax_posterior       = 100000                   !max number of posterior points
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down at the end of the run)
+    settings%nmax_posterior       = 1000000                  !max number of posterior points
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
 
     ! reading and writing
     settings%read_resume          = .false.                  !whether or not to resume from file
@@ -135,7 +135,7 @@ program main
     settings%write_live           = .true.                   !write out the physical live points?
 
     settings%do_clustering = .true.                          !whether or not to do clustering
-    settings%ncluster = 100                                  !maximum number of clusters + 1
+    settings%ncluster = 30                                   !maximum number of clusters + 1
     settings%SNN_k = 20                                      !maximum number of nearest neighbors to check
 
 

@@ -184,8 +184,8 @@ module feedback_module
         type(program_settings), intent(in) :: settings
         type(run_time_info),intent(in)     :: info
         integer,intent(in)                 :: ndead
-        integer,intent(in),dimension(:)    :: nphantom
-        integer,intent(in)                 :: nposterior
+        integer,intent(in),dimension(settings%ncluster)    :: nphantom
+        integer,intent(in),dimension(0:settings%ncluster)    :: nposterior
         double precision,intent(in)        :: mean_likelihood_calls
 
         integer :: i
@@ -196,14 +196,13 @@ module feedback_module
 
         if (settings%feedback>=1) then
             write(stdout_unit,'("ndead      =",  I8                   )') ndead
-            write(stdout_unit,'("ncluster_A = ", I7                   )') info%ncluster_A
-            write(stdout_unit,'("ncluster_T = ", I7                   )') info%ncluster_T
+            if(settings%calculate_posterior) &
+            write(stdout_unit,'("nposterior =",  I8                   )') nposterior(0)
+            write(stdout_unit,'("ncluster   = ", I7                   )') info%ncluster_A
             write(stdout_unit,'("lives      =   ", <info%ncluster_A>I5)')  info%n(:info%ncluster_A)
             write(stdout_unit,'("phantoms   =   ", <info%ncluster_A>I5)')  nphantom(:info%ncluster_A)
-
             if(settings%calculate_posterior) &
-                write(stdout_unit,'("nposterior = ", I7                   )') nposterior
-
+            write(stdout_unit,'("posteriors =   ", <info%ncluster_A>I5)')  nposterior(1:info%ncluster_A)
             write(stdout_unit,'("efficiency = ", F7.2, "    (",F5.2," per slice)")') mean_likelihood_calls, mean_likelihood_calls/settings%num_babies
             
 

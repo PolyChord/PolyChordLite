@@ -4,7 +4,7 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls,nposterior,posterior_array)
+    subroutine write_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls,nposterior,posterior_points)
         use utils_module, only: DBL_FMT,write_resume_unit
         use evidence_module, only: run_time_info
         use settings_module, only: program_settings
@@ -23,8 +23,8 @@ module read_write_module
         integer,intent(in) :: ndead
         integer,intent(in) :: total_likelihood_calls
 
-        integer,intent(in) :: nposterior
-        double precision,intent(in), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
+        integer,intent(in),dimension(0:settings%ncluster) :: nposterior
+        double precision,intent(in), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2) :: posterior_points
 
         integer :: i_err
 
@@ -46,7 +46,7 @@ module read_write_module
         ! global log evidence and evidence^2
         write(write_resume_unit,'(2E<DBL_FMT(1)>.<DBL_FMT(2)>)') info%logevidence, info%logevidence2
         ! number of live points in each cluster
-        write(write_resume_unit,'(<info%ncluster_A>I)') info%n
+        write(write_resume_unit,'(<info%ncluster_A>I)') info%n(:info%ncluster_A)
         ! Log likelihood contours
         write(write_resume_unit,'(<info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>)') info%logL(:info%ncluster_A)
         ! Log volume
@@ -67,7 +67,7 @@ module read_write_module
         end do
 
         ! number of phantom points
-        write(write_resume_unit,'(<info%ncluster_A>I)') nphantom
+        write(write_resume_unit,'(<info%ncluster_A>I)') nphantom(:info%ncluster_A)
         ! Phantom points
         do i_cluster=1,info%ncluster_A
             write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') phantom_points(:,:nphantom(i_cluster),i_cluster)
@@ -78,15 +78,17 @@ module read_write_module
         ! total likelihood calls
         write(write_resume_unit,'(I)') total_likelihood_calls
         ! Number of saved posterior points
-        write(write_resume_unit,'(I)') nposterior
+        write(write_resume_unit,'(<info%ncluster_A+1>I)') nposterior(0:info%ncluster_A) 
         ! posterior points
-        write(write_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+        do i_cluster=0,info%ncluster_A
+            write(write_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_points(:,:nposterior(i_cluster),i_cluster)
+        end do
 
         close(write_resume_unit)
 
     end subroutine write_resume_file
 
-    subroutine read_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls,nposterior,posterior_array)
+    subroutine read_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls,nposterior,posterior_points)
         use utils_module, only: DBL_FMT,read_resume_unit
         use evidence_module, only: run_time_info
         use settings_module, only: program_settings
@@ -105,8 +107,8 @@ module read_write_module
         integer,intent(out) :: ndead
         integer,intent(out) :: total_likelihood_calls
 
-        integer,intent(out) :: nposterior
-        double precision,intent(out), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior) :: posterior_array
+        integer,intent(out),dimension(0:settings%ncluster) :: nposterior
+        double precision,intent(out), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2) :: posterior_points
 
         integer :: i_err
 
@@ -128,7 +130,7 @@ module read_write_module
         ! global log evidence and evidence^2
         read(read_resume_unit,'(2E<DBL_FMT(1)>.<DBL_FMT(2)>)') info%logevidence, info%logevidence2
         ! number of live points in each cluster
-        read(read_resume_unit,'(<info%ncluster_A>I)') info%n
+        read(read_resume_unit,'(<info%ncluster_A>I)') info%n(:info%ncluster_A)
         ! Log likelihood contours
         read(read_resume_unit,'(<info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>)') info%logL(:info%ncluster_A)
         ! Log volume
@@ -148,7 +150,7 @@ module read_write_module
         end do
 
         ! number of phantom points
-        read(read_resume_unit,'(<info%ncluster_A>I)') nphantom
+        read(read_resume_unit,'(<info%ncluster_A>I)') nphantom(:info%ncluster_A) 
         ! Phantom points
         do i_cluster=1,info%ncluster_A
             read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') phantom_points(:,:nphantom(i_cluster),i_cluster)
@@ -159,9 +161,11 @@ module read_write_module
         ! total likelihood calls
         read(read_resume_unit,'(I)') total_likelihood_calls
         ! Number of saved posterior points
-        read(read_resume_unit,'(I)') nposterior
+        read(read_resume_unit,'(<info%ncluster_A+1>I)') nposterior(0:info%ncluster_A)
         ! posterior points
-        read(read_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_array(:,:nposterior)
+        do i_cluster=0,info%ncluster_A
+            read(read_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_points(:,:nposterior(i_cluster),i_cluster)
+        end do
 
         close(read_resume_unit)
 
@@ -169,34 +173,57 @@ module read_write_module
 
 
 
-    subroutine write_posterior_file(settings,posterior_array,evidence,nposterior) 
-        use utils_module, only: DBL_FMT,write_txt_unit,logzero
+    subroutine write_posterior_file(settings,info,posterior_points,nposterior,active_clusters) 
+        use utils_module, only: DBL_FMT,write_txt_unit,logzero,STR_LENGTH
         use settings_module, only: program_settings
-
+        use evidence_module, only: run_time_info 
         implicit none
 
-
-        integer :: nposterior
         type(program_settings), intent(in) :: settings
-        double precision, dimension(settings%nDims+settings%nDerived+2,nposterior) :: posterior_array
-        double precision                           :: evidence
+        type(run_time_info),    intent(in) :: info
+        double precision,intent(in), dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2) :: posterior_points
+        integer,intent(in),dimension(0:settings%ncluster) :: nposterior
+        integer,intent(in)                :: active_clusters
 
         integer :: i_err
 
         integer :: i_posterior
+        integer i_cluster
+        character(STR_LENGTH) :: cluster_num
         
         ! Open the .txt file, note the presence of iostat prevents program
         ! termination during this write
         open(write_txt_unit,file=trim(settings%file_root) // '.txt' , action='write', iostat=i_err) 
 
-        do i_posterior=1,nposterior
-            if(posterior_array(1,i_posterior)-evidence < log(huge(1d0)) ) then
+        do i_posterior=1,nposterior(i_cluster)
+            if(posterior_points(1,i_posterior,i_cluster)-info%logevidence < log(huge(1d0)) ) then
                 write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')   &
-                    exp(posterior_array(1,i_posterior)-evidence),posterior_array(2:,i_posterior)
+                    exp(posterior_points(1,i_posterior,i_cluster)-info%logevidence),posterior_points(2:,i_posterior,i_cluster)
             end if
         end do
 
         close(write_txt_unit)
+
+
+
+        do i_cluster=1,settings%ncluster
+
+            if(nposterior(i_cluster) >= 1) then
+                write(cluster_num,'(I5)') i_cluster
+                open(write_txt_unit,file=trim(settings%file_root) // "_cluster_" //trim(adjustl(cluster_num))// '.txt' , action='write', iostat=i_err) 
+
+                do i_posterior=1,nposterior(i_cluster)
+                    if(posterior_points(1,i_posterior,i_cluster)-info%logZ(i_cluster) < log(huge(1d0)) ) then
+                        write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)')   &
+                            exp(posterior_points(1,i_posterior,i_cluster)-info%logevidence),posterior_points(2:,i_posterior,i_cluster)
+                    end if
+                end do
+
+                close(write_txt_unit)
+            end if
+
+        end do
+
 
     end subroutine write_posterior_file
 
