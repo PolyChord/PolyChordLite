@@ -216,9 +216,15 @@ module read_write_module
         integer i_cluster
         character(STR_LENGTH) :: cluster_num
 
-        ! Delete the old file
+        ! Delete the old files
         open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err) 
         if(i_err.eq.0) close(write_phys_unit,status='delete')
+
+        do i_cluster=1,settings%ncluster
+            write(cluster_num,'(I5)') i_cluster
+            open(write_phys_cluster_unit,file=trim(settings%file_root) // '_phys_live_' //trim(adjustl(cluster_num))//'.txt' , action='write', iostat=i_err) 
+            if(i_err.eq.0) close(write_phys_cluster_unit,status='delete')
+        end do
 
         ! Open a new file for appending to
         open(write_phys_unit,file=trim(settings%file_root) // '_phys_live.txt' , action='write', iostat=i_err, position="append")

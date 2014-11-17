@@ -82,10 +82,10 @@ program main
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
     !       - twin_gaussian_loglikelihood 
-    loglikelihood => gaussian_loglikelihood_corr
+    loglikelihood => rastrigin_loglikelihood!gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20               ! Dimensionality of the space
+    settings%nDims= 2                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Assign the priors
@@ -97,8 +97,10 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    minimums=0.5-1d-2*5
-    maximums=0.5+1d-2*5
+    !minimums=0.5-1d-2*5
+    !maximums=0.5+1d-2*5
+    minimums=-2
+    maximums= 2
 
     do i=1,settings%nDims
         physical_indices(i)  = i
@@ -111,7 +113,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 25*settings%nDims        !number of live points
+    settings%nlive                = 100*25*settings%nDims        !number of live points
     settings%num_repeats          = 5                        !Number of chords to draw
 
     settings%num_babies           = settings%nDims*settings%num_repeats
