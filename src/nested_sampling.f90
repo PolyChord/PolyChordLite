@@ -18,7 +18,7 @@ module nested_sampling_module
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit,TwoPi
         use settings_module
         use utils_module,      only: logsumexp,calc_similarity_matrix
-        use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points,read_resume_file,resume_file
+        use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points,read_resume_file,resume_file,write_stats_file
         use feedback_module
         use evidence_module,   only: run_time_info,allocate_run_time_info,write_cluster_info
         use chordal_module,    only: SliceSampling
@@ -194,9 +194,6 @@ module nested_sampling_module
                 nposterior = 0  ! nothing in the posterior array
                 nphantom = 0    ! no phantom points
 
-                ! Delete the first outer point
-                call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
-
             endif !(myrank==root / myrank/=root)
 
 
@@ -246,6 +243,10 @@ module nested_sampling_module
 
             ! definitely more samples needed than this
             more_samples_needed = .true.
+
+            ! Delete the first outer point
+            call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
+
 
             do while ( more_samples_needed )
 
@@ -380,12 +381,12 @@ module nested_sampling_module
 
 
                         ! (3) Feedback to command line every nlive iterations
+                        ! Test to see if we need to finish
+                        more_samples_needed =  (live_logZ(settings,info,live_points) > log(settings%precision_criterion) + info%logevidence ) 
 
                         ! (4) Update the resume and posterior files every update_resume iterations, or at program termination
                         if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
 
-                            ! Test to see if we need to finish
-                            more_samples_needed =  (live_logZ(settings,info,live_points) > log(settings%precision_criterion) + info%logevidence ) 
 
                             ! ---------------------------------------------------------------------- !
                             call write_intermediate_results(settings,info,ndead,nphantom,nposterior,&
@@ -397,6 +398,8 @@ module nested_sampling_module
                                                                                     ndead,total_likelihood_calls,nposterior,posterior_points)
                             if(settings%calculate_posterior) call write_posterior_file(settings,info,posterior_points,nposterior)  
                             if(settings%write_live)          call write_phys_live_points(settings,info,live_points)
+                            call write_stats_file(settings,info) 
+
 
                         end if
 

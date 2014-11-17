@@ -39,6 +39,8 @@ include 'mkl_vml.f90'
     integer, parameter :: write_phys_cluster_unit = 16
     !> unit for writing evidence distribution
     integer, parameter :: write_ev_unit = 17
+    !> unit for writing evidence distribution
+    integer, parameter :: write_stats_unit = 18
 
     ! All series used to approximate F are computed with relative
     ! tolerance:

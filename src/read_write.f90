@@ -99,7 +99,7 @@ module read_write_module
 
 
         type(program_settings), intent(in) :: settings
-        type(run_time_info),    intent(out) :: info
+        type(run_time_info),    intent(inout) :: info
 
         double precision,intent(out), dimension(settings%nTotal,settings%nlive,settings%ncluster) :: live_points
 
@@ -293,6 +293,82 @@ module read_write_module
     end subroutine write_phys_live_points
 
 
+    subroutine write_stats_file(settings,info)
+        use utils_module, only: DBL_FMT,write_stats_unit,STR_LENGTH,logzero,logsubexp
+        use settings_module, only: program_settings
+        use evidence_module, only: run_time_info 
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        type(run_time_info),    intent(in) :: info
+
+        double precision, dimension(info%ncluster_A + info%ncluster_P) :: mu
+        double precision, dimension(info%ncluster_A + info%ncluster_P) :: sigma
+
+        integer :: i
+        integer :: i_err
+
+        open(write_stats_unit,file=trim(stats_file(settings)), action='write', iostat=i_err) 
+
+
+        write(write_stats_unit, '("Evidence estimates:")')
+        write(write_stats_unit, '("===================")')
+        write(write_stats_unit, '("  - The evidence Z is a log-normally distributed, with location and scale parameters mu and sigma.")')
+        write(write_stats_unit, '("  - We denote this as log(Z) = mu +/- sigma.")')
+        write(write_stats_unit,"")
+        write(write_stats_unit, '("Global evidence:")')
+        write(write_stats_unit, '("----------------")')
+        write(write_stats_unit,"")
+        if(info%logevidence>logzero .and. info%logevidence2>logzero) then
+            mu(1)    = 2*info%logevidence - 0.5*info%logevidence2              
+            sigma(1) = sqrt(info%logevidence2 - 2*info%logevidence)
+            write(write_stats_unit, '("log(Z)       = ", E<DBL_FMT(1)>.<DBL_FMT(2)>, " +/- ",E<DBL_FMT(1)>.<DBL_FMT(2)> )') mu(1),sigma(1)
+        else
+            write(write_stats_unit, '(" Too early to produce a sensible evidence estimate ")')
+        end if
+
+        write(write_stats_unit,"")
+        write(write_stats_unit,"")
+        write(write_stats_unit, '("Local evidences:")')
+        write(write_stats_unit, '("----------------")')
+        write(write_stats_unit, '(I2, " clusters found so far")') info%ncluster_A + info%ncluster_P
+        write(write_stats_unit, '(" ", I2, " still active")') info%ncluster_A 
+        write(write_stats_unit,"")
+
+        if(info%ncluster_A>=1) then
+            do i=1,info%ncluster_A
+                mu    = 2*info%logZ - 0.5*info%logZ2              
+                sigma = sqrt(info%logZ2 - 2*info%logZ)
+
+                if(info%logZ(i)>logzero) then
+                    write(write_stats_unit,'("log(Z_",I2,")  = ", E<DBL_FMT(1)>.<DBL_FMT(2)>, " +/- ",E<DBL_FMT(1)>.<DBL_FMT(2)>, " (still evaluating)"  )') i, mu(i),sigma(i)
+                else
+                    write(write_stats_unit,'("log(Z_",I2,")  = ?", "(still evaluating)")') i
+                end if
+            end do
+        end if
+
+        if(info%ncluster_P>=1) then
+            do i=info%ncluster_A+1,info%ncluster_A+info%ncluster_P
+                mu    = 2*info%logZ - 0.5*info%logZ2              
+                sigma = sqrt(info%logZ2 - 2*info%logZ)
+
+                if(info%logZ(i)>logzero) then
+                    write(write_stats_unit,'("log(Z_",I2,")  = ", E<DBL_FMT(1)>.<DBL_FMT(2)>, " +/- ",E<DBL_FMT(1)>.<DBL_FMT(2)>)') i, mu(i),sigma(i)
+                else
+                    write(write_stats_unit,'("log(Z_",I2,")  = ?")') i
+                end if
+            end do
+        end if
+
+
+
+
+        close(write_stats_unit)
+
+    end subroutine write_stats_file
+
+
 
 
 
@@ -308,6 +384,18 @@ module read_write_module
         file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '.resume'
 
     end function resume_file
+
+    function stats_file(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '.stats'
+
+    end function stats_file
 
     function cluster_dir(settings) result(file_name)
         use settings_module, only: program_settings
