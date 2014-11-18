@@ -115,10 +115,6 @@ module generate_module
 
         integer :: nlike
 
-        integer, parameter :: RUNTAG=1
-        integer, parameter :: ENDTAG=2
-
-
         ! Get the number of MPI procedures
         call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
         ! Get the MPI label of the current processor
@@ -143,7 +139,7 @@ module generate_module
 
                 ! Recieve a point from any slave
                 call MPI_RECV(live_point,settings%nTotal, &
-                    MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
+                    MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,tag_gen_new_point,mpi_communicator,mpi_status,mpierror)
 
                 ! If its valid, and we need more points, add it to the array
                 if(live_point(settings%l0)>logzero .and. i_live<settings%nlive) then
@@ -161,10 +157,10 @@ module generate_module
 
                 if(i_live<settings%nlive) then
                     ! If we still need more points, send a signal to have another go
-                    call MPI_SEND(empty_buffer,0,MPI_INT,mpi_status(MPI_SOURCE),RUNTAG,mpi_communicator,mpierror)
+                    call MPI_SEND(empty_buffer,0,MPI_INT,mpi_status(MPI_SOURCE),tag_gen_continue,mpi_communicator,mpierror)
                 else
                     ! Otherwise, send a signal to stop
-                    call MPI_SEND(empty_buffer,0,MPI_INT,mpi_status(MPI_SOURCE),ENDTAG,mpi_communicator,mpierror)
+                    call MPI_SEND(empty_buffer,0,MPI_INT,mpi_status(MPI_SOURCE),tag_gen_stop,mpi_communicator,mpierror)
                     ! and decrease the counter for the number of active slaves
                     active_slaves=active_slaves-1
                 end if
@@ -205,13 +201,13 @@ module generate_module
 
                 ! Send it to the root node
                 call MPI_SEND(live_point,settings%nTotal, &
-                    MPI_DOUBLE_PRECISION,root,0,mpi_communicator,mpierror)
+                    MPI_DOUBLE_PRECISION,root,tag_gen_new_point,mpi_communicator,mpierror)
 
                 ! Recieve signal as to whether we should keep generating
                 call MPI_RECV(empty_buffer,0,MPI_INT,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
 
                 ! If we've recieved a kill signal, then exit this loop
-                if(mpi_status(MPI_TAG) == ENDTAG ) exit
+                if(mpi_status(MPI_TAG) == tag_gen_stop ) exit
 
             end do
 

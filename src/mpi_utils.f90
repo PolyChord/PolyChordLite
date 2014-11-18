@@ -5,6 +5,24 @@ module mpi_module
 
     integer :: mpierror
 
+    integer, parameter :: STARTTAG=0
+    integer, parameter :: RUNTAG=1
+    integer, parameter :: ENDTAG=2
+
+    integer, parameter :: tag_run_new_points=0
+    integer, parameter :: tag_run_no_points=2
+    integer, parameter :: tag_run_new_seed=3
+    integer, parameter :: tag_run_new_cholesky=4
+    integer, parameter :: tag_run_end=5
+
+
+
+    integer, parameter :: tag_gen_continue=6
+    integer, parameter :: tag_gen_stop=7
+    integer, parameter :: tag_gen_new_point=8
+
+
+
     contains
 
     subroutine abort_all(message)

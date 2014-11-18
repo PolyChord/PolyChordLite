@@ -37,11 +37,17 @@ module priors_module
         do i=1,size(priors)
             select case(priors(i)%prior_type)
             case(uniform_type)
-                physical_coords(priors(i)%physical_indices)= uniform_htp    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+                physical_coords(priors(i)%physical_indices)= uniform_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
             case(gaussian_type)
-                physical_coords(priors(i)%physical_indices)= gaussian_htp   (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+                physical_coords(priors(i)%physical_indices)= gaussian_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
             case(log_uniform_type)
-                physical_coords(priors(i)%physical_indices)= log_uniform_htp(hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+                physical_coords(priors(i)%physical_indices)= log_uniform_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(sorted_uniform_type)
+                physical_coords(priors(i)%physical_indices)= sorted_uniform_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
             end select
         end do
 

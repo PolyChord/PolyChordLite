@@ -3,11 +3,6 @@ module nested_sampling_module
 
     implicit none
 
-    integer, parameter :: STARTTAG=0
-    integer, parameter :: RUNTAG=1
-    integer, parameter :: ENDTAG=2
-
-
 
 
     contains
@@ -285,7 +280,7 @@ module nested_sampling_module
                                 MPI_DOUBLE_PRECISION,i_slave,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
 
                             ! If these baby points aren't nonsense (i.e. the first send) ...
-                            if(mpi_status(MPI_TAG)/=STARTTAG) then
+                            if(mpi_status(MPI_TAG)/=tag_run_no_points) then
                                 ! Add these points to the incubator
                                 nincubator=nincubator+1
                                 baby_incubator(:,:,nincubator) = baby_points
@@ -295,13 +290,13 @@ module nested_sampling_module
                             seed_point = GenerateSeed(settings,info,live_points,i_cluster)
 
                             ! Send the seed point back to this slave
-                            call MPI_SEND(seed_point,settings%nTotal,MPI_DOUBLE_PRECISION,i_slave,RUNTAG,mpi_communicator,mpierror)
+                            call MPI_SEND(seed_point,settings%nTotal,MPI_DOUBLE_PRECISION,i_slave,tag_run_new_seed,mpi_communicator,mpierror)
 
                             ! Choose the cholesky decomposition for the cluster
                             cholesky = choleskys(:,:,i_cluster)
 
                             ! Send the cholesky decomposition
-                            call MPI_SEND(cholesky,settings%nDims*settings%nDims,MPI_DOUBLE_PRECISION,i_slave,RUNTAG,mpi_communicator,mpierror)
+                            call MPI_SEND(cholesky,settings%nDims*settings%nDims,MPI_DOUBLE_PRECISION,i_slave,tag_run_new_cholesky,mpi_communicator,mpierror)
 
                         end if !(slave_sending)
 
@@ -431,11 +426,11 @@ module nested_sampling_module
 
                     ! Recieve baby point from slave i_slave
                     call MPI_RECV(baby_points,settings%nTotal*settings%num_babies, &
-                        MPI_DOUBLE_PRECISION,i_slave,RUNTAG,mpi_communicator,mpi_status,mpierror)
+                        MPI_DOUBLE_PRECISION,i_slave,tag_run_new_points,mpi_communicator,mpi_status,mpierror)
 
                     ! Send kill signal to slave i_slave
                     call MPI_SEND(seed_point,settings%nTotal, &
-                        MPI_DOUBLE_PRECISION,i_slave,ENDTAG,mpi_communicator,mpierror)
+                        MPI_DOUBLE_PRECISION,i_slave,tag_run_end,mpi_communicator,mpierror)
 
                 end do
 
@@ -484,7 +479,7 @@ module nested_sampling_module
             ! to start receiving
             baby_points = 0d0
             call MPI_SEND(baby_points,settings%nTotal*settings%num_babies, &
-                MPI_DOUBLE_PRECISION,root,STARTTAG,mpi_communicator,mpierror)
+                MPI_DOUBLE_PRECISION,root,tag_run_no_points,mpi_communicator,mpierror)
 
             do while(.true.)
 
@@ -493,18 +488,18 @@ module nested_sampling_module
                     MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
 
                 ! END) If we receive a kill signal, then exit the loop
-                if(mpi_status(MPI_TAG)==ENDTAG) exit
+                if(mpi_status(MPI_TAG)==tag_run_end) exit
 
                 ! 2) Listen for the cholesky decomposition sent by the master
                 call MPI_RECV(cholesky,settings%nDims*settings%nDims, &
-                    MPI_DOUBLE_PRECISION,root,RUNTAG,mpi_communicator,mpi_status,mpierror)
+                    MPI_DOUBLE_PRECISION,root,tag_run_new_cholesky,mpi_communicator,mpi_status,mpierror)
 
                 ! 3) Generate a new set of baby points
                 baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
                 ! 4) Send the baby points back
                 call MPI_SEND(baby_points,settings%nTotal*settings%num_babies, &
-                    MPI_DOUBLE_PRECISION,root,RUNTAG,mpi_communicator,mpierror)
+                    MPI_DOUBLE_PRECISION,root,tag_run_new_points,mpi_communicator,mpierror)
 
             end do
 
