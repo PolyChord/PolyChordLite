@@ -34,7 +34,7 @@ module read_write_module
         
         ! Open the .resume file, note the presence of iostat prevents program
         ! termination during this write
-        open(write_resume_unit,file=trim(resume_file(settings)), action='write', iostat=i_err) 
+        open(write_resume_unit,file=trim(resume_file(settings))//'_new', action='write', iostat=i_err) 
 
 
         ! Cluster information: 
@@ -80,13 +80,15 @@ module read_write_module
         ! total likelihood calls
         write(write_resume_unit,'(I)') total_likelihood_calls
         ! Number of saved posterior points
-        write(write_resume_unit,'(<info%ncluster_A+1>I)') nposterior(0:info%ncluster_A+info%ncluster_P) 
+        write(write_resume_unit,'(<info%ncluster_A+info%ncluster_P+1>I)') nposterior(0:info%ncluster_A+info%ncluster_P) 
         ! posterior points
         do i_cluster=0,info%ncluster_A+info%ncluster_P
             write(write_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_points(:,:nposterior(i_cluster),i_cluster)
         end do
 
         close(write_resume_unit)
+
+        call rename(trim(resume_file(settings))//'_new',trim(resume_file(settings)))
 
     end subroutine write_resume_file
 
@@ -149,12 +151,13 @@ module read_write_module
         read(read_resume_unit,'(<info%ncluster_T*info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>)') info%logZX(:info%ncluster_T,:info%ncluster_A)
 
 
+        ! Live points
         do i_cluster=1,info%ncluster_A
             read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') live_points(:,:info%n(i_cluster),i_cluster)
         end do
 
         ! number of phantom points
-        read(read_resume_unit,'(<info%ncluster_A>I)') nphantom(:info%ncluster_A) 
+        read(read_resume_unit,'(<info%ncluster_A>I)') nphantom(:info%ncluster_A)
         ! Phantom points
         do i_cluster=1,info%ncluster_A
             read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>)') phantom_points(:,:nphantom(i_cluster),i_cluster)
@@ -165,7 +168,7 @@ module read_write_module
         ! total likelihood calls
         read(read_resume_unit,'(I)') total_likelihood_calls
         ! Number of saved posterior points
-        read(read_resume_unit,'(<info%ncluster_A+1>I)') nposterior(0:info%ncluster_A+info%ncluster_P)
+        read(read_resume_unit,'(<info%ncluster_A+info%ncluster_P+1>I)') nposterior(0:info%ncluster_A+info%ncluster_P) 
         ! posterior points
         do i_cluster=0,info%ncluster_A+info%ncluster_P
             read(read_resume_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>)') posterior_points(:,:nposterior(i_cluster),i_cluster)
