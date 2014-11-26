@@ -34,7 +34,15 @@ module mpi_module
         integer :: errorcode
         integer :: mpierror
 
-        if (present(message)) write(stdout_unit,trim(message))
+        integer :: strlen
+
+
+        if (present(message)) then
+            strlen = len(trim(adjustl(message)))
+            write(stdout_unit,'(" //", <strlen>("="), "\\ ")')
+            write(stdout_unit,'(" ||", A<strlen>,     "|| ")') trim(adjustl(message))
+            write(stdout_unit,'(" \\", <strlen>("="), "// ")')
+        end if 
 
 
         call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
