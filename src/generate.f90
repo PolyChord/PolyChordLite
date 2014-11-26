@@ -68,9 +68,9 @@ module generate_module
         use priors_module,    only: prior
         use settings_module,  only: program_settings,live_type,blank_type
         use random_module,   only: random_reals
-        use utils_module,    only: logzero
+        use utils_module,    only: logzero,write_phys_unit,DBL_FMT
         use calculate_module, only: calculate_point
-        use read_write_module, only: write_phys_live_points
+        use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating
 
         implicit none
@@ -135,6 +135,9 @@ module generate_module
             i_live=0               ! No live points initially
             nlike=0                ! No wasted likelihood calls initially
 
+            ! Open the live points file to sequentially add live points
+            open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
+
             do while(active_slaves>0) 
 
                 ! Recieve a point from any slave
@@ -148,6 +151,10 @@ module generate_module
                     i_live=i_live+1
                     ! Add the new live point to the live point array
                     live_points(:,i_live) = live_point
+                    ! Write the live points to the live_points file
+                    write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') &
+                        live_point(settings%p0:settings%d1), live_point(settings%l0)
+
                 else
                     ! If it failed for whatever reason, then record that we've
                     ! had a 'lost' likelihood evaluation
@@ -177,6 +184,9 @@ module generate_module
             ! Add the the number of 'wasted' likelihood calls to the first live
             ! point
             live_points(settings%nlike,1) = nlike
+
+            ! Close the file
+            close(write_phys_unit)
 
             ! ----------------------------------------------- !
             call write_finished_generating(settings%feedback)  
