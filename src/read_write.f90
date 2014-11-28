@@ -4,7 +4,7 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls,logcdf)
+    subroutine write_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls)
         use utils_module, only: DBL_FMT,write_resume_unit
         use evidence_module, only: run_time_info
         use settings_module, only: program_settings
@@ -22,8 +22,6 @@ module read_write_module
 
         integer,intent(in) :: ndead
         integer,intent(in) :: total_likelihood_calls
-
-        double precision, intent(in),dimension(0:settings%ncluster*2) :: logcdf
 
         integer :: i_cluster
 
@@ -75,8 +73,6 @@ module read_write_module
         write(write_resume_unit,'(I)') ndead
         ! total likelihood calls
         write(write_resume_unit,'(I)') total_likelihood_calls
-        ! cumulative distribution
-        write(write_resume_unit,'(<settings%ncluster*2+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') logcdf
 
 
         close(write_resume_unit)
@@ -85,7 +81,7 @@ module read_write_module
 
     end subroutine write_resume_file
 
-    subroutine read_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls,logcdf)
+    subroutine read_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls)
         use utils_module, only: DBL_FMT,read_resume_unit
         use evidence_module, only: run_time_info
         use settings_module, only: program_settings
@@ -103,8 +99,6 @@ module read_write_module
 
         integer,intent(out) :: ndead
         integer,intent(out) :: total_likelihood_calls
-
-        double precision, intent(out),dimension(0:settings%ncluster*2) :: logcdf
 
         integer :: i_cluster
 
@@ -156,8 +150,6 @@ module read_write_module
         read(read_resume_unit,'(I)') ndead
         ! total likelihood calls
         read(read_resume_unit,'(I)') total_likelihood_calls
-        ! cumulative distribution
-        read(read_resume_unit,'(<settings%ncluster*2+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') logcdf                                  
 
         close(read_resume_unit)
 
