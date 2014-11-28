@@ -108,7 +108,7 @@ module nested_sampling_module
 
         integer :: i_dims
 
-        double precision :: logcdf
+        double precision ,dimension(settings%ncluster*2) :: logcdf
 
         integer :: io_stat
 
@@ -411,7 +411,7 @@ module nested_sampling_module
                             if(settings%write_resume)        call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
                                                                                     ndead,total_likelihood_calls,logcdf)
                             if(settings%write_live)          call write_phys_live_points(settings,info,live_points)
-                            call write_stats_file(settings,info) 
+                            call write_stats_file(settings,info,ndead) 
 
                         end if
 
@@ -747,7 +747,7 @@ module nested_sampling_module
 
         double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
         integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
-        double precision,intent(inout) :: logcdf
+        double precision,intent(inout) ,dimension(0:settings%ncluster*2) :: logcdf
 
         double precision :: min_loglike
         integer :: min_cluster
@@ -817,6 +817,7 @@ module nested_sampling_module
 
         posterior_points(:,:,min_cluster:top_bound) = cshift(posterior_points(:,:,min_cluster:top_bound),shift=1,dim=3)
         nposterior(          min_cluster:top_bound) = cshift(nposterior(          min_cluster:top_bound),shift=1,dim=1) 
+        logcdf(              min_cluster:top_bound) = cshift(logcdf(              min_cluster:top_bound),shift=1,dim=1) 
 
         ! Rename the posterior files
         call rename(trim(posterior_file(settings,.true.,min_cluster)), 'temp_cluster.dat')
@@ -901,7 +902,7 @@ module nested_sampling_module
         integer, intent(in)            :: min_cluster
         double precision, intent(in)            :: min_loglike
         double precision, intent(in)            :: logweight
-        double precision,intent(inout) :: logcdf
+        double precision,intent(inout) ,dimension(0:settings%ncluster*2) :: logcdf
 
         ! Outputs
         double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
@@ -938,7 +939,7 @@ module nested_sampling_module
         
             ! Now update the posterior information for the dead point
             !   - calculate the new posterior point
-            posterior_point = calc_posterior_point(settings,dead_point,logweight-lognum_new,logcdf)
+            posterior_point = calc_posterior_point(settings,dead_point,logweight-lognum_new,logcdf(0))
             !   - add this point to the end of the arrays
             posterior_points(:,nposterior(0)+i_new          ,0          ) = posterior_point
             if(settings%do_clustering) posterior_points(:,nposterior(min_cluster)+i_new,min_cluster) = posterior_point
@@ -962,7 +963,7 @@ module nested_sampling_module
                         j_new=j_new+1
                         ! Now update the posterior information
                         !   - calculate the new posterior point
-                        posterior_point = calc_posterior_point(settings,phantom_points(:,i_phantom,min_cluster),logweight-lognum_new,logcdf)
+                        posterior_point = calc_posterior_point(settings,phantom_points(:,i_phantom,min_cluster),logweight-lognum_new,logcdf(min_cluster))
                         !   - add this point to the end of the arrays
                         posterior_points(:,nposterior(0)+j_new          ,0          ) = posterior_point
                         if(settings%do_clustering) posterior_points(:,nposterior(min_cluster)+j_new,min_cluster) = posterior_point

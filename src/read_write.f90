@@ -23,7 +23,7 @@ module read_write_module
         integer,intent(in) :: ndead
         integer,intent(in) :: total_likelihood_calls
 
-        double precision, intent(in) :: logcdf
+        double precision, intent(in),dimension(0:settings%ncluster*2) :: logcdf
 
         integer :: i_cluster
 
@@ -76,7 +76,7 @@ module read_write_module
         ! total likelihood calls
         write(write_resume_unit,'(I)') total_likelihood_calls
         ! cumulative distribution
-        write(write_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') logcdf
+        write(write_resume_unit,'(<settings%ncluster*2+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') logcdf
 
 
         close(write_resume_unit)
@@ -104,7 +104,7 @@ module read_write_module
         integer,intent(out) :: ndead
         integer,intent(out) :: total_likelihood_calls
 
-        double precision, intent(out) :: logcdf
+        double precision, intent(out),dimension(0:settings%ncluster*2) :: logcdf
 
         integer :: i_cluster
 
@@ -157,7 +157,7 @@ module read_write_module
         ! total likelihood calls
         read(read_resume_unit,'(I)') total_likelihood_calls
         ! cumulative distribution
-        read(read_resume_unit,'(E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') logcdf                                  
+        read(read_resume_unit,'(<settings%ncluster*2+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') logcdf                                  
 
         close(read_resume_unit)
 
@@ -369,7 +369,7 @@ module read_write_module
     end subroutine write_phys_live_points
 
 
-    subroutine write_stats_file(settings,info)
+    subroutine write_stats_file(settings,info,ndead)
         use utils_module, only: DBL_FMT,write_stats_unit,STR_LENGTH,logzero,logsubexp
         use settings_module, only: program_settings
         use evidence_module, only: run_time_info 
@@ -377,6 +377,7 @@ module read_write_module
 
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(in) :: info
+        integer,                intent(in) :: ndead
 
         double precision, dimension(info%ncluster_A + info%ncluster_P) :: mu
         double precision, dimension(info%ncluster_A + info%ncluster_P) :: sigma
@@ -390,10 +391,10 @@ module read_write_module
         write(write_stats_unit, '("===================")')
         write(write_stats_unit, '("  - The evidence Z is a log-normally distributed, with location and scale parameters mu and sigma.")')
         write(write_stats_unit, '("  - We denote this as log(Z) = mu +/- sigma.")')
-        write(write_stats_unit,"")
+        write(write_stats_unit,'("")')
         write(write_stats_unit, '("Global evidence:")')
         write(write_stats_unit, '("----------------")')
-        write(write_stats_unit,"")
+        write(write_stats_unit,'("")')
         if(info%logevidence>logzero .and. info%logevidence2>logzero) then
             mu(1)    = 2*info%logevidence - 0.5*info%logevidence2              
             sigma(1) = sqrt(info%logevidence2 - 2*info%logevidence)
@@ -402,13 +403,13 @@ module read_write_module
             write(write_stats_unit, '(" Too early to produce a sensible evidence estimate ")')
         end if
 
-        write(write_stats_unit,"")
-        write(write_stats_unit,"")
+        write(write_stats_unit,'("")')
+        write(write_stats_unit,'("")')
         write(write_stats_unit, '("Local evidences:")')
         write(write_stats_unit, '("----------------")')
         write(write_stats_unit, '(I2, " clusters found so far")') info%ncluster_A + info%ncluster_P
         write(write_stats_unit, '(" ", I2, " still active")') info%ncluster_A 
-        write(write_stats_unit,"")
+        write(write_stats_unit,'("")')
 
         if(info%ncluster_A>=1) then
             do i=1,info%ncluster_A
@@ -436,6 +437,20 @@ module read_write_module
             end do
         end if
 
+        write(write_stats_unit,'("")')
+        write(write_stats_unit,'("")')
+        write(write_stats_unit, '("Run-time information:")')
+        write(write_stats_unit, '("---------------------")')
+        write(write_stats_unit,'("")')
+        write(write_stats_unit,'(" ndead:    ", I8)') ndead
+        write(write_stats_unit,'(" nlive:    ", I8)') settings%nlive
+        write(write_stats_unit,'(" active clusters: ", I8)') info%ncluster_A
+        if(info%ncluster_A>1) then
+            do i=1,info%ncluster_A
+                write(write_stats_unit,'(" nlive (cluster", I3, "): ", I8)') i, info%n(i)
+            end do
+        end if
+        if(info%ncluster_T>1) write(write_stats_unit, '( I4, " clusters found so far" )') info%ncluster_A + info%ncluster_P
 
 
 
