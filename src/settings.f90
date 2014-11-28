@@ -39,9 +39,10 @@ module settings_module
         !!
         !! This is for memory allocation purposes, it won't necessarily have
         !! this many points if they're not 'good enough'
-        integer :: nmax_posterior = 100000
+        integer :: sigma_posterior = 5
 
-        !> What to thin the posterior points by
+        !> What to thin the posterior points (i.e. probability of keeping
+        !! phantom points)
         double precision :: thin_posterior = 1
 
         !> Whether or not to calculate the posterior

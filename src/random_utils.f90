@@ -126,6 +126,26 @@ module random_module
 
     ! ===========================================================================================
 
+    !>  Random array of logicals, produced with probability p
+    function random_logicals(nDims,p)
+        implicit none
+
+        !> Size of coordinate vector
+        integer,intent(in) :: nDims 
+
+        !> probability of true
+        double precision,intent(in) :: p 
+
+        ! The output nDims coordinate
+        logical, dimension(nDims) :: random_logicals
+
+        random_logicals = random_reals(nDims)<p
+
+
+    end function random_logicals
+
+    ! ===========================================================================================
+
 
     !>  Single random real number
     !!

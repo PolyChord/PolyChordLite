@@ -18,8 +18,8 @@ include 'mkl_vml.f90'
     !> The default double format
     !!
     !! should have write statements along the lines of 
-    !! write(*,'(E<DBL_FMT(1)>.<DBL_FMT(2)>)')
-    integer, parameter, dimension(2) :: DBL_FMT=(/17,8/)
+    !! write(*,'(E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)')
+    integer, parameter, dimension(3) :: DBL_FMT=(/17,8,3/)
 
     !> unit for stdout
     integer, parameter :: stdout_unit = 6
@@ -41,6 +41,14 @@ include 'mkl_vml.f90'
     integer, parameter :: write_ev_unit = 17
     !> unit for writing evidence distribution
     integer, parameter :: write_stats_unit = 18
+    !> unit for reading unnormalised posterior files
+    integer, parameter :: read_untxt_unit = 19
+    !> unit for writing unnormalised posterior files
+    integer, parameter :: write_untxt_unit = 20
+
+
+    !> Log[1/2 Erfc[j/Sqrt[2]]]
+    double precision, parameter,dimension(20) :: logsigma = (/-1.84102, -3.78318, -6.60773, -10.3601, -15.065, -20.7368, -27.3843, -35.0134, -43.6281, -53.2313, -63.8249, -75.4107, -87.9897, -101.563, -116.131, -131.695, -148.256, -165.812, -184.366, -203.917 /)
 
     ! All series used to approximate F are computed with relative
     ! tolerance:

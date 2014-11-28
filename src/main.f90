@@ -82,7 +82,7 @@ program main
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
     !       - twin_gaussian_loglikelihood 
-    loglikelihood => rastrigin_loglikelihood!gaussian_loglikelihood_corr
+    loglikelihood => rastrigin_loglikelihood !gaussian_loglikelihood_corr
 
     ! (ii) Set the dimensionality
     settings%nDims= 2                 ! Dimensionality of the space
@@ -97,8 +97,8 @@ program main
     allocate(physical_indices(settings%nDims))
     allocate(hypercube_indices(settings%nDims))
 
-    !minimums=0.5-1d-2*50
-    !maximums=0.5+1d-2*50
+    !minimums=0.5-1d-2*5
+    !maximums=0.5+1d-2*5
     minimums=-2
     maximums= 2
 
@@ -126,7 +126,6 @@ program main
     settings%precision_criterion  =  1d-3                    !degree of precision in answer 
     settings%max_ndead            = -1                       !maximum number of samples 
     ! posterior calculation
-    settings%nmax_posterior       = 1000000                  !max number of posterior points
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
 
     ! reading and writing
@@ -139,6 +138,7 @@ program main
     settings%ncluster = 30                                   !maximum number of clusters + 1
     settings%SNN_k = 20                                      !maximum number of nearest neighbors to check
 
+    settings%thin_posterior = 1d0
 
 
     ! Initialise the loglikelihood

@@ -3,6 +3,8 @@ module nested_sampling_module
 
     implicit none
 
+    double precision :: evidence
+
 
 
     contains
@@ -12,8 +14,8 @@ module nested_sampling_module
         use priors_module,     only: prior,prior_log_volume
         use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit,TwoPi
         use settings_module
-        use utils_module,      only: logsumexp,calc_similarity_matrix
-        use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points,read_resume_file,resume_file,write_stats_file
+        use utils_module,      only: logsumexp,calc_similarity_matrix,write_untxt_unit
+        use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points,read_resume_file,resume_file,write_stats_file,posterior_file
         use feedback_module
         use evidence_module,   only: run_time_info,allocate_run_time_info,write_cluster_info
         use chordal_module,    only: SliceSampling
@@ -53,7 +55,7 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster) :: phantom_points
         ! The number of phantom points in each cluster
         integer, dimension(settings%ncluster) :: nphantom
-        double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2) :: posterior_points
+        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2) :: posterior_points
         integer, dimension(0:settings%ncluster*2) :: nposterior
 
         ! The evidence storage
@@ -105,6 +107,10 @@ module nested_sampling_module
         integer :: i_incubator
 
         integer :: i_dims
+
+        double precision :: logcdf
+
+        integer :: io_stat
 
 
 
@@ -164,7 +170,7 @@ module nested_sampling_module
                 ! variable 'resume'
                 if(settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
                 call read_resume_file(settings,info,live_points,nphantom,phantom_points,&
-                    ndead,total_likelihood_calls,nposterior,posterior_points)
+                    ndead,total_likelihood_calls,logcdf)
 
             endif ! only root
 
@@ -181,6 +187,16 @@ module nested_sampling_module
             ! Now initialise all of the other variables
             if(myrank==root) then
 
+                ! Delete any existing .txt files
+                ! Open the old unormalised .txt file for reading
+                open(write_untxt_unit,file=trim(posterior_file(settings,.true.)), action='write',iostat=io_stat) 
+                if(io_stat.eq.0) close(write_untxt_unit,status='delete')
+                do i_cluster = 1,settings%ncluster*2
+                    open(write_untxt_unit,file=trim(posterior_file(settings,.true.,i_cluster)), action='write',iostat=io_stat) 
+                    if(io_stat.eq.0) close(write_untxt_unit,status='delete')
+                end do
+
+
                 ! count up the number of likelihood calls
                 total_likelihood_calls = sum(live_points(settings%nlike,:,1))
 
@@ -188,6 +204,8 @@ module nested_sampling_module
                 ndead = 0       ! no dead points 
                 nposterior = 0  ! nothing in the posterior array
                 nphantom = 0    ! no phantom points
+
+                logcdf = logzero
 
             endif !(myrank==root / myrank/=root)
 
@@ -213,7 +231,7 @@ module nested_sampling_module
 
             if(settings%write_resume) &
                 call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
-                    ndead,total_likelihood_calls,nposterior,posterior_points)
+                    ndead,total_likelihood_calls,logcdf)
 
 
 
@@ -240,7 +258,7 @@ module nested_sampling_module
             more_samples_needed = .true.
 
             ! Delete the first outer point
-            call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
+            call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,logcdf)
 
 
             do while ( more_samples_needed )
@@ -389,12 +407,11 @@ module nested_sampling_module
                             ! ---------------------------------------------------------------------- !
 
                             if(settings%feedback>=2) write(stdout_unit,'(" Writing resume files ")')
-                            if(settings%write_resume)        call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
-                                                                                    ndead,total_likelihood_calls,nposterior,posterior_points)
                             if(settings%calculate_posterior) call write_posterior_file(settings,info,posterior_points,nposterior)  
+                            if(settings%write_resume)        call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
+                                                                                    ndead,total_likelihood_calls,logcdf)
                             if(settings%write_live)          call write_phys_live_points(settings,info,live_points)
                             call write_stats_file(settings,info) 
-
 
                         end if
 
@@ -406,7 +423,7 @@ module nested_sampling_module
 
                         ! (6] delete the next outer point.
                         if(settings%feedback>=2) write(stdout_unit,'(" Deleting outer point ")')
-                        call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
+                        call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,logcdf)
 
 
                     end if
@@ -527,7 +544,7 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%nlive,settings%ncluster),intent(inout)   :: live_points
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
-        double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2),intent(inout) :: posterior_points
+        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
         integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
 
         integer, intent(in)                             :: i_cluster
@@ -716,10 +733,9 @@ module nested_sampling_module
 
 
 
-    subroutine delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior) 
+    subroutine delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,logcdf) 
         use settings_module,   only: program_settings
         use evidence_module,   only: run_time_info,update_evidence
-        use read_write_module, only: write_posterior_file
         implicit none
 
         type(program_settings), intent(in) :: settings
@@ -729,8 +745,9 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
 
-        double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2),intent(inout) :: posterior_points
+        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
         integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
+        double precision,intent(inout) :: logcdf
 
         double precision :: min_loglike
         integer :: min_cluster
@@ -750,8 +767,9 @@ module nested_sampling_module
         ! Update the evidence and other stored information 
         call update_evidence(info,min_cluster,min_loglike)
 
+        evidence = info%logevidence
         ! Update the posterior and phantom_arrays
-        call update_posterior_and_phantom(settings,posterior_points,nposterior,dead_point,phantom_points,nphantom,min_cluster,min_loglike,logweight) 
+        call update_posterior_and_phantom(settings,posterior_points,nposterior,dead_point,phantom_points,nphantom,min_cluster,min_loglike,logweight,logcdf) 
         ! Decrease the chord estimate for this cluster
         !live_points(settings%last_chord,:,min_cluster) = live_points(settings%last_chord,:,min_cluster) *info%n(min_cluster) / (info%n(min_cluster) + 1d0) 
 
@@ -767,6 +785,7 @@ module nested_sampling_module
     subroutine reorganise_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,min_cluster,deleted)
         use settings_module,   only: program_settings
         use evidence_module,   only: run_time_info,delete_evidence
+        use read_write_module, only: posterior_file
         implicit none
 
         type(program_settings), intent(in) :: settings
@@ -776,13 +795,15 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
 
-        double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2),intent(inout) :: posterior_points
+        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
         integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
 
         integer,intent(in) :: min_cluster
         logical,intent(in) :: deleted
 
         integer :: top_bound
+
+        integer :: i_cluster
         
         top_bound = info%ncluster_A
 
@@ -796,6 +817,13 @@ module nested_sampling_module
 
         posterior_points(:,:,min_cluster:top_bound) = cshift(posterior_points(:,:,min_cluster:top_bound),shift=1,dim=3)
         nposterior(          min_cluster:top_bound) = cshift(nposterior(          min_cluster:top_bound),shift=1,dim=1) 
+
+        ! Rename the posterior files
+        call rename(trim(posterior_file(settings,.true.,min_cluster)), 'temp_cluster.dat')
+        do i_cluster=min_cluster,top_bound-1
+            call rename(trim(posterior_file(settings,.true.,i_cluster+1)),trim(posterior_file(settings,.true.,i_cluster)))
+        end do
+        call rename( 'temp_cluster.dat',trim(posterior_file(settings,.true.,top_bound)))
 
         ! Update the evidence
         call delete_evidence(info,min_cluster,deleted)
@@ -860,13 +888,11 @@ module nested_sampling_module
 
     !> This function runs through the phantom array, removing any points from
     !! the relevant cluster that are now below the loglikelihood contour. It
-    !! adds a fraction of the discarded phantoms to the posterior array. Finally
-    !! it cleans the posterior array, by removing any points that are obviously
-    !! too low in weight
-    subroutine update_posterior_and_phantom(settings,posterior_points,nposterior,dead_point,phantom_points,nphantom,min_cluster,min_loglike,logweight)
+    !! adds a fraction of the discarded phantoms to the posterior array.
+    subroutine update_posterior_and_phantom(settings,posterior_points,nposterior,dead_point,phantom_points,nphantom,min_cluster,min_loglike,logweight,logcdf)
         use settings_module,   only: program_settings
-        use utils_module,      only: stdout_unit
-        use random_module,     only: random_real
+        use utils_module,      only: stdout_unit,logincexp,logsumexp
+        use random_module,     only: random_real,random_logicals
         implicit none
 
         ! Inputs
@@ -875,21 +901,25 @@ module nested_sampling_module
         integer, intent(in)            :: min_cluster
         double precision, intent(in)            :: min_loglike
         double precision, intent(in)            :: logweight
+        double precision,intent(inout) :: logcdf
 
         ! Outputs
-        double precision, dimension(settings%nDims+settings%nDerived+2,settings%nmax_posterior,0:settings%ncluster*2),intent(inout) :: posterior_points
+        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
         integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
 
 
         ! Local variables
-        double precision, dimension(settings%nDims+settings%nDerived+2) :: posterior_point
-        double precision :: max_logweight
-        double precision :: lognmax_posterior
+        double precision, dimension(settings%nDims+settings%nDerived+3) :: posterior_point
 
         integer :: i_phantom
-        integer :: i_posterior
+
+        integer :: num_new
+        double precision :: lognum_new
+        integer :: i_new,j_new
+
+        logical,dimension(settings%nstack) :: keeps
 
 
 
@@ -897,20 +927,22 @@ module nested_sampling_module
 
 
         if(settings%calculate_posterior) then
+            ! Count the number of new posterior points
+            num_new = count( phantom_points(settings%l0,:nphantom(min_cluster),min_cluster) < min_loglike) + 1
+            i_new=1
+            j_new=1
+            keeps = (/.true. , random_logicals(num_new-1,settings%thin_posterior) /)
+            num_new = count(keeps(:num_new))
+            lognum_new =log( num_new  + 0d0 )
+
+        
             ! Now update the posterior information for the dead point
             !   - calculate the new posterior point
-            posterior_point = calc_posterior_point(settings,dead_point,logweight)
-            !   - increase the number of posterior points by 1, and check that we're
-            !     not over the limit
-            nposterior(0)=nposterior(0)+1
-            nposterior(min_cluster)=nposterior(min_cluster)+1
-            
-            if(nposterior(0)>settings%nmax_posterior) call abort_all(' Too many posterior points. Consider increasing nmax_posterior ')
-            if(nposterior(min_cluster)>settings%nmax_posterior) call abort_all(' Too many posterior points in minor cluster. Consider increasing nmax_posterior ')
+            posterior_point = calc_posterior_point(settings,dead_point,logweight-lognum_new,logcdf)
+            !   - add this point to the end of the arrays
+            posterior_points(:,nposterior(0)+i_new          ,0          ) = posterior_point
+            if(settings%do_clustering) posterior_points(:,nposterior(min_cluster)+i_new,min_cluster) = posterior_point
 
-            !   - add the posterior point to the array
-            posterior_points(:,nposterior(0),0) = posterior_point
-            posterior_points(:,nposterior(min_cluster),min_cluster) = posterior_point
         end if
 
 
@@ -924,21 +956,17 @@ module nested_sampling_module
         do while(i_phantom<=nphantom(min_cluster))
             if( phantom_points(settings%l0,i_phantom,min_cluster) < min_loglike ) then
 
-                if(settings%calculate_posterior .and. random_real() < settings%thin_posterior) then
-                    ! Now update the posterior information
-                    !   - calculate the new posterior point
-                    posterior_point = calc_posterior_point(settings,phantom_points(:,i_phantom,min_cluster),logweight)
-                    !   - increase the number of posterior points by 1, and check that we're
-                    !     not over the limit
-                    nposterior(0)=nposterior(0)+1
-                    nposterior(min_cluster)=nposterior(min_cluster)+1
-
-                    if(nposterior(0)>settings%nmax_posterior) call abort_all(" Too many posterior points. Consider increasing nmax_posterior ")
-                    if(nposterior(min_cluster)>settings%nmax_posterior) call abort_all(" Too many posterior points in minor cluster. Consider increasing nmax_posterior ")
-
-                    !   - add the posterior point to the array
-                    posterior_points(:,nposterior(0),0) = posterior_point
-                    posterior_points(:,nposterior(min_cluster),min_cluster) = posterior_point
+                if(settings%calculate_posterior) then
+                    i_new=i_new+1
+                    if(keeps(i_new)) then
+                        j_new=j_new+1
+                        ! Now update the posterior information
+                        !   - calculate the new posterior point
+                        posterior_point = calc_posterior_point(settings,phantom_points(:,i_phantom,min_cluster),logweight-lognum_new,logcdf)
+                        !   - add this point to the end of the arrays
+                        posterior_points(:,nposterior(0)+j_new          ,0          ) = posterior_point
+                        if(settings%do_clustering) posterior_points(:,nposterior(min_cluster)+j_new,min_cluster) = posterior_point
+                    end if
                 end if
 
                 ! Overwrite the discarded point with a point from the end...
@@ -950,77 +978,76 @@ module nested_sampling_module
             end if
         end do
 
+        nposterior(0) = nposterior(0) + num_new
+        if(settings%do_clustering) nposterior(min_cluster) = nposterior(min_cluster) + num_new
 
-
-
-        if(settings%calculate_posterior) then
-
-            ! Clean out the posterior arrays just discussed
-
-            ! Find the maximum weighted posterior point
-            max_logweight = maxval(posterior_points(1,:nposterior(0),0))
-
-            lognmax_posterior = log(settings%nmax_posterior+0d0)
-
-            i_posterior=1
-            do while(i_posterior<=nposterior(0))
-                if( posterior_points(1,i_posterior,0) - max_logweight + lognmax_posterior < 0 ) then
-                    ! Overwrite the discarded point with a point from the end...
-                    posterior_points(:,i_posterior,0) = posterior_points(:,nposterior(0),0)
-                    ! ...and reduce the stack size
-                    nposterior(0)=nposterior(0)-1
-                else
-                    i_posterior=i_posterior+1
-                end if
-            end do
-
-
-
-
-
-            max_logweight = maxval(posterior_points(1,:nposterior(min_cluster),min_cluster))
-
-            lognmax_posterior = log(settings%nmax_posterior+0d0)
-
-            i_posterior=1
-            do while(i_posterior<=nposterior(min_cluster))
-                if( posterior_points(1,i_posterior,min_cluster) - max_logweight + lognmax_posterior < 0 ) then
-                    ! Overwrite the discarded point with a point from the end...
-                    posterior_points(:,i_posterior,min_cluster) = posterior_points(:,nposterior(min_cluster),min_cluster)
-                    ! ...and reduce the stack size
-                    nposterior(min_cluster)=nposterior(min_cluster)-1
-                else
-                    i_posterior=i_posterior+1
-                end if
-            end do
-
-
-        end if
 
     end subroutine update_posterior_and_phantom
 
 
 
+    function insert_point_at_min(vector,array,column,n) result(discarded_value)
+        use utils_module, only: logzero
+        implicit none
+        double precision, intent(in),    dimension(:)   :: vector
+        double precision, intent(inout), dimension(:,:) :: array
+        integer, intent(in)    :: column
+        integer, intent(inout) :: n
+
+        double precision :: discarded_value
+
+        integer :: row(1)
+
+        discarded_value = logzero
+
+        if(n<size(array,2)) then
+            ! If there's space left in the array, then tag this point on the end
+            n=n+1
+            array(:,n) = vector
+        else
+            ! Otherwise find the minimum position
+            row = minloc(array(column,:),mask=array(column,:)<vector(column))
+
+            if(row(1)/=0) then
+                ! Save the value in this discarded point
+                discarded_value = array(column,row(1))
+                ! Overwrite the array
+                array(:,row(1)) = vector
+            else
+                discarded_value = vector(column)
+            end if
+
+        end if
+
+    end function insert_point_at_min
+
+
+
     !> Calculate a posterior point from a live/phantom point, suitable for
     !! adding to a .txt file
-    function calc_posterior_point(settings,point,logweight) result(posterior_point)
+    function calc_posterior_point(settings,point,logweight,logcdf) result(posterior_point)
         use settings_module,   only: program_settings
+        use utils_module, only: logincexp
         implicit none
 
         type(program_settings), intent(in) :: settings
         double precision, dimension(settings%nTotal),intent(in) :: point
         double precision,intent(in) :: logweight
-        double precision, dimension(settings%nDims+settings%nDerived+2) :: posterior_point
+        double precision,intent(inout) :: logcdf
+        double precision, dimension(settings%nDims+settings%nDerived+3) :: posterior_point
 
 
         ! Un-normalised weighting (needs to be unnormalised since the evidence is only correct at the end)
         posterior_point(1)  = point(settings%l0) + logweight
+        ! Un-normalise cumulative weighting
+        call logincexp(logcdf,posterior_point(1))
+        posterior_point(2)  = logcdf
         ! Likelihood
-        posterior_point(2)  = point(settings%l0)
+        posterior_point(3)  = point(settings%l0)
         ! Physical parameters
-        posterior_point(2+1:2+settings%nDims) = point(settings%p0:settings%p1)
+        posterior_point(3+1:3+settings%nDims) = point(settings%p0:settings%p1)
         ! Derived parameters
-        posterior_point(2+settings%nDims+1:2+settings%nDims+settings%nDerived) = point(settings%d0:settings%d1)
+        posterior_point(3+settings%nDims+1:3+settings%nDims+settings%nDerived) = point(settings%d0:settings%d1)
 
     end function calc_posterior_point
 

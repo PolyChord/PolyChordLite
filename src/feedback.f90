@@ -208,10 +208,10 @@ module feedback_module
             
 
             mu(1)    = 2*info%logevidence - 0.5*info%logevidence2              
-            sigma(1) = sqrt(info%logevidence2 - 2*info%logevidence)
+            sigma(1) = sqrt(abs(info%logevidence2 - 2*info%logevidence))
 
             if(info%logevidence>logzero) then
-                write(stdout_unit,'("log(Z)     = ", F10.5, " +/- ", F10.5)') mu(1),sigma(1)
+                write(stdout_unit,'("log(Z)     = ", F15.2, " +/- ", F5.2)') mu(1),sigma(1)
             end if
 
             mu    = 2*info%logZ - 0.5*info%logZ2              
@@ -220,7 +220,7 @@ module feedback_module
             if(info%ncluster_A>1) then
                 do i=1,info%ncluster_A  
                     if(info%logZ(i)>logzero) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F10.5, " +/- ", F10.5)') i, mu(i),sigma(i)
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F15.2, " +/- ", F5.2)') i, mu(i),sigma(i)
                     else
                         write(stdout_unit,'("log(Z_",I2,")  = ?")') i
                     end if

@@ -152,7 +152,7 @@ module generate_module
                     ! Add the new live point to the live point array
                     live_points(:,i_live) = live_point
                     ! Write the live points to the live_points file
-                    write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>)') &
+                    write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
                         live_point(settings%p0:settings%d1), live_point(settings%l0)
 
                 else
