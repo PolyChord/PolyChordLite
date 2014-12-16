@@ -53,6 +53,42 @@ module priors_module
 
     end function hypercube_to_physical
 
+    function physical_to_hypercube(physical_coords,priors) result(hypercube_coords)
+        implicit none
+        type(prior), dimension(:), intent(in) :: priors
+        double precision, intent(in), dimension(:) :: physical_coords
+
+        double precision, dimension(size(physical_coords)) :: hypercube_coords
+
+        integer :: i
+
+        hypercube_coords=0d0
+
+        do i=1,size(priors)
+            select case(priors(i)%prior_type)
+            case(uniform_type)
+                hypercube_coords(priors(i)%hypercube_indices)= uniform_pth&
+                    (hypercube_coords(priors(i)%physical_indices),priors(i)%parameters)
+            case(gaussian_type)
+                hypercube_coords(priors(i)%hypercube_indices)= gaussian_pth&
+                    (hypercube_coords(priors(i)%physical_indices),priors(i)%parameters)
+            case(log_uniform_type)
+                hypercube_coords(priors(i)%hypercube_indices)= log_uniform_pth&
+                    (hypercube_coords(priors(i)%physical_indices),priors(i)%parameters)
+            case(sorted_uniform_type)
+                hypercube_coords(priors(i)%hypercube_indices)= sorted_uniform_pth&
+                    (hypercube_coords(priors(i)%physical_indices),priors(i)%parameters)
+            end select
+        end do
+
+    end function physical_to_hypercube
+
+
+
+
+
+
+
 
     function prior_log_volume(priors) result(log_volume)
         use utils_module, only: TwoPi
@@ -166,6 +202,26 @@ module priors_module
 
     end function uniform_htp
 
+    function uniform_pth(physical_coords,parameters) result(hypercube_coords)
+        implicit none
+        !> The physical coordinates to be transformed
+        double precision, intent(in), dimension(:) :: physical_coords
+
+        !> The parameters of the transformation
+        double precision, intent(in), dimension(2*size(physical_coords)) :: parameters
+
+        !> The transformed coordinates
+        double precision, dimension(size(physical_coords)) :: hypercube_coords
+
+        integer :: npars 
+
+        npars=size(physical_coords)
+
+
+        hypercube_coords = (physical_coords - parameters(:npars)) / (parameters(npars+1:) - parameters(:npars) )
+
+    end function uniform_pth
+
 
     !============= Gaussian (Separable) ===============================================
 
@@ -244,6 +300,37 @@ module priors_module
 
     end function gaussian_htp
 
+    !> Gaussian transformation
+    function gaussian_pth(physical_coords,parameters) result(hypercube_coords)
+        implicit none
+        !> The physical coordinates to be transformed
+        double precision, intent(in), dimension(:) :: physical_coords
+
+        !> The parameters of the transformation
+        double precision, intent(in), dimension(2*size(physical_coords)) :: parameters
+
+        !> The transformed coordinates
+        double precision, dimension(size(physical_coords)) :: hypercube_coords
+
+        !> Temporary re-scaled coordinates
+        double precision, dimension(size(physical_coords)) :: physical_rescale
+
+        integer :: npars 
+
+        npars=size(physical_coords)
+
+        ! Scale by the standard deviation and shift by the mean
+        ! Lower half of the parameters array are the means
+        ! Upper half of the parameters array are the stdevs
+        
+        physical_rescale = ( physical_coords - parameters(:npars) )/parameters(npars+1:)
+
+        ! Transform via the intel function cdfnorm inverse 
+        ! (v=vector, d=double, cdf=cumulative distribution function, norm=normal)
+        ! https://software.intel.com/en-us/node/521813
+        call vdcdfnorm(npars,physical_rescale,hypercube_coords)
+
+    end function gaussian_pth
 
     
 
@@ -321,6 +408,28 @@ module priors_module
         physical_coords = parameters(:npars) * (parameters(npars+1:)/parameters(:npars)) ** hypercube_coords
 
     end function log_uniform_htp
+
+    function log_uniform_pth(physical_coords,parameters) result(hypercube_coords)
+        implicit none
+        !> The physical coordinates to be transformed
+        double precision, intent(in), dimension(:) :: physical_coords
+
+        !> The parameters of the transformation
+        double precision, intent(in), dimension(2*size(physical_coords)) :: parameters
+
+        !> The transformed coordinates
+        double precision, dimension(size(physical_coords)) :: hypercube_coords
+
+        integer :: npars 
+
+        npars=size(physical_coords)
+                         
+        ! hypercube_coord -> min * (max/min)**hypercube_coord
+        ! Lower half of the parameters array are the minimums
+        ! Upper half of the parameters array are the maximums
+        hypercube_coords = log(physical_coords/parameters(:npars)) / log(parameters(npars+1:)/parameters(:npars))
+
+    end function log_uniform_pth
 
 
 
@@ -416,7 +525,7 @@ module priors_module
         double precision, intent(in), dimension(:) :: hypercube_coords
 
         !> The parameters of the transformation
-        double precision, intent(in), dimension(2*size(hypercube_coords)) :: parameters
+        double precision, intent(in), dimension(2) :: parameters
 
         !> The transformed coordinates
         double precision, dimension(size(hypercube_coords)) :: physical_coords
@@ -442,6 +551,39 @@ module priors_module
     end function sorted_uniform_htp
 
 
+    function sorted_uniform_pth(physical_coords,parameters) result(hypercube_coords)
+        implicit none
+
+        !> The physical coordinates to be transformed
+        double precision, intent(in), dimension(:) :: physical_coords
+
+        !> The parameters of the transformation
+        double precision, intent(in), dimension(2) :: parameters
+
+        !> The transformed coordinates
+        double precision, dimension(size(physical_coords)) :: hypercube_coords
+
+        !> Temporary re-scaled coordinates
+        double precision, dimension(size(physical_coords)) :: physical_rescale
+
+        integer n_prior ! the dimension
+        integer i_prior ! the dimension
+
+        ! Get the size of the array
+        n_prior = size(physical_coords)
+
+
+        ! Rescale back to [0,1]
+        hypercube_coords =  (physical_coords - parameters(1)) / (parameters(2)-parameters(1))  
+
+        ! Undo the trasformation piece by piece
+        do i_prior = 1,n_prior-1
+            hypercube_coords(i_prior) = ( hypercube_coords(i_prior)/hypercube_coords(i_prior+1) )**i_prior
+        end do
+        hypercube_coords(n_prior) = hypercube_coords(n_prior)**n_prior
+
+
+    end function sorted_uniform_pth
 
 
 
