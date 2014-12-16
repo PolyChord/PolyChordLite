@@ -106,7 +106,7 @@ module generate_module
         integer :: mpierror
 
         double precision, dimension(settings%nTotal,settings%nlive) :: live_points
-        double precision, dimension(settings%nTotal,settings%nstack) :: live_stack
+        double precision, dimension(settings%nTotal,settings%ngenerate) :: live_stack
         double precision, dimension(settings%nTotal,settings%num_babies)   :: baby_points
         double precision,    dimension(settings%nTotal)   :: seed_point
 
@@ -123,7 +123,7 @@ module generate_module
 
         integer :: nlike
 
-        integer :: nstack
+        integer :: ngenerate
 
         integer :: i_dims
         integer :: i_slave
@@ -141,7 +141,7 @@ module generate_module
         ! initialise live points at zero
         live_points = 0d0
 
-        nstack = 0
+        ngenerate = 0
 
         if(myrank==root) then
 
@@ -161,7 +161,7 @@ module generate_module
             ! -------------------------------------------- !
             open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
 
-            do while ( nstack<=settings%nstack )
+            do while ( ngenerate<=settings%ngenerate )
 
                     ! Recieve any new baby points from any slave currently sending
 
@@ -179,11 +179,11 @@ module generate_module
                             ! If these baby points aren't nonsense (i.e. the first send) ...
                             if(mpi_status(MPI_TAG)/=tag_run_no_points) then
                                 
-                                live_stack(:,nstack+1:min(settings%nstack,nstack+settings%num_babies))= baby_points
-                                nstack = nstack+settings%num_babies
+                                live_stack(:,ngenerate+1:min(settings%ngenerate,ngenerate+settings%num_babies))= baby_points
+                                ngenerate = ngenerate+settings%num_babies
 
                                 write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
-                                    live_stack(settings%p0:settings%d1,min(nstack,settings%num_babies)), live_stack(settings%l0,min(nstack,settings%num_babies))
+                                    live_stack(settings%p0:settings%d1,min(ngenerate,settings%num_babies)), live_stack(settings%l0,min(ngenerate,settings%num_babies))
                                 call flush(write_phys_unit)
 
                                 ! choose the seed point as the last baby point
@@ -193,9 +193,11 @@ module generate_module
                                 seed_point = settings%seed_point
                             end if
 
-                            if(nstack>settings%nstack/10) then
-                                covmat   = calc_covmat(live_stack(settings%h0:settings%h1,:nstack),blank_stack)
-                                cholesky = calc_cholesky(covmat)
+                            if(ngenerate>settings%nstack) then
+                                if(mod(ngenerate,settings%nlive)==0) then
+                                    covmat   = calc_covmat(live_stack(settings%h0:settings%h1,:ngenerate),blank_stack)
+                                    cholesky = calc_cholesky(covmat)
+                                end if
                             end if
 
                             ! Send the seed point back to this slave
