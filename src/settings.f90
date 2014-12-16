@@ -130,6 +130,10 @@ module settings_module
         !> Memory storage considerations; The maximum number of active clusters
         integer :: ncluster = 1 
 
+        logical :: generate_from_seed = .false.
+
+        double precision, allocatable,dimension(:) :: seed_point
+
     end type program_settings
 
     contains

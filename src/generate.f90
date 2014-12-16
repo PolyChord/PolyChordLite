@@ -63,6 +63,169 @@ module generate_module
     end function GenerateSeed
 
 
+
+
+
+
+
+    function GenerateLivePointsFromSeedP(loglikelihood,priors,settings,mpi_communicator,root) result(live_points) 
+        use priors_module,    only: prior
+        use settings_module,  only: program_settings,live_type,blank_type
+        use random_module,   only: random_reals,random_distinct_integers
+        use utils_module,    only: logzero,write_phys_unit,DBL_FMT
+        use calculate_module, only: calculate_point
+        use read_write_module, only: phys_live_file
+        use feedback_module,  only: write_started_generating,write_finished_generating
+        use utils_module, only: calc_cholesky,calc_covmat
+
+        implicit none
+        
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
+
+        !> Program settings
+        type(program_settings), intent(in) :: settings
+
+
+        integer, intent(in) :: mpi_communicator
+        integer, intent(in) :: root
+
+        !> The rank of the processor
+        integer :: myrank
+        integer :: nprocs
+        integer :: active_slaves
+        integer :: mpierror
+
+        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
+        double precision, dimension(settings%nTotal,settings%nstack) :: live_stack
+        double precision, dimension(settings%nTotal,settings%num_babies)   :: baby_points
+        double precision,    dimension(settings%nTotal)   :: seed_point
+
+        !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
+        ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
+        double precision, dimension(settings%nTotal) :: live_point
+
+        ! Loop variable
+        integer i_live
+
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+
+        integer :: empty_buffer(0)
+
+        integer :: nlike
+
+        integer :: nstack
+
+        integer :: i_dims
+        integer :: i_slave
+        logical :: slave_sending
+
+        double precision, dimension(settings%nTotal,0) :: blank_stack
+        double precision, dimension(settings%nDims,settings%nDims) :: cholesky
+        double precision, dimension(settings%nDims,settings%nDims) :: covmat
+
+        ! Get the number of MPI procedures
+        call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
+        ! Get the MPI label of the current processor
+        call MPI_COMM_RANK(mpi_communicator, myrank, mpierror)
+
+        ! initialise live points at zero
+        live_points = 0d0
+
+        nstack = 0
+
+        if(myrank==root) then
+
+
+            ! Initialise the covmats at the identity
+            covmat = 0d0
+            cholesky=0d0
+            do i_dims=1,settings%nDims
+                covmat(i_dims,i_dims) = 1d0
+                cholesky(i_dims,i_dims) = 1d0
+            end do
+
+            !======= 2) Main loop body =====================================
+
+            ! -------------------------------------------- !
+            call write_started_generating(settings%feedback)
+            ! -------------------------------------------- !
+            open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
+
+            do while ( nstack<=settings%nstack )
+
+                    ! Recieve any new baby points from any slave currently sending
+
+                    ! Loop through all the slaves
+                    do i_slave=1,nprocs-1
+                        ! Use MPI_IPROBE to see if the slave at i_slave is sending
+                        ! If it is, the logical variable 'slave_sending' is true
+                        call MPI_IPROBE(i_slave,MPI_ANY_TAG,mpi_communicator,slave_sending,mpi_status,mpierror)
+
+                        if(slave_sending) then
+                            ! If this slave is sending, then recieve the newly generated baby points
+                            call MPI_RECV(baby_points,settings%nTotal*settings%num_babies,&
+                                MPI_DOUBLE_PRECISION,i_slave,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
+
+                            ! If these baby points aren't nonsense (i.e. the first send) ...
+                            if(mpi_status(MPI_TAG)/=tag_run_no_points) then
+                                
+                                live_stack(:,nstack+1:min(settings%nstack,nstack+settings%num_babies))= baby_points
+                                nstack = nstack+settings%num_babies
+
+                                write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
+                                    live_stack(settings%p0:settings%d1,min(nstack,settings%num_babies)), live_stack(settings%l0,min(nstack,settings%num_babies))
+                                call flush(write_phys_unit)
+
+                                ! choose the seed point as the last baby point
+                                seed_point = baby_points(:,settings%num_babies)
+                            else
+                                ! Otherwise initialise at the start seed
+                                seed_point = settings%seed_point
+                            end if
+
+                            if(nstack>settings%nstack/10) then
+                                covmat   = calc_covmat(live_stack(settings%h0:settings%h1,:nstack),blank_stack)
+                                cholesky = calc_cholesky(covmat)
+                            end if
+
+                            ! Send the seed point back to this slave
+                            call MPI_SEND(seed_point,settings%nTotal,MPI_DOUBLE_PRECISION,i_slave,tag_run_new_seed,mpi_communicator,mpierror)
+
+                            ! Send the cholesky decomposition
+                            call MPI_SEND(cholesky,settings%nDims*settings%nDims,MPI_DOUBLE_PRECISION,i_slave,tag_run_new_cholesky,mpi_communicator,mpierror)
+                        end if !(slave_sending)
+
+                    end do !(i_slave=1,nprocs-1)
+
+            end do ! End main loop
+            close(write_phys_unit)
+
+            ! Now thin the stack
+            live_points = live_stack(:,random_distinct_integers(settings%nstack,settings%nlive))
+        end if
+
+
+    end function GenerateLivePointsFromSeedP
+
+
+
+
+
+
+
+
+
+
     !> Generate an initial set of live points distributed uniformly in the unit hypercube in parallel
     function GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root) result(live_points)
         use priors_module,    only: prior
@@ -154,6 +317,7 @@ module generate_module
                     ! Write the live points to the live_points file
                     write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
                         live_point(settings%p0:settings%d1), live_point(settings%l0)
+                    call flush(write_phys_unit)
 
                 else
                     ! If it failed for whatever reason, then record that we've

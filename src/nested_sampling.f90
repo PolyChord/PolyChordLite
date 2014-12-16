@@ -21,7 +21,7 @@ module nested_sampling_module
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: NN_clustering
-        use generate_module,   only: GenerateLivePointsP,GenerateLivePointsL,GenerateSeed
+        use generate_module,   only: GenerateLivePointsFromSeedP,GenerateLivePointsP,GenerateLivePointsL,GenerateSeed
 
         implicit none
 
@@ -179,7 +179,11 @@ module nested_sampling_module
             if(linear_mode) then
                 live_points(:,:,1) = GenerateLivePointsL(loglikelihood,priors,settings)
             else
-                live_points(:,:,1) = GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root)
+                if(settings%generate_from_seed) then
+                    live_points(:,:,1) = GenerateLivePointsFromSeedP(loglikelihood,priors,settings,mpi_communicator,root)
+                else
+                    live_points(:,:,1) = GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root)
+                end if
             end if
 
 
