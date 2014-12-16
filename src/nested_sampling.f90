@@ -169,6 +169,7 @@ module nested_sampling_module
                 if(settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
                 call read_resume_file(settings,info,live_points,nphantom,phantom_points,&
                     ndead,total_likelihood_calls)
+                nposterior=0
 
             endif ! only root
 
@@ -198,7 +199,7 @@ module nested_sampling_module
                 ! count up the number of likelihood calls
                 total_likelihood_calls = sum(live_points(settings%nlike,:,1))
 
-                
+
                 ndead = 0       ! no dead points 
                 nposterior = 0  ! nothing in the posterior array
                 nphantom = 0    ! no phantom points
