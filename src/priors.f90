@@ -83,13 +83,6 @@ module priors_module
 
     end function physical_to_hypercube
 
-
-
-
-
-
-
-
     function prior_log_volume(priors) result(log_volume)
         use utils_module, only: TwoPi
         implicit none
@@ -113,14 +106,6 @@ module priors_module
             end select
         end do
 
-        ! Uniform contribution
-        !if (M%uniform_num >0 ) &
-        !    log_volume = log_volume + sum(log(M%uniform_params(:,2)-M%uniform_params(:,1) ))
-        !if (M%log_uniform_num >0 ) &
-        !    log_volume = log_volume + sum( log(log(M%log_uniform_params(:,2)/M%log_uniform_params(:,1))) )
-        !if (M%gaussian_num >0 ) &
-        !    log_volume = log_volume + sum( 0.5d0*log(TwoPi) + log(M%gaussian_params(:,2)) )
-        
     end function prior_log_volume
 
 

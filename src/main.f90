@@ -5,10 +5,10 @@ program main
 
     use priors_module
     use settings_module
-    use random_module,          only: initialise_random, deinitialise_random
+    use random_module,            only: initialise_random, deinitialise_random
     use example_likelihoods
     use feedback_module
-    use grades_module,          only: allocate_grades,calc_num_babies
+    use grades_module,            only: allocate_grades,calc_num_babies
     use nested_sampling_module,   only: NestedSampling
     use mpi_module
 
@@ -20,22 +20,30 @@ program main
     ! 2) error(log(evidence))
     ! 3) ndead
     ! 4) number of likelihood calls
+    ! 5) log(evidence) + log(prior volume)
     double precision, dimension(5) :: output_info
 
     type(program_settings)    :: settings  ! The program settings 
-    type(prior), dimension(1) :: priors
+    type(prior), dimension(1) :: priors    ! The details of the priors
 
-    pointer loglikelihood
-    double precision :: loglike
+    pointer loglikelihood                  ! Pointer to a loglikelihood function
+    ! (this just makes assigning them easier, one can just pass your chosen function to the nested sampling algorithm)
 
-    double precision, allocatable, dimension(:) :: theta
-    double precision, allocatable, dimension(:) :: phi
 
+
+    ! Temporary variables for initialising priors
     double precision, allocatable, dimension(:) :: minimums 
     double precision, allocatable, dimension(:) :: maximums
     integer, allocatable, dimension(:) :: hypercube_indices
     integer, allocatable, dimension(:) :: physical_indices
+
+    ! Iterator
     integer :: i
+
+    ! Temporary variables for initialising loglikelihoods
+    double precision :: loglike
+    double precision, allocatable, dimension(:) :: theta
+    double precision, allocatable, dimension(:) :: phi
 
 
 
@@ -58,6 +66,7 @@ program main
     ! b) random number generator
     ! c) model
     ! d) program settings
+    ! e) likelihoods
 
 
     ! ------- (1a) Initialise MPI threads -------------------
@@ -72,7 +81,23 @@ program main
 
     ! ------- (1c) Initialise the model -------
     ! (i) Choose the loglikelihood
-    !       Possible example likelihoods:
+    !       These can be written into src/example_likelihoods.f90, and should
+    !       have the interface:
+    !
+    !interface
+    !    function loglikelihood(theta,phi,context)
+    !        double precision, intent(in),  dimension(:) :: theta
+    !        double precision, intent(out),  dimension(:) :: phi
+    !        integer,          intent(in)                 :: context
+    !        double precision :: loglikelihood
+    !    end function
+    !end interface
+    !
+    ! where theta are the input params, phi are any derived params and 
+    ! context is an integer which can be useful as a C pointer
+    !
+    !
+    ! Possible example likelihoods already written are:
     !       - gaussian_loglikelihood
     !       - gaussian_shell
     !       - rosenbrock_loglikelihood
@@ -82,30 +107,37 @@ program main
     !       - gaussian_loglikelihood_corr
     !       - gaussian_loglikelihood_cluster
     !       - twin_gaussian_loglikelihood 
-    loglikelihood => rastrigin_loglikelihood !gaussian_loglikelihood_corr
+    !
+    loglikelihood => rastrigin_loglikelihood 
 
     ! (ii) Set the dimensionality
-    settings%nDims= 2                 ! Dimensionality of the space
+    settings%nDims= 3                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
-    ! (iii) Assign the priors
-    call allocate_indices(settings)
+    ! (iii) Set up priors
 
-    ! (v) Set up priors
-    allocate(minimums(settings%nDims))
-    allocate(maximums(settings%nDims))
-    allocate(physical_indices(settings%nDims))
-    allocate(hypercube_indices(settings%nDims))
+    ! If just using uniform priors, then all you need to alter are the
+    ! 'minimums' and 'maximums' array. If they're more complicated, then these
+    ! are initialised in a very similar way, but using the initialise_<prior choice> 
+    ! function in src/priors.f90
+    !
+    ! Currently have the possibility of
+    ! 1) Separable Uniform priors
+    ! 2) Separable Gaussian priors
+    ! 3) Separable Log-Uniform priors
+    ! 4) Sorted Uniform Priors
 
-    !minimums=0.5-1d-2*5
-    !maximums=0.5+1d-2*5
+    allocate(                                &
+        minimums(settings%nDims),            &
+        maximums(settings%nDims),            &
+        physical_indices(settings%nDims),    &
+        hypercube_indices(settings%nDims)    &
+        )
+
     minimums=-2
     maximums= 2
-
-    do i=1,settings%nDims
-        physical_indices(i)  = i
-        hypercube_indices(i) = i
-    end do
+    hypercube_indices  = [ (i,i=1,settings%nDims) ]
+    physical_indices  = hypercube_indices
 
     call initialise_uniform(priors(1),hypercube_indices,physical_indices,minimums,maximums)
 
@@ -113,66 +145,53 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 2000                     !number of live points
-    settings%num_repeats          = 1                        !Number of chords to draw
+    settings%nlive                = 500                      !number of live points
+    settings%num_repeats          = 1                        !Number of chords to draw (this is multiplied by nDims)
 
-    settings%num_babies           = settings%nDims*settings%num_repeats
-    settings%nstack               = settings%nlive*settings%num_babies*2
-    settings%file_root            =  'test'                  !file root
-    settings%base_dir             =  'chains'                !base_dir
+    settings%do_clustering = .true.                          !whether or not to do clustering
+    settings%ncluster = 30                                   !maximum number of clusters + 1 (memory allocation purposes)
+
     settings%feedback             = 1                        !degree of feedback
 
-    ! stopping criteria
-    settings%precision_criterion  =  1d-3                    !degree of precision in answer 
-    settings%max_ndead            = -1                       !maximum number of samples 
-    ! posterior calculation
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down at the end of the run)
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down)
+    settings%thin_posterior = 1d0                            !Factor by which the posterior file should be thinned
+                                                             ! 0 uses just live points,
+                                                             ! 1 uses all inter-chain points
 
     ! reading and writing
+    settings%file_root            = 'rastrigin'              !file root
+    settings%base_dir             = 'chains'                 !directory to put chains in
     settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .true.                   !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%write_live           = .true.                   !write out the physical live points?
 
-    settings%do_clustering = .true.                          !whether or not to do clustering
-    settings%ncluster = 30                                   !maximum number of clusters + 1
-    settings%SNN_k = 20                                      !maximum number of nearest neighbors to check
 
-    settings%thin_posterior = 1d0
+    ! Calculate all of the rest of the settings
+    call initialise_settings(settings)   
 
 
-    ! Initialise the loglikelihood
+
+    ! ------- (1e) Initialise loglikelihood -----------------
+    ! This is only needed for a few things (e.g. generating a random correlated gaussian)
     allocate(theta(settings%nDims),phi(settings%nDerived))
     loglike = loglikelihood(theta,phi,0)
 
-    ! Sort out the grades
-    !call allocate_grades(settings%grades,(/1,1,1,1,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4/) ) 
-    !settings%grades%num_repeats(2)= 5
-    !settings%grades%num_repeats(4)= 5
-    !settings%num_babies = calc_num_babies(settings%grades)
-    !settings%nstack               = settings%nlive*settings%num_babies*2
-    settings%do_grades=.false.
-    settings%do_timing=.false.
-    !nest_settings%thin_posterior = max(0d0,&
-    !    nest_settings%grades%num_repeats(1)*nest_settings%grades%grade_nDims(1)/&
-    !    (sum(nest_settings%grades%num_repeats*nest_settings%grades%grade_nDims)+0d0)&
-    !    )
+
+
+
 
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
-
-    do i=1,1
-        output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
-        write(*,'(2E17.8)') output_info(5),output_info(2)
-    end do
-
+    output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
 
 
     ! ======= (3) De-initialise =======
     ! De-initialise the random number generator 
     call deinitialise_random()
 
+    ! Finish off all of the threads
     call MPI_FINALIZE(mpierror)
 
 

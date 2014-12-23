@@ -140,7 +140,12 @@ module settings_module
 
     contains
 
-    subroutine allocate_indices(settings)
+    !> This subroutine initialises all of the default settings
+    !!
+    !! It deals with all the fiddly stuff that's important, such as where to
+    !! store things
+    !!
+    subroutine initialise_settings(settings)
         implicit none
         type(program_settings), intent(inout) :: settings
 
@@ -168,7 +173,15 @@ module settings_module
         ! Total number of parameters
         settings%nTotal = settings%l1
 
-    end subroutine allocate_indices
+
+
+        ! Number of babies to generate,
+        settings%num_babies           = settings%nDims*settings%num_repeats
+        ! Space in stack for excess phantoms
+        settings%nstack               = settings%nlive*settings%num_babies*2
+
+
+    end subroutine initialise_settings
 
 
 end module settings_module 
