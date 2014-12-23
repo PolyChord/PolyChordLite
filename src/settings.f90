@@ -133,6 +133,7 @@ module settings_module
         !> To generate from a seed point instead
         logical :: generate_from_seed = .false.
         integer :: ngenerate = 500*10
+        integer :: generate_burn_in = 0
         double precision, allocatable,dimension(:) :: seed_point
 
     end type program_settings

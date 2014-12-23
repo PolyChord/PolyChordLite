@@ -126,8 +126,11 @@ module generate_module
         integer :: ngenerate
 
         integer :: i_dims
+        integer :: i_baby
         integer :: i_slave
         logical :: slave_sending
+
+        integer, dimension(:), allocatable :: burn_in
 
         double precision, dimension(settings%nTotal,0) :: blank_stack
         double precision, dimension(settings%nDims,settings%nDims) :: cholesky
@@ -145,6 +148,9 @@ module generate_module
 
         if(myrank==root) then
 
+
+            allocate(burn_in(nprocs-1))
+            burn_in = 0
 
             ! Initialise the covmats at the identity
             covmat = 0d0
@@ -178,26 +184,26 @@ module generate_module
 
                             ! If these baby points aren't nonsense (i.e. the first send) ...
                             if(mpi_status(MPI_TAG)/=tag_run_no_points) then
-                                
-                                live_stack(:,ngenerate+1:min(settings%ngenerate,ngenerate+settings%num_babies))= baby_points
-                                ngenerate = ngenerate+settings%num_babies
 
-                                write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
-                                    live_stack(settings%p0:settings%d1,min(ngenerate,settings%num_babies)), live_stack(settings%l0,min(ngenerate,settings%num_babies))
-                                call flush(write_phys_unit)
+                                burn_in(i_slave) = burn_in(i_slave)+1
+
+                                if(burn_in(i_slave)>settings%generate_burn_in) then
+
+                                    live_stack(:,ngenerate+1:min(settings%ngenerate,ngenerate+settings%num_babies))= baby_points
+                                    ngenerate = ngenerate+settings%num_babies
+
+                                    do i_baby=1,settings%num_babies
+                                        write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
+                                            baby_points(settings%p0:settings%d1,i_baby), baby_points(settings%l0,i_baby)
+                                    end do
+                                    call flush(write_phys_unit)
+                                end if
 
                                 ! choose the seed point as the last baby point
                                 seed_point = baby_points(:,settings%num_babies)
                             else
                                 ! Otherwise initialise at the start seed
                                 seed_point = settings%seed_point
-                            end if
-
-                            if(ngenerate>settings%nstack) then
-                                if(mod(ngenerate,settings%nlive)==0) then
-                                    covmat   = calc_covmat(live_stack(settings%h0:settings%h1,:ngenerate),blank_stack)
-                                    cholesky = calc_cholesky(covmat)
-                                end if
                             end if
 
                             ! Send the seed point back to this slave
@@ -208,6 +214,11 @@ module generate_module
                         end if !(slave_sending)
 
                     end do !(i_slave=1,nprocs-1)
+
+                    if(ngenerate>settings%nlive) then
+                        covmat   = calc_covmat(live_stack(settings%h0:settings%h1,:ngenerate),blank_stack)
+                        cholesky = calc_cholesky(covmat)
+                    end if
 
             end do ! End main loop
             close(write_phys_unit)

@@ -68,16 +68,16 @@ module priors_module
             select case(priors(i)%prior_type)
             case(uniform_type)
                 hypercube_coords(priors(i)%hypercube_indices)= uniform_pth&
-                    (hypercube_coords(priors(i)%physical_indices),priors(i)%parameters)
+                    (physical_coords(priors(i)%physical_indices),priors(i)%parameters)
             case(gaussian_type)
                 hypercube_coords(priors(i)%hypercube_indices)= gaussian_pth&
-                    (hypercube_coords(priors(i)%physical_indices),priors(i)%parameters)
+                    (physical_coords(priors(i)%physical_indices),priors(i)%parameters)
             case(log_uniform_type)
                 hypercube_coords(priors(i)%hypercube_indices)= log_uniform_pth&
-                    (hypercube_coords(priors(i)%physical_indices),priors(i)%parameters)
+                    (physical_coords(priors(i)%physical_indices),priors(i)%parameters)
             case(sorted_uniform_type)
                 hypercube_coords(priors(i)%hypercube_indices)= sorted_uniform_pth&
-                    (hypercube_coords(priors(i)%physical_indices),priors(i)%parameters)
+                    (physical_coords(priors(i)%physical_indices),priors(i)%parameters)
             end select
         end do
 
