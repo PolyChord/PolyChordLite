@@ -5,7 +5,7 @@ program main
 
     use priors_module
     use settings_module
-    use random_module,            only: initialise_random, deinitialise_random
+    use random_module,            only: initialise_random
     use example_likelihoods
     use feedback_module
     use grades_module,            only: allocate_grades,calc_num_babies
@@ -55,8 +55,6 @@ program main
             double precision :: loglikelihood
         end function
     end interface
-
-
 
 
 
@@ -188,8 +186,6 @@ program main
 
 
     ! ======= (3) De-initialise =======
-    ! De-initialise the random number generator 
-    call deinitialise_random()
 
     ! Finish off all of the threads
     call MPI_FINALIZE(mpierror)

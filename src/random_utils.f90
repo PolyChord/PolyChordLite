@@ -1,28 +1,11 @@
-! Include the Intel Math Kernel Library - Vector Statistical Library
-! This is a library used for generating random numbers optimally on intel cores 
-include 'mkl_vsl.f90'  
 
 !> Module containing utilities to generate random numbers
-!!
-!! For details on the Intel Math Kernel Library - Vector Statistical Library (MKL_VSL)
-!! consult the [excellent manual](
-!! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/)
-!!
-!! @todo Save stream state for exact replication if necessary
 
 module random_module
-
-    use mkl_vsl_type
-    use mkl_vsl
 
     use mpi_module
 
     implicit none           
-
-
-    !> The stream state for vector random number generators
-    type (vsl_stream_state) :: rng_stream
-
 
     contains
 
@@ -35,19 +18,7 @@ module random_module
     !! Takes an optional argument in case you want to set the seed. Otherwise it
     !! just uses the system time. 
     !!
-    !! The intel command vslnewstream initialises the module variable
-    !! rng_stream, which is then used throughout the code to generate random
-    !! numbers from. More can be found on streams [here](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#7_3_2_Creating_and_Initializing_Random_Streams.htm)
-    !! We have opted to use a fast implementation of the Mersenne Twister as our
-    !! [basic random number generator.](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#7_2_Basic_Generators.htm)
-    !!
-    !! @todo Error code processing
-    !!
     !! @todo Write seed to log file
-    !!
-    !! @todo parallel stream initialisation : check that they're independent
 
     subroutine initialise_random(seed_input)
         implicit none
@@ -57,11 +28,8 @@ module random_module
 
         integer :: errcode ! Error code
         integer :: seed    ! seed to be generated from system time
+        integer :: seed_vec(1) ! vector to be passed to random_seed
         integer :: mpierror
-
-        ! The choice of random number generator
-        ! In this case it is a fast mersenne twister
-        integer,parameter       :: basic_rng_type = VSL_BRNG_SFMT19937
 
         integer :: myrank
 
@@ -70,15 +38,18 @@ module random_module
 
         if (present(seed_input)) then
             ! If the seed argument is present, initialise stream with this
-            errcode=vslnewstream( rng_stream, basic_rng_type,  seed_input + myrank)
+            seed_vec(1) = seed_input
         else
             ! Otherwise initialise it with the system time
             call system_clock(seed)
-            ! Broadcast the same seed to everybody from 'root' (0)
-            call MPI_BCAST(seed,1,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
-
-            errcode=vslnewstream( rng_stream, basic_rng_type,  seed + myrank )
+            seed_vec(1) = seed
         end if
+
+        ! Broadcast the same seed to everybody from 'root' (0)
+        call MPI_BCAST(seed_vec,1,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
+
+        ! Set the seed
+        call random_seed(put=seed_vec+myrank)
 
     end subroutine initialise_random
 
@@ -88,16 +59,6 @@ module random_module
     !>  Random unit hypercube coordinate
     !!
     !! Generate a randomly directed unit vector in the unit hypercube
-    !!
-    !! We use the 
-    !! [VSL_RNG_METHOD_UNIFORM_STD](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
-    !! intel method to generate uniform random numbers using the 
-    !! [vdrnguniform](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-D7AD317E-34EC-4789-8027-01D0E194FAC1.htm)
-    !!
-    !! Note that [VSL_RNG_METHOD_UNIFORM_STD](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm)
-    !! can come in an accurate form.
 
     function random_reals(nDims)
         implicit none
@@ -108,18 +69,7 @@ module random_module
         ! The output nDims coordinate
         double precision, dimension(nDims) :: random_reals
 
-        ! Method to generate random numbers 
-        ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
-        integer,parameter       :: method=VSL_RNG_METHOD_UNIFORM_STD
-
-        double precision, parameter :: l_bound  = 0.0 ! generate random numbers between 0 and 1
-        double precision, parameter :: u_bound  = 1.0 ! 
-
-        integer :: errcode ! Error code
-
-        ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
-        ! (v=vector,d=double,rng,uniform)
-        errcode=vdrnguniform( method, rng_stream, nDims, random_reals, l_bound, u_bound)
+        call random_number(random_reals)
 
 
     end function random_reals
@@ -148,40 +98,16 @@ module random_module
 
 
     !>  Single random real number
-    !!
-    !! We use the 
-    !! [VSL_RNG_METHOD_UNIFORM_STD](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
-    !! intel method to generate uniform random numbers using the 
-    !! [vdrnguniform](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-D7AD317E-34EC-4789-8027-01D0E194FAC1.htm)
-    !!
-    !! Note that [VSL_RNG_METHOD_UNIFORM_STD](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm)
-    !! can come in an accurate form.
 
     function random_real()
         implicit none
 
         ! The output nDims coordinate
         double precision :: random_real
+        double precision :: random_real_vec(1)
 
-        double precision :: random_reals(1)
-
-        ! Method to generate random numbers 
-        ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
-        integer,parameter       :: method=VSL_RNG_METHOD_UNIFORM_STD
-
-        double precision, parameter :: l_bound  = 0.0 ! generate random numbers between 0 and 1
-        double precision, parameter :: u_bound  = 1.0 ! 
-
-        integer :: errcode ! Error code
-
-        ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
-        ! (v=vector,d=double,rng,uniform)
-        errcode=vdrnguniform( method, rng_stream, 1, random_reals, l_bound, u_bound)
-
-        random_real = random_reals(1)
-
+        random_real_vec = random_reals(1)
+        random_real = random_real_vec(1)
 
     end function random_real
 
@@ -189,18 +115,6 @@ module random_module
 
 
     !>  Random integer between 1 and nmax (inclusive)
-    !!
-    !! Generate a random integer  between 1 and nmax inclusive
-    !!
-    !! We use the 
-    !! [VSL_RNG_METHOD_UNIFORM_STD](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm) 
-    !! intel method to generate uniform random integers using the 
-    !! [virnguniform](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-46FE7EF1-CE00-42CB-891D-17FD96062255.htm)
-    !!
-    !! Note that [VSL_RNG_METHOD_UNIFORM_STD](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_1_Uniform_VSL_RNG_METHOD_UNIFORM_STD.htm)
-    !! can come in an accurate form.
 
     function random_integer(nmax)
         implicit none
@@ -210,22 +124,8 @@ module random_module
 
         ! The output nDims coordinate
         integer :: random_integer
-        integer :: random_integers(1)
 
-        ! Method to generate random numbers 
-        ! (This can be upgraded to VSL_RNG_METHOD_UNIFORM_STD_ACCURATE)
-        integer,parameter       :: method=VSL_RNG_METHOD_UNIFORM_STD
-
-        integer, parameter :: l_bound  = 1 ! generate random numbers between 0 and 1
-
-        integer :: errcode ! Error code
-
-        ! Generate nDims random numbers, stored in the output vector 'random_coordinate'
-        ! (v=vector,i=integer,rng,uniform)
-        ! This generates a vector of random integers between [1,nmax+1) = [1,nmax]
-        errcode=virnguniform( method, rng_stream, 1, random_integers, l_bound, nmax+1)
-
-        random_integer = random_integers(1)
+        random_integer = ceiling(random_real()*nmax)
 
 
     end function random_integer
@@ -235,13 +135,9 @@ module random_module
     !>  Random Gaussian vector
     !!
     !! Generate nDims random gausian numbers with mean 0 and variance 1
-    !!
-    !! We use the 
-    !! [VSL_RNG_METHOD_GAUSSIAN_ICDF](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_4_Gaussian_VSL_RNG_METHOD_GAUSSIAN_ICDF.htm) 
-    !! intel method to generate Gaussian random numbers using the
-    !! [vdrnggaussian](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-63196F25-5013-4038-8BCD-2613C4EF3DE4.htm) function.
 
     function random_gaussian(nDims)
+        use utils_module, only: inv_normal_cdf
         implicit none
 
         !> Size of vector to be generated
@@ -250,20 +146,7 @@ module random_module
         ! The output unit vector
         double precision, dimension(nDims) :: random_gaussian
 
-        ! Method to generate random numbers 
-        integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIAN_ICDF
-
-        double precision, parameter :: sigma = 1.0 ! Standard deviation of gaussian random numbers
-        double precision, parameter :: mean  = 0.0 ! Mean of gaussian random numbers
-
-        integer :: errcode ! Error code
-
-
-        ! Generate nDims gaussian random numbers, stored in a vector
-        ! random_gaussian
-        ! with mean=0 variance=1
-        ! (v=vector,d=double,rng,gaussian)
-        errcode=vdrnggaussian( method, rng_stream, nDims, random_gaussian, mean, sigma)
+        random_gaussian = inv_normal_cdf(random_reals(nDims))
 
     end function random_gaussian
 
@@ -342,112 +225,6 @@ module random_module
 
     end function random_subdirection
 
-    ! ===========================================================================================
-
-
-    !>  Random skewed direction vector
-    !!
-    !! Generate a randomly directed normalised vector in nDims dimensional space
-    !! according to the covariance matrix recieved. The vector is normalised
-    !! with respect to the [Mahalanobis_distance](http://en.wikipedia.org/wiki/Mahalanobis_distance)
-    !! defined by the variance-covariance matrix.
-    !!
-    !! We use the 
-    !! [VSL_RNG_METHOD_GAUSSIANMV_ICDF](https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_7_GaussianMV_VSL_RNG_METHOD_GAUSSIANMV_ICDF.htm#9_3_7_GaussianMV_VSL_RNG) 
-    !! intel method to generate multivariate gaussian random numbers using the 
-    !! [vdrnggaussianmv](https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F.htm#GUID-1595CFFA-4878-4BCD-9C1D-2034731C1F4F) function.
-
-    function random_skewed_direction(nDims,cholesky) result(nhat)
-        use utils_module, only: distance
-        implicit none
-
-        !> Size of vector to be generated
-        integer,intent(in) :: nDims
-
-        !> Cholesky decomposition of the covariance matrix
-        double precision, dimension(nDims,nDims) :: cholesky
-
-        ! The output normalised vector
-        double precision, dimension(nDims) :: nhat
-
-        ! Temporary length 1 vector of nDims vectors for passing to the routine
-        double precision, dimension(nDims,1) :: nhat_temp
-
-        ! Method to generate random numbers 
-        integer,parameter       :: method=VSL_RNG_METHOD_GAUSSIANMV_ICDF
-        ! The type of matrix storage (this indicates 'full' storage, i.e. the
-        ! easy to understand kind)
-        integer,parameter       :: mstorage=VSL_MATRIX_STORAGE_FULL
-
-        ! Mean of the vector produced
-        double precision, dimension(nDims) :: mean
-
-        ! Error code for output of intel routine
-        integer :: errcode
-
-        ! The modulus squared of the vector
-        double precision ::nhat2
-
-        mean =0
-        nhat2=0d0
-        do while(nhat2==0d0)
-            ! Compute a random gaussian vector subject to the matrix
-            errcode=vdrnggaussianmv( method, rng_stream, 1,nhat_temp, nDims, mstorage, mean, cholesky)
-
-            nhat2 = dot_product(nhat_temp(:,1),nhat_temp(:,1))
-        end do
-
-        nhat = nhat_temp(:,1)/sqrt(nhat2)
-        
-
-    end function random_skewed_direction
-
-
-    ! ===========================================================================================
-
-    ! ===========================================================================================
-
-
-
-    !> Random point in the [beta distribution](http://en.wikipedia.org/wiki/Beta_distribution)
-    !!
-    !! Generate an nDims-vector of points with each coordinate \f$x_i\f$ distributed as: 
-    !! \f$ P(x_i;p,q) ~ x_i^{p-1}(1-x_i)^{q-1}\f$
-    !!
-    !! We use the 
-    !! [VSL_RNG_METHOD_BETA_CJA](
-    !! https://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/vslnotes/hh_goto.htm#9_3_17_Beta_VSL_RNG_METHOD_BETA_CJA.htm#9_3_16_Beta_VSL_RNG) 
-    !! intel method to generate points. Note that this can come in an accurate form                               
-
-    function random_beta_vec(p,q,nDims)
-        implicit none
-
-        !> beta shape parameter 1
-        double precision, intent(in) :: p
-        !> beta shape parameter 2
-        double precision, intent(in) :: q
-        !> Size of coordinate vector
-        integer :: nDims
-
-        ! The output vector
-        double precision, dimension(nDims) :: random_beta_vec
-
-
-        ! Method to generate random numbers 
-        integer,parameter       :: method=VSL_RNG_METHOD_BETA_CJA
-
-        double precision, parameter :: offset = 0.0 ! Mean of the beta distribution
-        double precision, parameter :: scale_factor  = 1.0 ! width of the beta distribution
-
-        integer :: errcode ! Error code
-
-
-
-        ! call the intel procedure to generate the point
-        errcode=vdrngbeta( method, rng_stream, nDims, random_beta_vec, p, q, offset, scale_factor )
-
-
-    end function random_beta_vec
 
     ! ===========================================================================================
 
@@ -476,7 +253,7 @@ module random_module
         ! generate a random direction
         random_point_in_sphere = random_direction(nDims)
 
-        ! generate a single random number distributed as beta(r,1) ~ r^{d-1}
+        ! generate a single random number distributed as ~ r^{d-1}
         rand_rad = random_real()**(1d0/nDims)
 
         ! Create a point in the sphere
@@ -651,18 +428,6 @@ module random_module
 
 
     end function random_integer_P
-
-
-    !> De-initialise the random number generators
-
-    subroutine deinitialise_random
-
-        implicit none
-        integer :: errcode ! Error code
-
-        errcode=vsldeletestream( rng_stream )
-
-    end subroutine deinitialise_random
 
 
 end module random_module

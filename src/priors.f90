@@ -259,6 +259,7 @@ module priors_module
 
     !> Gaussian transformation
     function gaussian_htp(hypercube_coords,parameters) result(physical_coords)
+        use utils_module, only: inv_normal_cdf
         implicit none
         !> The hypercube coordinates to be transformed
         double precision, intent(in), dimension(:) :: hypercube_coords
@@ -273,12 +274,8 @@ module priors_module
 
         npars=size(hypercube_coords)
 
-        ! Transform via the intel function cdfnorm inverse 
-        ! (v=vector, d=double, cdf=cumulative distribution function, norm=normal, inv=inverse)
-        ! https://software.intel.com/sites/products/documentation/hpc/mkl/mklman/hh_goto.htm#GUID-67369FA5-ABFD-4B5D-82D4-E6A5E4AB565B.htm#GUID-67369FA5-ABFD-4B5D-82D4-E6A5E4AB565B
-        ! Lower half of the parameters array are the means
-        ! Upper half of the parameters array are the stdevs
-        call vdcdfnorminv(npars,hypercube_coords,physical_coords)
+        ! Transform via the inverse normal cumulative distribution function
+        physical_coords = inv_normal_cdf(hypercube_coords)
 
         ! Scale by the standard deviation and shift by the mean
         physical_coords = parameters(:npars) + parameters(npars+1:) * physical_coords
@@ -287,6 +284,7 @@ module priors_module
 
     !> Gaussian transformation
     function gaussian_pth(physical_coords,parameters) result(hypercube_coords)
+        use utils_module, only: normal_cdf
         implicit none
         !> The physical coordinates to be transformed
         double precision, intent(in), dimension(:) :: physical_coords
@@ -297,9 +295,6 @@ module priors_module
         !> The transformed coordinates
         double precision, dimension(size(physical_coords)) :: hypercube_coords
 
-        !> Temporary re-scaled coordinates
-        double precision, dimension(size(physical_coords)) :: physical_rescale
-
         integer :: npars 
 
         npars=size(physical_coords)
@@ -308,12 +303,10 @@ module priors_module
         ! Lower half of the parameters array are the means
         ! Upper half of the parameters array are the stdevs
         
-        physical_rescale = ( physical_coords - parameters(:npars) )/parameters(npars+1:)
+        hypercube_coords = ( physical_coords - parameters(:npars) )/parameters(npars+1:)
 
-        ! Transform via the intel function cdfnorm inverse 
-        ! (v=vector, d=double, cdf=cumulative distribution function, norm=normal)
-        ! https://software.intel.com/en-us/node/521813
-        call vdcdfnorm(npars,physical_rescale,hypercube_coords)
+        ! Transform via the normal cumulative distribution function
+        hypercube_coords = normal_cdf(hypercube_coords)
 
     end function gaussian_pth
 
