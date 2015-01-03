@@ -280,7 +280,6 @@ module read_write_module
 
 
         if(settings%do_clustering) then
-            call makedirqq(trim(cluster_dir(settings)))
 
             do i_cluster=1,info%ncluster_A+info%ncluster_P
 
@@ -375,7 +374,6 @@ module read_write_module
         if(i_err.eq.0) close(write_phys_unit,status='delete')
 
         if(settings%do_clustering) then
-            call makedirqq(trim(cluster_dir(settings)))
 
             do i_cluster=1,settings%ncluster
                 open(write_phys_cluster_unit,file=trim(phys_live_file(settings,i_cluster)), action='write', iostat=i_err) 

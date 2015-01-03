@@ -27,28 +27,33 @@ module random_module
         integer, optional, intent(in) :: seed_input
 
         integer :: seed    ! seed to be generated from system time
-        integer :: seed_vec(1) ! vector to be passed to random_seed
+        integer,allocatable,dimension(:) :: seed_vec ! vector to be passed to random_seed
         integer :: mpierror
 
         integer :: myrank
 
+        integer :: size_seed
+
         ! Get the global ranking
         call MPI_COMM_RANK(MPI_COMM_WORLD, myrank, mpierror)
 
+        call random_seed(size=size_seed)
+        allocate(seed_vec(size_seed))
+
         if (present(seed_input)) then
             ! If the seed argument is present, initialise stream with this
-            seed_vec(1) = seed_input
+            seed_vec = seed_input
         else
             ! Otherwise initialise it with the system time
             call system_clock(seed)
-            seed_vec(1) = seed
+            seed_vec = seed
         end if
 
         ! Broadcast the same seed to everybody from 'root' (0)
-        call MPI_BCAST(seed_vec,1,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
+        call MPI_BCAST(seed_vec,size_seed,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
 
         ! Set the seed
-        call random_seed(put=seed_vec+myrank)
+        call random_seed(put=seed_vec)
 
     end subroutine initialise_random
 

@@ -7,9 +7,11 @@ FC = mpif90
 
 # flags
 # fpp  : perform preprocessing
-FCFLAGS = -fpp
+FCFLAGS = -ffree-line-length-none
+#FCFLAGS = -fpp
 
 ifeq ($(DEBUG), 1)
+FCFLAGS +=
 # Debugging mode
 # --------------
 # g              : enable gnu debugger compatibility
@@ -18,13 +20,14 @@ ifeq ($(DEBUG), 1)
 # check all      : all checks (whilst compiling)
 # fpe0           : halts program if dividing by zero, etc
 # warn all       : all warnings (whilst running)
-FCFLAGS += -g -traceback -fp-stack-check -check all -fpe0 -warn all
+#FCFLAGS += -g -traceback -fp-stack-check -check all -fpe0 -warn all
 else
+FCFLAGS +=
 # Optimised mode
 # --------------
 # O3         : maximum optimisation
 # xHost      : maximise architecture usage
-FCFLAGS += -O3 -xHost
+#FCFLAGS += -O3 -xHost
 endif
 
 

@@ -106,7 +106,7 @@ program main
     !       - gaussian_loglikelihood_cluster
     !       - twin_gaussian_loglikelihood 
     !
-    loglikelihood => rastrigin_loglikelihood 
+    !loglikelihood => rastrigin_loglikelihood 
 
     ! (ii) Set the dimensionality
     settings%nDims= 2                 ! Dimensionality of the space
@@ -173,7 +173,7 @@ program main
     ! ------- (1e) Initialise loglikelihood -----------------
     ! This is only needed for a few things (e.g. generating a random correlated gaussian)
     allocate(theta(settings%nDims),phi(settings%nDerived))
-    loglike = loglikelihood(theta,phi,0)
+    loglike = rastrigin_loglikelihood(theta,phi,0)
 
 
 
@@ -182,7 +182,7 @@ program main
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
-    output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
+    output_info = NestedSampling(rastrigin_loglikelihood,priors,settings,MPI_COMM_WORLD) 
 
 
     ! ======= (3) De-initialise =======

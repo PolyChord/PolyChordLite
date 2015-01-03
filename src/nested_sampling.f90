@@ -17,7 +17,7 @@ module nested_sampling_module
         use utils_module,      only: logsumexp,calc_similarity_matrix,write_untxt_unit
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points,read_resume_file,resume_file,write_stats_file,posterior_file
         use feedback_module
-        use evidence_module,   only: run_time_info,allocate_run_time_info,write_cluster_info
+        use evidence_module,   only: run_time_info,allocate_run_time_info
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: NN_clustering
@@ -371,7 +371,7 @@ module nested_sampling_module
                                         else
                                             call create_new_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
 
-                                            write(stdout_unit,'( I, " clusters found at iteration ", I)') info%ncluster_A, ndead
+                                            write(stdout_unit,'( I8, " clusters found at iteration ", I8)') info%ncluster_A, ndead
                                         end if
                                     else
                                         ! Otherwise move on to the next cluster
@@ -399,7 +399,7 @@ module nested_sampling_module
                         more_samples_needed =  (live_logZ(settings,info,live_points) > log(settings%precision_criterion) + info%logevidence ) 
 
                         ! (4) Update the resume and posterior files every update_resume iterations, or at program termination
-                        if (mod(ndead,settings%update_resume) .eq. 0 .or.  more_samples_needed==.false.)  then
+                        if ( (mod(ndead,settings%update_resume) == 0) .or.  (more_samples_needed.eqv..false.) )  then
 
 
                             ! ---------------------------------------------------------------------- !

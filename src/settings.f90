@@ -140,7 +140,7 @@ module settings_module
         !> Whether to time likelihood calls for grades
         logical :: do_timing = .false.
         !> How long to wait in between the printing of times
-        logical :: print_timing = 100
+        integer :: print_timing = 100
 
         !> Whether to do clustering or not
         logical :: do_clustering = .false.
