@@ -276,7 +276,6 @@ module example_likelihoods
     !! Note that this is a 2D function, and should hence only be used for settings%nDims=2
     !!
     function himmelblau_loglikelihood(theta,phi,context) result(loglikelihood)
-        use utils_module, only: logzero
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -319,7 +318,7 @@ module example_likelihoods
     !! of local minima.
     !!
     function rastrigin_loglikelihood(theta,phi,context) result(loglikelihood)
-        use utils_module, only: logzero,TwoPi
+        use utils_module, only: TwoPi
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -351,7 +350,6 @@ module example_likelihoods
     !! \f[ -\log L(x, y) = (2+ \prod_i^n \cos(\theta_i/2) )^5 \f]
     !!
     function eggbox_loglikelihood(theta,phi,context) result(loglikelihood)
-        use utils_module, only: logzero
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -406,8 +404,6 @@ module example_likelihoods
         double precision, save :: logdetcovmat
 
         logical,save :: initialised=.false.
-
-        double precision, parameter :: sigma = 0.01 ! width of peak
 
 
         nDims = size(theta)
@@ -658,10 +654,10 @@ module example_likelihoods
     subroutine generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
         use random_module, only: random_reals, random_orthonormal_basis
         implicit none
+        integer,          intent(in)                         :: nDims
         double precision, intent(out),dimension(nDims,nDims) :: invcovmat
         double precision, intent(out)                        :: logdetcovmat
         double precision, intent(in)                         :: sigma
-        integer,          intent(in)                         :: nDims
 
         double precision, dimension(nDims)       :: eigenvalues
         double precision, dimension(nDims,nDims) :: eigenvectors
@@ -696,9 +692,9 @@ module example_likelihoods
         use random_module, only: random_reals, random_orthonormal_basis
         use utils_module, only: read_covmat_unit
         implicit none
+        integer,          intent(in)                         :: nDims
         double precision, intent(out),dimension(nDims,nDims) :: invcovmat
         double precision, intent(out)                        :: logdetcovmat
-        integer,          intent(in)                         :: nDims
 
         !double precision, dimension(nDims)       :: eigenvalues
         !double precision, dimension(nDims,nDims) :: eigenvectors

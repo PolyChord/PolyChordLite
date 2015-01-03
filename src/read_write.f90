@@ -194,7 +194,7 @@ module read_write_module
 
 
     subroutine write_posterior_file(settings,info,posterior_points,nposterior) 
-        use utils_module, only: DB_FMT,fmt_len,write_txt_unit,write_untxt_unit,read_untxt_unit,logzero,STR_LENGTH,logsigma
+        use utils_module, only: DB_FMT,fmt_len,write_txt_unit,write_untxt_unit,read_untxt_unit,STR_LENGTH,logsigma
         use settings_module, only: program_settings
         use evidence_module, only: run_time_info 
         implicit none
@@ -348,7 +348,7 @@ module read_write_module
     end subroutine write_posterior_file
 
     subroutine write_phys_live_points(settings,info,live_points)
-        use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_phys_unit,write_phys_cluster_unit,STR_LENGTH
+        use utils_module, only: DB_FMT,fmt_len,write_phys_unit,write_phys_cluster_unit
         use settings_module, only: program_settings 
         use evidence_module, only: run_time_info 
         implicit none
@@ -408,7 +408,7 @@ module read_write_module
 
 
     subroutine write_stats_file(settings,info,ndead)
-        use utils_module, only: DB_FMT,fmt_len,write_stats_unit,STR_LENGTH,logzero,logsubexp
+        use utils_module, only: DB_FMT,fmt_len,write_stats_unit,logzero,logsubexp
         use settings_module, only: program_settings
         use evidence_module, only: run_time_info 
         implicit none

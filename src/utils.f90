@@ -443,7 +443,6 @@ module utils_module
         implicit none
         double precision, intent(in),dimension(:) :: x
         double precision,dimension(size(x)) :: inv_normal_cdf
-        double precision, parameter :: sqrt2 = sqrt(2d0)
         integer :: i
 
         inv_normal_cdf = [( r8_normal_01_cdf_inverse(x(i)), i=1,size(x) )]

@@ -16,7 +16,7 @@ module feedback_module
 
     !> Called before running the program
     subroutine write_opening_statement(settings)
-        use utils_module,    only: logzero,stdout_unit
+        use utils_module,    only: stdout_unit
         use settings_module, only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
@@ -124,7 +124,7 @@ module feedback_module
         write(bar_fmt,'("(a1,a",i0,")")') bar_size+7
 
         ! Convert the fraction to an integer percentage
-        percent = 100 * frac
+        percent = int(100 * frac)
 
         ! Create the progress bar structure:
         ! e.g.  bar = "???% |                     |"

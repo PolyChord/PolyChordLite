@@ -18,7 +18,6 @@ module grades_module
     contains
 
     subroutine allocate_grades(grades, grade_information)
-        use utils_module, only: stdout_unit
         implicit none
         type(parameter_grades),intent(out) :: grades
         integer,intent(in),optional,dimension(:) :: grade_information
