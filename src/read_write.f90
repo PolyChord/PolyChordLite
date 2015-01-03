@@ -5,7 +5,7 @@ module read_write_module
     contains
 
     subroutine write_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls)
-        use utils_module, only: DBL_FMT,write_resume_unit
+        use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_resume_unit
         use evidence_module, only: run_time_info
         use settings_module, only: program_settings
 
@@ -25,7 +25,24 @@ module read_write_module
 
         integer :: i_cluster
 
+        character(len=fmt_len) :: fmt_dbl_ncluster_A
+        character(len=fmt_len) :: fmt_dbl_ncluster_T
+        character(len=fmt_len) :: fmt_dbl_nTotal
+        character(len=fmt_len) :: fmt_dbl_2
 
+        character(len=fmt_len) :: fmt_int_ncluster_A
+        character(len=fmt_len) :: fmt_int_1
+
+
+        ! Initialise the formats
+        write(fmt_dbl_ncluster_A,'("(",I0,A,")")') info%ncluster_A, DB_FMT
+        write(fmt_dbl_ncluster_T,'("(",I0,A,")")') info%ncluster_T, DB_FMT
+        write(fmt_dbl_nTotal    ,'("(",I0,A,")")') settings%nTotal, DB_FMT
+        write(fmt_dbl_2         ,'("(",I0,A,")")') 2,               DB_FMT
+
+        write(fmt_int_ncluster_A,'("(",I0,A,")")') info%ncluster_A, INT_FMT
+        write(fmt_int_1         ,'("(",I0,A,")")') 1,               INT_FMT
+        
         
         ! Open the .resume file
         open(write_resume_unit,file=trim(resume_file(settings))//'_new', action='write') 
@@ -34,45 +51,45 @@ module read_write_module
         ! Cluster information: 
 
         ! Number of Active clusters
-        write(write_resume_unit,'(I)') info%ncluster_A
+        write(write_resume_unit,fmt_int_1) info%ncluster_A
         ! Number of Passive clusters
-        write(write_resume_unit,'(I)') info%ncluster_P
+        write(write_resume_unit,fmt_int_1) info%ncluster_P
         ! Total amount of evidence information
-        write(write_resume_unit,'(I)') info%ncluster_T
+        write(write_resume_unit,fmt_int_1) info%ncluster_T
         ! global log evidence and evidence^2
-        write(write_resume_unit,'(2E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logevidence, info%logevidence2
+        write(write_resume_unit,fmt_dbl_2) info%logevidence, info%logevidence2
         ! number of live points in each cluster
-        write(write_resume_unit,'(<info%ncluster_A>I)') info%n(:info%ncluster_A)
+        write(write_resume_unit,fmt_int_ncluster_A) info%n(:info%ncluster_A)
         ! Log likelihood contours
-        write(write_resume_unit,'(<info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logL(:info%ncluster_A)
+        write(write_resume_unit,fmt_dbl_ncluster_A) info%logL(:info%ncluster_A)
         ! Log volume
-        write(write_resume_unit,'(<info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logX(:info%ncluster_A)
+        write(write_resume_unit,fmt_dbl_ncluster_A) info%logX(:info%ncluster_A)
         ! Log evidence
-        write(write_resume_unit,'(<info%ncluster_T>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logZ(:info%ncluster_A)
+        write(write_resume_unit,fmt_dbl_ncluster_A) info%logZ(:info%ncluster_A)
         ! Log evidence^2
-        write(write_resume_unit,'(<info%ncluster_T>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logZ2(:info%ncluster_A)
+        write(write_resume_unit,fmt_dbl_ncluster_A) info%logZ2(:info%ncluster_A)
         ! Correlations: log(X_iX_j)
-        write(write_resume_unit,'(<info%ncluster_A*info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logXX(:info%ncluster_A,:info%ncluster_A)
+        write(write_resume_unit,fmt_dbl_ncluster_A) info%logXX(:info%ncluster_A,:info%ncluster_A)
         ! Correlations: log(Z_iX_j)
-        write(write_resume_unit,'(<info%ncluster_T*info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logZX(:info%ncluster_T,:info%ncluster_A)
+        write(write_resume_unit,fmt_dbl_ncluster_T) info%logZX(:info%ncluster_T,:info%ncluster_A)
 
 
         ! Live points
         do i_cluster=1,info%ncluster_A
-            write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') live_points(:,:info%n(i_cluster),i_cluster)
+            write(write_resume_unit,fmt_dbl_nTotal) live_points(:,:info%n(i_cluster),i_cluster)
         end do
 
         ! number of phantom points
-        write(write_resume_unit,'(<info%ncluster_A>I)') nphantom(:info%ncluster_A)
+        write(write_resume_unit,fmt_int_ncluster_A) nphantom(:info%ncluster_A)
         ! Phantom points
         do i_cluster=1,info%ncluster_A
-            write(write_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') phantom_points(:,:nphantom(i_cluster),i_cluster)
+            write(write_resume_unit,fmt_dbl_nTotal) phantom_points(:,:nphantom(i_cluster),i_cluster)
         end do
 
         ! number of dead points
-        write(write_resume_unit,'(I)') ndead
+        write(write_resume_unit,fmt_int_1) ndead
         ! total likelihood calls
-        write(write_resume_unit,'(I)') total_likelihood_calls
+        write(write_resume_unit,fmt_int_1) total_likelihood_calls
 
 
         close(write_resume_unit)
@@ -81,8 +98,9 @@ module read_write_module
 
     end subroutine write_resume_file
 
+
     subroutine read_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls)
-        use utils_module, only: DBL_FMT,read_resume_unit
+        use utils_module, only: DB_FMT,INT_FMT,fmt_len,read_resume_unit
         use evidence_module, only: run_time_info
         use settings_module, only: program_settings
 
@@ -102,7 +120,24 @@ module read_write_module
 
         integer :: i_cluster
 
+        character(len=fmt_len) :: fmt_dbl_ncluster_A
+        character(len=fmt_len) :: fmt_dbl_ncluster_T
+        character(len=fmt_len) :: fmt_dbl_nTotal
+        character(len=fmt_len) :: fmt_dbl_2
 
+        character(len=fmt_len) :: fmt_int_ncluster_A
+        character(len=fmt_len) :: fmt_int_1
+
+
+        ! Initialise the formats
+        write(fmt_dbl_ncluster_A,'("(",I0,A,")")') info%ncluster_A, DB_FMT
+        write(fmt_dbl_ncluster_T,'("(",I0,A,")")') info%ncluster_T, DB_FMT
+        write(fmt_dbl_nTotal    ,'("(",I0,A,")")') settings%nTotal, DB_FMT
+        write(fmt_dbl_2         ,'("(",I0,A,")")') 2,               DB_FMT
+
+        write(fmt_int_ncluster_A,'("(",I0,A,")")') info%ncluster_A, INT_FMT
+        write(fmt_int_1         ,'("(",I0,A,")")') 1,               INT_FMT
+        
         
         ! Open the .resume file
         open(read_resume_unit,file=trim(resume_file(settings)), action='read') 
@@ -111,45 +146,46 @@ module read_write_module
         ! Cluster information: 
 
         ! Number of Active clusters
-        read(read_resume_unit,'(I)') info%ncluster_A
+        read(read_resume_unit,fmt_int_1) info%ncluster_A
         ! Number of Passive clusters
-        read(read_resume_unit,'(I)') info%ncluster_P
+        read(read_resume_unit,fmt_int_1) info%ncluster_P
         ! Total amount of evidence information
-        read(read_resume_unit,'(I)') info%ncluster_T
+        read(read_resume_unit,fmt_int_1) info%ncluster_T
         ! global log evidence and evidence^2
-        read(read_resume_unit,'(2E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logevidence, info%logevidence2
+        read(read_resume_unit,fmt_dbl_2) info%logevidence, info%logevidence2
         ! number of live points in each cluster
-        read(read_resume_unit,'(<info%ncluster_A>I)') info%n(:info%ncluster_A)
+        read(read_resume_unit,fmt_int_ncluster_A) info%n(:info%ncluster_A)
         ! Log likelihood contours
-        read(read_resume_unit,'(<info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logL(:info%ncluster_A)
+        read(read_resume_unit,fmt_dbl_ncluster_A) info%logL(:info%ncluster_A)
         ! Log volume
-        read(read_resume_unit,'(<info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logX(:info%ncluster_A)
+        read(read_resume_unit,fmt_dbl_ncluster_A) info%logX(:info%ncluster_A)
         ! Log evidence
-        read(read_resume_unit,'(<info%ncluster_T>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logZ(:info%ncluster_A)
+        read(read_resume_unit,fmt_dbl_ncluster_A) info%logZ(:info%ncluster_A)
         ! Log evidence^2
-        read(read_resume_unit,'(<info%ncluster_T>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logZ2(:info%ncluster_A)
+        read(read_resume_unit,fmt_dbl_ncluster_A) info%logZ2(:info%ncluster_A)
         ! Correlations: log(X_iX_j)
-        read(read_resume_unit,'(<info%ncluster_A*info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logXX(:info%ncluster_A,:info%ncluster_A)
+        read(read_resume_unit,fmt_dbl_ncluster_A) info%logXX(:info%ncluster_A,:info%ncluster_A)
         ! Correlations: log(Z_iX_j)
-        read(read_resume_unit,'(<info%ncluster_T*info%ncluster_A>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') info%logZX(:info%ncluster_T,:info%ncluster_A)
+        read(read_resume_unit,fmt_dbl_ncluster_T) info%logZX(:info%ncluster_T,:info%ncluster_A)
 
 
         ! Live points
         do i_cluster=1,info%ncluster_A
-            read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') live_points(:,:info%n(i_cluster),i_cluster)
+            read(read_resume_unit,fmt_dbl_nTotal) live_points(:,:info%n(i_cluster),i_cluster)
         end do
 
         ! number of phantom points
-        read(read_resume_unit,'(<info%ncluster_A>I)') nphantom(:info%ncluster_A)
+        read(read_resume_unit,fmt_int_ncluster_A) nphantom(:info%ncluster_A)
         ! Phantom points
         do i_cluster=1,info%ncluster_A
-            read(read_resume_unit,'(<settings%nTotal>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') phantom_points(:,:nphantom(i_cluster),i_cluster)
+            read(read_resume_unit,fmt_dbl_nTotal) phantom_points(:,:nphantom(i_cluster),i_cluster)
         end do
 
         ! number of dead points
-        read(read_resume_unit,'(I)') ndead
+        read(read_resume_unit,fmt_int_1) ndead
         ! total likelihood calls
-        read(read_resume_unit,'(I)') total_likelihood_calls
+        read(read_resume_unit,fmt_int_1) total_likelihood_calls
+
 
         close(read_resume_unit)
 
@@ -158,14 +194,14 @@ module read_write_module
 
 
     subroutine write_posterior_file(settings,info,posterior_points,nposterior) 
-        use utils_module, only: DBL_FMT,write_txt_unit,write_untxt_unit,read_untxt_unit,logzero,STR_LENGTH,logsigma
+        use utils_module, only: DB_FMT,fmt_len,write_txt_unit,write_untxt_unit,read_untxt_unit,logzero,STR_LENGTH,logsigma
         use settings_module, only: program_settings
         use evidence_module, only: run_time_info 
         implicit none
 
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(in) :: info
-        double precision,intent(inout), dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2) :: posterior_points
+        double precision,intent(inout), dimension(settings%nposterior,settings%nstack,0:settings%ncluster*2) :: posterior_points
         integer,intent(inout),dimension(0:settings%ncluster*2) :: nposterior
 
         integer :: i_posterior
@@ -173,10 +209,18 @@ module read_write_module
 
         double precision :: logweight
 
-        double precision, dimension(settings%nDims+settings%nDerived+3) :: posterior_point
+        double precision, dimension(settings%nposterior) :: posterior_point
 
 
         integer :: io_stat
+
+        character(len=fmt_len) :: fmt_dbl_nposterior
+        character(len=fmt_len) :: fmt_dbl_nposterior_norm
+
+
+        ! Initialise the formats
+        write(fmt_dbl_nposterior,'("(",I0,A,")")') settings%nposterior, DB_FMT
+        write(fmt_dbl_nposterior_norm,'("(",I0,A,")")') settings%nposterior-1, DB_FMT
         
         ! Open the .txt file for writing
         open(write_txt_unit,file=trim(posterior_file(settings)), action='write') 
@@ -191,19 +235,19 @@ module read_write_module
         do while(io_stat==0) 
 
             ! Read a point from the old unormalised text file
-            read(read_untxt_unit, '(<settings%nDims+settings%nDerived+3>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)',iostat=io_stat) posterior_point
+            read(read_untxt_unit,fmt_dbl_nposterior,iostat=io_stat) posterior_point
 
             ! If this is still above the cdf threshold
-            if( posterior_point(2) - info%logevidence > logsigma(settings%sigma_posterior) ) then
+            if( posterior_point(settings%pos_Z) - info%logevidence > logsigma(settings%sigma_posterior) ) then
 
                 ! Re-copy to the new unnormalised posterior file
-                write(write_untxt_unit, '(<settings%nDims+settings%nDerived+3>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') posterior_point
+                write(write_untxt_unit,fmt_dbl_nposterior) posterior_point
 
                 ! And add it to the .txt file
                 logweight = posterior_point(1) - info%logevidence 
 
                 if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
-                    write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
+                    write(write_txt_unit,fmt_dbl_nposterior_norm) &
                     exp(logweight),posterior_point(3:)
 
             end if
@@ -214,12 +258,12 @@ module read_write_module
         do i_posterior=1,nposterior(0)
 
             ! Add to the new unnormalised posterior file
-            write(write_untxt_unit, '(<settings%nDims+settings%nDerived+3>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') posterior_points(:,i_posterior,0)
+            write(write_untxt_unit,fmt_dbl_nposterior) posterior_points(:,i_posterior,0)
 
             logweight = posterior_points(1,i_posterior,0)-info%logevidence
 
             if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
-                write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
+                write(write_txt_unit,fmt_dbl_nposterior_norm) &
                 exp(logweight),posterior_points(3:,i_posterior,0)
         end do
 
@@ -253,19 +297,19 @@ module read_write_module
                     do while(io_stat==0) 
 
                         ! Read a point from the old unormalised text file
-                        read(read_untxt_unit, '(<settings%nDims+settings%nDerived+3>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)',iostat=io_stat) posterior_point
+                        read(read_untxt_unit,fmt_dbl_nposterior,iostat=io_stat) posterior_point
 
                         ! If this is still above the cdf threshold
-                        if( posterior_point(2) - info%logevidence > logsigma(settings%sigma_posterior) ) then
+                        if( posterior_point(settings%pos_Z) - info%logevidence > logsigma(settings%sigma_posterior) ) then
 
                             ! Re-copy to the new unnormalised posterior file
-                            write(write_untxt_unit, '(<settings%nDims+settings%nDerived+3>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') posterior_point
+                            write(write_untxt_unit,fmt_dbl_nposterior) posterior_point
 
                             ! And add it to the .txt file
                             logweight = posterior_point(1) - info%logZ(i_cluster)
 
                             if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
-                                write(write_txt_unit,'(<settings%nDims+settings%nDerived+2>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
+                                write(write_txt_unit,fmt_dbl_nposterior_norm) &
                                 exp(logweight),posterior_point(3:)
 
                         end if
@@ -277,12 +321,12 @@ module read_write_module
                     do i_posterior=1,nposterior(i_cluster)
 
                         ! Add to the new unnormalised posterior file
-                        write(write_untxt_unit, '(<settings%nDims+settings%nDerived+3>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') posterior_points(:,i_posterior,i_cluster)
+                        write(write_untxt_unit,fmt_dbl_nposterior) posterior_points(:,i_posterior,i_cluster)
 
                         logweight = posterior_points(1,i_posterior,i_cluster)-info%logZ(i_cluster)
 
                         if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
-                            write(write_txt_unit,'(<settings%nDims+settings%nDerived+3>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)')   &
+                            write(write_txt_unit,fmt_dbl_nposterior)   &
                             exp(logweight),posterior_points(3:,i_posterior,i_cluster)
                     end do
 
@@ -305,7 +349,7 @@ module read_write_module
     end subroutine write_posterior_file
 
     subroutine write_phys_live_points(settings,info,live_points)
-        use utils_module, only: DBL_FMT,write_phys_unit,write_phys_cluster_unit,STR_LENGTH
+        use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_phys_unit,write_phys_cluster_unit,STR_LENGTH
         use settings_module, only: program_settings 
         use evidence_module, only: run_time_info 
         implicit none
@@ -318,6 +362,13 @@ module read_write_module
 
         integer i_live
         integer i_cluster
+
+        character(len=fmt_len) :: fmt_dbl_nphys
+
+
+        ! Initialise the formats
+        write(fmt_dbl_nphys,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
+
 
         ! Delete the old files
         open(write_phys_unit,file=trim(phys_live_file(settings)), action='write', iostat=i_err) 
@@ -341,13 +392,10 @@ module read_write_module
 
             do i_live=1,info%n(i_cluster)
                 if(settings%do_clustering) then
-                    write(write_phys_unit,'(<settings%nDims+settings%nDerived>E<DBL_FMT(1)>.<DBL_FMT(2)>, I5, E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
-                        live_points(settings%p0:settings%d1,i_live,i_cluster), i_cluster, live_points(settings%l0,i_live,i_cluster)
-                    write(write_phys_cluster_unit,'(<settings%nDims+settings%nDerived>E<DBL_FMT(1)>.<DBL_FMT(2)>, I5, E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
-                        live_points(settings%p0:settings%d1,i_live,i_cluster), i_cluster, live_points(settings%l0,i_live,i_cluster)
+                    write(write_phys_unit,fmt_dbl_nphys) live_points(settings%p0:settings%d1,i_live,i_cluster), live_points(settings%l0,i_live,i_cluster)
+                    write(write_phys_cluster_unit,fmt_dbl_nphys) live_points(settings%p0:settings%d1,i_live,i_cluster), live_points(settings%l0,i_live,i_cluster)
                 else
-                    write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
-                        live_points(settings%p0:settings%d1,i_live,i_cluster), live_points(settings%l0,i_live,i_cluster)
+                    write(write_phys_unit,fmt_dbl_nphys) live_points(settings%p0:settings%d1,i_live,i_cluster), live_points(settings%l0,i_live,i_cluster)
                 end if
             end do
 
@@ -362,7 +410,7 @@ module read_write_module
 
 
     subroutine write_stats_file(settings,info,ndead)
-        use utils_module, only: DBL_FMT,write_stats_unit,STR_LENGTH,logzero,logsubexp
+        use utils_module, only: DB_FMT,fmt_len,write_stats_unit,STR_LENGTH,logzero,logsubexp
         use settings_module, only: program_settings
         use evidence_module, only: run_time_info 
         implicit none
@@ -375,6 +423,8 @@ module read_write_module
         double precision, dimension(info%ncluster_A + info%ncluster_P) :: sigma
 
         integer :: i
+
+        character(len=fmt_len) :: fmt_1
 
         open(write_stats_unit,file=trim(stats_file(settings)), action='write') 
 
@@ -390,7 +440,8 @@ module read_write_module
         if(info%logevidence>logzero .and. info%logevidence2>logzero) then
             mu(1)    = 2*info%logevidence - 0.5*info%logevidence2              
             sigma(1) = sqrt(info%logevidence2 - 2*info%logevidence)
-            write(write_stats_unit, '("log(Z)       = ", E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>, " +/- ",E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)> )') mu(1),sigma(1)
+            write(fmt_1,'("(""log(Z)       = "",", A, ","" +/- "",", A, ")")') DB_FMT,DB_FMT
+            write(write_stats_unit,fmt_1) mu(1),sigma(1)
         else
             write(write_stats_unit, '(" Too early to produce a sensible evidence estimate ")')
         end if
@@ -408,8 +459,9 @@ module read_write_module
                 mu    = 2*info%logZ - 0.5*info%logZ2              
                 sigma = sqrt(info%logZ2 - 2*info%logZ)
 
+                write(fmt_1,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, ")")') 'I2',DB_FMT,DB_FMT
                 if(info%logZ(i)>logzero) then
-                    write(write_stats_unit,'("log(Z_",I2,")  = ", E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>, " +/- ",E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>, " (still evaluating)"  )') i, mu(i),sigma(i)
+                    write(write_stats_unit,fmt_1) i, mu(i),sigma(i)
                 else
                     write(write_stats_unit,'("log(Z_",I2,")  = ?", "(still evaluating)")') i
                 end if
@@ -422,7 +474,7 @@ module read_write_module
                 sigma = sqrt(info%logZ2 - 2*info%logZ)
 
                 if(info%logZ(i)>logzero) then
-                    write(write_stats_unit,'("log(Z_",I2,")  = ", E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>, " +/- ",E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') i, mu(i),sigma(i)
+                    write(write_stats_unit,fmt_1) i, mu(i),sigma(i)
                 else
                     write(write_stats_unit,'("log(Z_",I2,")  = ?")') i
                 end if

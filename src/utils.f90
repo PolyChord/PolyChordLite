@@ -1,7 +1,6 @@
 module utils_module
 
     implicit none
-include 'mkl_vml.f90'  
 
     !> The effective value of \f$ log(0) \f$
     double precision, parameter :: logzero = -sqrt(huge(0d0))
@@ -14,11 +13,11 @@ include 'mkl_vml.f90'
     !> \f$ 2\pi \f$ in double precision
     double precision, parameter :: TwoPi = 8d0*atan(1d0)
 
-    !> The default double format
-    !!
-    !! should have write statements along the lines of 
-    !! write(*,'(E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)')
-    integer, parameter, dimension(3) :: DBL_FMT=(/17,8,3/)
+    !> The default formats
+    integer, parameter :: fmt_len = 200
+    character(7) :: DB_FMT='E17.8E3'
+    character(4) :: FLT_FMT='F8.2'
+    character(3) :: INT_FMT='I20'
 
     !> unit for stdout
     integer, parameter :: stdout_unit = 6
@@ -63,28 +62,6 @@ include 'mkl_vml.f90'
 
 
     contains
-
-    !> Wrapper for the intel vml lgamma function
-    !!
-    !! This function returns log(gamma(x))
-    function lgamma(x)
-        implicit none
-        double precision :: x
-
-        double precision :: lgamma
-
-        double precision, dimension(1) :: input
-        double precision, dimension(1) :: output
-
-        input(1) = x
-        call vdlgamma(1,input,output)
-        lgamma = output(1)
-
-    end function lgamma
-
-
-
-
 
 
     !> Euclidean distance of two coordinates
@@ -373,21 +350,24 @@ include 'mkl_vml.f90'
 
     end function abovetol
 
-    function calc_cholesky(matrix) result(cholesky)
+    function calc_cholesky(a) result(L)
         implicit none
-        double precision, intent(in),dimension(:,:) :: matrix
-        double precision, dimension(size(matrix,1),size(matrix,2)) :: cholesky
-        integer :: errcode
+        double precision, intent(in),dimension(:,:) :: a
+        double precision, dimension(size(a,1),size(a,2)) :: L
         integer :: i,j
 
-        cholesky = matrix
-        call dpotrf ('L',size(matrix,1),cholesky,size(matrix,1),errcode)
+        ! Set it all to zero to begin with
+        L = 0
 
         ! Zero out the upper half
-        do i=1,size(matrix,1)
-            do j=i+1,size(matrix,2)
-                cholesky(i,j)=0d0
+        do i=1,size(a,1)
+
+            L(i,i)= sqrt( a(i,i) - sum(L(i,:i-1)**2) )
+
+            do j=i+1,size(a,1)
+                L(j,i) = (a(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)
             end do
+
         end do
 
     end function calc_cholesky

@@ -108,6 +108,27 @@ module settings_module
         !> This is the likelihood contour which generated the live point
         integer :: l1          
 
+
+        ! Posterior indices
+
+        ! Weight index
+        integer :: pos_w
+        ! Cumulative weight index
+        integer :: pos_Z
+        ! Loglikelihood index
+        integer :: pos_l
+        ! physical parameter indices
+        integer :: pos_p0
+        integer :: pos_p1
+        ! derived parameter indices
+        integer :: pos_d0
+        integer :: pos_d1
+
+        ! Number of posterior parameters
+        integer :: nposterior
+
+
+
         !> Pointer to any additional files that need to be stored in between
         !! evaluations (only really important for C likelihoods)
         integer :: context
@@ -179,6 +200,25 @@ module settings_module
         settings%num_babies           = settings%nDims*settings%num_repeats
         ! Space in stack for excess phantoms
         settings%nstack               = settings%nlive*settings%num_babies*2
+
+
+        ! Posterior indices
+
+        ! Weight index
+        settings%pos_w = 1
+        ! Cumulative weight index
+        settings%pos_Z = settings%pos_w+1
+        ! Loglikelihood index
+        settings%pos_l = settings%pos_Z+1
+        ! physical parameter indices
+        settings%pos_p0= settings%pos_Z+1
+        settings%pos_p1= settings%pos_Z+settings%nDims
+        ! derived parameter indices
+        settings%pos_d0= settings%pos_p1+1
+        settings%pos_d1= settings%pos_p1+settings%nDerived
+
+        ! Number of posterior parameters
+        settings%nposterior = settings%pos_d1
 
 
     end subroutine initialise_settings

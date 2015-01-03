@@ -703,7 +703,6 @@ module example_likelihoods
         !double precision, dimension(nDims)       :: eigenvalues
         !double precision, dimension(nDims,nDims) :: eigenvectors
         integer :: j,k
-        integer :: info
         !double precision, parameter :: rng=1e-2
         double precision, dimension(nDims,nDims) :: covmat
 
@@ -714,7 +713,7 @@ module example_likelihoods
 
         ! calculate the cholesky decomposition
         invcovmat=covmat
-        call dpotrf('U',nDims,invcovmat,nDims,info)
+        !call dpotrf('U',nDims,invcovmat,nDims,info)
 
         ! Calculate the determinant
         logdetcovmat=0
@@ -723,7 +722,7 @@ module example_likelihoods
         end do
 
         ! calculate the inverse function
-        call dpotri('U',nDims,invcovmat,nDims,info)
+        !call dpotri('U',nDims,invcovmat,nDims,info)
         ! symmetrise
         do j=1,nDims
             do k=j,nDims

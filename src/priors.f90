@@ -541,9 +541,6 @@ module priors_module
         !> The transformed coordinates
         double precision, dimension(size(physical_coords)) :: hypercube_coords
 
-        !> Temporary re-scaled coordinates
-        double precision, dimension(size(physical_coords)) :: physical_rescale
-
         integer n_prior ! the dimension
         integer i_prior ! the dimension
 

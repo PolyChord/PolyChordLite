@@ -12,7 +12,7 @@ module nested_sampling_module
     !> Main subroutine for computing a generic nested sampling algorithm
     function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
-        use utils_module,      only: logzero,loginf,DBL_FMT,read_resume_unit,stdout_unit,write_dead_unit,TwoPi
+        use utils_module,      only: logzero,loginf,read_resume_unit,stdout_unit,write_dead_unit,TwoPi
         use settings_module
         use utils_module,      only: logsumexp,calc_similarity_matrix,write_untxt_unit
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points,read_resume_file,resume_file,write_stats_file,posterior_file
@@ -55,7 +55,7 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster) :: phantom_points
         ! The number of phantom points in each cluster
         integer, dimension(settings%ncluster) :: nphantom
-        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2) :: posterior_points
+        double precision, dimension(settings%nposterior,settings%nstack,0:settings%ncluster*2) :: posterior_points
         integer, dimension(0:settings%ncluster*2) :: nposterior
 
         ! The evidence storage
@@ -545,7 +545,7 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%nlive,settings%ncluster),intent(inout)   :: live_points
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
-        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
+        double precision, dimension(settings%nposterior,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
         integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
 
         integer, intent(in)                             :: i_cluster
@@ -748,7 +748,7 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
 
-        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
+        double precision, dimension(settings%nposterior,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
         integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
 
         double precision :: min_loglike
@@ -797,7 +797,7 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
 
-        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
+        double precision, dimension(settings%nposterior,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
         integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
 
         integer,intent(in) :: min_cluster
@@ -907,14 +907,14 @@ module nested_sampling_module
         double precision, intent(in)            :: logweight
 
         ! Outputs
-        double precision, dimension(settings%nDims+settings%nDerived+3,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
+        double precision, dimension(settings%nposterior,settings%nstack,0:settings%ncluster*2),intent(inout) :: posterior_points
         integer, dimension(0:settings%ncluster*2),intent(inout) :: nposterior
         double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster),intent(inout)  :: phantom_points
         integer, dimension(settings%ncluster),intent(inout) :: nphantom
 
 
         ! Local variables
-        double precision, dimension(settings%nDims+settings%nDerived+3) :: posterior_point
+        double precision, dimension(settings%nposterior) :: posterior_point
 
         integer :: i_phantom
 
@@ -1046,19 +1046,19 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal),intent(in) :: point
         double precision,intent(in) :: logweight
         double precision,intent(in) :: evidence
-        double precision, dimension(settings%nDims+settings%nDerived+3) :: posterior_point
+        double precision, dimension(settings%nposterior) :: posterior_point
 
 
         ! Un-normalised weighting (needs to be unnormalised since the evidence is only correct at the end)
-        posterior_point(1)  = point(settings%l0) + logweight
-        ! Un-normalise cumulative weighting
-        posterior_point(2)  = evidence
+        posterior_point(settings%pos_w)  = point(settings%l0) + logweight
+        ! un-normalise cumulative weighting
+        posterior_point(settings%pos_Z)  = evidence
         ! Likelihood
-        posterior_point(3)  = point(settings%l0)
+        posterior_point(settings%pos_l)  = point(settings%l0)
         ! Physical parameters
-        posterior_point(3+1:3+settings%nDims) = point(settings%p0:settings%p1)
+        posterior_point(settings%pos_p0:settings%pos_p1) = point(settings%p0:settings%p1)
         ! Derived parameters
-        posterior_point(3+settings%nDims+1:3+settings%nDims+settings%nDerived) = point(settings%d0:settings%d1)
+        posterior_point(settings%pos_d0:settings%pos_d1) = point(settings%d0:settings%d1)
 
     end function calc_posterior_point
 
@@ -1092,6 +1092,9 @@ module nested_sampling_module
         integer :: i,j
 
         covmats = 0d0
+        do i=1,settings%nDims
+            covmats(i,i,:) = 1d0
+        end do
 
         do i=1,info%ncluster_A
             if(info%n(i)+nphantom(i) >= settings%nDims*(settings%nDims+1)/2) then

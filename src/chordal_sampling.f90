@@ -7,7 +7,7 @@ module chordal_module
         use priors_module, only: prior
         use settings_module, only: program_settings,phantom_type,live_type
         use random_module, only: random_orthonormal_basis,random_real
-        use utils_module, only: logzero,lgamma
+        use utils_module, only: logzero,FLT_FMT,fmt_len,stdout_unit
 
         implicit none
         interface
@@ -60,6 +60,9 @@ module chordal_module
         integer :: nlike
 
         double precision :: w
+
+        character(len=fmt_len) :: fmt_1
+
 
 
         ! Start the baby point at the seed point
@@ -139,8 +142,9 @@ module chordal_module
             end if
         end do
 
-        if(do_timing) then 
-            write(*, '( <settings%grades%max_grade-settings%grades%min_grade+1>(F8.2, "% "), "(Total time:", F8.2, "seconds)" )') timers/sum(timers)*100, sum(timers)
+        if(do_timing.and.settings%do_grades) then 
+            write(fmt_1,'("(",I0,"(",A,",""% ""), ""(Total time:"",",A,",""seconds)"")")') settings%grades%max_grade-settings%grades%min_grade+1, FLT_FMT,FLT_FMT
+            write(stdout_unit,fmt_1) timers/sum(timers)*100, sum(timers)
         end if
 
         ! Hand back the maximum chord this time to be used as the step length

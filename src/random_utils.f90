@@ -26,7 +26,6 @@ module random_module
         !! If this isn't included, then the system time is used
         integer, optional, intent(in) :: seed_input
 
-        integer :: errcode ! Error code
         integer :: seed    ! seed to be generated from system time
         integer :: seed_vec(1) ! vector to be passed to random_seed
         integer :: mpierror

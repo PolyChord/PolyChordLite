@@ -72,7 +72,7 @@ module generate_module
         use priors_module,    only: prior
         use settings_module,  only: program_settings,live_type,blank_type
         use random_module,   only: random_reals,random_distinct_integers
-        use utils_module,    only: logzero,write_phys_unit,DBL_FMT
+        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating
@@ -102,7 +102,6 @@ module generate_module
         !> The rank of the processor
         integer :: myrank
         integer :: nprocs
-        integer :: active_slaves
         integer :: mpierror
 
         double precision, dimension(settings%nTotal,settings%nlive) :: live_points
@@ -110,18 +109,8 @@ module generate_module
         double precision, dimension(settings%nTotal,settings%num_babies)   :: baby_points
         double precision,    dimension(settings%nTotal)   :: seed_point
 
-        !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
-        ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal) :: live_point
-
-        ! Loop variable
-        integer i_live
 
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status
-
-        integer :: empty_buffer(0)
-
-        integer :: nlike
 
         integer :: ngenerate
 
@@ -135,6 +124,11 @@ module generate_module
         double precision, dimension(settings%nTotal,0) :: blank_stack
         double precision, dimension(settings%nDims,settings%nDims) :: cholesky
         double precision, dimension(settings%nDims,settings%nDims) :: covmat
+
+        character(len=fmt_len) :: fmt_dbl_nphys
+
+        ! Initialise the formats
+        write(fmt_dbl_nphys,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
 
         ! Get the number of MPI procedures
         call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
@@ -193,8 +187,7 @@ module generate_module
                                     ngenerate = ngenerate+settings%num_babies
 
                                     do i_baby=1,settings%num_babies
-                                        write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
-                                            baby_points(settings%p0:settings%d1,i_baby), baby_points(settings%l0,i_baby)
+                                        write(write_phys_unit,fmt_dbl_nphys) baby_points(settings%p0:settings%d1,i_baby), baby_points(settings%l0,i_baby)
                                     end do
                                     call flush(write_phys_unit)
                                 end if
@@ -244,7 +237,7 @@ module generate_module
         use priors_module,    only: prior
         use settings_module,  only: program_settings,live_type,blank_type
         use random_module,   only: random_reals
-        use utils_module,    only: logzero,write_phys_unit,DBL_FMT
+        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating
@@ -290,6 +283,10 @@ module generate_module
         integer :: empty_buffer(0)
 
         integer :: nlike
+        character(len=fmt_len) :: fmt_dbl_nphys
+
+        ! Initialise the formats
+        write(fmt_dbl_nphys,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
 
         ! Get the number of MPI procedures
         call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
@@ -328,8 +325,7 @@ module generate_module
                     ! Add the new live point to the live point array
                     live_points(:,i_live) = live_point
                     ! Write the live points to the live_points file
-                    write(write_phys_unit,'(<settings%nDims+settings%nDerived+1>E<DBL_FMT(1)>.<DBL_FMT(2)>E<DBL_FMT(3)>)') &
-                        live_point(settings%p0:settings%d1), live_point(settings%l0)
+                    write(write_phys_unit,fmt_dbl_nphys) live_point(settings%p0:settings%d1), live_point(settings%l0)
                     call flush(write_phys_unit)
 
                 else

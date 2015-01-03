@@ -91,31 +91,6 @@ module evidence_module
     end subroutine allocate_run_time_info
 
 
-    subroutine write_cluster_info(info)
-        use utils_module, only: stdout_unit
-        implicit none
-        type(run_time_info), intent(in) :: info
-
-
-        write(stdout_unit,'("ncluster_A:", I4)') info%ncluster_A
-        write(stdout_unit,'("ncluster_P:", I4)') info%ncluster_P
-        write(stdout_unit,'("ncluster_T:", I4)') info%ncluster_T
-        write(stdout_unit,'("logevidence:", E10.2)') info%logevidence
-        write(stdout_unit,'("logevidence2:", E10.2)') info%logevidence2
-        write(stdout_unit,'("n:", <info%ncluster_A>I4)') info%n(:info%ncluster_A)
-        write(stdout_unit,'("logL:", <info%ncluster_A>E10.2)') info%logL(:info%ncluster_A)
-        write(stdout_unit,'("logX:", <info%ncluster_A>E10.2)') info%logX(:info%ncluster_A)
-        write(stdout_unit,'("logZ:", <info%ncluster_T>E10.2)') info%logZ(:info%ncluster_T)
-        write(stdout_unit,'("logZ2:", <info%ncluster_T>E10.2)') info%logZ2(:info%ncluster_T)
-        write(stdout_unit,'("logXX:", <info%ncluster_A>E10.2)') info%logXX(:info%ncluster_A,:info%ncluster_A)
-        write(stdout_unit,'("logZX:", <info%ncluster_T>E10.2)') info%logZX(:info%ncluster_T,:info%ncluster_A)
-
-    end subroutine write_cluster_info
-
-
-
-
-
     subroutine update_evidence(r,i,newloglike)
         use utils_module, only: logsumexp,logincexp
         implicit none

@@ -39,9 +39,9 @@ module mpi_module
 
         if (present(message)) then
             strlen = len(trim(adjustl(message)))
-            write(stdout_unit,'(" //", <strlen>("="), "\\ ")')
-            write(stdout_unit,'(" ||", A<strlen>,     "|| ")') trim(adjustl(message))
-            write(stdout_unit,'(" \\", <strlen>("="), "// ")')
+            write(stdout_unit,'( 20("=") )')
+            write(stdout_unit,'(A)') trim(adjustl(message))
+            write(stdout_unit,'( 20("=") )')
         end if 
 
 

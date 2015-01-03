@@ -109,7 +109,7 @@ program main
     loglikelihood => rastrigin_loglikelihood 
 
     ! (ii) Set the dimensionality
-    settings%nDims= 3                 ! Dimensionality of the space
+    settings%nDims= 2                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Set up priors

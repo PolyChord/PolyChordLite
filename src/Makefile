@@ -3,11 +3,11 @@ DEBUG ?= 0
 
 # The compiler
 FC = mpif90
+#FC = gfortran
 
 # flags
-# mkl  : use the mkl library
 # fpp  : perform preprocessing
-FCFLAGS = -mkl -fpp
+FCFLAGS = -fpp
 
 ifeq ($(DEBUG), 1)
 # Debugging mode
@@ -24,7 +24,7 @@ else
 # --------------
 # O3         : maximum optimisation
 # xHost      : maximise architecture usage
-FCFLAGS += -O3 -xHost -traceback -check bounds -fpe0 -fp-stack-check
+FCFLAGS += -O3 -xHost
 endif
 
 

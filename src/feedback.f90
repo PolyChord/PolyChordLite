@@ -23,9 +23,9 @@ module feedback_module
 
 
         if(settings%feedback >=1) then
-            write(stdout_unit,'("Nested Sampling Algorithm")')
-            write(stdout_unit,'("  author: Will Handley")')
-            write(stdout_unit,'("   email: wh260@cam.ac.uk")')
+            write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
+            write(stdout_unit,'("   author: Will Handley")')
+            write(stdout_unit,'("    email: wh260@cam.ac.uk")')
             write(stdout_unit,'("")')
         end if
 
@@ -110,6 +110,8 @@ module feedback_module
         integer :: bar_size                   ! bar size
         integer :: i                          ! loop variable
 
+        character(len=40) :: bar_fmt  ! format string for outputting
+
 
         if(present(brsz))then
             ! If a specific bar size is requested set bar_size to brsz
@@ -119,6 +121,7 @@ module feedback_module
             bar_size=100
         endif
 
+        write(bar_fmt,'("(a1,a",i0,")")') bar_size+7
 
         ! Convert the fraction to an integer percentage
         percent = 100 * frac
@@ -148,7 +151,7 @@ module feedback_module
         enddo
 
         ! print the progress bar to stdout (unit 6)
-        write(stdout_unit,fmt="(a1,a<bar_size+7>)",advance="no") char(13), bar
+        write(stdout_unit,fmt=bar_fmt,advance="no") char(13), bar
 
         if (percent/=100) then
             ! If we're not at the end, then we should flush the command line so
@@ -179,7 +182,7 @@ module feedback_module
     subroutine write_intermediate_results(settings,info,ndead,nphantom,nposterior,mean_likelihood_calls)
         use evidence_module, only: run_time_info
         use settings_module, only: program_settings
-        use utils_module,    only: stdout_unit,logzero
+        use utils_module,    only: stdout_unit,logzero,fmt_len
         implicit none
         type(program_settings), intent(in) :: settings
         type(run_time_info),intent(in)     :: info
@@ -193,17 +196,29 @@ module feedback_module
         double precision, dimension(info%ncluster_A) :: mu
         double precision, dimension(info%ncluster_A) :: sigma
 
+        integer :: n_A
+        character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_tail
+
+        ! Get the number of active clusters
+        n_A = info%ncluster_A
+        write(fmt_head,'("(",I0,"(""_""))")') 7*n_A + 11
+        write(fmt_live,'("(""lives      |"",",I0,"(I5,"" |""))")') n_A
+        write(fmt_phantom,'("(""phantoms   |"",",I0,"(I5,"" |""))")') n_A
+        write(fmt_posterior,'("(""posteriors |"",",I0,"(I5,"" |""))")') n_A
+        write(fmt_tail,'("(",I0,"(""‾""))")') 7*n_A + 11
+
 
         if (settings%feedback>=1) then
             write(stdout_unit,'("ndead      =",  I8                   )') ndead
             if(settings%calculate_posterior) &
             write(stdout_unit,'("nposterior =",  I8                   )') nposterior(0)
-            write(stdout_unit,'("ncluster   = ", I7                   )') info%ncluster_A
-            write(stdout_unit,'("nclustertot= ", I7                   )') info%ncluster_A+info%ncluster_P
-            write(stdout_unit,'("lives      =   ", <info%ncluster_A>I5)')  info%n(:info%ncluster_A)
-            write(stdout_unit,'("phantoms   =   ", <info%ncluster_A>I5)')  nphantom(:info%ncluster_A)
-            if(settings%calculate_posterior) &
-            write(stdout_unit,'("posteriors =   ", <info%ncluster_A>I5)')  nposterior(1:info%ncluster_A)
+            write(stdout_unit,'("ncluster   = ", I7                   )') n_A
+            write(stdout_unit,'("nclustertot= ", I7                   )') n_A+info%ncluster_P
+            write(stdout_unit,fmt_head)
+            write(stdout_unit,fmt_live)  info%n(:n_A)
+            write(stdout_unit,fmt_phantom)  nphantom(:n_A)
+            if(settings%calculate_posterior) write(stdout_unit,fmt_posterior)  nposterior(1:n_A)
+            write(stdout_unit,fmt_tail)
             write(stdout_unit,'("efficiency = ", F7.2, "    (",F5.2," per slice)")') mean_likelihood_calls, mean_likelihood_calls/settings%num_babies
             
 
@@ -257,7 +272,6 @@ module feedback_module
             write(stdout_unit,'(A42)')                                        ' ________________________________________ '
             write(stdout_unit,'(A42)')                                        '|                                        |'
             write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') nint(output_info(3))
-            write(stdout_unit,'("| nlike  = ", I12, "                  |"  )') nint(output_info(4)) 
             write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1:2)
             write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') output_info(1)+prior_log_volume(priors),output_info(2)
             write(stdout_unit,'(A42)')                                        '|________________________________________|'
