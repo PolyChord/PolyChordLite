@@ -12,7 +12,7 @@ module nested_sampling_module
     !> Main subroutine for computing a generic nested sampling algorithm
     function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
-        use utils_module,      only: logzero,loginf,read_resume_unit,stdout_unit,write_dead_unit,TwoPi
+        use utils_module,      only: stdout_unit
         use settings_module
         use utils_module,      only: logsumexp,calc_similarity_matrix,write_untxt_unit
         use read_write_module, only: write_resume_file,write_posterior_file,write_phys_live_points,read_resume_file,resume_file,write_stats_file,posterior_file
@@ -201,7 +201,7 @@ module nested_sampling_module
 
 
                 ! count up the number of likelihood calls
-                total_likelihood_calls = sum(live_points(settings%nlike,:,1))
+                total_likelihood_calls = nint(sum(live_points(settings%nlike,:,1)))
 
 
                 ndead = 0       ! no dead points 
@@ -894,7 +894,7 @@ module nested_sampling_module
     subroutine update_posterior_and_phantom(settings,info,posterior_points,nposterior,dead_point,phantom_points,nphantom,min_cluster,min_loglike,logweight)
         use settings_module,   only: program_settings
         use evidence_module,   only: run_time_info
-        use utils_module,      only: stdout_unit,logincexp,logsumexp
+        use utils_module,      only: logincexp,logsumexp
         use random_module,     only: random_real,random_logicals
         implicit none
 
@@ -950,6 +950,9 @@ module nested_sampling_module
                 posterior_points(:,nposterior(min_cluster)+i_new,min_cluster) = posterior_point
             end if
 
+            nposterior(0) = nposterior(0) + num_new
+            if(settings%do_clustering) nposterior(min_cluster) = nposterior(min_cluster) + num_new
+
         end if
 
 
@@ -989,9 +992,6 @@ module nested_sampling_module
                 i_phantom=i_phantom+1
             end if
         end do
-
-        nposterior(0) = nposterior(0) + num_new
-        if(settings%do_clustering) nposterior(min_cluster) = nposterior(min_cluster) + num_new
 
 
     end subroutine update_posterior_and_phantom

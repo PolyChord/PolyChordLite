@@ -70,9 +70,9 @@ module generate_module
 
     function GenerateLivePointsFromSeedP(loglikelihood,priors,settings,mpi_communicator,root) result(live_points) 
         use priors_module,    only: prior
-        use settings_module,  only: program_settings,live_type,blank_type
+        use settings_module,  only: program_settings
         use random_module,   only: random_reals,random_distinct_integers
-        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len
+        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating
@@ -235,7 +235,7 @@ module generate_module
     !> Generate an initial set of live points distributed uniformly in the unit hypercube in parallel
     function GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root) result(live_points)
         use priors_module,    only: prior
-        use settings_module,  only: program_settings,live_type,blank_type
+        use settings_module,  only: program_settings
         use random_module,   only: random_reals
         use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len
         use calculate_module, only: calculate_point
@@ -402,7 +402,7 @@ module generate_module
     !> Generate an initial set of live points distributed uniformly in the unit hypercube
     function GenerateLivePointsL(loglikelihood,priors,settings) result(live_points)
         use priors_module,    only: prior
-        use settings_module,  only: program_settings,live_type,blank_type
+        use settings_module,  only: program_settings
         use random_module,    only: random_reals
         use utils_module,     only: logzero
         use calculate_module, only: calculate_point

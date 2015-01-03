@@ -11,7 +11,7 @@ FCFLAGS = -ffree-line-length-none
 #FCFLAGS = -fpp
 
 ifeq ($(DEBUG), 1)
-FCFLAGS +=
+FCFLAGS += -g -Og -Wall -Wextra -pedantic -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow #-fbounds-check 
 # Debugging mode
 # --------------
 # g              : enable gnu debugger compatibility

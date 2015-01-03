@@ -194,7 +194,7 @@ module read_write_module
 
 
     subroutine write_posterior_file(settings,info,posterior_points,nposterior) 
-        use utils_module, only: DB_FMT,fmt_len,write_txt_unit,write_untxt_unit,read_untxt_unit,STR_LENGTH,logsigma
+        use utils_module, only: DB_FMT,fmt_len,write_txt_unit,write_untxt_unit,read_untxt_unit,logsigma
         use settings_module, only: program_settings
         use evidence_module, only: run_time_info 
         implicit none

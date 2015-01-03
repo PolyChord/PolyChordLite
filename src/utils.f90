@@ -341,7 +341,7 @@ module utils_module
         double precision, intent(in) :: change,current_sum
         logical abovetol
 
-        if (current_sum == 0d0) then
+        if (current_sum <= 0d0) then
             ! this check is useful for entering loops
             abovetol = .true.
         else

@@ -124,7 +124,7 @@ module feedback_module
         write(bar_fmt,'("(a1,a",i0,")")') bar_size+7
 
         ! Convert the fraction to an integer percentage
-        percent = int(100 * frac)
+        percent = nint(100 * frac)
 
         ! Create the progress bar structure:
         ! e.g.  bar = "???% |                     |"

@@ -212,7 +212,6 @@ module example_likelihoods
     !! are elsewhere in dimensions higher than 7.
     !!
     function rosenbrock_loglikelihood(theta,phi,context) result(loglikelihood)
-        use utils_module, only: logzero
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -332,7 +331,7 @@ module example_likelihoods
         ! The return value
         double precision :: loglikelihood
 
-        loglikelihood =  - sum( log(4991.217507308888d0) + theta**2 - A*cos(TwoPi*theta) )
+        loglikelihood =  - sum( log(4991.21750d0) + theta**2 - A*cos(TwoPi*theta) )
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then

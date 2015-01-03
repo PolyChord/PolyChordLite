@@ -26,34 +26,59 @@ module random_module
         !! If this isn't included, then the system time is used
         integer, optional, intent(in) :: seed_input
 
-        integer :: seed    ! seed to be generated from system time
-        integer,allocatable,dimension(:) :: seed_vec ! vector to be passed to random_seed
+        integer,allocatable,dimension(:) :: seed ! vector to be passed to random_seed
         integer :: mpierror
 
         integer :: myrank
 
         integer :: size_seed
+        integer :: dt(8)
+        integer :: t
+        integer :: i
+
+
 
         ! Get the global ranking
         call MPI_COMM_RANK(MPI_COMM_WORLD, myrank, mpierror)
 
-        call random_seed(size=size_seed)
-        allocate(seed_vec(size_seed))
+        call random_seed(size = size_seed)
+        allocate(seed(size_seed))
 
         if (present(seed_input)) then
             ! If the seed argument is present, initialise stream with this
-            seed_vec = seed_input
+            t = seed_input
         else
-            ! Otherwise initialise it with the system time
-            call system_clock(seed)
-            seed_vec = seed
+
+            ! Seed from the system time (hopefully one of these will work on your machine)
+            call system_clock(t)
+            if (t == 0) then
+                call date_and_time(values=dt)
+                t = &
+                        (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 &
+                        + dt(2) * 31 * 24 * 60 * 60 * 1000 &
+                        + dt(3) * 24 * 60 * 60 * 1000 &
+                        + dt(5) * 60 * 60 * 1000 &
+                        + dt(6) * 60 * 1000 &
+                        + dt(7) * 1000 &
+                        + dt(8)
+            end if
+
         end if
 
-        ! Broadcast the same seed to everybody from 'root' (0)
-        call MPI_BCAST(seed_vec,size_seed,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
+        ! Broadcast the system time to all nodes
+        call MPI_BCAST(t,1,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
 
-        ! Set the seed
-        call random_seed(put=seed_vec)
+        ! Augment the seed on each node by adding 1 to it
+        t = t+myrank
+
+        ! Seed the rubbish default generator to generate seeds for the better generator
+        call srand(t)
+
+        ! set up the seeds for the better generator
+        seed = [ ( floor(rand()*huge(0)) , i=1,size_seed ) ]
+
+        ! Seed the better generator
+        call random_seed(put=seed)
 
     end subroutine initialise_random
 
@@ -64,16 +89,16 @@ module random_module
     !!
     !! Generate a randomly directed unit vector in the unit hypercube
 
-    function random_reals(nDims)
+    function random_reals(nDims) result(reals)
         implicit none
 
         !> Size of coordinate vector
         integer,intent(in) :: nDims 
 
         ! The output nDims coordinate
-        double precision, dimension(nDims) :: random_reals
+        double precision, dimension(nDims) :: reals
 
-        call random_number(random_reals)
+        call random_number(reals)
 
 
     end function random_reals
@@ -176,7 +201,7 @@ module random_module
         double precision :: random_direction2
 
         random_direction2=0
-        do while(random_direction2==0)
+        do while(random_direction2<=0)
 
             ! Generate nDims gaussian random numbers
             random_direction = random_gaussian(nDims)
@@ -212,7 +237,7 @@ module random_module
         double precision :: random_subdirection2
 
         random_subdirection2=0
-        do while (random_subdirection2==0)
+        do while (random_subdirection2<=0)
 
             ! Generate nDims gaussian random numbers
             random_subdirection = random_gaussian(nDims)

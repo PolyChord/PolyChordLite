@@ -173,6 +173,7 @@ program main
     ! ------- (1e) Initialise loglikelihood -----------------
     ! This is only needed for a few things (e.g. generating a random correlated gaussian)
     allocate(theta(settings%nDims),phi(settings%nDerived))
+    theta   = 0d0
     loglike = rastrigin_loglikelihood(theta,phi,0)
 
 

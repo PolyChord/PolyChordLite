@@ -5,7 +5,7 @@ module chordal_module
 
     function SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)  result(baby_points)
         use priors_module, only: prior
-        use settings_module, only: program_settings,phantom_type,live_type
+        use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,random_real
         use utils_module, only: logzero,FLT_FMT,fmt_len,stdout_unit
 
@@ -152,7 +152,7 @@ module chordal_module
         baby_points(settings%last_chord,:) = max_chord
 
         ! Give all the likelihood calls to the baby point
-        nlike = sum(baby_points(settings%nlike,:) )
+        nlike = nint(sum(baby_points(settings%nlike,:) ))
         baby_points(settings%nlike,:) = 0
         baby_points(settings%nlike,settings%num_babies) = nlike
 
