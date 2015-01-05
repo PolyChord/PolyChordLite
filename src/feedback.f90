@@ -106,7 +106,7 @@ module feedback_module
 
         
         integer :: percent                    ! the percentage completed
-        character(:), allocatable ::bar       ! the bounds on the progress bar
+        character(100) :: bar                 ! the bounds on the progress bar
         integer :: bar_size                   ! bar size
         integer :: i                          ! loop variable
 

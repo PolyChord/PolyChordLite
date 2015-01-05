@@ -3,7 +3,9 @@
 
 module random_module
 
+#ifdef MPI
     use mpi_module
+#endif
 
     implicit none           
 
@@ -39,7 +41,11 @@ module random_module
 
 
         ! Get the global ranking
+#ifdef MPI
         call MPI_COMM_RANK(MPI_COMM_WORLD, myrank, mpierror)
+#else
+        myrank = 0
+#endif
 
         call random_seed(size = size_seed)
         allocate(seed(size_seed))
@@ -65,11 +71,13 @@ module random_module
 
         end if
 
+#ifdef MPI
         ! Broadcast the system time to all nodes
         call MPI_BCAST(t,1,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
 
         ! Augment the seed on each node by adding 1 to it
         t = t+myrank
+#endif
 
         ! set up the seeds for the better generator
         seed = [ ( floor(basic_random(t)*huge(0)) , i=1,size_seed ) ]

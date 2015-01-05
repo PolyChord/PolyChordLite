@@ -2,7 +2,9 @@
 
 module example_likelihoods
     use utils_module,    only: logzero,TwoPi,stdout_unit,Hypergeometric1F1,Hypergeometric2F1,Pochhammer 
+#ifdef MPI
     use mpi_module
+#endif
 
     contains
 
@@ -509,6 +511,7 @@ module example_likelihoods
             mu = 0.5d0
             ! Generate a random covariance matrix, its inverse and logdet on the root node
             call generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
+#ifdef MPI
             ! Broadcast the covariance matrix and normalisation data to the
             ! rest of the nodes
             ! Covariance matrix:
@@ -527,6 +530,7 @@ module example_likelihoods
                 0,                    & ! root node id
                 MPI_COMM_WORLD,       & ! communication info
                 mpierror)               ! error (from mpiutils)
+#endif
             initialised=.true.
         end if
 
@@ -596,6 +600,7 @@ module example_likelihoods
                 call generate_covariance(invcovmat(:,:,i),logdetcovmat(i),sigma,nDims)
             end do
 
+#ifdef MPI
             ! Broadcast the means, covariances and normalisation data to the
             ! rest of the nodes
             ! Means:
@@ -624,6 +629,7 @@ module example_likelihoods
                 0,                         & ! root node id
                 MPI_COMM_WORLD,            & ! communication info
                 mpierror)                    ! error (from mpiutils)
+#endif
 
             initialised=.true.
         end if

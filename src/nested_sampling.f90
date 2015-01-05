@@ -1,5 +1,8 @@
 module nested_sampling_module
+
+#ifdef MPI
     use mpi_module
+#endif
 
     implicit none
 
@@ -21,7 +24,7 @@ module nested_sampling_module
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: NN_clustering
-        use generate_module,   only: GenerateLivePointsFromSeedP,GenerateLivePointsP,GenerateLivePointsL,GenerateSeed
+        use generate_module
 
         implicit none
 
@@ -83,7 +86,9 @@ module nested_sampling_module
 
         integer :: ndead
 
+#ifdef MPI
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+#endif
 
         integer :: send_start
         integer :: nprocs
@@ -120,6 +125,7 @@ module nested_sampling_module
 
 
 
+#ifdef MPI
         ! Get the number of MPI procedures
         call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
         send_start=nprocs-1
@@ -130,6 +136,14 @@ module nested_sampling_module
 
         ! Assign the root
         call MPI_ALLREDUCE(myrank,root,1,MPI_INTEGER,MPI_MIN,mpi_communicator,mpierror)
+#else 
+        ! If we're not running with MPI then set these to defaults, everything
+        ! is done on the 'root' node
+        root=0
+        myrank=root
+        linear_mode=.true.
+        nprocs=1
+#endif
 
         if(myrank==root) then
             ! ------------------------------------ !
@@ -179,11 +193,13 @@ module nested_sampling_module
             if(linear_mode) then
                 live_points(:,:,1) = GenerateLivePointsL(loglikelihood,priors,settings)
             else
+#ifdef MPI
                 if(settings%generate_from_seed) then
                     live_points(:,:,1) = GenerateLivePointsFromSeedP(loglikelihood,priors,settings,mpi_communicator,root)
                 else
                     live_points(:,:,1) = GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root)
                 end if
+#endif
             end if
 
 
@@ -284,6 +300,7 @@ module nested_sampling_module
 
                 else !(.not.linear_mode)
 
+#ifdef MPI
                     ! Recieve any new baby points from any slave currently sending
 
                     ! Loop through all the slaves
@@ -321,6 +338,7 @@ module nested_sampling_module
 
                     end do !(i_slave=1,nprocs-1)
 
+#endif
                 end if !(linear_mode / .not.linear_mode)
 
 
@@ -365,9 +383,19 @@ module nested_sampling_module
                                     if(num_new_clusters>1) then
 
                                         if( num_new_clusters+info%ncluster_A>settings%ncluster ) then
+#ifdef MPI
                                             call abort_all(" Too many clusters. Consider increasing settings%ncluster")
+#else
+                                            write(*,'(" Too many clusters. Consider increasing settings%ncluster")')
+                                            stop
+#endif
                                         else if (num_new_clusters + info%ncluster_T > settings%ncluster*2 ) then
+#ifdef MPI
                                             call abort_all(" Too many clusters. Consider increasing settings%nclustertot")
+#else
+                                            write(*,'(" Too many clusters. Consider increasing settings%nclustertot")')
+                                            stop
+#endif
                                         else
                                             call create_new_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
 
@@ -435,6 +463,7 @@ module nested_sampling_module
 
 
 
+#ifdef MPI
             if(.not.linear_mode) then
 
                 ! Kill off the final slaves
@@ -453,6 +482,7 @@ module nested_sampling_module
                 end do
 
             end if !(.not.linear_mode / linear_mode )
+#endif
 
 
             ! Create the output array
@@ -476,6 +506,7 @@ module nested_sampling_module
 
 
         else !(myrank/=root)
+#ifdef MPI
 
             ! These are the slave tasks
             ! -------------------------
@@ -521,6 +552,7 @@ module nested_sampling_module
 
             end do
 
+#endif
         end if !(myrank==root / myrank/=root) 
 
 

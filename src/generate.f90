@@ -6,7 +6,9 @@
 !! * GenerateLivePointsL
 module generate_module
 
+#ifdef MPI
     use mpi_module
+#endif
 
     implicit none
 
@@ -67,6 +69,8 @@ module generate_module
 
 
 
+
+#ifdef MPI
 
     function GenerateLivePointsFromSeedP(loglikelihood,priors,settings,mpi_communicator,root) result(live_points) 
         use priors_module,    only: prior
@@ -397,6 +401,7 @@ module generate_module
         end if
 
     end function GenerateLivePointsP
+#endif
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube

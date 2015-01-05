@@ -24,7 +24,7 @@ module chordal_module
         type(prior), dimension(:), intent(in) :: priors
 
         !> program settings (mostly useful to pass on the number of live points)
-        class(program_settings), intent(in) :: settings
+        type(program_settings), intent(in) :: settings
 
         !> The seed point
         double precision, intent(in), dimension(settings%nTotal)   :: seed_point
@@ -162,7 +162,7 @@ module chordal_module
         use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,shuffle_deck
         implicit none
-        class(program_settings), intent(in) :: settings
+        type(program_settings), intent(in) :: settings
 
         integer, dimension(settings%num_babies), intent(out),optional :: grade_order
 

@@ -10,7 +10,9 @@ program main
     use feedback_module
     use grades_module,            only: allocate_grades,calc_num_babies
     use nested_sampling_module,   only: NestedSampling
+#ifdef MPI
     use mpi_module
+#endif
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
@@ -68,7 +70,9 @@ program main
 
 
     ! ------- (1a) Initialise MPI threads -------------------
+#ifdef MPI
     call MPI_INIT(mpierror)
+#endif
 
     ! ------- (1b) Initialise random number generator -------
     ! Initialise the random number generator with the system time
@@ -183,13 +187,19 @@ program main
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
+#ifdef MPI
     output_info = NestedSampling(rastrigin_loglikelihood,priors,settings,MPI_COMM_WORLD) 
+#else
+    output_info = NestedSampling(rastrigin_loglikelihood,priors,settings,0) 
+#endif
 
 
     ! ======= (3) De-initialise =======
 
     ! Finish off all of the threads
+#ifdef MPI
     call MPI_FINALIZE(mpierror)
+#endif
 
 
 end program main
