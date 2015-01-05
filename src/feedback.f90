@@ -209,8 +209,6 @@ module feedback_module
 
 
         if (settings%feedback>=1) then
-            write(stdout_unit,'("ndead      =",  I8                   )') ndead
-            if(settings%calculate_posterior) &
             write(stdout_unit,'("nposterior =",  I8                   )') nposterior(0)
             write(stdout_unit,'("ncluster   = ", I7                   )') n_A
             write(stdout_unit,'("nclustertot= ", I7                   )') n_A+info%ncluster_P
@@ -219,6 +217,8 @@ module feedback_module
             write(stdout_unit,fmt_phantom)  nphantom(:n_A)
             if(settings%calculate_posterior) write(stdout_unit,fmt_posterior)  nposterior(1:n_A)
             write(stdout_unit,fmt_tail)
+            write(stdout_unit,'("ndead      =",  I8                   )') ndead
+            if(settings%calculate_posterior) &
             write(stdout_unit,'("efficiency = ", F7.2, "    (",F5.2," per slice)")') mean_likelihood_calls, mean_likelihood_calls/settings%num_babies
             
 
@@ -244,6 +244,8 @@ module feedback_module
 
 
 
+            write(stdout_unit,'("")')
+            write(stdout_unit,'("")')
             write(stdout_unit,'("")')
         end if
 

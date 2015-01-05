@@ -71,16 +71,28 @@ module random_module
         ! Augment the seed on each node by adding 1 to it
         t = t+myrank
 
-        ! Seed the rubbish default generator to generate seeds for the better generator
-        call srand(t)
-
         ! set up the seeds for the better generator
-        seed = [ ( floor(rand()*huge(0)) , i=1,size_seed ) ]
+        seed = [ ( floor(basic_random(t)*huge(0)) , i=1,size_seed ) ]
 
         ! Seed the better generator
         call random_seed(put=seed)
 
     end subroutine initialise_random
+
+    function basic_random(seed)
+        implicit none
+        real :: basic_random
+        integer :: seed
+        integer :: oldseed = 0
+        integer, parameter :: c1 = 19423
+        integer, parameter :: c2 = 811
+        save oldseed
+
+        if (oldseed .eq. 0) oldseed = seed
+        oldseed = mod(c1 * oldseed, c2)
+        basic_random = 1.0 * oldseed / c2
+
+    end function basic_random
 
     ! ===========================================================================================
 
