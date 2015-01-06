@@ -88,9 +88,11 @@ module nested_sampling_module
 
 #ifdef MPI
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+        integer :: send_start
+        integer :: i_slave
+        logical :: slave_sending
 #endif
 
-        integer :: send_start
         integer :: nprocs
         integer :: myrank
         integer :: root
@@ -103,8 +105,6 @@ module nested_sampling_module
         double precision, dimension(settings%nlive,settings%nlive) :: similarity_matrix
 
 
-        integer :: i_slave
-        logical :: slave_sending
 
         ! This is an incubation stack for babies generated in parallell
         double precision, allocatable, dimension(:,:,:) :: baby_incubator
@@ -139,6 +139,7 @@ module nested_sampling_module
 #else 
         ! If we're not running with MPI then set these to defaults, everything
         ! is done on the 'root' node
+        root=mpi_communicator !this just turns off an annoying warning
         root=0
         myrank=root
         linear_mode=.true.

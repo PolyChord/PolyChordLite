@@ -29,7 +29,9 @@ module random_module
         integer, optional, intent(in) :: seed_input
 
         integer,allocatable,dimension(:) :: seed ! vector to be passed to random_seed
+#ifdef MPI
         integer :: mpierror
+#endif
 
         integer :: myrank
 

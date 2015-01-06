@@ -498,7 +498,9 @@ module example_likelihoods
 
         double precision, parameter :: sigma = 0.01 ! width of peak
 
+#ifdef MPI
         integer :: mpierror
+#endif
 
 
         nDims = size(theta)
@@ -580,7 +582,9 @@ module example_likelihoods
         double precision, parameter :: sigma = 0.01 ! width of peak
         integer, parameter :: num_peaks = 3
         integer :: i !iterator
+#ifdef MPI
         integer :: mpierror
+#endif
 
         nDims=size(theta)
 
