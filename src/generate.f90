@@ -447,7 +447,7 @@ module generate_module
         do i_live=1,settings%nlive
 
             ! Generate a random coordinate
-            live_points(:,i_live) = random_reals(settings%nDims)
+            live_points(settings%h0:settings%h1,i_live) = random_reals(settings%nDims)
 
             ! Compute physical coordinates, likelihoods and derived parameters
             call calculate_point( loglikelihood, priors, live_points(:,i_live), settings )

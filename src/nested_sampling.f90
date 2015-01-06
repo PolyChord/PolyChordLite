@@ -264,7 +264,7 @@ module nested_sampling_module
             ! Calculate the covariance matrices
             covmats = calc_covmats(settings,info,live_points,phantom_points,nphantom)
             ! Calculate the cholesky decomposition
-            choleskys = calc_choleskys(covmats(:,:,:info%ncluster_A))
+            choleskys(:,:,:info%ncluster_A) = calc_choleskys(covmats(:,:,:info%ncluster_A))
 
             !======= 2) Main loop body =====================================
 
@@ -603,7 +603,7 @@ module nested_sampling_module
 
         ! Get the lives to split
         nlives = info%n(i_cluster)
-        lives  = live_points(:,:,i_cluster)
+        lives(:,:)  = live_points(:,:info%n(i_cluster),i_cluster)
 
         ! Create a temporary set of phantom points for re-assigning to clusters
         ncluster_A_old= info%ncluster_A

@@ -66,7 +66,7 @@ ifeq ($(COMPILER_TYPE),ifort)
 # default flags
 # --------------
 # fpp  : perform preprocessing
-FCFLAGS += -fpp -heap-arrays
+FCFLAGS += -fpp 
 
 ifdef DEBUG
 # Debugging mode
@@ -78,7 +78,7 @@ ifdef DEBUG
 # check all      : all checks (whilst compiling)
 # fpe0           : halts program if dividing by zero, etc
 # warn all       : all warnings (whilst running)
-FCFLAGS += -g -O0 -traceback -fp-stack-check -check all -fpe0 -warn all
+FCFLAGS += -g -O0 #-traceback -fp-stack-check -check all -fpe0 -warn all
 else
 # Optimised mode
 # --------------
@@ -98,7 +98,7 @@ ifeq ($(COMPILER_TYPE),gfortran)
 # --------------
 # free-line-length-none : turn of line length limitation (why is this not a default??)
 # cpp  					: perform preprocessing
-FCFLAGS += -ffree-line-length-none -cpp -frecursive
+FCFLAGS += -ffree-line-length-none -cpp 
 
 ifdef DEBUG
 # Debugging mode
@@ -112,7 +112,7 @@ ifdef DEBUG
 # backtrace     : produce backtrace of error
 # fpe-trap      : search for floating point exceptions (dividing by zero etc)
 # fbounds-check : check array indices
-FCFLAGS += -g -O0 -Wall -Wextra -pedantic -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow
+FCFLAGS += -g -O0 -Wall -Wextra -pedantic -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow -fbounds-check
 else
 # Optimised mode
 # --------------

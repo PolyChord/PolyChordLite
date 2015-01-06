@@ -452,11 +452,12 @@ module read_write_module
         write(write_stats_unit, '(" ", I2, " still active")') info%ncluster_A 
         write(write_stats_unit,'("")')
 
+        mu    = 2*info%logZ(:info%ncluster_A+info%ncluster_P) - 0.5*info%logZ2(:info%ncluster_A+info%ncluster_P)              
+        sigma = sqrt(info%logZ2(:info%ncluster_A+info%ncluster_P) - 2*info%logZ(:info%ncluster_A+info%ncluster_P))
+
+
         if(info%ncluster_A>=1) then
             do i=1,info%ncluster_A
-                mu    = 2*info%logZ - 0.5*info%logZ2              
-                sigma = sqrt(info%logZ2 - 2*info%logZ)
-
                 write(fmt_1,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, ")")') 'I2',DB_FMT,DB_FMT
                 if(info%logZ(i)>logzero) then
                     write(write_stats_unit,fmt_1) i, mu(i),sigma(i)
@@ -468,8 +469,6 @@ module read_write_module
 
         if(info%ncluster_P>=1) then
             do i=info%ncluster_A+1,info%ncluster_A+info%ncluster_P
-                mu    = 2*info%logZ - 0.5*info%logZ2              
-                sigma = sqrt(info%logZ2 - 2*info%logZ)
 
                 if(info%logZ(i)>logzero) then
                     write(write_stats_unit,fmt_1) i, mu(i),sigma(i)

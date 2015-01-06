@@ -229,8 +229,8 @@ module feedback_module
                 write(stdout_unit,'("log(Z)     = ", F15.2, " +/- ", F5.2)') mu(1),sigma(1)
             end if
 
-            mu    = 2*info%logZ - 0.5*info%logZ2              
-            sigma = sqrt(info%logZ2 - 2*info%logZ)
+            mu    = 2*info%logZ(:info%ncluster_A) - 0.5*info%logZ2(:info%ncluster_A)              
+            sigma = sqrt(info%logZ2(:info%ncluster_A) - 2*info%logZ(:info%ncluster_A))
 
             if(info%ncluster_A>1) then
                 do i=1,info%ncluster_A  
