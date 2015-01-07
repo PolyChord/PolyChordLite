@@ -1,20 +1,27 @@
+# Whether to use MPI or not (leave blank if running without MPI)
+MPI = 1
+
 # Whether to run in debugging mode
 DEBUG=
 
-# Whether to use MPI or not
-MPI = 1
+# The compiler type:
+# This sets up the correct compiler flags below 
+# current options are:
+#  * gfortran
+#  * ifort
+COMPILER_TYPE=ifort
 
-# The compiler:
-#COMPILER_TYPE=ifort
-COMPILER_TYPE=gfortran
 
+
+# Object files
+# ============
 ifdef MPI
 # Using MPI
 # ---------
 # Set a define flag for MPI
 FCFLAGS = -DMPI
 # Choose the mpi wrapper
-FC = mpifc -fc=$(COMPILER_TYPE)
+FC = mpif90
 # Define the files to be used 
 OBJECTS =                    \
 		  utils.o            \
@@ -60,7 +67,7 @@ endif
 
 
 
-# intel settings
+# ifort settings
 # ==============
 ifeq ($(COMPILER_TYPE),ifort)
 # default flags
@@ -129,9 +136,6 @@ endif
 
 
 
-# libraries needed for linking, unused in the examples
-LDFLAGS =
-
 # List of executables to be built within the package
 PROGRAMS = libchord.a main
 
@@ -153,13 +157,13 @@ main: main.o
 # used in order to list additional object files on which the
 # executable depends
 %: %.o
-	$(FC) $(FCFLAGS) -o $@ $^ $(LDFLAGS)
+	$(FC) $(FCFLAGS) -o $@ $^ 
 
 # General rules for building prog.o from prog.f90 or prog.F90; $< is
 # used in order to list only the first prerequisite (the source file)
 # and not the additional prerequisites such as module or include files
 %.o: %.f90
-	$(FC) $(FCFLAGS) -c $< $(LDFLAGS)
+	$(FC) $(FCFLAGS) -c $< 
 
 %.o: %.F90
 	$(FC) $(FCFLAGS) -c $<
