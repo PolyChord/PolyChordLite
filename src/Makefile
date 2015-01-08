@@ -85,13 +85,16 @@ ifdef DEBUG
 # check all      : all checks (whilst compiling)
 # fpe0           : halts program if dividing by zero, etc
 # warn all       : all warnings (whilst running)
-FCFLAGS += -g -O0 #-traceback -fp-stack-check -check all -fpe0 -warn all
+FCFLAGS += -g -O0 -traceback -fp-stack-check -check all -fpe0 -warn all
 else
 # Optimised mode
 # --------------
-# O3         : maximum optimisation
-# xHost      : maximise architecture usage
-FCFLAGS += -O3 -xHost
+#   ipo          : interprocedural optimization (optimize entire program)
+#   O3           : maximum optimisation
+#   no-prec-div  : slightly less precise floating point divides, but speeds up
+#   static       : link intel libraries statically
+#   xHost        : maximise architecture usage
+FCFLAGS += -ipo -O3 -no-prec-div -xHost
 endif
 
 endif
@@ -143,7 +146,7 @@ PROGRAMS = libchord.a main
 all: $(PROGRAMS)
 
 
-AR = ar r
+AR = xiar r
 
 
 
