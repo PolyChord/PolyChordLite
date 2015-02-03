@@ -9,7 +9,7 @@ DEBUG=
 # current options are:
 #  * gfortran
 #  * ifort
-COMPILER_TYPE=ifort
+COMPILER_TYPE=gfortran
 
 
 
@@ -97,6 +97,9 @@ else
 FCFLAGS += -ipo -O3 -no-prec-div -xHost
 endif
 
+# Archive tool for compiling with ipo.
+AR = xiar r
+
 endif
 
 
@@ -130,6 +133,8 @@ else
 FCFLAGS += -O3
 endif
  
+# Archive tool
+AR = ar r
 endif
 
 
@@ -144,9 +149,6 @@ PROGRAMS = libchord.a main
 
 # "make" builds all
 all: $(PROGRAMS)
-
-
-AR = xiar r
 
 
 

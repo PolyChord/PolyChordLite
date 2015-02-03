@@ -8,85 +8,6 @@ module example_likelihoods
 
     contains
 
-    !> Gaussian shell defined as,
-    !!
-    !!  \f$ latex here \f$
-    !!
-    !! where the parameters used are,
-    !!      - w = width of the guassian shell 
-    !!      - R = Radius of the gaussian shell (ie: distance from the center)
-    !!      - in progress...
-    function gaussian_shell(theta,phi,context) result(loglikelihood)
-        implicit none
-        !> Input parameters
-        double precision, intent(in), dimension(:)  :: theta
-        !> Output derived parameters
-        double precision, intent(out), dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                :: context
-
-        !The output of the function 
-        double precision :: loglikelihood
-
-        !Additional parameters that are needed
-        double precision, parameter :: pi       = 4d0*atan(1d0) ! \pi in double precision
-        double precision, parameter :: width    = 0.1           ! width of shell peak
-        double precision, parameter :: radius   = 1d0           ! radius to the shell
-        double precision            :: distance                 ! storing distance to center of theta
-        double precision, dimension(size(theta))    :: center   ! center of the gaussian shell
-        integer                     :: dim                      ! dimensions of theta/the space
-
-        !For reducing the computational load by storing the normalisation:
-        logical, save               :: stored   = .false.
-        double precision, save      :: normalisation
-        
-        !Getting the dimension and storing in dim
-        dim      = size(theta)
-        !Define where the center of the gaussian shell is
-        center = 0d0
-        !Calculate the distance between the parameter space points theta and center
-        distance = sqrt( sum( (center-theta)**2 ) )
-
-        !Computing the normalisation upon first call to this function:
-        if(.NOT. stored) then
-            !For the first call to this function, we calculate the normalisation
-            !and change the flag to say this is completed:
-            !   choose from the options below 
-            !   (Mathematic normalisation is most exact)
-
-            !No normalisation:
-            !normalisation = 0
-
-            !Mathematica normalisation:
-            !normalisation = - (width**dim)*( ((2*pi)**(dim/2d0)) * Hypergeometric1F1( (1d0-dim)/2d0,1d0/2d0,-(radius*radius)/(2d0*width*width) ) + ( (2**((1d0+dim)/2d0)) * (pi**(dim/2d0)) * radius * GAMMA( (1d0+dim)/2d0 ) * Hypergeometric1F1( 1d0-(dim/2d0),3d0/2d0,-(radius*radius)/(2d0*width*width) ))/(width * GAMMA( dim/2d0 )) )
-
-            !Temporary normalisation (when you know the numerical value):
-            !normalisation = -0.45
-
-            !Will's approximate normalisation based on assumptions,
-            !   1. width*dimension << radius 
-            !Basically, over the region of interest the integral in polar coords (a gaussian and the nD volume element) 
-            !simplify nicely and allow the limits of the integral to go to -inf. 
-            normalisation = log_gamma(1d0+(dim/2d0)) - (1d0/2d0)*log(2d0) - log(dim+0d0) - ((1d0+dim)/2d0)*log(pi) - (dim-1d0)*log(radius) - log(width)
-
-            !Change the flag:
-            stored = .true.
-        end if
-
-        !Use the stored value as the normalisation:
-        loglikelihood = normalisation
-
-        !Calculating the loglikelihood dependant on theta here:
-        loglikelihood = loglikelihood - ( (distance-radius)**2d0 /(2d0*width*width) )
-
-        ! Use up these parameters to stop irritating warnings
-        if(size(phi)>0) then
-            phi= context
-            phi=0d0
-        end if
-
-
-    end function gaussian_shell
 
     !> Basic Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! 
@@ -460,6 +381,7 @@ module example_likelihoods
 
 
 
+    !> Gaussian Needle loglikelihood
 
 
 
@@ -470,7 +392,8 @@ module example_likelihoods
 
 
 
-    !> Correlated gaussian loglikelihood
+
+    !> Random Correlated gaussian loglikelihood
     !! 
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
@@ -798,5 +721,86 @@ module example_likelihoods
 
 
     end function pyramidal_loglikelihood
+
+
+    !> Gaussian shell defined as,
+    !!
+    !!  \f$ latex here \f$
+    !!
+    !! where the parameters used are,
+    !!      - w = width of the guassian shell 
+    !!      - R = Radius of the gaussian shell (ie: distance from the center)
+    !!      - in progress...
+    function gaussian_shell(theta,phi,context) result(loglikelihood)
+        implicit none
+        !> Input parameters
+        double precision, intent(in), dimension(:)  :: theta
+        !> Output derived parameters
+        double precision, intent(out), dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                :: context
+
+        !The output of the function 
+        double precision :: loglikelihood
+
+        !Additional parameters that are needed
+        double precision, parameter :: pi       = 4d0*atan(1d0) ! \pi in double precision
+        double precision, parameter :: width    = 0.1           ! width of shell peak
+        double precision, parameter :: radius   = 1d0           ! radius to the shell
+        double precision            :: distance                 ! storing distance to center of theta
+        double precision, dimension(size(theta))    :: center   ! center of the gaussian shell
+        integer                     :: dim                      ! dimensions of theta/the space
+
+        !For reducing the computational load by storing the normalisation:
+        logical, save               :: stored   = .false.
+        double precision, save      :: normalisation
+        
+        !Getting the dimension and storing in dim
+        dim      = size(theta)
+        !Define where the center of the gaussian shell is
+        center = 0d0
+        !Calculate the distance between the parameter space points theta and center
+        distance = sqrt( sum( (center-theta)**2 ) )
+
+        !Computing the normalisation upon first call to this function:
+        if(.NOT. stored) then
+            !For the first call to this function, we calculate the normalisation
+            !and change the flag to say this is completed:
+            !   choose from the options below 
+            !   (Mathematic normalisation is most exact)
+
+            !No normalisation:
+            !normalisation = 0
+
+            !Mathematica normalisation:
+            !normalisation = - (width**dim)*( ((2*pi)**(dim/2d0)) * Hypergeometric1F1( (1d0-dim)/2d0,1d0/2d0,-(radius*radius)/(2d0*width*width) ) + ( (2**((1d0+dim)/2d0)) * (pi**(dim/2d0)) * radius * GAMMA( (1d0+dim)/2d0 ) * Hypergeometric1F1( 1d0-(dim/2d0),3d0/2d0,-(radius*radius)/(2d0*width*width) ))/(width * GAMMA( dim/2d0 )) )
+
+            !Temporary normalisation (when you know the numerical value):
+            !normalisation = -0.45
+
+            !Will's approximate normalisation based on assumptions,
+            !   1. width*dimension << radius 
+            !Basically, over the region of interest the integral in polar coords (a gaussian and the nD volume element) 
+            !simplify nicely and allow the limits of the integral to go to -inf. 
+            normalisation = log_gamma(1d0+(dim/2d0)) - (1d0/2d0)*log(2d0) - log(dim+0d0) - ((1d0+dim)/2d0)*log(pi) - (dim-1d0)*log(radius) - log(width)
+
+            !Change the flag:
+            stored = .true.
+        end if
+
+        !Use the stored value as the normalisation:
+        loglikelihood = normalisation
+
+        !Calculating the loglikelihood dependant on theta here:
+        loglikelihood = loglikelihood - ( (distance-radius)**2d0 /(2d0*width*width) )
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
+
+
+    end function gaussian_shell
 
 end module example_likelihoods

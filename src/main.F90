@@ -1,14 +1,53 @@
+!> This is a log-likelihood wrapper
+!!
+!! we define this, so we can easily switch in and out differing likelihoods
+function loglikelihood(theta,phi,context)
+        use example_likelihoods
+        implicit none
+        double precision, intent(in),  dimension(:) :: theta
+        double precision, intent(out),  dimension(:) :: phi
+        integer,          intent(in)                 :: context
+        double precision :: loglikelihood
+        !       These can be written into src/example_likelihoods.f90, and should
+        !       have the interface:
+        !
+        !interface
+        !    function loglikelihood(theta,phi,context)
+        !        double precision, intent(in),  dimension(:) :: theta
+        !        double precision, intent(out),  dimension(:) :: phi
+        !        integer,          intent(in)                 :: context
+        !        double precision :: loglikelihood
+        !    end function
+        !end interface
+        !
+        ! where theta are the input params, phi are any derived params and 
+        ! context is an integer which can be useful as a C pointer
+        !
+        !
+        ! Possible example likelihoods already written are:
+        !       - gaussian_loglikelihood
+        !       - gaussian_shell
+        !       - rosenbrock_loglikelihood
+        !       - himmelblau_loglikelihood
+        !       - rastrigin_loglikelihood
+        !       - eggbox_loglikelihood
+        !       - gaussian_loglikelihood_corr
+        !       - gaussian_loglikelihood_cluster
+        !       - twin_gaussian_loglikelihood 
+        !
+        loglikelihood = rastrigin_loglikelihood(theta,phi,context)
+end function
+
+
+
 !> This is the main driving routine of the nested sampling algorithm
 program main
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
     use priors_module
-    use settings_module
+    use settings_module,          only: program_settings,initialise_settings
     use random_module,            only: initialise_random
-    use example_likelihoods
-    use feedback_module
-    use grades_module,            only: allocate_grades,calc_num_babies
     use nested_sampling_module,   only: NestedSampling
 #ifdef MPI
     use mpi_module
@@ -28,7 +67,7 @@ program main
     type(program_settings)    :: settings  ! The program settings 
     type(prior), dimension(1) :: priors    ! The details of the priors
 
-    pointer loglikelihood                  ! Pointer to a loglikelihood function
+    !pointer loglikelihood                  ! Pointer to a loglikelihood function
     ! (this just makes assigning them easier, one can just pass your chosen function to the nested sampling algorithm)
 
 
@@ -82,35 +121,7 @@ program main
 
 
     ! ------- (1c) Initialise the model -------
-    ! (i) Choose the loglikelihood
-    !       These can be written into src/example_likelihoods.f90, and should
-    !       have the interface:
-    !
-    !interface
-    !    function loglikelihood(theta,phi,context)
-    !        double precision, intent(in),  dimension(:) :: theta
-    !        double precision, intent(out),  dimension(:) :: phi
-    !        integer,          intent(in)                 :: context
-    !        double precision :: loglikelihood
-    !    end function
-    !end interface
-    !
-    ! where theta are the input params, phi are any derived params and 
-    ! context is an integer which can be useful as a C pointer
-    !
-    !
-    ! Possible example likelihoods already written are:
-    !       - gaussian_loglikelihood
-    !       - gaussian_shell
-    !       - rosenbrock_loglikelihood
-    !       - himmelblau_loglikelihood
-    !       - rastrigin_loglikelihood
-    !       - eggbox_loglikelihood
-    !       - gaussian_loglikelihood_corr
-    !       - gaussian_loglikelihood_cluster
-    !       - twin_gaussian_loglikelihood 
-    !
-    !loglikelihood => rastrigin_loglikelihood 
+    ! (i) Choose the loglikelihood at the top of this file
 
     ! (ii) Set the dimensionality
     settings%nDims= 2                 ! Dimensionality of the space
@@ -178,7 +189,7 @@ program main
     ! This is only needed for a few things (e.g. generating a random correlated gaussian)
     allocate(theta(settings%nDims),phi(settings%nDerived))
     theta   = 0d0
-    loglike = rastrigin_loglikelihood(theta,phi,0)
+    loglike = loglikelihood(theta,phi,0)
 
 
 
@@ -188,9 +199,9 @@ program main
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 #ifdef MPI
-    output_info = NestedSampling(rastrigin_loglikelihood,priors,settings,MPI_COMM_WORLD) 
+    output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
 #else
-    output_info = NestedSampling(rastrigin_loglikelihood,priors,settings,0) 
+    output_info = NestedSampling(loglikelihood,priors,settings,0) 
 #endif
 
 
