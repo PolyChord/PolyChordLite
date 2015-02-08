@@ -161,7 +161,7 @@ program main
     settings%nlive                = 500                      !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw (this is multiplied by nDims)
 
-    settings%do_clustering        = .false.                  !whether or not to do clustering
+    settings%do_clustering        = .true.                   !whether or not to do clustering
     settings%ncluster             = 30                       !maximum number of clusters + 1 (memory allocation purposes)
 
     settings%feedback             = 1                        !degree of feedback

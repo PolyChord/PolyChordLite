@@ -953,7 +953,7 @@ module nested_sampling_module
 
         integer :: num_new
         double precision :: lognum_new
-        integer :: i_new,j_new
+        integer :: i_new
 
         logical,dimension(settings%nstack) :: keeps
 
@@ -966,25 +966,24 @@ module nested_sampling_module
             ! Count the number of new posterior points
             num_new = count( phantom_points(settings%l0,:nphantom(min_cluster),min_cluster) < min_loglike) + 1
             i_new=1
-            j_new=1
             keeps = (/.true. , random_logicals(num_new-1,settings%thin_posterior) /)
             num_new = count(keeps(:num_new))
             lognum_new =log( num_new  + 0d0 )
 
-        
+
+            nposterior(0) = nposterior(0) + 1
             ! Now update the posterior information for the dead point
             !   - calculate the new posterior point
             posterior_point = calc_posterior_point(settings,dead_point,logweight-lognum_new,info%logevidence)
             !   - add this point to the end of the arrays
-            posterior_points(:,nposterior(0)+i_new          ,0          ) = posterior_point
+            posterior_points(:,nposterior(0)          ,0          ) = posterior_point
 
             if(settings%do_clustering) then
+                nposterior(min_cluster) = nposterior(min_cluster) + 1
                 posterior_point = calc_posterior_point(settings,dead_point,logweight-lognum_new,info%logZ(min_cluster))
-                posterior_points(:,nposterior(min_cluster)+i_new,min_cluster) = posterior_point
+                posterior_points(:,nposterior(min_cluster),min_cluster) = posterior_point
             end if
 
-            nposterior(0) = nposterior(0) + num_new
-            if(settings%do_clustering) nposterior(min_cluster) = nposterior(min_cluster) + num_new
 
         end if
 
@@ -1002,17 +1001,19 @@ module nested_sampling_module
                 if(settings%calculate_posterior) then
                     i_new=i_new+1
                     if(keeps(i_new)) then
-                        j_new=j_new+1
+                        nposterior(0) = nposterior(0) + 1
                         ! Now update the posterior information
                         !   - calculate the new posterior point
                         posterior_point = calc_posterior_point(settings,phantom_points(:,i_phantom,min_cluster),logweight-lognum_new,info%logevidence)
                         !   - add this point to the end of the arrays
-                        posterior_points(:,nposterior(0)+j_new          ,0          ) = posterior_point
+                        posterior_points(:,nposterior(0)          ,0          ) = posterior_point
 
                         if(settings%do_clustering) then
+                            nposterior(min_cluster) = nposterior(min_cluster) + 1
                             posterior_point = calc_posterior_point(settings,phantom_points(:,i_phantom,min_cluster),logweight-lognum_new,info%logZ(min_cluster))
-                            posterior_points(:,nposterior(min_cluster)+j_new,min_cluster) = posterior_point
+                            posterior_points(:,nposterior(min_cluster),min_cluster) = posterior_point
                         end if
+
 
                     end if
                 end if

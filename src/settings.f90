@@ -211,8 +211,8 @@ module settings_module
         ! Loglikelihood index
         settings%pos_l = settings%pos_Z+1
         ! physical parameter indices
-        settings%pos_p0= settings%pos_Z+1
-        settings%pos_p1= settings%pos_Z+settings%nDims
+        settings%pos_p0= settings%pos_l+1
+        settings%pos_p1= settings%pos_l+settings%nDims
         ! derived parameter indices
         settings%pos_d0= settings%pos_p1+1
         settings%pos_d1= settings%pos_p1+settings%nDerived
