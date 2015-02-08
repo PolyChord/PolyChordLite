@@ -22,17 +22,20 @@ module feedback_module
         type(program_settings), intent(in) :: settings  ! The program settings 
 
 
-        if(settings%feedback >=1) then
+        if(settings%feedback >=0) then
+            write(stdout_unit,'("")')
             write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
-            write(stdout_unit,'("   author: Will Handley")')
+            write(stdout_unit,'("copyright: Will Handley, Mike Hobson & Anthony Lasenby")')
+            write(stdout_unit,'("  version: 1.0")')
+            write(stdout_unit,'("  release: 8th Feb 2015")')
             write(stdout_unit,'("    email: wh260@cam.ac.uk")')
             write(stdout_unit,'("")')
-        end if
 
-        if(settings%feedback >=0) then
-            write(stdout_unit,'("nlive      :",I8)')   settings%nlive
-            write(stdout_unit,'("nDims      :",I8)')   settings%nDims
-            write(stdout_unit,'("nDerived   :",I8)')   settings%nDerived
+            write(stdout_unit,'("Run Settings"   )')
+            write(stdout_unit,'("nlive    :",I8)')   settings%nlive
+            write(stdout_unit,'("nDims    :",I8)')   settings%nDims
+            write(stdout_unit,'("nDerived :",I8)')   settings%nDerived
+            write(stdout_unit,'("")')
         end if
        
 
@@ -52,6 +55,7 @@ module feedback_module
 
         if (feedback>=1) then
             write(stdout_unit,'("generating live points")')
+            write(stdout_unit,'("")')
         end if
 
     end subroutine write_started_generating
@@ -85,6 +89,7 @@ module feedback_module
 
         if (feedback>=1) then
             write(stdout_unit,'("all live points generated")')
+            write(stdout_unit,'("")')
         end if
 
     end subroutine write_finished_generating
@@ -174,6 +179,7 @@ module feedback_module
 
         if (feedback>=1) then
             write(stdout_unit,'("started sampling")')
+            write(stdout_unit,'("")')
         end if
 
     end subroutine write_started_sampling

@@ -161,13 +161,13 @@ program main
     settings%nlive                = 500                      !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw (this is multiplied by nDims)
 
-    settings%do_clustering = .true.                          !whether or not to do clustering
-    settings%ncluster = 30                                   !maximum number of clusters + 1 (memory allocation purposes)
+    settings%do_clustering        = .false.                  !whether or not to do clustering
+    settings%ncluster             = 30                       !maximum number of clusters + 1 (memory allocation purposes)
 
     settings%feedback             = 1                        !degree of feedback
 
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down)
-    settings%thin_posterior = 1d0                            !Factor by which the posterior file should be thinned
+    settings%thin_posterior       = 1                        !Factor by which the posterior file should be thinned
                                                              ! 0 uses just live points,
                                                              ! 1 uses all inter-chain points
 
@@ -175,7 +175,7 @@ program main
     settings%file_root            = 'rastrigin'              !file root
     settings%base_dir             = 'chains'                 !directory to put chains in
     settings%read_resume          = .false.                  !whether or not to resume from file
-    settings%write_resume         = .true.                   !whether or not to write resume files
+    settings%write_resume         = .false.                  !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%write_live           = .true.                   !write out the physical live points?
 
