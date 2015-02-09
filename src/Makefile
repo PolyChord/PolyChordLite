@@ -1,18 +1,3 @@
-# Whether to use MPI or not (leave blank if running without MPI)
-MPI = 1
-
-# Whether to run in debugging mode
-DEBUG=
-
-# The compiler type:
-# This sets up the correct compiler flags below 
-# current options are:
-#  * gfortran
-#  * ifort
-COMPILER_TYPE=gfortran
-
-
-
 # Object files
 # ============
 ifdef MPI
