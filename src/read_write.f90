@@ -248,7 +248,7 @@ module read_write_module
 
                 if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
                     write(write_txt_unit,fmt_dbl_nposterior_norm) &
-                    exp(logweight),posterior_point(settings%pos_l:)
+                    exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
 
             end if
 
@@ -265,7 +265,7 @@ module read_write_module
 
             if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
                 write(write_txt_unit,fmt_dbl_nposterior_norm) &
-                exp(logweight),posterior_points(settings%pos_l:,i_posterior,0)
+                exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
         end do
 
         ! Close the files
@@ -310,7 +310,7 @@ module read_write_module
 
                             if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
                                 write(write_txt_unit,fmt_dbl_nposterior_norm) &
-                                exp(logweight),posterior_point(settings%pos_l:)
+                                exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
 
                         end if
 
@@ -327,7 +327,7 @@ module read_write_module
 
                         if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
                             write(write_txt_unit,fmt_dbl_nposterior)   &
-                            exp(logweight),posterior_points(settings%pos_l:,i_posterior,i_cluster)
+                            exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
                     end do
 
                     close(write_txt_unit)

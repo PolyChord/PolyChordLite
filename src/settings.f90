@@ -43,16 +43,16 @@ module settings_module
 
         !> What to thin the posterior points (i.e. probability of keeping
         !! phantom points)
-        double precision :: thin_posterior = 1
+        double precision :: thin_posterior = 0
 
         !> Whether or not to calculate the posterior
-        logical :: calculate_posterior = .true.
+        logical :: calculate_posterior = .false.
 
         !> Whether or not to write resume files
-        logical :: write_resume = .true.
+        logical :: write_resume = .false.
 
         !> How often to update the resume file
-        integer :: update_resume = 10000
+        integer :: update_resume = 500
 
         !> How many baby points are generated in each iteration
         integer :: num_babies
@@ -61,7 +61,7 @@ module settings_module
         integer :: num_repeats
 
         !> Whether or not to resume from file
-        logical :: read_resume = .true.
+        logical :: read_resume = .false.
 
         !> Whether or not to write phys_live points
         logical :: write_live = .false.
@@ -149,7 +149,7 @@ module settings_module
         integer :: SNN_k = 20
 
         !> Memory storage considerations; The maximum number of active clusters
-        integer :: ncluster = 1 
+        integer :: ncluster = 30
 
         !> To generate from a seed point instead
         logical :: generate_from_seed = .false.
