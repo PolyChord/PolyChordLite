@@ -110,4 +110,154 @@ module mpi_module
     end function assign_root
 
 
+    !> Root catch
+    !!
+    !! This a process by which the root node 'catches' a thrown point from 
+    !! any slave, and returns the slave identifier for use to throw back
+    function catch_point(live_point,mpi_communicator) result(slave_id)
+        implicit none
+
+        !> The caught live point
+        double precision,intent(out),dimension(:) :: live_point
+
+        !> The mpi communicator
+        integer, intent(in) :: mpi_communicator
+
+        ! slave identifier
+        integer :: slave_id
+
+        ! status identifier
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+
+        call MPI_RECV(&
+                live_point,&
+                size(live_point), &
+                MPI_DOUBLE_PRECISION,&
+                MPI_ANY_SOURCE,&
+                tag_gen_new_point,&
+                mpi_communicator,&
+                mpi_status,&
+                mpierror&
+                )
+
+        ! Pass on the slave id
+        slave_id = mpi_status(MPI_SOURCE)
+
+    end function catch_point
+
+
+    !> Slave throw
+    !!
+    !! This a process by which a slave node 'throws' a point to the root
+    subroutine throw_point(live_point,mpi_communicator,root) result(slave_id)
+        implicit none
+
+        !> The caught live point
+        double precision,intent(out),dimension(:) :: live_point
+
+        !> The mpi communicator
+        integer, intent(in) :: mpi_communicator
+        integer, intent(in) :: root
+
+        ! slave identifier
+        integer :: slave_id
+
+        call MPI_SEND(&
+                live_point,&
+                size(live_point),&
+                MPI_DOUBLE_PRECISION,&
+                root,&
+                tag_gen_new_point,&
+                mpi_communicator,&
+                mpierror&
+                )
+
+    end subroutine throw_point
+
+    !> Request point
+    !!
+    !! This subroutine is used by the root node to request a new live point
+    subroutine request_point(slave_id,mpi_communicator)
+        implicit none
+        integer, intent(in) :: mpi_communicator !> mpi handle
+        integer, intent(in) :: slave_id         !> Slave to request a new point from
+
+        
+        integer :: empty_buffer(0) ! empty buffer to send
+
+        call MPI_SEND(&
+                empty_buffer,&       ! not sending anything
+                0,&                  ! size of nothing
+                MPI_INT,&            ! sending no integers
+                slave_id,&           ! process id to send to
+                tag_gen_continue,&   ! continuation tag
+                mpi_communicator,&   ! mpi handle
+                mpierror&            ! error flag
+                )
+
+    end subroutine request_point
+
+
+    !> No more points please
+    !!
+    !! This subroutine is used by the root node to signal that no more points are required
+    subroutine no_more_points(slave_id,mpi_communicator)
+        implicit none
+        integer, intent(in) :: mpi_communicator !> mpi handle
+        integer, intent(in) :: slave_id         !> Slave to request a new point from
+
+        
+        integer :: empty_buffer(0) ! empty buffer to send
+
+        call MPI_SEND(&
+                empty_buffer,&       ! not sending anything
+                0,&                  ! size of nothing
+                MPI_INT,&            ! sending no integers
+                slave_id,&           ! process id to send to
+                tag_gen_continue,&   ! continuation tag
+                mpi_communicator,&   ! mpi handle
+                mpierror&            ! error flag
+                )
+
+    end subroutine no_more_points
+
+    !> See if more points are needed
+    !!
+    !! This subroutine is used by the root node to request a new live point
+    function more_points_needed(mpi_communicator,root)
+        implicit none
+        integer, intent(in) :: mpi_communicator !> mpi handle
+        integer, intent(in) :: root             !> root to recieve request
+
+        integer :: empty_buffer(0) ! empty buffer to send
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status  ! status identifier
+
+        logical :: more_points_needed !> Whether we need more points or not
+
+        call MPI_RECV(&
+            empty_buffer,&
+            0,&
+            MPI_INT,&
+            root,&
+            MPI_ANY_TAG,&
+            mpi_communicator,&
+            mpi_status,&
+            mpierror&
+            )
+
+        ! If we've recieved a kill signal, then exit this loop
+        if(mpi_status(MPI_TAG) == tag_gen_stop ) then
+            more_points_needed = .false.
+        else if(mpi_status(MPI_TAG) == tag_gen_continue) then
+            more_points_needed = .true.
+        else
+            call abort('generate error: unrecognised tag')
+        end if
+
+
+
+
+    end function more_points_needed
+
+
 end module mpi_module

@@ -22,6 +22,43 @@ module read_write_module
 
     end function resume_file_exists
 
+    !> Remove resume files
+    subroutine delete_files(settings)
+        use settings_module, only: program_settings
+        implicit none
+
+        !> settings variable to get the base_dir and root_name out of
+        type(program_settings), intent(in) :: settings
+
+        integer :: i_cluster ! cluster iterator
+
+        logical :: deleted
+
+        deleted = delete_file( stats_file(settings) )           ! Delete stats file
+        deleted = delete_file( phys_live_file(settings) )       ! Delete phys_live file
+        deleted = delete_file( resume_file(settings,.false.) )  ! Delete temp resume file
+        deleted = delete_file( resume_file(settings,.true.) )   ! Delete resume file
+
+
+        ! Delete normalised .txt files
+        deleted = delete_file( posterior_file(settings) )
+
+        i_cluster = 1
+        do while ( delete_file( posterior_file(settings,i_cluster) ) )
+            i_cluster = i_cluster + 1
+        end do
+
+        ! Delete the unnormalised .txt files
+        deleted = delete_file( posterior_file(settings,.true.) )
+
+        i_cluster = 1
+        do while ( delete_file( posterior_file(settings,.true.,i_cluster) ) )
+            i_cluster = i_cluster + 1
+        end do
+
+
+    end subroutine delete_files
+
 
     subroutine write_resume_file(settings,RTI)
         use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_resume_unit
@@ -136,6 +173,10 @@ module read_write_module
         character(len=fmt_len) :: fmt_dbl
 
 
+        ! -------------------------------------------- !
+        call write_resuming(settings%feedback)
+        ! -------------------------------------------- !
+
 
         ! Open the .resume file
         open(read_resume_unit,file=trim(resume_file(settings,.false.)), action='read') 
@@ -192,9 +233,6 @@ module read_write_module
             RTI%logXpXq(RTI%nclusters,RTI%nclusters),                    &
             )
 
-        ! Allocate the posterior array if we're calculating this
-        if(settings%calculate_posterior) allocate(RTI%posterior(settings%nTotal,settings%nlive,RTI%nclusters))
-
 
         ! Read in evidences
         write(fmt_dbl,'("(",I0,A,")")') 1, DB_FMT              ! Initialise the double format
@@ -239,7 +277,16 @@ module read_write_module
         ! Close the reading unit
         close(read_resume_unit)
 
+
+        ! Allocate the posterior array if we're calculating this
+        if(settings%calculate_posterior) allocate(RTI%posterior(settings%nTotal,settings%nlive,RTI%nclusters))
         RTI%nposterior = 0 ! Initialise number of posterior points at 0
+
+        ! Allocate the cholesky and covmat arrays
+        allocate(                                                      &
+            RTI%cholesky(settings%nDims,settings%nDims,RTI%nclusters), &
+            RTI%covmat(settings%nDims,settings%nDims,RTI%nclusters)    &
+            )
 
     end subroutine read_resume_file
 

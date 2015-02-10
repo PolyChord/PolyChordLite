@@ -44,6 +44,9 @@ module utils_module
     !> unit for writing unnormalised posterior files
     integer, parameter :: write_untxt_unit = 20
 
+    !> Unit for deleting generic files
+    integer, parameter :: delete_unit = 21
+
 
     !> Log[1/2 Erfc[j/Sqrt[2]]]
     double precision, parameter,dimension(20) :: logsigma = (/-1.84102, -3.78318, -6.60773, -10.3601, -15.065, -20.7368, -27.3843, -35.0134, -43.6281, -53.2313, -63.8249, -75.4107, -87.9897, -101.563, -116.131, -131.695, -148.256, -165.812, -184.366, -203.917 /)
@@ -174,6 +177,44 @@ module utils_module
     end function dbleq
 
 
+
+    !> Identity matrix ( nDims x nDims )
+    function identity_matrix(nDims)
+        implicit none
+        !> dimensionality of the identity matrix
+        integer,intent(in) :: nDims
+        !> The identity matrix to be returned
+        double precision, dimension(nDims,nDims) :: identity_matrix
+
+        integer :: i_dims ! iterator over dimensions
+
+        identity_matrix=0d0
+        do i_dims=1,nDims
+            identity_matrix(i_dims,i_dims) = 1d0
+        end do
+
+
+    end function identity_matrix
+
+
+    function delete_file(file_name) result(deleted)
+        implicit none
+        character(STR_LENGTH),intent(in) :: file_name
+
+        logical :: deleted ! whether or not there was a file to be deleted
+        integer :: io_stat ! input/output status variable
+
+
+        ! Try to open the file
+        open(delete_unit,file=trim(file_name), action='write',iostat=io_stat) 
+
+        ! Note whether the file exists
+        deleted = (io_stat == 0) 
+
+        ! Delete it if it exists
+        if(deleted) close(delete_unit,status='delete')
+    end function delete_file
+        
 
 
 

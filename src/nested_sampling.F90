@@ -6,9 +6,6 @@ module nested_sampling_module
 
     implicit none
 
-    double precision :: evidence
-
-
 
     contains
 
@@ -90,8 +87,6 @@ module nested_sampling_module
 
         integer :: i_dims
 
-        integer :: io_stat
-
 
 #ifdef MPI
         ! MPI initialisation
@@ -102,7 +97,7 @@ module nested_sampling_module
 
         send_start  = nprocs-1  ! Initialise the starting iterator         !--- consider revising
 #else 
-        ! If we're not running with MPI then set these defaults
+        ! non-MPI initialisation
         root=0      ! Define root node
         myrank=root ! set the only node's rank to be the root
         nprocs=1    ! there's only one process
@@ -114,9 +109,6 @@ module nested_sampling_module
             ! ------------------------------------ !
             call write_opening_statement(settings) 
             ! ------------------------------------ !
-
-            ! Allocate the run time arrays
-            call initialise_run_time_info(settings,RTI)
 
             !--- consider revising
             ! Allocate the baby incubator to be an array of live + phantom points the size
@@ -134,99 +126,30 @@ module nested_sampling_module
             ! Check if we actually want to resume
             resume = settings%read_resume .and. resume_file_exists(settings)
 
-            if(resume) then
-                ! -------------------------------------------- !
-                call write_resuming(settings%feedback)
-                ! -------------------------------------------- !
-
-                call read_resume_file(settings,RTI)
-
-            end if !(resume)
+            if(resume) call read_resume_file(settings,RTI)
 
         end if !(myrank==root)
 
 
 
         !======= 1) Initialisation =====================================
-        ! (i)   generate initial live points by sampling
-        !       randomly from the prior (i.e. unit hypercube)
-        ! (ii)  Initialise all variables
 
-        !~~~ (i) Generate Live Points ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        if (.not. resume) then
 
+            ! Delete any existing files
+            if(myrank==root) call delete_files(settings)
 
-        if (.not. resume)
+            ! Intialise the run by setting all of the relevant run time info, and generating live points
+            call GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_communicator,nprocs,myrank,root)
 
-            ! If not resuming, then generate live points in linear or in parallel
-            if(linear_mode) then
-                live_points(:,:,1) = GenerateLivePointsL(loglikelihood,priors,settings)
-            else
-#ifdef MPI
-                if(settings%generate_from_seed) then
-                    live_points(:,:,1) = GenerateLivePointsFromSeedP(loglikelihood,priors,settings,mpi_communicator,root)
-                else
-                    live_points(:,:,1) = GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root)
-                end if
-#endif
-            end if
-
-
-            ! Now initialise all of the other variables
-            if(myrank==root) then
-
-                ! Delete any existing .txt files
-                ! Open the old unormalised .txt file for reading
-                open(write_untxt_unit,file=trim(posterior_file(settings,.true.)), action='write',iostat=io_stat) 
-                if(io_stat.eq.0) close(write_untxt_unit,status='delete')
-                do i_cluster = 1,settings%ncluster*2
-                    open(write_untxt_unit,file=trim(posterior_file(settings,.true.,i_cluster)), action='write',iostat=io_stat) 
-                    if(io_stat.eq.0) close(write_untxt_unit,status='delete')
-                end do
-
-
-                ! count up the number of likelihood calls
-                total_likelihood_calls = nint(sum(live_points(settings%nlike,:,1)))
-
-
-                ndead = 0       ! no dead points 
-                nposterior = 0  ! nothing in the posterior array
-                nphantom = 0    ! no phantom points
-
-            endif !(myrank==root / myrank/=root)
-
+            ! Write a resume file (as the generation of live points can be intensive)
+            if(myrank==root) write_resume_file(settings,RTI)
 
         end if !(.not.resume)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
         if(myrank==root) then
 
-
-            if(settings%write_resume) &
-                call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
-                    ndead,total_likelihood_calls)
-
-
-
-            ! Initialise the covmats at the identity
-            covmats = 0d0
-            choleskys=0d0
-            do i_dims=1,settings%nDims
-                covmats(i_dims,i_dims,:) = 1d0
-                choleskys(i_dims,i_dims,:) = 1d0
-            end do
 
             ! Calculate the covariance matrices
             covmats = calc_covmats(settings,info,live_points,phantom_points,nphantom)

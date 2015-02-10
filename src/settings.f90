@@ -98,8 +98,6 @@ module settings_module
         ! Algorithm indices
         !> The number of likelihood evaluations required to calculate this point
         integer :: nlike
-        !> The last chord length used in calculating this point
-        integer :: last_chord
 
         !> likelihood index
         !!
@@ -151,12 +149,6 @@ module settings_module
         !> Memory storage considerations; The maximum number of active clusters
         integer :: ncluster = 30
 
-        !> To generate from a seed point instead
-        logical :: generate_from_seed = .false.
-        integer :: ngenerate = 500*10
-        integer :: generate_burn_in = 0
-        double precision, allocatable,dimension(:) :: seed_point
-
     end type program_settings
 
     contains
@@ -185,10 +177,9 @@ module settings_module
 
         ! Algorithm indices
         settings%nlike=settings%d1+1
-        settings%last_chord=settings%nlike+1
 
         ! Loglikelihood indices
-        settings%l0=settings%last_chord+1
+        settings%l0=settings%nlike+1
         settings%l1=settings%l0+1
 
         ! Total number of parameters

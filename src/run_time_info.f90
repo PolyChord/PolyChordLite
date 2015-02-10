@@ -31,9 +31,9 @@ module run_time_module
             double precision, allocatable, dimension(:,:,:) :: posterior
 
             !> Covariance Matrices
-            double precision, allocatable, dimension(:,:,:) :: covmats
+            double precision, allocatable, dimension(:,:,:) :: covmat
             !> Cholesky decompositions
-            double precision, allocatable, dimension(:,:,:) :: choleskys
+            double precision, allocatable, dimension(:,:,:) :: cholesky
 
             !> Global evidence estimate
             double precision :: logZ
@@ -59,14 +59,19 @@ module run_time_module
         !> This is a self explanatory subroutine.
         !!
         !! It allocates the arrays for a single cluster 
-        subroutine allocate_run_time_info(settings,RTI)
-            use utils_module,    only: logzero
+        subroutine initialise_run_time_info(settings,RTI)
+            use utils_module,    only: logzero,identity_matrix
             use settings_module, only: program_settings
 
             implicit none
+            !> Program settings
             type(program_settings), intent(in) :: settings
+            !> Run time information
             type(run_time_info),intent(out) :: RTI
 
+            integer :: i_dims ! iterator over dimensions
+
+            ! Allocate all of the arrays with one cluster
             allocate(                                            &
                 RTI%live(settings%nTotal,settings%nlive,1),      &
                 RTI%phantom(settings%nTotal,settings%nlive,1),   &
@@ -79,21 +84,40 @@ module run_time_module
                 RTI%logXpXq(1,1),                                &
                 RTI%nlive(1),                                    &
                 RTI%nphantom(1),                                 &
-                RTI%nposterior(1)                                &
+                RTI%nposterior(1),                               &
+                RTI%cholesky(settings%nDims,settings%nDims,1),   &
+                RTI%covmat(settings%nDims,settings%nDims,1)      &
                 )
 
             ! All evidences set to logzero
             RTI%logZ=logzero
             RTI%logZ2=logzero
-            RTI%logXp=1
-            RTI%logXpXq=1
             RTI%logZp=logzero
             RTI%logZXp=logzero
             RTI%logZp2=logzero
             RTI%logZpXp=logzero
 
+            ! All volumes set to 1
+            RTI%logXp=1d0
+            RTI%logXpXq=1d0
 
-        end subroutine allocate_run_time_info
+            !Initially no live points at all
+            RTI%nlive=0
+            RTI%nphantom=0
+            RTI%nposterior=0
+
+            !No likelihood calls
+            RTI%nlike=0
+
+            !No dead points
+            RTI%ndead=0
+
+            !Cholesky and covmat set to identity
+            RTI%cholesky(:,:,1) = identity_matrix(settings%nDims)
+            RTI%covmat(:,:,1)   = identity_matrix(settings%nDims)
+
+
+        end subroutine initialise_run_time_info
 
     subroutine update_evidence(RTI,p,logL)
         use utils_module, only: logsumexp,logincexp
