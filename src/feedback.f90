@@ -44,6 +44,16 @@ module feedback_module
     end subroutine write_opening_statement
 
 
+    subroutine write_resuming(feedback)
+        implicit none
+        integer, intent(in) :: feedback
+
+        if(feedback>=0) then
+            write(stdout_unit,'("Resuming from previous run")')
+        end if
+
+    end subroutine write_resuming
+
 
     !> Called before generating the live points
     subroutine write_started_generating(feedback)
@@ -186,7 +196,7 @@ module feedback_module
 
     !> Intermediate results
     subroutine write_intermediate_results(settings,info,ndead,nphantom,nposterior,mean_likelihood_calls)
-        use evidence_module, only: run_time_info
+        use run_time_module, only: run_time_info
         use settings_module, only: program_settings
         use utils_module,    only: stdout_unit,logzero,fmt_len
         implicit none

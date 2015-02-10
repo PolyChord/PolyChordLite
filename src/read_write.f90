@@ -4,190 +4,242 @@ module read_write_module
 
     contains
 
-    subroutine write_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls)
+    !> Check to see whether resume file exists
+    function resume_file_exists(settings) result(resume)
+        use settings_module, only: program_settings
+        implicit none
+
+        !> settings variable to get the base_dir and root_name out of
+        type(program_settings), intent(in) :: settings
+        !> Whether or not we should resume from file
+        logical :: resume
+
+        ! See if the resume file with the correct name exists
+        inquire(                                     &! Inquire function
+            file=trim(resume_file(settings,.false.)),&! file name defined by subroutine resume_file
+            exist=resume                             &! return whether this exists
+            )
+
+    end function resume_file_exists
+
+
+    subroutine write_resume_file(settings,RTI)
         use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_resume_unit
-        use evidence_module, only: run_time_info
+        use run_time_module, only: run_time_info
         use settings_module, only: program_settings
 
         implicit none
-
-
         type(program_settings), intent(in) :: settings
-        type(run_time_info),    intent(in) :: info
-
-        double precision,intent(in), dimension(settings%nTotal,settings%nlive,settings%ncluster) :: live_points
-
-        integer,intent(in),dimension(settings%ncluster) :: nphantom
-        double precision,intent(in), dimension(settings%nTotal,settings%nstack,settings%ncluster) :: phantom_points
-
-        integer,intent(in) :: ndead
-        integer,intent(in) :: total_likelihood_calls
+        type(run_time_info),    intent(out) :: RTI
 
         integer :: i_cluster
 
-        character(len=fmt_len) :: fmt_dbl_ncluster_A
-        character(len=fmt_len) :: fmt_dbl_ncluster_T
-        character(len=fmt_len) :: fmt_dbl_nTotal
-        character(len=fmt_len) :: fmt_dbl_2
 
-        character(len=fmt_len) :: fmt_int_ncluster_A
-        character(len=fmt_len) :: fmt_int_1
+        character(len=fmt_len) :: fmt_int
+        character(len=fmt_len) :: fmt_dbl
 
 
-        ! Initialise the formats
-        write(fmt_dbl_ncluster_A,'("(",I0,A,")")') info%ncluster_A, DB_FMT
-        write(fmt_dbl_ncluster_T,'("(",I0,A,")")') info%ncluster_T, DB_FMT
-        write(fmt_dbl_nTotal    ,'("(",I0,A,")")') settings%nTotal, DB_FMT
-        write(fmt_dbl_2         ,'("(",I0,A,")")') 2,               DB_FMT
 
-        write(fmt_int_ncluster_A,'("(",I0,A,")")') info%ncluster_A, INT_FMT
-        write(fmt_int_1         ,'("(",I0,A,")")') 1,               INT_FMT
-        
-        
         ! Open the .resume file
-        open(write_resume_unit,file=trim(resume_file(settings))//'_new', action='write') 
+        open(write_resume_unit,file=trim(resume_file(settings,.true.)), action='write') 
+
+        ! write integers 
+        write(fmt_int,'("(",I0,A,")")') 1,INT_FMT   ! define the integer format
+
+        ! number of dimensions
+        write(write_resume_unit,'("=== Number of dimensions ===")')                    
+        write(write_resume_unit,fmt_int) settings%nDims
+
+        ! number of derived parameters
+        write(write_resume_unit,'("=== Number of derived parameters ===")')                    
+        write(write_resume_unit,fmt_int) settings%nDerived
+
+        write(write_resume_unit,'("=== Number of dead points/iterations ===")')                    
+        write(write_resume_unit,fmt_int) RTI%ndead
+        write(write_resume_unit,'("=== Total number of likelihood calls ===")')                    
+        write(write_resume_unit,fmt_int) RTI%nlike
+        write(write_resume_unit,'("=== Number of clusters ===")')                    
+        write(write_resume_unit,fmt_int) RTI%nclusters
 
 
-        ! Cluster information: 
+        ! write number of live and phantom points
+        write(fmt_int,'("(",I0,A,")")') RTI%nclusters,INT_FMT   ! define the integer array format
 
-        ! Number of Active clusters
-        write(write_resume_unit,fmt_int_1) info%ncluster_A
-        ! Number of Passive clusters
-        write(write_resume_unit,fmt_int_1) info%ncluster_P
-        ! Total amount of evidence information
-        write(write_resume_unit,fmt_int_1) info%ncluster_T
-        ! global log evidence and evidence^2
-        write(write_resume_unit,fmt_dbl_2) info%logevidence, info%logevidence2
-        ! number of live points in each cluster
-        write(write_resume_unit,fmt_int_ncluster_A) info%n(:info%ncluster_A)
-        ! Log likelihood contours
-        write(write_resume_unit,fmt_dbl_ncluster_A) info%logL(:info%ncluster_A)
-        ! Log volume
-        write(write_resume_unit,fmt_dbl_ncluster_A) info%logX(:info%ncluster_A)
-        ! Log evidence
-        write(write_resume_unit,fmt_dbl_ncluster_A) info%logZ(:info%ncluster_A)
-        ! Log evidence^2
-        write(write_resume_unit,fmt_dbl_ncluster_A) info%logZ2(:info%ncluster_A)
-        ! Correlations: log(X_iX_j)
-        write(write_resume_unit,fmt_dbl_ncluster_A) info%logXX(:info%ncluster_A,:info%ncluster_A)
-        ! Correlations: log(Z_iX_j)
-        write(write_resume_unit,fmt_dbl_ncluster_T) info%logZX(:info%ncluster_T,:info%ncluster_A)
+        write(write_resume_unit,'("=== Number of live points in each cluster ===")')                    
+        write(write_resume_unit,fmt_int) RTI%nlive               ! number of live points
+        write(write_resume_unit,'("=== Number of phantom points in each cluster ===")')                    
+        write(write_resume_unit,fmt_int) RTI%nphantom            ! number of phantom points
+
+        ! write evidences
+        write(fmt_dbl,'("(",I0,A,")")') 1, DB_FMT              ! Initialise the double format
+        write(write_resume_unit,'("=== global evidence -- log(<Z>) ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%logZ                ! global evidence estimate
+        write(write_resume_unit,'("=== global evidence^2 -- log(<Z^2>) ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%logZ2               ! global evidence^2 estimate
 
 
-        ! Live points
-        do i_cluster=1,info%ncluster_A
-            write(write_resume_unit,fmt_dbl_nTotal) live_points(:,:info%n(i_cluster),i_cluster)
+
+        write(fmt_dbl,'("(",I0,A,")")') RTI%nclusters, DB_FMT   ! Initialise the double array format
+        write(write_resume_unit,'("=== local volume -- log(<X_p>) ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%logXp
+        write(write_resume_unit,'("=== global evidence volume cross correlation -- log(<ZX_p>) ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%logZXp
+        write(write_resume_unit,'("=== local evidence -- log(<Z_p>) ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%logZp
+        write(write_resume_unit,'("=== local evidence^2 -- log(<Z_p^2>) ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%logZp2
+        write(write_resume_unit,'("=== local evidence volume cross correlation -- log(<Z_pX_p>) ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%logZpXp
+        write(write_resume_unit,'("=== local volume cross correlation -- log(<X_pX_q>) ===")')                    
+        do i_cluster=1,RTI%nclusters
+            write(write_resume_unit,fmt_dbl) RTI%logXpXq         ! local volume cross correlation
         end do
 
-        ! number of phantom points
-        write(write_resume_unit,fmt_int_ncluster_A) nphantom(:info%ncluster_A)
-        ! Phantom points
-        do i_cluster=1,info%ncluster_A
-            write(write_resume_unit,fmt_dbl_nTotal) phantom_points(:,:nphantom(i_cluster),i_cluster)
+
+        write(fmt_dbl,'("(",I0,A,")")') settings%nTotal, DB_FMT   ! Initialise the double array format for live points
+
+        ! write live points
+        write(write_resume_unit,'("=== live points ===")')                    
+        do i_cluster=1,RTI%nclusters
+            write(write_resume_unit,fmt_dbl) RTI%live(:,:,i_cluster)
         end do
 
-        ! number of dead points
-        write(write_resume_unit,fmt_int_1) ndead
-        ! total likelihood calls
-        write(write_resume_unit,fmt_int_1) total_likelihood_calls
+        ! write phantom points
+        write(write_resume_unit,'("=== phantom points ===")')                    
+        do i_cluster=1,RTI%nclusters
+            write(write_resume_unit,fmt_dbl) RTI%phantom(:,:,i_cluster)
+        end do
 
-
+        ! Close the writing file
         close(write_resume_unit)
 
-        call rename(trim(resume_file(settings))//'_new',trim(resume_file(settings)))
+        ! Move the temp file onto the new file
+        call rename(trim(resume_file(settings,.true.)),trim(resume_file(settings,.false.)))
 
     end subroutine write_resume_file
 
 
-    subroutine read_resume_file(settings,info,live_points,nphantom,phantom_points,ndead,total_likelihood_calls)
+    subroutine read_resume_file(settings,RTI)
         use utils_module, only: DB_FMT,INT_FMT,fmt_len,read_resume_unit
-        use evidence_module, only: run_time_info
+        use run_time_module, only: run_time_info
         use settings_module, only: program_settings
-
         implicit none
 
-
         type(program_settings), intent(in) :: settings
-        type(run_time_info),    intent(inout) :: info
-
-        double precision,intent(out), dimension(settings%nTotal,settings%nlive,settings%ncluster) :: live_points
-
-        integer,intent(out),dimension(settings%ncluster) :: nphantom
-        double precision,intent(out), dimension(settings%nTotal,settings%nstack,settings%ncluster) :: phantom_points
-
-        integer,intent(out) :: ndead
-        integer,intent(out) :: total_likelihood_calls
+        type(run_time_info),    intent(out) :: RTI
 
         integer :: i_cluster
-
-        character(len=fmt_len) :: fmt_dbl_ncluster_A
-        character(len=fmt_len) :: fmt_dbl_ncluster_T
-        character(len=fmt_len) :: fmt_dbl_nTotal
-        character(len=fmt_len) :: fmt_dbl_2
-
-        character(len=fmt_len) :: fmt_int_ncluster_A
-        character(len=fmt_len) :: fmt_int_1
+        integer :: i_temp
 
 
-        ! Initialise the formats
-        write(fmt_dbl_ncluster_A,'("(",I0,A,")")') info%ncluster_A, DB_FMT
-        write(fmt_dbl_ncluster_T,'("(",I0,A,")")') info%ncluster_T, DB_FMT
-        write(fmt_dbl_nTotal    ,'("(",I0,A,")")') settings%nTotal, DB_FMT
-        write(fmt_dbl_2         ,'("(",I0,A,")")') 2,               DB_FMT
+        character(len=fmt_len) :: fmt_int
+        character(len=fmt_len) :: fmt_dbl
 
-        write(fmt_int_ncluster_A,'("(",I0,A,")")') info%ncluster_A, INT_FMT
-        write(fmt_int_1         ,'("(",I0,A,")")') 1,               INT_FMT
-        
-        
+
+
         ! Open the .resume file
-        open(read_resume_unit,file=trim(resume_file(settings)), action='read') 
+        open(read_resume_unit,file=trim(resume_file(settings,.false.)), action='read') 
+
+        ! Read in integers 
+        write(fmt_int,'("(",I0,A,")")') 1,INT_FMT   ! define the integer format
+
+        ! number of dimensions
+        read(read_resume_unit,*)                    
+        read(read_resume_unit,fmt_int) i_temp       
+        if(settings%nDims/=i_temp) call abort('resume error: nDims does not match')
+
+        ! number of derived parameters
+        read(read_resume_unit,*)                    
+        read(read_resume_unit,fmt_int) i_temp       
+        if(settings%nDerived/=i_temp) call abort('resume error: nDerived does not match')
+
+        read(read_resume_unit,*)                    ! 
+        read(read_resume_unit,fmt_int) RTI%ndead    ! number of dead points
+        read(read_resume_unit,*)                    ! 
+        read(read_resume_unit,fmt_int) RTI%nlike    ! number of likelihood calls
+        read(read_resume_unit,*)                    ! 
+        read(read_resume_unit,fmt_int) RTI%nclusters! number of clusters
+
+        ! Allocate nlive and nphantom arrays based on these
+        allocate(                           &
+            RTI%nlive(RTI%nclusters),       &
+            RTI%nphantom(RTI%nclusters),    &
+            RTI%nposterior(RTI%nposterior)  &
+            )
+
+        ! Read in number of live and phantom points
+        write(fmt_int,'("(",I0,A,")")') RTI%nclusters,INT_FMT  ! define the integer array format
+
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_int) RTI%nlive               ! number of live points
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_int) RTI%nphantom            ! number of phantom points
 
 
-        ! Cluster information: 
-
-        ! Number of Active clusters
-        read(read_resume_unit,fmt_int_1) info%ncluster_A
-        ! Number of Passive clusters
-        read(read_resume_unit,fmt_int_1) info%ncluster_P
-        ! Total amount of evidence information
-        read(read_resume_unit,fmt_int_1) info%ncluster_T
-        ! global log evidence and evidence^2
-        read(read_resume_unit,fmt_dbl_2) info%logevidence, info%logevidence2
-        ! number of live points in each cluster
-        read(read_resume_unit,fmt_int_ncluster_A) info%n(:info%ncluster_A)
-        ! Log likelihood contours
-        read(read_resume_unit,fmt_dbl_ncluster_A) info%logL(:info%ncluster_A)
-        ! Log volume
-        read(read_resume_unit,fmt_dbl_ncluster_A) info%logX(:info%ncluster_A)
-        ! Log evidence
-        read(read_resume_unit,fmt_dbl_ncluster_A) info%logZ(:info%ncluster_A)
-        ! Log evidence^2
-        read(read_resume_unit,fmt_dbl_ncluster_A) info%logZ2(:info%ncluster_A)
-        ! Correlations: log(X_iX_j)
-        read(read_resume_unit,fmt_dbl_ncluster_A) info%logXX(:info%ncluster_A,:info%ncluster_A)
-        ! Correlations: log(Z_iX_j)
-        read(read_resume_unit,fmt_dbl_ncluster_T) info%logZX(:info%ncluster_T,:info%ncluster_A)
+        ! Check to see if this is consistent with settings
+        if(settings%nlive/=sum(RTI%nlive)) call abort('resume error: nlive does not match')
 
 
-        ! Live points
-        do i_cluster=1,info%ncluster_A
-            read(read_resume_unit,fmt_dbl_nTotal) live_points(:,:info%n(i_cluster),i_cluster)
+        ! Allocate the rest of the arrays
+        allocate(                                                        &
+            RTI%live(settings%nTotal,settings%nlive,RTI%nclusters),      &
+            RTI%phantom(settings%nTotal,settings%nlive,RTI%nclusters),   &
+            RTI%logXp(RTI%nclusters),                                    &
+            RTI%logZXp(RTI%nclusters),                                   &
+            RTI%logZp(RTI%nclusters),                                    &
+            RTI%logZp2(RTI%nclusters),                                   &
+            RTI%logZpXp(RTI%nclusters),                                  &
+            RTI%logXpXq(RTI%nclusters,RTI%nclusters),                    &
+            )
+
+        ! Allocate the posterior array if we're calculating this
+        if(settings%calculate_posterior) allocate(RTI%posterior(settings%nTotal,settings%nlive,RTI%nclusters))
+
+
+        ! Read in evidences
+        write(fmt_dbl,'("(",I0,A,")")') 1, DB_FMT              ! Initialise the double format
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_dbl) RTI%logZ                ! global evidence estimate
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_dbl) RTI%logZ2               ! global evidence^2 estimate
+
+
+
+        write(fmt_dbl,'("(",I0,A,")")') RTI%nclusters, DB_FMT  ! Initialise the double array format
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_dbl) RTI%logXp               ! local volume estimate
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_dbl) RTI%logZXp              ! global evidence volume cross correlation
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_dbl) RTI%logZp               ! local evidence estimate
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_dbl) RTI%logZp2              ! local evidence^2 estimate
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_dbl) RTI%logZpXp             ! local evidence volume cross correlation
+        read(read_resume_unit,*)                               ! 
+        do i_cluster=1,RTI%nclusters
+            read(read_resume_unit,fmt_dbl) RTI%logXpXq         ! local volume cross correlation
         end do
 
-        ! number of phantom points
-        read(read_resume_unit,fmt_int_ncluster_A) nphantom(:info%ncluster_A)
-        ! Phantom points
-        do i_cluster=1,info%ncluster_A
-            read(read_resume_unit,fmt_dbl_nTotal) phantom_points(:,:nphantom(i_cluster),i_cluster)
+
+        write(fmt_dbl,'("(",I0,A,")")') settings%nTotal, DB_FMT   ! Initialise the double array format for live points
+
+        ! Read in live points
+        read(read_resume_unit,*)                               
+        do i_cluster=1,RTI%nclusters
+            read(read_resume_unit,fmt_dbl) RTI%live(:,:,i_cluster)
         end do
 
-        ! number of dead points
-        read(read_resume_unit,fmt_int_1) ndead
-        ! total likelihood calls
-        read(read_resume_unit,fmt_int_1) total_likelihood_calls
+        ! Read in phantom points
+        read(read_resume_unit,*)                               
+        do i_cluster=1,RTI%nclusters
+            read(read_resume_unit,fmt_dbl) RTI%phantom(:,:,i_cluster)
+        end do
 
-
+        ! Close the reading unit
         close(read_resume_unit)
+
+        RTI%nposterior = 0 ! Initialise number of posterior points at 0
 
     end subroutine read_resume_file
 
@@ -196,7 +248,7 @@ module read_write_module
     subroutine write_posterior_file(settings,info,posterior_points,nposterior) 
         use utils_module, only: DB_FMT,fmt_len,write_txt_unit,write_untxt_unit,read_untxt_unit,logsigma
         use settings_module, only: program_settings
-        use evidence_module, only: run_time_info 
+        use run_time_module, only: run_time_info 
         implicit none
 
         type(program_settings), intent(in) :: settings
@@ -352,7 +404,7 @@ module read_write_module
     subroutine write_phys_live_points(settings,info,live_points)
         use utils_module, only: DB_FMT,fmt_len,write_phys_unit,write_phys_cluster_unit
         use settings_module, only: program_settings 
-        use evidence_module, only: run_time_info 
+        use run_time_module, only: run_time_info 
         implicit none
 
         type(program_settings), intent(in) :: settings
@@ -412,7 +464,7 @@ module read_write_module
     subroutine write_stats_file(settings,info,ndead)
         use utils_module, only: DB_FMT,fmt_len,write_stats_unit,logzero,logsubexp
         use settings_module, only: program_settings
-        use evidence_module, only: run_time_info 
+        use run_time_module, only: run_time_info 
         implicit none
 
         type(program_settings), intent(in) :: settings
@@ -506,15 +558,24 @@ module read_write_module
 
 
     ! File namers
-    function resume_file(settings) result(file_name)
+
+    !> Name of the resume file
+    function resume_file(settings,temp) result(file_name)
         use settings_module, only: program_settings
         use utils_module,    only: STR_LENGTH
         implicit none
+        !> Program settings (for base_dir and file_root)
         type(program_settings), intent(in) :: settings
+        !> whether or not to create a temp file
+        logical, intent(in) :: temp
 
         character(STR_LENGTH) :: file_name
 
-        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '.resume'
+        if(temp) then
+            file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_temp.resume'
+        else
+            file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '.resume'
+        end if
 
     end function resume_file
 

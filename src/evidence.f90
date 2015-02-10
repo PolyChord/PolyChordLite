@@ -2,45 +2,6 @@
 module evidence_module
     implicit none
 
-    type :: run_time_info
-
-        ! Number of active clusters 
-        ! These are clusters that are currently evolving
-        integer :: ncluster_A
-        ! Number of passive clusters
-        ! These are clusters that have 'died'
-        integer :: ncluster_P
-        ! Total number of clusters, including pieces of clusters before
-        ! splitting
-        integer :: ncluster_T
-
-        ! Global evidence, and evidence squared
-        ! log(Z)
-        double precision :: logevidence
-        ! log(Z^2)
-        double precision :: logevidence2
-
-        ! local cluster variables
-        ! n_i - live points in each cluster
-        integer, allocatable, dimension(:)            :: n
-        ! log(L_i) - log likelihood contour of each cluster
-        double precision, allocatable, dimension(:)   :: logL
-        ! log(X_i) - log volume for the cluster (since splitting)
-        double precision, allocatable, dimension(:)   :: logX
-        ! log(Z_i) - log evidence for the cluster (since splitting)
-        double precision, allocatable, dimension(:)   :: logZ
-        ! log(Z_i^2) - log evidence for the cluster (since splitting)
-        double precision, allocatable, dimension(:)   :: logZ2
-
-        ! local cluster correlations
-        ! log(X_iX_j)
-        double precision, allocatable, dimension(:,:) :: logXX
-        ! log(Z_iX_j)
-        double precision, allocatable, dimension(:,:) :: logZX
-        
-    end type run_time_info
-
-
     contains
 
     subroutine allocate_run_time_info(settings,info)

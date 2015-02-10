@@ -50,38 +50,17 @@ module nested_sampling_module
         ! 5) log(evidence) + log(prior volume)
         double precision, dimension(5) :: output_info
 
-
-
-        ! The live points
-        double precision, dimension(settings%nTotal,settings%nlive,settings%ncluster) :: live_points
-        ! The phantom points
-        double precision, dimension(settings%nTotal,settings%nstack,settings%ncluster) :: phantom_points
-        ! The number of phantom points in each cluster
-        integer, dimension(settings%ncluster) :: nphantom
-        double precision, dimension(settings%nposterior,settings%nstack,0:settings%ncluster*2) :: posterior_points
-        integer, dimension(0:settings%ncluster*2) :: nposterior
-
-        ! The evidence storage
-        type(run_time_info) :: info
-
-        ! The covariance matrices in the unit hypercube
-        double precision, dimension(settings%nDims,settings%nDims,settings%ncluster) :: covmats
-        ! The cholesky decompositions in the unit hypercube
-        double precision, dimension(settings%nDims,settings%nDims,settings%ncluster) :: choleskys
-        ! A single cholesky decomposition for use by the slaves
-        double precision, dimension(settings%nDims,settings%nDims) :: cholesky
+        ! The run time info (very important, see src/run_time_info.f90)
+        type(run_time_info) :: RTI
 
         logical :: more_samples_needed
 
         ! The new-born baby points
         double precision, dimension(settings%nTotal,settings%num_babies)   :: baby_points
 
-
         ! Point to seed a new one from
-        double precision,    dimension(settings%nTotal)   :: seed_point
+        double precision, dimension(settings%nTotal)   :: seed_point
 
-
-        logical :: resume=.false.
         integer :: total_likelihood_calls
 
         integer :: ndead
@@ -91,13 +70,11 @@ module nested_sampling_module
         integer :: send_start
         integer :: i_slave
         logical :: slave_sending
-#endif
-
         integer :: nprocs
+#endif
         integer :: myrank
         integer :: root
         logical :: linear_mode
-
 
         integer :: i_cluster
         integer :: clusters(settings%nlive)
@@ -116,53 +93,57 @@ module nested_sampling_module
         integer :: io_stat
 
 
-
-
-
-
-
-
-
-
-
 #ifdef MPI
-        ! Get the number of MPI procedures
-        call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
-        send_start=nprocs-1
-        linear_mode = nprocs==1
+        ! MPI initialisation
+        
+        nprocs = get_nprocs(mpi_communicator)         ! Get the number of MPI processes
+        myrank = get_rank(mpi_communicator)           ! Get the identity of this process
+        root   = assign_root(myrank,mpi_communicator) ! Assign the root process
 
-        ! Get the MPI label of the current processor
-        call MPI_COMM_RANK(mpi_communicator, myrank, mpierror)
-
-        ! Assign the root
-        call MPI_ALLREDUCE(myrank,root,1,MPI_INTEGER,MPI_MIN,mpi_communicator,mpierror)
+        send_start  = nprocs-1  ! Initialise the starting iterator         !--- consider revising
 #else 
-        ! If we're not running with MPI then set these to defaults, everything
-        ! is done on the 'root' node
-        root=mpi_communicator !this just turns off an annoying warning
-        root=0
-        myrank=root
-        linear_mode=.true.
-        nprocs=1
+        ! If we're not running with MPI then set these defaults
+        root=0      ! Define root node
+        myrank=root ! set the only node's rank to be the root
+        nprocs=1    ! there's only one process
 #endif
+
+        linear_mode = nprocs==1 ! Run in linear mode if only one process
 
         if(myrank==root) then
             ! ------------------------------------ !
             call write_opening_statement(settings) 
             ! ------------------------------------ !
 
-            ! Allocate the evidence store
-            call allocate_run_time_info(settings,info)
+            ! Allocate the run time arrays
+            call initialise_run_time_info(settings,RTI)
 
+            !--- consider revising
             ! Allocate the baby incubator to be an array of live + phantom points the size
             ! of the number of slaves.
             ! Note that it in linear mode (nprocs==1) there is '1 slave' -- the
             ! single node is both master and slave.
             allocate(baby_incubator(settings%nTotal,settings%num_babies,(max(1,nprocs-1))))
             nincubator=0
-        end if
+        end if !(myrank==root)
 
 
+        !======= 0) Read resume file on root =========================== 
+        if(myrank==root) then
+
+            ! Check if we actually want to resume
+            resume = settings%read_resume .and. resume_file_exists(settings)
+
+            if(resume) then
+                ! -------------------------------------------- !
+                call write_resuming(settings%feedback)
+                ! -------------------------------------------- !
+
+                call read_resume_file(settings,RTI)
+
+            end if !(resume)
+
+        end if !(myrank==root)
 
 
 
@@ -172,23 +153,9 @@ module nested_sampling_module
         ! (ii)  Initialise all variables
 
         !~~~ (i) Generate Live Points ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        ! Check if we actually want to resume
-        inquire(file=trim(resume_file(settings)),exist=resume)
-        resume = settings%read_resume .and. resume
 
-        if(resume) then
 
-            if(myrank==root) then
-                ! Check to see whether there's a resume file present, and record in the
-                ! variable 'resume'
-                if(settings%feedback>=0) write(stdout_unit,'("Resuming from previous run")')
-                call read_resume_file(settings,info,live_points,nphantom,phantom_points,&
-                    ndead,total_likelihood_calls)
-                nposterior=0
-
-            endif ! only root
-
-        else !(.not.resume)
+        if (.not. resume)
 
             ! If not resuming, then generate live points in linear or in parallel
             if(linear_mode) then
@@ -228,7 +195,7 @@ module nested_sampling_module
             endif !(myrank==root / myrank/=root)
 
 
-        end if !(resume / .not.resume)
+        end if !(.not.resume)
 
 
 
