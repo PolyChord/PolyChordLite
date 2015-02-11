@@ -195,43 +195,35 @@ module feedback_module
     end subroutine write_started_sampling
 
     !> Intermediate results
-    subroutine write_intermediate_results(settings,info,ndead,nphantom,nposterior,mean_likelihood_calls)
+    subroutine write_intermediate_results(settings,RTI)
         use run_time_module, only: run_time_info
         use settings_module, only: program_settings
         use utils_module,    only: stdout_unit,logzero,fmt_len
         implicit none
-        type(program_settings), intent(in) :: settings
-        type(run_time_info),intent(in)     :: info
-        integer,intent(in)                 :: ndead
-        integer,intent(in),dimension(settings%ncluster)    :: nphantom
-        integer,intent(in),dimension(0:settings%ncluster)    :: nposterior
-        double precision,intent(in)        :: mean_likelihood_calls
+        type(program_settings), intent(in) :: settings !> program settings
+        type(run_time_info),    intent(in) :: RTI      !> run time info
 
         integer :: i
 
         double precision, dimension(info%ncluster_A) :: mu
         double precision, dimension(info%ncluster_A) :: sigma
 
-        integer :: n_A
         character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_tail
 
         ! Get the number of active clusters
-        n_A = info%ncluster_A
-        write(fmt_head,'("(",I0,"(""_""))")') 7*n_A + 11
-        write(fmt_live,'("(""lives      |"",",I0,"(I5,"" |""))")') n_A
-        write(fmt_phantom,'("(""phantoms   |"",",I0,"(I5,"" |""))")') n_A
-        write(fmt_posterior,'("(""posteriors |"",",I0,"(I5,"" |""))")') n_A
-        write(fmt_tail,'("(",I0,"(""‾""))")') 7*n_A + 11
+        write(fmt_head,'("(",I0,"(""_""))")') 7*RTI%ncluster + 11
+        write(fmt_live,'("(""lives      |"",",I0,"(I5,"" |""))")') RTI%ncluster
+        write(fmt_phantom,'("(""phantoms   |"",",I0,"(I5,"" |""))")') RTI%ncluster
+        write(fmt_posterior,'("(""posteriors |"",",I0,"(I5,"" |""))")') RTI%ncluster
+        write(fmt_tail,'("(",I0,"(""‾""))")') 7*RTI%ncluster + 11
 
 
         if (settings%feedback>=1) then
-            write(stdout_unit,'("nposterior =",  I8                   )') nposterior(0)
-            write(stdout_unit,'("ncluster   = ", I7                   )') n_A
-            write(stdout_unit,'("nclustertot= ", I7                   )') n_A+info%ncluster_P
+            write(stdout_unit,'("ncluster  =",  I8                   )') RTI%ncluster
             write(stdout_unit,fmt_head)
-            write(stdout_unit,fmt_live)  info%n(:n_A)
-            write(stdout_unit,fmt_phantom)  nphantom(:n_A)
-            if(settings%calculate_posterior) write(stdout_unit,fmt_posterior)  nposterior(1:n_A)
+            write(stdout_unit,fmt_live)  RTI%nlive
+            write(stdout_unit,fmt_phantom)  nphantom(:RTI%ncluster)
+            if(settings%calculate_posterior) write(stdout_unit,fmt_posterior)  nposterior(1:RTI%ncluster)
             write(stdout_unit,fmt_tail)
             write(stdout_unit,'("ndead      =",  I8                   )') ndead
             if(settings%calculate_posterior) &

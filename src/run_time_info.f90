@@ -15,7 +15,7 @@ module run_time_module
             integer :: nlike
 
             !> The number currently evolving clusters
-            integer :: nclusters
+            integer :: ncluster
             !> The number of live points in each cluster
             integer, allocatable, dimension(:) :: nlive
             !> The number of phantom points in each cluster
@@ -165,7 +165,7 @@ module run_time_module
                 )
 
         ! global evidence volume cross correlation p/=q
-        do q=1,RTI%nclusters
+        do q=1,RTI%ncluster
             if(p/=q) call logincexp( RTI%logZXp(q) , RTI%logXpXq(p,q)+ logL - lognp1 )
         end do
 
@@ -186,7 +186,7 @@ module run_time_module
         RTI%logXpXq(p,p) = RTI%logXpXq(p,p) + lognp - lognp2
 
         ! Local volume cross correlation (p=q)
-        do q=1,RTI%nclusters
+        do q=1,RTI%ncluster
             if(p/=q) then
                 RTI%logXpXq(p,q) = RTI%logXpXq(p,q) + lognp - lognp1
                 RTI%logXpXq(q,p) = RTI%logXpXq(q,p) + lognp - lognp1
@@ -211,7 +211,7 @@ module run_time_module
         double precision, dimension(settings%nDims) :: mean ! The mean of a given cluster
 
         ! For each cluster:
-        do i_cluster = 1,RTI%nclusters
+        do i_cluster = 1,RTI%ncluster
             ! Calculate the mean
             mean = ( sum(RTI%live(settings%h0:settings%h1,1:RTI%nlive(i_cluster),i_cluster),dim=2) &
                     + sum(RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster),dim=2) ) &

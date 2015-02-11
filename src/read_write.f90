@@ -96,11 +96,11 @@ module read_write_module
         write(write_resume_unit,'("=== Total number of likelihood calls ===")')                    
         write(write_resume_unit,fmt_int) RTI%nlike
         write(write_resume_unit,'("=== Number of clusters ===")')                    
-        write(write_resume_unit,fmt_int) RTI%nclusters
+        write(write_resume_unit,fmt_int) RTI%ncluster
 
 
         ! write number of live and phantom points
-        write(fmt_int,'("(",I0,A,")")') RTI%nclusters,INT_FMT   ! define the integer array format
+        write(fmt_int,'("(",I0,A,")")') RTI%ncluster,INT_FMT   ! define the integer array format
 
         write(write_resume_unit,'("=== Number of live points in each cluster ===")')                    
         write(write_resume_unit,fmt_int) RTI%nlive               ! number of live points
@@ -116,7 +116,7 @@ module read_write_module
 
 
 
-        write(fmt_dbl,'("(",I0,A,")")') RTI%nclusters, DB_FMT   ! Initialise the double array format
+        write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster, DB_FMT   ! Initialise the double array format
         write(write_resume_unit,'("=== local volume -- log(<X_p>) ===")')                    
         write(write_resume_unit,fmt_dbl) RTI%logXp
         write(write_resume_unit,'("=== global evidence volume cross correlation -- log(<ZX_p>) ===")')                    
@@ -128,7 +128,7 @@ module read_write_module
         write(write_resume_unit,'("=== local evidence volume cross correlation -- log(<Z_pX_p>) ===")')                    
         write(write_resume_unit,fmt_dbl) RTI%logZpXp
         write(write_resume_unit,'("=== local volume cross correlation -- log(<X_pX_q>) ===")')                    
-        do i_cluster=1,RTI%nclusters
+        do i_cluster=1,RTI%ncluster
             write(write_resume_unit,fmt_dbl) RTI%logXpXq         ! local volume cross correlation
         end do
 
@@ -137,13 +137,13 @@ module read_write_module
 
         ! write live points
         write(write_resume_unit,'("=== live points ===")')                    
-        do i_cluster=1,RTI%nclusters
+        do i_cluster=1,RTI%ncluster
             write(write_resume_unit,fmt_dbl) RTI%live(:,:,i_cluster)
         end do
 
         ! write phantom points
         write(write_resume_unit,'("=== phantom points ===")')                    
-        do i_cluster=1,RTI%nclusters
+        do i_cluster=1,RTI%ncluster
             write(write_resume_unit,fmt_dbl) RTI%phantom(:,:,i_cluster)
         end do
 
@@ -199,17 +199,17 @@ module read_write_module
         read(read_resume_unit,*)                    ! 
         read(read_resume_unit,fmt_int) RTI%nlike    ! number of likelihood calls
         read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) RTI%nclusters! number of clusters
+        read(read_resume_unit,fmt_int) RTI%ncluster! number of clusters
 
         ! Allocate nlive and nphantom arrays based on these
         allocate(                           &
-            RTI%nlive(RTI%nclusters),       &
-            RTI%nphantom(RTI%nclusters),    &
+            RTI%nlive(RTI%ncluster),       &
+            RTI%nphantom(RTI%ncluster),    &
             RTI%nposterior(RTI%nposterior)  &
             )
 
         ! Read in number of live and phantom points
-        write(fmt_int,'("(",I0,A,")")') RTI%nclusters,INT_FMT  ! define the integer array format
+        write(fmt_int,'("(",I0,A,")")') RTI%ncluster,INT_FMT  ! define the integer array format
 
         read(read_resume_unit,*)                               ! 
         read(read_resume_unit,fmt_int) RTI%nlive               ! number of live points
@@ -223,14 +223,14 @@ module read_write_module
 
         ! Allocate the rest of the arrays
         allocate(                                                        &
-            RTI%live(settings%nTotal,settings%nlive,RTI%nclusters),      &
-            RTI%phantom(settings%nTotal,settings%nlive,RTI%nclusters),   &
-            RTI%logXp(RTI%nclusters),                                    &
-            RTI%logZXp(RTI%nclusters),                                   &
-            RTI%logZp(RTI%nclusters),                                    &
-            RTI%logZp2(RTI%nclusters),                                   &
-            RTI%logZpXp(RTI%nclusters),                                  &
-            RTI%logXpXq(RTI%nclusters,RTI%nclusters),                    &
+            RTI%live(settings%nTotal,settings%nlive,RTI%ncluster),      &
+            RTI%phantom(settings%nTotal,settings%nlive,RTI%ncluster),   &
+            RTI%logXp(RTI%ncluster),                                    &
+            RTI%logZXp(RTI%ncluster),                                   &
+            RTI%logZp(RTI%ncluster),                                    &
+            RTI%logZp2(RTI%ncluster),                                   &
+            RTI%logZpXp(RTI%ncluster),                                  &
+            RTI%logXpXq(RTI%ncluster,RTI%ncluster),                    &
             )
 
 
@@ -243,7 +243,7 @@ module read_write_module
 
 
 
-        write(fmt_dbl,'("(",I0,A,")")') RTI%nclusters, DB_FMT  ! Initialise the double array format
+        write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster, DB_FMT  ! Initialise the double array format
         read(read_resume_unit,*)                               ! 
         read(read_resume_unit,fmt_dbl) RTI%logXp               ! local volume estimate
         read(read_resume_unit,*)                               ! 
@@ -255,7 +255,7 @@ module read_write_module
         read(read_resume_unit,*)                               ! 
         read(read_resume_unit,fmt_dbl) RTI%logZpXp             ! local evidence volume cross correlation
         read(read_resume_unit,*)                               ! 
-        do i_cluster=1,RTI%nclusters
+        do i_cluster=1,RTI%ncluster
             read(read_resume_unit,fmt_dbl) RTI%logXpXq         ! local volume cross correlation
         end do
 
@@ -264,13 +264,13 @@ module read_write_module
 
         ! Read in live points
         read(read_resume_unit,*)                               
-        do i_cluster=1,RTI%nclusters
+        do i_cluster=1,RTI%ncluster
             read(read_resume_unit,fmt_dbl) RTI%live(:,:,i_cluster)
         end do
 
         ! Read in phantom points
         read(read_resume_unit,*)                               
-        do i_cluster=1,RTI%nclusters
+        do i_cluster=1,RTI%ncluster
             read(read_resume_unit,fmt_dbl) RTI%phantom(:,:,i_cluster)
         end do
 
@@ -279,13 +279,13 @@ module read_write_module
 
 
         ! Allocate the posterior array if we're calculating this
-        if(settings%calculate_posterior) allocate(RTI%posterior(settings%nTotal,settings%nlive,RTI%nclusters))
+        if(settings%calculate_posterior) allocate(RTI%posterior(settings%nTotal,settings%nlive,RTI%ncluster))
         RTI%nposterior = 0 ! Initialise number of posterior points at 0
 
         ! Allocate the cholesky and covmat arrays
         allocate(                                                      &
-            RTI%cholesky(settings%nDims,settings%nDims,RTI%nclusters), &
-            RTI%covmat(settings%nDims,settings%nDims,RTI%nclusters)    &
+            RTI%cholesky(settings%nDims,settings%nDims,RTI%ncluster), &
+            RTI%covmat(settings%nDims,settings%nDims,RTI%ncluster)    &
             )
 
     end subroutine read_resume_file
