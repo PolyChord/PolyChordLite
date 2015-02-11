@@ -53,50 +53,39 @@ module nested_sampling_module
         logical :: more_samples_needed
 
         ! The new-born baby points
-        double precision, dimension(settings%nTotal,settings%num_babies)   :: baby_points
+        double precision, dimension(settings%nTotal,settings%num_babies) :: baby_points
 
         ! Point to seed a new one from
-        double precision, dimension(settings%nTotal)   :: seed_point
+        double precision, dimension(settings%nTotal) :: seed_point
 
-        integer :: total_likelihood_calls
+        ! Cholesky matrix to send
+        double precision, dimension(settings%nDims,settings%nDims)   :: seed_point
 
-        integer :: ndead
 
-#ifdef MPI
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
-        integer :: send_start
-        integer :: i_slave
-        logical :: slave_sending
+        logical :: linear_mode ! Whether to run in linear mode if nprocs==1
+        logical :: resume      ! Whether to resume from file
+
+
         integer :: nprocs
-#endif
         integer :: myrank
         integer :: root
-        logical :: linear_mode
 
         integer :: i_cluster
         integer :: clusters(settings%nlive)
         integer :: num_new_clusters
         double precision, dimension(settings%nlive,settings%nlive) :: similarity_matrix
 
-
-
-        ! This is an incubation stack for babies generated in parallell
-        double precision, allocatable, dimension(:,:,:) :: baby_incubator
-        integer :: nincubator
-        integer :: i_incubator
-
-        integer :: i_dims
-
-
 #ifdef MPI
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+        integer :: i_slave
+
         ! MPI initialisation
-        
         nprocs = get_nprocs(mpi_communicator)         ! Get the number of MPI processes
         myrank = get_rank(mpi_communicator)           ! Get the identity of this process
-        root   = assign_root(myrank,mpi_communicator) ! Assign the root process
+        root   = assign_root(myrank,mpi_communicator) ! Assign the root process as the minimum integer
 
-        send_start  = nprocs-1  ! Initialise the starting iterator         !--- consider revising
 #else 
+
         ! non-MPI initialisation
         root=0      ! Define root node
         myrank=root ! set the only node's rank to be the root
@@ -105,45 +94,31 @@ module nested_sampling_module
 
         linear_mode = nprocs==1 ! Run in linear mode if only one process
 
-        if(myrank==root) then
-            ! ------------------------------------ !
-            call write_opening_statement(settings) 
-            ! ------------------------------------ !
+        if(myrank==root) call write_opening_statement(settings) 
 
-            !--- consider revising
-            ! Allocate the baby incubator to be an array of live + phantom points the size
-            ! of the number of slaves.
-            ! Note that it in linear mode (nprocs==1) there is '1 slave' -- the
-            ! single node is both master and slave.
-            allocate(baby_incubator(settings%nTotal,settings%num_babies,(max(1,nprocs-1))))
-            nincubator=0
-        end if !(myrank==root)
-
-
-        !======= 0) Read resume file on root =========================== 
-        if(myrank==root) then
-
-            ! Check if we actually want to resume
-            resume = settings%read_resume .and. resume_file_exists(settings)
-
-            if(resume) call read_resume_file(settings,RTI)
-
-        end if !(myrank==root)
 
 
 
         !======= 1) Initialisation =====================================
 
-        if (.not. resume) then
+        ! Check if we actually want to resume
+        resume = settings%read_resume .and. resume_file_exists(settings)
 
-            ! Delete any existing files
-            if(myrank==root) call delete_files(settings)
+        if (resume) then 
 
+            ! Read the resume file on root
+            if(myrank==root) call read_resume_file(settings,RTI) 
+
+        else 
+            
             ! Intialise the run by setting all of the relevant run time info, and generating live points
             call GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_communicator,nprocs,myrank,root)
 
             ! Write a resume file (as the generation of live points can be intensive)
-            if(myrank==root) write_resume_file(settings,RTI)
+            if(myrank==root.and.settings%write_resume) then
+                call delete_files(settings)     ! Delete any existing files
+                write_resume_file(settings,RTI) ! Write a new resume file
+            end if
 
         end if !(.not.resume)
 
@@ -151,10 +126,8 @@ module nested_sampling_module
         if(myrank==root) then
 
 
-            ! Calculate the covariance matrices
-            covmats = calc_covmats(settings,info,live_points,phantom_points,nphantom)
-            ! Calculate the cholesky decomposition
-            choleskys(:,:,:info%ncluster_A) = calc_choleskys(covmats(:,:,:info%ncluster_A))
+            ! --- consider revising
+            call calc_covmats(settings,RTI)
 
             !======= 2) Main loop body =====================================
 
@@ -166,6 +139,7 @@ module nested_sampling_module
             more_samples_needed = .true.
 
             ! Delete the first outer point
+            !---consider revising
             call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
 
 
@@ -176,7 +150,7 @@ module nested_sampling_module
 
                 if(linear_mode) then
 
-                    ! Generate a seed point
+                    ! Generate a seed point --- update this
                     seed_point = GenerateSeed(settings,info,live_points,i_cluster)
 
                     ! Choose the cholesky decomposition for the cluster
@@ -185,170 +159,119 @@ module nested_sampling_module
                     ! Generate a new set of points within the likelihood bound of the late point
                     baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
-                    ! Add these baby points to the incubator
-                    nincubator=1
-                    baby_incubator(:,:,nincubator) = baby_points
-
+#ifdef MPI
                 else !(.not.linear_mode)
 
-#ifdef MPI
                     ! Recieve any new baby points from any slave currently sending
+                    i_slave = catch_babies(baby_points,mpi_communicator)
 
-                    ! Loop through all the slaves
-                    nincubator=0
-                    do i_slave=1,nprocs-1
-                        ! Use MPI_IPROBE to see if the slave at i_slave is sending
-                        ! If it is, the logical variable 'slave_sending' is true
-                        call MPI_IPROBE(i_slave,MPI_ANY_TAG,mpi_communicator,slave_sending,mpi_status,mpierror)
-
-                        if(slave_sending) then
-                            ! If this slave is sending, then recieve the newly generated baby points
-                            call MPI_RECV(baby_points,settings%nTotal*settings%num_babies,&
-                                MPI_DOUBLE_PRECISION,i_slave,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
-
-                            ! If these baby points aren't nonsense (i.e. the first send) ...
-                            if(mpi_status(MPI_TAG)/=tag_run_no_points) then
-                                ! Add these points to the incubator
-                                nincubator=nincubator+1
-                                baby_incubator(:,:,nincubator) = baby_points
-                            end if
-
-                            ! Now generate a new seed point
-                            seed_point = GenerateSeed(settings,info,live_points,i_cluster)
-
-                            ! Send the seed point back to this slave
-                            call MPI_SEND(seed_point,settings%nTotal,MPI_DOUBLE_PRECISION,i_slave,tag_run_new_seed,mpi_communicator,mpierror)
-
-                            ! Choose the cholesky decomposition for the cluster
-                            cholesky = choleskys(:,:,i_cluster)
-
-                            ! Send the cholesky decomposition
-                            call MPI_SEND(cholesky,settings%nDims*settings%nDims,MPI_DOUBLE_PRECISION,i_slave,tag_run_new_cholesky,mpi_communicator,mpierror)
-
-                        end if !(slave_sending)
-
-                    end do !(i_slave=1,nprocs-1)
+                    seed_point = GenerateSeed(settings,info,live_points,i_cluster)  ! generate a new seed point --- update this
+                    call throw_seed(seed_point,mpi_communicator,i_slave,.true.)     ! and throw back to slave (true => keep going)
+                    
+                    cholesky = RTI%cholesky(:,:,i_cluster)                 ! Find the cholesky decomp for seed
+                    call throw_cholesky(cholesky,mpi_communicator,i_slave) ! Throw this back to slave
 
 #endif
                 end if !(linear_mode / .not.linear_mode)
 
-
-
-
-                ! Now use the incubation stack to update the evidence,live_points,phantom_points & posterior_array
                 
-                ! Iterate through the incubation stack
-                do i_incubator = 1, nincubator
+                !vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+                !vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+                !vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
-                    ! Save the baby points to a local variable
-                    baby_points = baby_incubator(:,:,i_incubator)
+                ! (2) Add the babies to the array, testing to see if these
+                ! constitute a valid point. 
+                if( add_babies(settings,info,live_points,phantom_points,nphantom,baby_points) ) then
 
-                    ! (2) Add the babies to the array, testing to see if these
-                    ! constitute a valid point. 
-                    if(settings%feedback>=2) write(stdout_unit,'(" Adding babies ")')
-                    if( add_babies(settings,info,live_points,phantom_points,nphantom,baby_points) ) then
+                    ! Record that we have a new dead point
+                    ndead = ndead + 1
 
-                        ! Record that we have a new dead point
-                        ndead = ndead + 1
+                    ! (5) Update the covariance matrix of the distribution of live points
+                    if(mod(ndead,settings%nlive) .eq.0) then
 
-                        ! (5) Update the covariance matrix of the distribution of live points
-                        if(mod(ndead,settings%nlive) .eq.0) then
+                        if(settings%do_clustering) then 
 
-                            if(settings%do_clustering) then 
+                            if(settings%feedback>=2) write(stdout_unit,'(" Doing Clustering ")')
+                            i_cluster=1
+                            do while(i_cluster<=info%ncluster_A)
+                                ! For each active cluster, see if it is further sub-clustered
 
-                                if(settings%feedback>=2) write(stdout_unit,'(" Doing Clustering ")')
-                                i_cluster=1
-                                do while(i_cluster<=info%ncluster_A)
-                                    ! For each active cluster, see if it is further sub-clustered
-
-                                    ! Calculate a similarity matrix
-                                    similarity_matrix(:info%n(i_cluster),:info%n(i_cluster)) &
+                                ! Calculate a similarity matrix
+                                similarity_matrix(:info%n(i_cluster),:info%n(i_cluster)) &
                                         = calc_similarity_matrix(live_points(settings%h0:settings%h1,:info%n(i_cluster),i_cluster))
 
-                                    ! Do clustering on this matrix
-                                    num_new_clusters = NN_clustering( &
+                                ! Do clustering on this matrix
+                                num_new_clusters = NN_clustering( &
                                         similarity_matrix(:info%n(i_cluster),:info%n(i_cluster)), &
                                         settings%SNN_k,clusters(:info%n(i_cluster)))
 
-                                    ! If we've found new clusters, then we should bifurcate the algorithm at this point
-                                    if(num_new_clusters>1) then
+                                ! If we've found new clusters, then we should bifurcate the algorithm at this point
+                                if(num_new_clusters>1) then
 
-                                        if( num_new_clusters+info%ncluster_A>settings%ncluster ) then
-#ifdef MPI
-                                            call abort_all(" Too many clusters. Consider increasing settings%ncluster")
-#else
-                                            write(*,'(" Too many clusters. Consider increasing settings%ncluster")')
-                                            stop
-#endif
-                                        else if (num_new_clusters + info%ncluster_T > settings%ncluster*2 ) then
-#ifdef MPI
-                                            call abort_all(" Too many clusters. Consider increasing settings%nclustertot")
-#else
-                                            write(*,'(" Too many clusters. Consider increasing settings%nclustertot")')
-                                            stop
-#endif
-                                        else
-                                            call create_new_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
-
-                                            write(stdout_unit,'( I8, " clusters found at iteration ", I8)') info%ncluster_A, ndead
-                                        end if
+                                    if( num_new_clusters+info%ncluster_A>settings%ncluster ) then
+                                        call halt_program(" Too many clusters. Consider increasing settings%ncluster")
+                                    else if (num_new_clusters + info%ncluster_T > settings%ncluster*2 ) then
+                                        call halt_program(" Too many clusters. Consider increasing settings%nclustertot")
                                     else
-                                        ! Otherwise move on to the next cluster
-                                        i_cluster=i_cluster+1
+                                        call create_new_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
+
+                                        write(stdout_unit,'( I8, " clusters found at iteration ", I8)') info%ncluster_A, ndead
                                     end if
+                                else
+                                    ! Otherwise move on to the next cluster
+                                    i_cluster=i_cluster+1
+                                end if
 
 
-                                end do
-
-                            end if
-                            ! Calculate the covariance matrices
-                            covmats = calc_covmats(settings,info,live_points,phantom_points,nphantom)
-                            ! Calculate the cholesky decomposition
-                            choleskys = calc_choleskys(covmats)
+                            end do
 
                         end if
-
-
-
-
-
-
-                        ! (3) Feedback to command line every nlive iterations
-                        ! Test to see if we need to finish
-                        more_samples_needed =  (live_logZ(settings,info,live_points) > log(settings%precision_criterion) + info%logevidence ) 
-
-                        ! (4) Update the resume and posterior files every update_resume iterations, or at program termination
-                        if ( (mod(ndead,settings%update_resume) == 0) .or.  (more_samples_needed.eqv..false.) )  then
-
-
-                            ! ---------------------------------------------------------------------- !
-                            call write_intermediate_results(settings,info,ndead,nphantom,nposterior,&
-                                mean_likelihood_calls(settings,info,live_points) ) 
-                            ! ---------------------------------------------------------------------- !
-
-                            if(settings%feedback>=2) write(stdout_unit,'(" Writing resume files ")')
-                            if(settings%calculate_posterior) call write_posterior_file(settings,info,posterior_points,nposterior)  
-                            if(settings%write_resume)        call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
-                                                                                    ndead,total_likelihood_calls)
-                            if(settings%write_live)          call write_phys_live_points(settings,info,live_points)
-                            call write_stats_file(settings,info,ndead) 
-
-                        end if
-
-                        ! If we've put a limit on the maximum number of iterations, then
-                        ! check to see if we've reached this
-                        if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
-
-
-
-                        ! (6] delete the next outer point.
-                        if(settings%feedback>=2) write(stdout_unit,'(" Deleting outer point ")')
-                        call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
-
+                        ! Calculate the covariance matrices
+                        covmats = calc_covmats(settings,info,live_points,phantom_points,nphantom)
+                        ! Calculate the cholesky decomposition
+                        choleskys = calc_choleskys(covmats)
 
                     end if
 
-                end do
+
+
+
+
+
+                    ! (3) Feedback to command line every nlive iterations
+                    ! Test to see if we need to finish
+                    more_samples_needed =  (live_logZ(settings,info,live_points) > log(settings%precision_criterion) + info%logevidence ) 
+
+                    ! (4) Update the resume and posterior files every update_resume iterations, or at program termination
+                    if ( (mod(ndead,settings%update_resume) == 0) .or.  (more_samples_needed.eqv..false.) )  then
+
+
+                        ! ---------------------------------------------------------------------- !
+                        call write_intermediate_results(settings,info,ndead,nphantom,nposterior,&
+                                mean_likelihood_calls(settings,info,live_points) ) 
+                        ! ---------------------------------------------------------------------- !
+
+                        if(settings%feedback>=2) write(stdout_unit,'(" Writing resume files ")')
+                        if(settings%calculate_posterior) call write_posterior_file(settings,info,posterior_points,nposterior)  
+                        if(settings%write_resume)        call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
+                                ndead,total_likelihood_calls)
+                        if(settings%write_live)          call write_phys_live_points(settings,info,live_points)
+                        call write_stats_file(settings,info,ndead) 
+
+                    end if
+
+                    ! If we've put a limit on the maximum number of iterations, then
+                    ! check to see if we've reached this
+                    if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
+
+
+
+                    ! (6] delete the next outer point.
+                    if(settings%feedback>=2) write(stdout_unit,'(" Deleting outer point ")')
+                    call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
+
+
+                end if
 
             end do ! End main loop
 
@@ -360,15 +283,13 @@ module nested_sampling_module
                 ! Kill off the final slaves
                 ! If we're done, then clean up by receiving the last piece of
                 ! data from each node (and throw it away) and then send a kill signal back to it
-                do i_slave=1,nprocs-1
+                do active_slaves=nprocs-1,1,-1
 
                     ! Recieve baby point from slave i_slave
-                    call MPI_RECV(baby_points,settings%nTotal*settings%num_babies, &
-                        MPI_DOUBLE_PRECISION,i_slave,tag_run_new_points,mpi_communicator,mpi_status,mpierror)
+                    i_slave = catch_babies(baby_points,mpi_communicator)
 
-                    ! Send kill signal to slave i_slave
-                    call MPI_SEND(seed_point,settings%nTotal, &
-                        MPI_DOUBLE_PRECISION,i_slave,tag_run_end,mpi_communicator,mpierror)
+                    ! Send kill signal to slave i_slave (note that we no longer care about seed_point, so we'll just use the last one
+                    call throw_seed(seed_point,mpi_communicator,i_slave,.false.) 
 
                 end do
 
@@ -396,8 +317,8 @@ module nested_sampling_module
 
 
 
-        else !(myrank/=root)
 #ifdef MPI
+        else !(myrank/=root)
 
             ! These are the slave tasks
             ! -------------------------
@@ -408,38 +329,29 @@ module nested_sampling_module
             ! 2) recieve a cholesky decomposition from the master
             ! 3) using the seed and cholesky, generate a new set of baby points
             ! 4) Send the baby points back to the master
-            !
-            ! There are a couple of subtleties, in that 
-            ! BEGIN) at the beginning it needs to send a signal to the master that it's ready to start recieving
-            ! END)   at the end it needs to detect when the master has told it the run has finished
 
 
             ! BEGIN) On the first loop, send a nonsense set of baby_points
-            ! along with the tag STARTTAG to indicate that we're ready
-            ! to start receiving
+            ! to indicate that we're ready to start receiving
+
             baby_points = 0d0
-            call MPI_SEND(baby_points,settings%nTotal*settings%num_babies, &
-                MPI_DOUBLE_PRECISION,root,tag_run_no_points,mpi_communicator,mpierror)
+            baby_points(settings%l0) = logzero
 
-            do while(.true.)
+            call throw_babies(baby_points,mpi_communicator,root)
 
-                ! 1) Listen for a seed point being sent by the master
-                call MPI_RECV(seed_point,settings%nTotal, &
-                    MPI_DOUBLE_PRECISION,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
+            ! 1) Listen for a seed point being sent by the master
+            !    Note that this also tests for a kill signal sent by the master
+            do while(catch_seed(seed_point,mpi_communicator,root))
 
-                ! END) If we receive a kill signal, then exit the loop
-                if(mpi_status(MPI_TAG)==tag_run_end) exit
 
                 ! 2) Listen for the cholesky decomposition sent by the master
-                call MPI_RECV(cholesky,settings%nDims*settings%nDims, &
-                    MPI_DOUBLE_PRECISION,root,tag_run_new_cholesky,mpi_communicator,mpi_status,mpierror)
+                call catch_cholesky(cholesky,mpi_communicator,root) 
 
                 ! 3) Generate a new set of baby points
                 baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
 
                 ! 4) Send the baby points back
-                call MPI_SEND(baby_points,settings%nTotal*settings%num_babies, &
-                    MPI_DOUBLE_PRECISION,root,tag_run_new_points,mpi_communicator,mpierror)
+                call throw_babies(baby_points,mpi_communicator,root)
 
             end do
 

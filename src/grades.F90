@@ -1,7 +1,4 @@
 module grades_module
-#ifdef MPI
-    use mpi_module, only: abort_all
-#endif
     implicit none
 
     type :: parameter_grades
@@ -20,6 +17,7 @@ module grades_module
     contains
 
     subroutine allocate_grades(grades, grade_information)
+        use abort_module
         implicit none
         type(parameter_grades),intent(out) :: grades
         integer,intent(in),optional,dimension(:) :: grade_information
@@ -40,13 +38,8 @@ module grades_module
                 )
 
             do i=2,size(grade_information)
-#ifdef MPI
-                if( grade_information(i)<grade_information(i-1) ) call abort_all&
-                    (" Parameters must be ordered in terms of grade, lowest to highest")
-#else
-                write(*,'(" Parameters must be ordered in terms of grade, lowest to highest")')
-                stop
-#endif
+                if( grade_information(i)<grade_information(i-1) ) &
+                        call halt_program(" Parameters must be ordered in terms of grade, lowest to highest")
             end do
             do i=grades%min_grade,grades%max_grade
                 grades%grade_index(i:i)=minloc(grade_information,mask=grade_information==i)

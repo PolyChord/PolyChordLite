@@ -81,6 +81,7 @@ module generate_module
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating
+        use abort_module
 
         implicit none
         
@@ -201,10 +202,10 @@ module generate_module
 
                     if(i_live<settings%nlive) then
                         ! If we still need more points, send a signal to have another go
-                        call request_point(slave_id,mpi_communicator)
+                        call request_point(mpi_communicator,slave_id)
                     else
                         ! Otherwise, send a signal to stop
-                        call done_generating(slave_id,mpi_communicator)
+                        call done_generating(mpi_communicator,slave_id)
                         
                         active_slaves=active_slaves-1 ! decrease the active slave counter
                     end if
@@ -242,10 +243,10 @@ module generate_module
 
 #else
             ! If we don't have MPI configured, we can't generate in parallel
-            call abort('generate error: cannot have nprocs>1 without MPI')
+            call halt_program('generate error: cannot have nprocs>1 without MPI')
 #endif
         else !(nprocs<0)
-            call abort('generate error: nprocs<0')
+            call halt_program('generate error: nprocs<0')
         end if !(nprocs case)
 
 

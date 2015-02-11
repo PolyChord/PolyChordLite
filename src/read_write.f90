@@ -187,12 +187,12 @@ module read_write_module
         ! number of dimensions
         read(read_resume_unit,*)                    
         read(read_resume_unit,fmt_int) i_temp       
-        if(settings%nDims/=i_temp) call abort('resume error: nDims does not match')
+        if(settings%nDims/=i_temp) call halt_program('resume error: nDims does not match')
 
         ! number of derived parameters
         read(read_resume_unit,*)                    
         read(read_resume_unit,fmt_int) i_temp       
-        if(settings%nDerived/=i_temp) call abort('resume error: nDerived does not match')
+        if(settings%nDerived/=i_temp) call halt_program('resume error: nDerived does not match')
 
         read(read_resume_unit,*)                    ! 
         read(read_resume_unit,fmt_int) RTI%ndead    ! number of dead points
@@ -218,7 +218,7 @@ module read_write_module
 
 
         ! Check to see if this is consistent with settings
-        if(settings%nlive/=sum(RTI%nlive)) call abort('resume error: nlive does not match')
+        if(settings%nlive/=sum(RTI%nlive)) call halt_program('resume error: nlive does not match')
 
 
         ! Allocate the rest of the arrays

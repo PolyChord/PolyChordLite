@@ -5,49 +5,18 @@ module mpi_module
 
     integer :: mpierror
 
-    integer, parameter :: STARTTAG=0
-    integer, parameter :: RUNTAG=1
-    integer, parameter :: ENDTAG=2
+    integer, parameter :: tag_gen_point=1
+    integer, parameter :: tag_gen_request=2
+    integer, parameter :: tag_gen_stop=3
 
-    integer, parameter :: tag_run_new_points=0
-    integer, parameter :: tag_run_no_points=2
-    integer, parameter :: tag_run_new_seed=3
-    integer, parameter :: tag_run_new_cholesky=4
-    integer, parameter :: tag_run_end=5
-
-
-
-    integer, parameter :: tag_gen_continue=6
-    integer, parameter :: tag_gen_stop=7
-    integer, parameter :: tag_gen_new_point=8
+    integer, parameter :: tag_run_baby=4
+    integer, parameter :: tag_run_seed=5
+    integer, parameter :: tag_run_cholesky=6
+    integer, parameter :: tag_run_stop=7
 
 
 
     contains
-
-    subroutine abort_all(message)
-        use utils_module, only: stdout_unit
-        implicit none
-
-        character(LEN=*), intent(in), optional :: message
-
-        integer :: errorcode
-        integer :: mpierror
-
-        integer :: strlen
-
-
-        if (present(message)) then
-            strlen = len(trim(adjustl(message)))
-            write(stdout_unit,'( 20("=") )')
-            write(stdout_unit,'(A)') trim(adjustl(message))
-            write(stdout_unit,'( 20("=") )')
-        end if 
-
-
-        call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
-
-    end subroutine abort_all
 
 
     !> Procedure to get the number of mpi processors
@@ -107,7 +76,27 @@ module mpi_module
                 mpierror           &!error flag
                 )
 
-    end function assign_root
+    end function get_root
+
+    !============== Throwing and catching routines ====================
+    ! There are four points in the algorithm where arrays need to be transferred 
+    ! between master and slaves
+    !
+    ! 1) live point during initial generation
+    !     any slave    ---->  root
+    !     throw_point         catch_point
+    !
+    ! 2) baby points for use in nested sampling
+    !     any slave   ----> root
+    !     throw_babies      catch_babies
+    !
+    ! 3) seed point for generation of babies
+    !     root      ----> specific slave
+    !     throw_seed      catch_seed
+    ! 
+    ! 4) cholesky matrix defining sampling space
+    !     root      ----> specific slave
+    !     throw_cholesky  catch_cholesky
 
 
     !> Root catch
@@ -117,24 +106,74 @@ module mpi_module
     function catch_point(live_point,mpi_communicator) result(slave_id)
         implicit none
 
-        !> The caught live point
-        double precision,intent(out),dimension(:) :: live_point
+        double precision,intent(out),dimension(:) :: live_point !> The caught live point
+        integer, intent(in) :: mpi_communicator                 !> The mpi communicator
 
-        !> The mpi communicator
-        integer, intent(in) :: mpi_communicator
+        integer :: slave_id ! slave identifier
 
-        ! slave identifier
-        integer :: slave_id
-
-        ! status identifier
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status ! status identifier
 
         call MPI_RECV(&
                 live_point,&
                 size(live_point), &
                 MPI_DOUBLE_PRECISION,&
                 MPI_ANY_SOURCE,&
-                tag_gen_new_point,&
+                tag_gen_point,&
+                mpi_communicator,&
+                mpi_status,&
+                mpierror&
+                )
+
+        slave_id = mpi_status(MPI_SOURCE) ! Pass on the slave id
+
+    end function catch_point
+
+
+    !> Slave throws a point to the master
+    !!
+    !! This a process by which a slave node 'throws' a point to the root
+    subroutine throw_point(live_point,mpi_communicator,root)
+        implicit none
+
+        double precision,intent(in),dimension(:) :: live_point !> live point to throw
+        integer, intent(in) :: mpi_communicator                !> mpi communicator
+        integer, intent(in) :: root                            !> 
+
+        call MPI_SEND(&
+                live_point,&
+                size(live_point),&
+                MPI_DOUBLE_PRECISION,&
+                root,&
+                tag_gen_point,&
+                mpi_communicator,&
+                mpierror&
+                )
+
+    end subroutine throw_point
+
+
+
+
+
+
+
+    !> Master catches babies thrown by any slave, and returns the slave identity that did the throwing
+    function catch_babies(baby_points,mpi_communicator) result(slave_id)
+        implicit none
+
+        double precision,intent(out),dimension(:,:) :: baby_points !> The babies to be caught
+        integer, intent(in) :: mpi_communicator                    !> The mpi communicator
+
+        integer :: slave_id ! slave identifier
+
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status ! status identifier
+    
+        call MPI_RECV(&
+                baby_points,&
+                size(baby_points,1)*size(baby_points,2),&
+                MPI_DOUBLE_PRECISION,&
+                MPI_ANY_SOURCE,&
+                tag_run_baby,&
                 mpi_communicator,&
                 mpi_status,&
                 mpierror&
@@ -143,41 +182,158 @@ module mpi_module
         ! Pass on the slave id
         slave_id = mpi_status(MPI_SOURCE)
 
-    end function catch_point
+    end function catch_babies
 
-
-    !> Slave throw
-    !!
-    !! This a process by which a slave node 'throws' a point to the root
-    subroutine throw_point(live_point,mpi_communicator,root) result(slave_id)
+    !> Slave throws babies to the master
+    subroutine throw_babies(baby_points,mpi_communicator,root)
         implicit none
 
-        !> The caught live point
-        double precision,intent(out),dimension(:) :: live_point
-
-        !> The mpi communicator
-        integer, intent(in) :: mpi_communicator
-        integer, intent(in) :: root
-
-        ! slave identifier
-        integer :: slave_id
+        double precision,intent(in),dimension(:,:) :: baby_points !> The babies to be thrown
+        integer, intent(in) :: mpi_communicator                   !> The mpi communicator
+        integer, intent(in) :: root                               !> root node to throw to
 
         call MPI_SEND(&
-                live_point,&
-                size(live_point),&
+                baby_points,&
+                size(baby_points,1)*size(baby_points,2),&
                 MPI_DOUBLE_PRECISION,&
                 root,&
-                tag_gen_new_point,&
+                tag_run_baby,&
                 mpi_communicator,&
                 mpierror&
                 )
 
-    end subroutine throw_point
+    end subroutine throw_babies
+
+
+
+
+
+
+    !> slave catches seed thrown by master
+    function catch_seed(seed_point,mpi_communicator,root) result(more_points_needed)
+        implicit none
+
+        
+        double precision,intent(out),dimension(:) :: seed_point  !> The babies to be caught
+        integer, intent(in) :: mpi_communicator                  !> The mpi communicator
+        integer, intent(in) :: root                              !> The root node
+
+        logical :: more_points_needed ! whether or not we need more points
+
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status ! status identifier
+
+    
+        call MPI_RECV(&
+                seed_point,&
+                size(seed_point),&
+                MPI_DOUBLE_PRECISION,&
+                root,&
+                MPI_ANY_TAG,&
+                mpi_communicator,&
+                mpi_status,&
+                mpierror&
+                )
+        if(mpi_status(MPI_TAG) == tag_run_stop ) then
+            more_points_needed = .false.
+        else if(mpi_status(MPI_TAG) == tag_run_seed) then
+            more_points_needed = .true.
+        else
+            call halt_program('slave error: unrecognised tag')
+        end if
+
+    end function catch_seed
+
+
+
+    !> root throws seed to slave
+    subroutine throw_seed(seed_point,mpi_communicator,slave_id,keep_going)
+        implicit none
+
+        double precision,intent(in),dimension(:,:) :: seed_point !> Babies to be thrown
+        integer, intent(in) :: mpi_communicator                  !> mpi handle
+        integer, intent(in) :: slave_id                          !> identity of target slave
+        logical, intent(in) :: keep_going                        !> Further signal whether to keep going 
+
+        integer :: tag ! tag variable to
+
+        tag = tag_run_stop                 ! Default tag is stop tag
+        if(keep_going) tag = tag_run_seed  ! If we want to keep going then change this to the seed tag
+
+
+        call MPI_SEND(&
+                seed_point,&
+                size(seed_point),&
+                MPI_DOUBLE_PRECISION,&
+                slave_id,&
+                tag,&
+                mpi_communicator,&
+                mpierror&
+                )
+
+    end subroutine throw_seed
+
+
+
+    !> slave catches cholesky matrix thrown by master
+    subroutine catch_cholesky(cholesky,mpi_communicator,root)
+        implicit none
+
+        
+        double precision,intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
+        integer, intent(in) :: mpi_communicator                  !> mpi communicator
+        integer, intent(in) :: root                              !> root node to be caught from
+
+        integer, dimension(MPI_STATUS_SIZE) :: mpi_status        ! status identifier
+    
+        call MPI_RECV(&
+                cholesky,&
+                size(cholesky,1)*size(cholesky,1),&
+                MPI_DOUBLE_PRECISION,&
+                root,&
+                tag_run_cholesky,&
+                mpi_communicator,&
+                mpi_status,&
+                mpierror&
+                )
+
+    end subroutine catch_cholesky
+
+
+
+    !> root throws cholesky to slave
+    subroutine throw_cholesky(cholesky,mpi_communicator,slave_id)
+        implicit none
+
+        double precision,intent(in),dimension(:,:) :: cholesky !> cholesky to be thrown
+        integer, intent(in) :: mpi_communicator                !> mpi communicator
+        integer, intent(in) :: slave_id                        !> identity of target slave
+
+        call MPI_SEND(&
+                cholesky,&
+                size(cholesky,1)*size(cholesky,2),&
+                MPI_DOUBLE_PRECISION,&
+                slave_id,&
+                tag_run_cholesky,&
+                mpi_communicator,&
+                mpierror&
+                )
+
+    end subroutine throw_cholesky
+
+
+    !============== Pure messaging routines ===========================
+    ! During initial live point generation, the master needs to signal to the slaves
+    ! whether or not to keep generating live points, or whether to stop
+    !
+    ! master         ----> slave
+    ! request_point        more_points_needed -> true
+    ! no_more_points       more_points_needed -> false
+    ! 
 
     !> Request point
     !!
     !! This subroutine is used by the root node to request a new live point
-    subroutine request_point(slave_id,mpi_communicator)
+    subroutine request_point(mpi_communicator,slave_id)
         implicit none
         integer, intent(in) :: mpi_communicator !> mpi handle
         integer, intent(in) :: slave_id         !> Slave to request a new point from
@@ -190,7 +346,7 @@ module mpi_module
                 0,&                  ! size of nothing
                 MPI_INT,&            ! sending no integers
                 slave_id,&           ! process id to send to
-                tag_gen_continue,&   ! continuation tag
+                tag_gen_request,&    ! continuation tag
                 mpi_communicator,&   ! mpi handle
                 mpierror&            ! error flag
                 )
@@ -201,7 +357,7 @@ module mpi_module
     !> No more points please
     !!
     !! This subroutine is used by the root node to signal that no more points are required
-    subroutine no_more_points(slave_id,mpi_communicator)
+    subroutine no_more_points(mpi_communicator,slave_id)
         implicit none
         integer, intent(in) :: mpi_communicator !> mpi handle
         integer, intent(in) :: slave_id         !> Slave to request a new point from
@@ -214,7 +370,7 @@ module mpi_module
                 0,&                  ! size of nothing
                 MPI_INT,&            ! sending no integers
                 slave_id,&           ! process id to send to
-                tag_gen_continue,&   ! continuation tag
+                tag_gen_stop,&       ! continuation tag
                 mpi_communicator,&   ! mpi handle
                 mpierror&            ! error flag
                 )
@@ -225,6 +381,7 @@ module mpi_module
     !!
     !! This subroutine is used by the root node to request a new live point
     function more_points_needed(mpi_communicator,root)
+        use abort_module
         implicit none
         integer, intent(in) :: mpi_communicator !> mpi handle
         integer, intent(in) :: root             !> root to recieve request
@@ -234,30 +391,33 @@ module mpi_module
 
         logical :: more_points_needed !> Whether we need more points or not
 
-        call MPI_RECV(&
-            empty_buffer,&
-            0,&
-            MPI_INT,&
-            root,&
-            MPI_ANY_TAG,&
+        call MPI_RECV(       &
+            empty_buffer,    &
+            0,               &
+            MPI_INT,         &
+            root,            &
+            MPI_ANY_TAG,     &
             mpi_communicator,&
-            mpi_status,&
-            mpierror&
+            mpi_status,      &
+            mpierror         &
             )
 
         ! If we've recieved a kill signal, then exit this loop
         if(mpi_status(MPI_TAG) == tag_gen_stop ) then
             more_points_needed = .false.
-        else if(mpi_status(MPI_TAG) == tag_gen_continue) then
+        else if(mpi_status(MPI_TAG) == tag_gen_request) then
             more_points_needed = .true.
         else
-            call abort('generate error: unrecognised tag')
+            call halt_program('generate error: unrecognised tag')
         end if
 
-
-
-
     end function more_points_needed
+
+
+
+
+
+
 
 
 end module mpi_module

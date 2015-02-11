@@ -25,9 +25,11 @@ FC = mpif90
 # Define the files to be used 
 OBJECTS =                    \
 		  utils.o            \
+		  abort.o            \
 		  mpi_utils.o        \
 		  random_utils.o     \
-		  priors.o grades.o  \
+		  priors.o           \
+          grades.o           \
 		  settings.o         \
 		  run_time_info.o    \
 		  calculate.o        \
