@@ -88,17 +88,6 @@ program main
 
 
 
-    interface
-        function loglikelihood(theta,phi,context)
-            double precision, intent(in),  dimension(:) :: theta
-            double precision, intent(out),  dimension(:) :: phi
-            integer,          intent(in)                 :: context
-            double precision :: loglikelihood
-        end function
-    end interface
-
-
-
     ! ======= (1) Initialisation =======
     ! We need to initialise:
     ! a) mpi threads

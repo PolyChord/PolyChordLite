@@ -23,7 +23,7 @@ module generate_module
     function GenerateSeed(settings,RTI,p) result(seed_point)
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info
-        use random_module,     only: random_integer,random_integer_P
+        use random_module,     only: random_integer,random_integer_P,bernoulli_trial
         use utils_module,      only: logsumexp
         implicit none
 
@@ -51,23 +51,22 @@ module generate_module
         ! 1) Pick cluster in proportion to the set of volume estimates of the active clusters
         p = random_integer_P(probs)
 
-
         ! 2) Pick whether to draw from phantom or live points
-        if(random_real() < RTI%nlive(p) / (RTI%nlive(p) + RTI%nphantom(p) +0d0) ) then
+        if(bernoulli_trial(RTI%nlive(p)+0d0,RTI%nlive(p)+0d0)) then
 
+            ! 3a) Pick a random integer in between 1 and the number of live points in the cluster 'p'
+            seed_choice = random_integer(RTI%nlive(p))
 
+            ! 4a) Select the live point at index 'seed_choice' in cluster 'p' for the seed point
+            seed_point = RTI%live(:,seed_choice,p)
         else
 
+            ! 3b) Pick a random integer in between 1 and the number of phantom points in cluster 'p'
+            seed_choice = random_integer(RTI%nphantom(p))
+
+            ! 4b) Select the phantom point at index 'seed_choice' in cluster 'p' for the seed point
+            seed_point = RTI%phantom(:,seed_choice,p)
         end if
-
-        ! 2) Pick a random integer in between 1 and the number of live points in the chosen cluster
-        seed_choice = random_integer(info%n(p))
-
-        ! 3) Select the live point at index 'seed_choice' in cluster 'p' for the seed point
-        seed_point = live_points(:,seed_choice,p)
-        
-        ! 4) Give the seed point the likelihood contour of cluster  'p'
-        seed_point(settings%l1) = info%logL(p)
 
     end function GenerateSeed
 
@@ -83,10 +82,11 @@ module generate_module
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating
+        use run_time_module,   only: run_time_info
         use abort_module
 
         implicit none
-        
+
         interface
             function loglikelihood(theta,phi,context)
                 double precision, intent(in),  dimension(:) :: theta
@@ -149,7 +149,7 @@ module generate_module
             do while(i_live<=settings%nlive)
 
                 ! Generate a random coordinate
-                live_point(settings%h0:settings%h1,i_live) = random_reals(settings%nDims)
+                live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
 
                 ! Compute physical coordinates, likelihoods and derived parameters
                 call calculate_point( loglikelihood, priors, live_point, settings )
@@ -208,7 +208,7 @@ module generate_module
                     else
                         ! Otherwise, send a signal to stop
                         call done_generating(mpi_communicator,slave_id)
-                        
+
                         active_slaves=active_slaves-1 ! decrease the active slave counter
                     end if
 
@@ -255,10 +255,10 @@ module generate_module
 
         if(myrank==root) then
             ! Set the likelihood contours to logzero for now
-            live_points(settings%l1,:,1) = logzero
+            RTI%live(settings%l1,:,1) = logzero
 
             ! Zero the likelihood calls, as they've now been recorded
-            live_points(settings%nlike,:,1) = 0
+            RTI%live(settings%nlike,:,1) = 0
 
             ! Close the file
             close(write_phys_unit)

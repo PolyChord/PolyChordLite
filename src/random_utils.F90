@@ -165,6 +165,58 @@ module random_module
     ! ===========================================================================================
 
 
+    !>  Bernoulli trials, probability p, or odds ratio p:q for
+    !!
+    !! http://en.wikipedia.org/wiki/Bernoulli_trial
+    !! 
+    !! http://en.wikipedia.org/wiki/Odds#Gambling_odds_versus_probabilities
+    !!
+    !! Returns true with probability p
+    !! Returns true with probability p/(p+q)
+
+    function bernoulli_trials(nDims,p,q)
+        implicit none
+
+        ! The output nDims coordinate
+        integer, intent(in) :: nDims
+        double precision,intent(in) :: p
+        double precision,intent(in),optional :: q
+
+        logical, dimension(nDims) :: bernoulli_trials
+
+        if(present(q)) then
+            bernoulli_trials = random_reals(nDims) < p/(p+q)
+        else
+            bernoulli_trials = random_reals(nDims) < p
+        end if
+
+
+    end function bernoulli_trials
+
+    ! ===========================================================================================
+
+
+    !>  Bernoulli trial (see above)
+
+    function bernoulli_trial(p,q)
+        implicit none
+
+        ! The output nDims coordinate
+        double precision,intent(in) :: p
+        double precision,intent(in),optional :: q
+
+        logical :: bernoulli_trial
+        logical :: bernoulli_trial_vec(1)
+
+        bernoulli_trial_vec = bernoulli_trials(1,p,q)
+        bernoulli_trial = bernoulli_trial_vec(1)
+
+
+    end function bernoulli_trial
+
+    ! ===========================================================================================
+
+
     !>  Random integer between 1 and nmax (inclusive)
 
     function random_integer(nmax)

@@ -221,11 +221,11 @@ module read_write_module
             RTI%live(settings%nTotal,settings%nlive,RTI%ncluster),      &
             RTI%phantom(settings%nTotal,settings%nlive,RTI%ncluster),   &
             RTI%logXp(RTI%ncluster),                                    &
-            RTI%logZXp(RTI%ncluster),                                   &
             RTI%logZp(RTI%ncluster),                                    &
+            RTI%logZXp(RTI%ncluster),                                   &
             RTI%logZp2(RTI%ncluster),                                   &
             RTI%logZpXp(RTI%ncluster),                                  &
-            RTI%logXpXq(RTI%ncluster,RTI%ncluster),                    &
+            RTI%logXpXq(RTI%ncluster,RTI%ncluster)                      &
             )
 
 
