@@ -85,7 +85,7 @@ module feedback_module
         integer, intent(in) :: nlive
 
         if (feedback>=1) then
-            call progress(dble(i_live)/dble(nlive))
+            call progress(dble(i_live)/dble(nlive),100)
         end if
 
     end subroutine write_generating_live_points
@@ -111,31 +111,22 @@ module feedback_module
     !!
     !! Note that you shouldn't put any write statements in between using this
     !! subroutine.
-    subroutine progress(frac,brsz)
+    subroutine progress(frac,bar_size)
         use utils_module,    only: stdout_unit
         implicit none
 
         !> fraction completed
         double precision,intent(in) :: frac
         !> The size of the progress bar
-        integer,intent(in),optional :: brsz
+        integer,intent(in) :: bar_size
 
         
         integer :: percent                    ! the percentage completed
-        character(100) :: bar                 ! the bounds on the progress bar
-        integer :: bar_size                   ! bar size
+        character(bar_size) :: bar                 ! the bounds on the progress bar
         integer :: i                          ! loop variable
 
         character(len=40) :: bar_fmt  ! format string for outputting
 
-
-        if(present(brsz))then
-            ! If a specific bar size is requested set bar_size to brsz
-            bar_size=brsz
-        else
-            ! Otherwise default to 100
-            bar_size=100
-        endif
 
         write(bar_fmt,'("(a1,a",i0,")")') bar_size+7
 
