@@ -259,13 +259,14 @@ module read_write_module
 
 
             ! Add to the new unnormalised posterior file
-            write(write_untxt_unit,fmt_dbl_nposterior) posterior_points(:,i_posterior,0)
+            posterior_point = posterior_points(:,i_posterior,0)
+            write(write_untxt_unit,fmt_dbl_nposterior) posterior_point
 
-            logweight = posterior_points(settings%pos_w,i_posterior,0)-info%logevidence
+            logweight = posterior_point(settings%pos_w)-info%logevidence
 
             if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
                 write(write_txt_unit,fmt_dbl_nposterior_norm) &
-                exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
+                exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1),'GOODBYE'
         end do
 
         ! Close the files
@@ -321,9 +322,10 @@ module read_write_module
                     do i_posterior=1,nposterior(i_cluster)
 
                         ! Add to the new unnormalised posterior file
-                        write(write_untxt_unit,fmt_dbl_nposterior) posterior_points(:,i_posterior,i_cluster)
+                        posterior_point = posterior_points(:,i_posterior,0)
+                        write(write_untxt_unit,fmt_dbl_nposterior) posterior_point
 
-                        logweight = posterior_points(settings%pos_w,i_posterior,i_cluster)-info%logZ(i_cluster)
+                        logweight = posterior_point(settings%pos_w)-info%logZ(i_cluster)
 
                         if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
                             write(write_txt_unit,fmt_dbl_nposterior)   &
