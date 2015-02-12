@@ -291,17 +291,43 @@ module read_write_module
     end subroutine read_resume_file
 
 
+    subroutine write_unnormalised_posterior_file(settings,RTI)
+        use utils_module, only: DB_FMT,fmt_len,write_untxt_unit,read_untxt_unit
+        use settings_module, only: program_settings
+        use run_time_module, only: run_time_info 
+        implicit none
 
-    subroutine write_posterior_file(settings,info,posterior_points,nposterior) 
+        type(program_settings), intent(in) :: settings
+        type(run_time_info),    intent(in) :: RTI
+
+        integer :: i_cluster
+
+        character(len=fmt_len) :: fmt_dbl_nposterior
+
+
+        ! Open the new unormalised .txt file for writing
+        open(write_untxt_unit,file=trim(posterior_file(settings,.false.)), action='write',position='append') 
+
+        write(fmt_dbl_nposterior,'("(",I0,A,")")') settings%nposterior, DB_FMT
+
+        do i_cluster=1,RTI%ncluster
+            write(write_untxt_unit,
+        end do
+
+        close(write_untxt_unit)
+        close(read_untxt_unit)
+
+    end subroutine write_unnormalised_posterior_file
+
+
+    subroutine write_posterior_file(settings,RTI) 
         use utils_module, only: DB_FMT,fmt_len,write_txt_unit,write_untxt_unit,read_untxt_unit,logsigma
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info 
         implicit none
 
         type(program_settings), intent(in) :: settings
-        type(run_time_info),    intent(in) :: info
-        double precision,intent(inout), dimension(settings%nposterior,settings%nstack,0:settings%ncluster*2) :: posterior_points
-        integer,intent(inout),dimension(0:settings%ncluster*2) :: nposterior
+        type(run_time_info),    intent(in) :: RTI
 
         integer :: i_posterior
         integer :: i_cluster
@@ -309,7 +335,6 @@ module read_write_module
         double precision :: logweight
 
         double precision, dimension(settings%nposterior) :: posterior_point
-
 
         integer :: io_stat
 
@@ -337,13 +362,13 @@ module read_write_module
             read(read_untxt_unit,fmt_dbl_nposterior,iostat=io_stat) posterior_point
 
             ! If this is still above the cdf threshold
-            if( posterior_point(settings%pos_Z) - info%logevidence > logsigma(settings%sigma_posterior) ) then
+            if( posterior_point(settings%pos_Z) - RTI%logZ > logsigma(settings%sigma_posterior) ) then
 
                 ! Re-copy to the new unnormalised posterior file
                 write(write_untxt_unit,fmt_dbl_nposterior) posterior_point
 
                 ! And add it to the .txt file
-                logweight = posterior_point(settings%pos_w) - info%logevidence 
+                logweight = posterior_point(settings%pos_w) - RTI%logZ
 
                 if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
                     write(write_txt_unit,fmt_dbl_nposterior_norm) &
@@ -360,7 +385,7 @@ module read_write_module
             ! Add to the new unnormalised posterior file
             write(write_untxt_unit,fmt_dbl_nposterior) posterior_points(:,i_posterior,0)
 
-            logweight = posterior_points(settings%pos_w,i_posterior,0)-info%logevidence
+            logweight = posterior_points(settings%pos_w,i_posterior,0)-RTI%logZ
 
             if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
                 write(write_txt_unit,fmt_dbl_nposterior_norm) &
@@ -381,7 +406,7 @@ module read_write_module
 
         if(settings%do_clustering) then
 
-            do i_cluster=1,info%ncluster_A+info%ncluster_P
+            do i_cluster=1,RTI%ncluster
 
                 if(nposterior(i_cluster) >= 1) then
 
@@ -448,54 +473,42 @@ module read_write_module
 
     end subroutine write_posterior_file
 
-    subroutine write_phys_live_points(settings,info,live_points)
+    subroutine write_phys_live_points(settings,RTI)
         use utils_module, only: DB_FMT,fmt_len,write_phys_unit,write_phys_cluster_unit
         use settings_module, only: program_settings 
         use run_time_module, only: run_time_info 
         implicit none
 
         type(program_settings), intent(in) :: settings
-        type(run_time_info),    intent(in) :: info
-        double precision, intent(in), dimension(settings%nTotal,settings%nlive,settings%ncluster) :: live_points
-
-        integer i_err
+        type(run_time_info),    intent(in) :: RTI
 
         integer i_live
         integer i_cluster
 
-        character(len=fmt_len) :: fmt_dbl_nphys
-
+        character(len=fmt_len) :: fmt_dbl
 
         ! Initialise the formats
-        write(fmt_dbl_nphys,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
+        write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
 
-
-        ! Delete the old files
-        open(write_phys_unit,file=trim(phys_live_file(settings)), action='write', iostat=i_err) 
-        if(i_err.eq.0) close(write_phys_unit,status='delete')
-
-        if(settings%do_clustering) then
-
-            do i_cluster=1,settings%ncluster
-                open(write_phys_cluster_unit,file=trim(phys_live_file(settings,i_cluster)), action='write', iostat=i_err) 
-                if(i_err.eq.0) close(write_phys_cluster_unit,status='delete')
-            end do
-        end if
 
         ! Open a new file for appending to
-        open(write_phys_unit,file=trim(phys_live_file(settings)), action='write', position="append")
+        open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
 
-        do i_cluster = 1,info%ncluster_A
+        do i_cluster = 1,RTI%ncluster
 
             if(settings%do_clustering) open(write_phys_cluster_unit,file=trim(phys_live_file(settings,i_cluster)), action='write') 
 
-            do i_live=1,info%n(i_cluster)
+            do i_live=1,RTI%nlive(i_cluster)
+                write(write_phys_unit,fmt_dbl) &
+                        RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
+                        RTI%live(settings%l0,i_live,i_cluster)
+
                 if(settings%do_clustering) then
-                    write(write_phys_unit,fmt_dbl_nphys) live_points(settings%p0:settings%d1,i_live,i_cluster), live_points(settings%l0,i_live,i_cluster)
-                    write(write_phys_cluster_unit,fmt_dbl_nphys) live_points(settings%p0:settings%d1,i_live,i_cluster), live_points(settings%l0,i_live,i_cluster)
-                else
-                    write(write_phys_unit,fmt_dbl_nphys) live_points(settings%p0:settings%d1,i_live,i_cluster), live_points(settings%l0,i_live,i_cluster)
+                    write(write_phys_cluster_unit,fmt_dbl) &
+                            RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
+                            RTI%live(settings%l0,i_live,i_cluster)
                 end if
+
             end do
 
             if(settings%do_clustering) close(write_phys_cluster_unit)
@@ -508,24 +521,30 @@ module read_write_module
     end subroutine write_phys_live_points
 
 
-    subroutine write_stats_file(settings,info,ndead)
+    subroutine write_stats_file(settings,RTI)
         use utils_module, only: DB_FMT,fmt_len,write_stats_unit,logzero,logsubexp
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info 
         implicit none
 
         type(program_settings), intent(in) :: settings
-        type(run_time_info),    intent(in) :: info
-        integer,                intent(in) :: ndead
+        type(run_time_info),    intent(in) :: RTI
 
-        double precision, dimension(info%ncluster_A + info%ncluster_P) :: mu
-        double precision, dimension(info%ncluster_A + info%ncluster_P) :: sigma
+        double precision                          :: logZ       
+        double precision                          :: sigmalogZ  
+        double precision, dimension(RTI%ncluster) :: logZp      
+        double precision, dimension(RTI%ncluster) :: sigmalogZp 
 
-        integer :: i
+        integer :: p
 
-        character(len=fmt_len) :: fmt_1
+        character(len=fmt_len) :: fmt_Z
 
         open(write_stats_unit,file=trim(stats_file(settings)), action='write') 
+
+        call calculate_logZ_estimate(RTI,logZ,sigmalogZ,logZp,sigmalogZp)            
+
+
+        write(fmt_Z,'("(""log(Z)       = "",", A, ","" +/- "",", A, ")")') DB_FMT,DB_FMT
 
 
         write(write_stats_unit, '("Evidence estimates:")')
@@ -536,46 +555,20 @@ module read_write_module
         write(write_stats_unit, '("Global evidence:")')
         write(write_stats_unit, '("----------------")')
         write(write_stats_unit,'("")')
-        if(info%logevidence>logzero .and. info%logevidence2>logzero) then
-            mu(1)    = 2*info%logevidence - 0.5*info%logevidence2              
-            sigma(1) = sqrt(info%logevidence2 - 2*info%logevidence)
-            write(fmt_1,'("(""log(Z)       = "",", A, ","" +/- "",", A, ")")') DB_FMT,DB_FMT
-            write(write_stats_unit,fmt_1) mu(1),sigma(1)
-        else
-            write(write_stats_unit, '(" Too early to produce a sensible evidence estimate ")')
-        end if
-
+        write(write_stats_unit,fmt_Z) logZ,sigmalogZ
         write(write_stats_unit,'("")')
         write(write_stats_unit,'("")')
         write(write_stats_unit, '("Local evidences:")')
         write(write_stats_unit, '("----------------")')
-        write(write_stats_unit, '(I2, " clusters found so far")') info%ncluster_A + info%ncluster_P
-        write(write_stats_unit, '(" ", I2, " still active")') info%ncluster_A 
+        write(write_stats_unit, '(" ", I2, " cluster still active")') RTI%ncluster
         write(write_stats_unit,'("")')
 
-        mu    = 2*info%logZ(:info%ncluster_A+info%ncluster_P) - 0.5*info%logZ2(:info%ncluster_A+info%ncluster_P)              
-        sigma = sqrt(info%logZ2(:info%ncluster_A+info%ncluster_P) - 2*info%logZ(:info%ncluster_A+info%ncluster_P))
 
+        write(fmt_Z,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, ")")') 'I2',DB_FMT,DB_FMT
 
-        if(info%ncluster_A>=1) then
-            do i=1,info%ncluster_A
-                write(fmt_1,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, ")")') 'I2',DB_FMT,DB_FMT
-                if(info%logZ(i)>logzero) then
-                    write(write_stats_unit,fmt_1) i, mu(i),sigma(i)
-                else
-                    write(write_stats_unit,'("log(Z_",I2,")  = ?", "(still evaluating)")') i
-                end if
-            end do
-        end if
-
-        if(info%ncluster_P>=1) then
-            do i=info%ncluster_A+1,info%ncluster_A+info%ncluster_P
-
-                if(info%logZ(i)>logzero) then
-                    write(write_stats_unit,fmt_1) i, mu(i),sigma(i)
-                else
-                    write(write_stats_unit,'("log(Z_",I2,")  = ?")') i
-                end if
+        if(RTI%ncluster>1) then
+            do p=1,RTI%ncluster
+                write(write_stats_unit,fmt_Z) p, logZp(p), sigmalogZp(p)
             end do
         end if
 
@@ -584,15 +577,9 @@ module read_write_module
         write(write_stats_unit, '("Run-time information:")')
         write(write_stats_unit, '("---------------------")')
         write(write_stats_unit,'("")')
-        write(write_stats_unit,'(" ndead:    ", I8)') ndead
+        write(write_stats_unit,'(" ndead:    ", I8)') RTI%ndead
         write(write_stats_unit,'(" nlive:    ", I8)') settings%nlive
-        write(write_stats_unit,'(" active clusters: ", I8)') info%ncluster_A
-        if(info%ncluster_A>1) then
-            do i=1,info%ncluster_A
-                write(write_stats_unit,'(" nlive (cluster", I3, "): ", I8)') i, info%n(i)
-            end do
-        end if
-        if(info%ncluster_T>1) write(write_stats_unit, '( I4, " clusters found so far" )') info%ncluster_A + info%ncluster_P
+        write(write_stats_unit,'(" active clusters: ", I8)') RTI%ncluster
 
 
 

@@ -45,6 +45,7 @@ module feedback_module
 
 
     subroutine write_resuming(feedback)
+        use utils_module,    only: stdout_unit
         implicit none
         integer, intent(in) :: feedback
 
@@ -203,10 +204,12 @@ module feedback_module
         type(program_settings), intent(in) :: settings !> program settings
         type(run_time_info),    intent(in) :: RTI      !> run time info
 
-        integer :: i
-
-        double precision, dimension(info%ncluster_A) :: mu
-        double precision, dimension(info%ncluster_A) :: sigma
+        integer :: p
+        
+        double precision                          :: logZ       
+        double precision                          :: sigmalogZ  
+        double precision, dimension(RTI%ncluster) :: logZp      
+        double precision, dimension(RTI%ncluster) :: sigmalogZp 
 
         character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_tail
 
@@ -219,38 +222,32 @@ module feedback_module
 
 
         if (settings%feedback>=1) then
-            write(stdout_unit,'("ncluster  =",  I8                   )') RTI%ncluster
             write(stdout_unit,fmt_head)
             write(stdout_unit,fmt_live)  RTI%nlive
-            write(stdout_unit,fmt_phantom)  nphantom(:RTI%ncluster)
-            if(settings%calculate_posterior) write(stdout_unit,fmt_posterior)  nposterior(1:RTI%ncluster)
+            write(stdout_unit,fmt_phantom)  RTI%nphantom
+            if(settings%calculate_posterior) write(stdout_unit,fmt_posterior)  RTI%nposterior
             write(stdout_unit,fmt_tail)
-            write(stdout_unit,'("ndead      =",  I8                   )') ndead
-            if(settings%calculate_posterior) &
-            write(stdout_unit,'("efficiency = ", F7.2, "    (",F5.2," per slice)")') mean_likelihood_calls, mean_likelihood_calls/settings%num_babies
-            
+            write(stdout_unit,'("ncluster  =",  I8                   )') RTI%ncluster
+            write(stdout_unit,'("ndead      =",  I8                   )') RTI%ndead
+            write(stdout_unit,'("nlike      =",  I8                   )') RTI%nlike
+            !if(settings%calculate_posterior) &
+            !write(stdout_unit,'("efficiency = ", F7.2, "    (",F5.2," per slice)")') mean_likelihood_calls, mean_likelihood_calls/settings%num_babies
+            call calculate_logZ_estimate(RTI,logZ,sigmalogZ,logZp,sigmalogZp)            
 
-            mu(1)    = 2*info%logevidence - 0.5*info%logevidence2              
-            sigma(1) = sqrt(abs(info%logevidence2 - 2*info%logevidence))
 
-            if(info%logevidence>logzero) then
-                write(stdout_unit,'("log(Z)     = ", F15.2, " +/- ", F5.2)') mu(1),sigma(1)
+            if(RTI%logZ>logzero) then
+                write(stdout_unit,'("log(Z)     = ", F15.2, " +/- ", F5.2)') logZ,sigmalogZ
             end if
 
-            mu    = 2*info%logZ(:info%ncluster_A) - 0.5*info%logZ2(:info%ncluster_A)              
-            sigma = sqrt(info%logZ2(:info%ncluster_A) - 2*info%logZ(:info%ncluster_A))
-
-            if(info%ncluster_A>1) then
-                do i=1,info%ncluster_A  
-                    if(info%logZ(i)>logzero) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F15.2, " +/- ", F5.2)') i, mu(i),sigma(i)
+            if(RTI%ncluster>1) then
+                do p=1,RTI%ncluster
+                    if(RTI%logZp(p)>logzero) then
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F15.2, " +/- ", F5.2)') p, logZp(p),sigmalogZp(p)
                     else
-                        write(stdout_unit,'("log(Z_",I2,")  = ?")') i
+                        write(stdout_unit,'("log(Z_",I2,")  = ?")') p
                     end if
                 end do
             end if
-
-
 
             write(stdout_unit,'("")')
             write(stdout_unit,'("")')
