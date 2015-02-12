@@ -1,5 +1,7 @@
 module abort_module
+#ifdef MPI
     use mpi
+#endif
     contains
 
     subroutine halt_program(message)

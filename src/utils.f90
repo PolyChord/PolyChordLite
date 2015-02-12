@@ -43,9 +43,11 @@ module utils_module
     integer, parameter :: read_untxt_unit = 19
     !> unit for writing unnormalised posterior files
     integer, parameter :: write_untxt_unit = 20
+    !> unit for writing unnormalised posterior cluster files
+    integer, parameter :: write_untxt_cluster_unit = 21
 
     !> Unit for deleting generic files
-    integer, parameter :: delete_unit = 21
+    integer, parameter :: delete_unit = 22
 
 
     !> Log[1/2 Erfc[j/Sqrt[2]]]

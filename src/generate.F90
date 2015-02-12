@@ -20,9 +20,9 @@ module generate_module
     !! It uses the existing set of live points and the details of the clustering
     !! in order to select a seed point to generate from in proportion to the
     !! estimates of the prior volume of each cluster.
-    function GenerateSeed(settings,info,live_points,cluster_choice) result(seed_point)
+    function GenerateSeed(settings,RTI,p) result(seed_point)
         use settings_module,   only: program_settings
-        use evidence_module,   only: run_time_info
+        use run_time_module,   only: run_time_info
         use random_module,     only: random_integer,random_integer_P
         use utils_module,      only: logsumexp
         implicit none
@@ -30,11 +30,9 @@ module generate_module
         !> Program settings
         type(program_settings), intent(in) :: settings
         !> The evidence storage
-        type(run_time_info), intent(in) :: info
-        !> The live points
-        double precision, dimension(settings%nTotal,settings%nlive,settings%ncluster),intent(in) :: live_points
+        type(run_time_info), intent(in) :: RTI
         !> The cluster number chosen
-        integer,intent(out) :: cluster_choice
+        integer,intent(out) :: p
 
 
         ! The seed point to be produced
@@ -42,35 +40,39 @@ module generate_module
 
         integer :: seed_choice
 
-        double precision, dimension(info%ncluster_A) :: probs
+        double precision, dimension(RTI%ncluster) :: probs
 
 
         ! 0) Calculate an array proportional to the volumes
-        probs = info%logX(:info%ncluster_A) ! prob_i = log( X_i )
-        probs = probs - logsumexp(probs)    ! prob_i = log( X_i/(sum_j X_j) )
-        probs = exp(probs)                  ! prob_i = X_i/(sum_j X_j)
+        probs = RTI%logXp(:RTI%ncluster)  ! prob_p = log( X_p )
+        probs = probs - logsumexp(probs)  ! prob_p = log( X_p/(sum_q X_q) )
+        probs = exp(probs)                ! prob_p = X_p/(sum_q X_q)
 
         ! 1) Pick cluster in proportion to the set of volume estimates of the active clusters
-        cluster_choice = random_integer_P(probs)
+        p = random_integer_P(probs)
+
+
+        ! 2) Pick whether to draw from phantom or live points
+        if(random_real() < RTI%nlive(p) / (RTI%nlive(p) + RTI%nphantom(p) +0d0) ) then
+
+
+        else
+
+        end if
 
         ! 2) Pick a random integer in between 1 and the number of live points in the chosen cluster
-        seed_choice = random_integer(info%n(cluster_choice))
+        seed_choice = random_integer(info%n(p))
 
-        ! 3) Select the live point at index 'seed_choice' in cluster 'cluster_choice' for the seed point
-        seed_point = live_points(:,seed_choice,cluster_choice)
+        ! 3) Select the live point at index 'seed_choice' in cluster 'p' for the seed point
+        seed_point = live_points(:,seed_choice,p)
         
-        ! 4) Give the seed point the likelihood contour of cluster ! 'cluster_choice'
-        seed_point(settings%l1) = info%logL(cluster_choice)
+        ! 4) Give the seed point the likelihood contour of cluster  'p'
+        seed_point(settings%l1) = info%logL(p)
 
     end function GenerateSeed
 
 
 
-
-
-
-
-#ifdef MPI
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube in parallel
     subroutine GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_communicator,nprocs,myrank,root)

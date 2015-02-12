@@ -47,8 +47,6 @@ module chordal_module
 
         double precision  :: max_chord
 
-        double precision :: step_length
-
         integer :: i_babies
 
         double precision,dimension(settings%grades%min_grade:settings%grades%max_grade) :: timers
@@ -70,12 +68,6 @@ module chordal_module
 
         ! Set the number of likelihood evaluations to zero
         previous_point(settings%nlike) = 0
-
-        ! Record the step length
-        step_length = seed_point(settings%last_chord)
-
-        ! Give the start point the step length
-        previous_point(settings%last_chord) = step_length
 
         ! Initialise max_chord at 0
         max_chord = 0
@@ -123,14 +115,8 @@ module chordal_module
                 if(grade_order(i_babies)/=settings%grades%min_grade) baby_points(settings%nlike,i_babies) = 0
             end if
 
-            ! keep track of the largest chord
-            max_chord = max(max_chord,baby_points(settings%last_chord,i_babies))
-
             ! Save this for the next loop
             previous_point = baby_points(:,i_babies)
-
-            ! Give the previous point the step length
-            previous_point(settings%last_chord) = step_length
 
             ! Zero the likelihood calls
             previous_point(settings%nlike) = 0
@@ -146,10 +132,6 @@ module chordal_module
             write(fmt_1,'("(",I0,"(",A,",""% ""), ""(Total time:"",",A,",""seconds)"")")') settings%grades%max_grade-settings%grades%min_grade+1, FLT_FMT,FLT_FMT
             write(stdout_unit,fmt_1) timers/sum(timers)*100, sum(timers)
         end if
-
-        ! Hand back the maximum chord this time to be used as the step length
-        ! next time this point is drawn
-        baby_points(settings%last_chord,:) = max_chord
 
         ! Give all the likelihood calls to the baby point
         nlike = nint(sum(baby_points(settings%nlike,:) ))
@@ -276,8 +258,6 @@ module chordal_module
 
         integer :: i_step
 
-        ! estimate at an appropriate chord
-        !w = x0(S%last_chord)
 
         ! record the number of likelihood calls
         R(S%nlike) = x0(S%nlike)
@@ -317,9 +297,6 @@ module chordal_module
 
         ! Pass on the loglikelihood bound
         baby_point(S%l1) = x0(S%l1)
-
-        ! Estimate the next appropriate chord
-        baby_point(S%last_chord) = distance( R(S%h0:S%h1),L(S%h0:S%h1) )/2d0
 
         contains
 

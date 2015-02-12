@@ -25,6 +25,7 @@ module read_write_module
     !> Remove resume files
     subroutine delete_files(settings)
         use settings_module, only: program_settings
+        use utils_module, only: delete_file
         implicit none
 
         !> settings variable to get the base_dir and root_name out of
@@ -42,17 +43,15 @@ module read_write_module
 
         ! Delete normalised .txt files
         deleted = delete_file( posterior_file(settings) )
-
-        i_cluster = 1
-        do while ( delete_file( posterior_file(settings,i_cluster) ) )
-            i_cluster = i_cluster + 1
-        end do
-
-        ! Delete the unnormalised .txt files
         deleted = delete_file( posterior_file(settings,.true.) )
+        deleted = delete_file( posterior_file(settings,.false.) )
 
         i_cluster = 1
-        do while ( delete_file( posterior_file(settings,.true.,i_cluster) ) )
+        do while ( &
+            delete_file( posterior_file(settings,i=i_cluster) ) .or.  &
+            delete_file( posterior_file(settings,.true.,i_cluster) ) .or.  &
+            delete_file( posterior_file(settings,.false.,i_cluster) )   &
+            )
             i_cluster = i_cluster + 1
         end do
 
@@ -202,11 +201,7 @@ module read_write_module
         read(read_resume_unit,fmt_int) RTI%ncluster! number of clusters
 
         ! Allocate nlive and nphantom arrays based on these
-        allocate(                           &
-            RTI%nlive(RTI%ncluster),       &
-            RTI%nphantom(RTI%ncluster),    &
-            RTI%nposterior(RTI%nposterior)  &
-            )
+        allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior(RTI%ncluster))
 
         ! Read in number of live and phantom points
         write(fmt_int,'("(",I0,A,")")') RTI%ncluster,INT_FMT  ! define the integer array format
@@ -292,7 +287,7 @@ module read_write_module
 
 
     subroutine write_unnormalised_posterior_file(settings,RTI)
-        use utils_module, only: DB_FMT,fmt_len,write_untxt_unit,read_untxt_unit
+        use utils_module, only: DB_FMT,fmt_len,write_untxt_unit,write_untxt_cluster_unit
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info 
         implicit none
@@ -302,176 +297,37 @@ module read_write_module
 
         integer :: i_cluster
 
-        character(len=fmt_len) :: fmt_dbl_nposterior
+        character(len=fmt_len) :: fmt_dbl
 
 
         ! Open the new unormalised .txt file for writing
-        open(write_untxt_unit,file=trim(posterior_file(settings,.false.)), action='write',position='append') 
+        open(write_untxt_unit,file=trim(posterior_file(settings,.true.)), action='write',position='append') 
 
-        write(fmt_dbl_nposterior,'("(",I0,A,")")') settings%nposterior, DB_FMT
+        ! Define the printing format
+        write(fmt_dbl,'("(",I0,A,")")') settings%nposterior, DB_FMT
 
         do i_cluster=1,RTI%ncluster
-            write(write_untxt_unit,
-        end do
+            ! Print each cluster sequentially to the main unnormalised chains file
+            write(write_untxt_unit,fmt_dbl) RTI%posterior(:,1:RTI%nposterior(i_cluster),:)
+            
 
-        close(write_untxt_unit)
-        close(read_untxt_unit)
+            ! If we're clustering, then print out separate cluster files
+            if(settings%do_clustering) then
+                open(write_untxt_cluster_unit,file=trim(posterior_file(settings,.true.,i_cluster)), &
+                        action='write',position='append') 
 
-    end subroutine write_unnormalised_posterior_file
+                write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior(:,1:RTI%nposterior(i_cluster),:) 
 
-
-    subroutine write_posterior_file(settings,RTI) 
-        use utils_module, only: DB_FMT,fmt_len,write_txt_unit,write_untxt_unit,read_untxt_unit,logsigma
-        use settings_module, only: program_settings
-        use run_time_module, only: run_time_info 
-        implicit none
-
-        type(program_settings), intent(in) :: settings
-        type(run_time_info),    intent(in) :: RTI
-
-        integer :: i_posterior
-        integer :: i_cluster
-
-        double precision :: logweight
-
-        double precision, dimension(settings%nposterior) :: posterior_point
-
-        integer :: io_stat
-
-        character(len=fmt_len) :: fmt_dbl_nposterior
-        character(len=fmt_len) :: fmt_dbl_nposterior_norm
-
-
-        ! Initialise the formats
-        write(fmt_dbl_nposterior,'("(",I0,A,")")') settings%nposterior, DB_FMT
-        write(fmt_dbl_nposterior_norm,'("(",I0,A,")")') settings%nposterior-1, DB_FMT
-        
-        ! Open the .txt file for writing
-        open(write_txt_unit,file=trim(posterior_file(settings)), action='write') 
-        ! Open the old unormalised .txt file for reading
-        open(read_untxt_unit,file=trim(posterior_file(settings,.true.)), action='read',iostat=io_stat) 
-        ! Open the new unormalised .txt file for writing
-        open(write_untxt_unit,file=trim(posterior_file(settings,.false.)), action='write') 
-
-
-
-        ! Trim off points that are too low in weight
-        do while(io_stat==0) 
-
-            ! Read a point from the old unormalised text file
-            read(read_untxt_unit,fmt_dbl_nposterior,iostat=io_stat) posterior_point
-
-            ! If this is still above the cdf threshold
-            if( posterior_point(settings%pos_Z) - RTI%logZ > logsigma(settings%sigma_posterior) ) then
-
-                ! Re-copy to the new unnormalised posterior file
-                write(write_untxt_unit,fmt_dbl_nposterior) posterior_point
-
-                ! And add it to the .txt file
-                logweight = posterior_point(settings%pos_w) - RTI%logZ
-
-                if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
-                    write(write_txt_unit,fmt_dbl_nposterior_norm) &
-                    exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
-
+                close(write_untxt_cluster_unit)
             end if
 
         end do
 
-        ! Now add the new posterior points
-        do i_posterior=1,nposterior(0)
-
-
-            ! Add to the new unnormalised posterior file
-            write(write_untxt_unit,fmt_dbl_nposterior) posterior_points(:,i_posterior,0)
-
-            logweight = posterior_points(settings%pos_w,i_posterior,0)-RTI%logZ
-
-            if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
-                write(write_txt_unit,fmt_dbl_nposterior_norm) &
-                exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
-        end do
-
-        ! Close the files
-        close(write_txt_unit)
         close(write_untxt_unit)
-        close(read_untxt_unit)
 
-        ! Move the temporary file to the new one
-        call rename( trim(posterior_file(settings,.false.)), trim(posterior_file(settings,.true.)) )
-
-        ! Re-set the posterior points
-        nposterior(0) = 0
+    end subroutine write_unnormalised_posterior_file
 
 
-        if(settings%do_clustering) then
-
-            do i_cluster=1,RTI%ncluster
-
-                if(nposterior(i_cluster) >= 1) then
-
-                    ! Open the .txt file for writing
-                    open(write_txt_unit,file=trim(posterior_file(settings,i=i_cluster)), action='write') 
-                    ! Open the old unormalised .txt file for reading
-                    open(read_untxt_unit,file=trim(posterior_file(settings,.true.,i_cluster)), action='read',iostat=io_stat) 
-                    ! Open the new unormalised .txt file for writing
-                    open(write_untxt_unit,file=trim(posterior_file(settings,.false.,i_cluster)), action='write') 
-
-                    ! Trim off points that are too low in weight
-                    do while(io_stat==0) 
-
-                        ! Read a point from the old unormalised text file
-                        read(read_untxt_unit,fmt_dbl_nposterior,iostat=io_stat) posterior_point
-
-                        ! If this is still above the cdf threshold
-                        if( posterior_point(settings%pos_Z) - info%logevidence > logsigma(settings%sigma_posterior) ) then
-
-                            ! Re-copy to the new unnormalised posterior file
-                            write(write_untxt_unit,fmt_dbl_nposterior) posterior_point
-
-                            ! And add it to the .txt file
-                            logweight = posterior_point(settings%pos_w) - info%logZ(i_cluster)
-
-                            if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
-                                write(write_txt_unit,fmt_dbl_nposterior_norm) &
-                                exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
-
-                        end if
-
-                    end do
-
-
-                    ! Now add the new posterior points
-                    do i_posterior=1,nposterior(i_cluster)
-
-                        ! Add to the new unnormalised posterior file
-                        write(write_untxt_unit,fmt_dbl_nposterior) posterior_points(:,i_posterior,i_cluster)
-
-                        logweight = posterior_points(settings%pos_w,i_posterior,i_cluster)-info%logZ(i_cluster)
-
-                        if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
-                            write(write_txt_unit,fmt_dbl_nposterior)   &
-                            exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
-                    end do
-
-                    close(write_txt_unit)
-                    close(write_untxt_unit)
-                    close(read_untxt_unit)
-
-                    ! Move the temporary file to the new one
-                    call rename( trim(posterior_file(settings,.false.,i_cluster)), trim(posterior_file(settings,.true.,i_cluster)) )
-
-                end if
-
-            end do
-
-            nposterior(1:) = 0
-
-        end if
-
-
-
-    end subroutine write_posterior_file
 
     subroutine write_phys_live_points(settings,RTI)
         use utils_module, only: DB_FMT,fmt_len,write_phys_unit,write_phys_cluster_unit
@@ -522,7 +378,7 @@ module read_write_module
 
 
     subroutine write_stats_file(settings,RTI)
-        use utils_module, only: DB_FMT,fmt_len,write_stats_unit,logzero,logsubexp
+        use utils_module, only: DB_FMT,fmt_len,write_stats_unit,logsubexp
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info 
         implicit none
@@ -637,12 +493,12 @@ module read_write_module
 
     end function cluster_dir
 
-    function posterior_file(settings,reading,i) result(file_name)
+    function posterior_file(settings,unnormalised,i) result(file_name)
         use settings_module, only: program_settings
         use utils_module,    only: STR_LENGTH
         implicit none
         type(program_settings), intent(in) :: settings
-        logical,intent(in),optional :: reading
+        logical,intent(in),optional :: unnormalised
         integer,intent(in),optional :: i
 
         character(STR_LENGTH) :: file_name
@@ -654,8 +510,8 @@ module read_write_module
             write(cluster_num,'(I5)') i
             file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) // '_'
 
-            if(present(reading)) then
-                if(reading) then
+            if(present(unnormalised)) then
+                if(unnormalised) then
                     file_name = trim(file_name) // 'unnormalised_'
                 else
                     file_name = trim(file_name) // 'unnormalised_temp_'
@@ -667,8 +523,8 @@ module read_write_module
 
             file_name = trim(settings%base_dir) // '/' // trim(settings%file_root)
 
-            if(present(reading)) then
-                if(reading) then
+            if(present(unnormalised)) then
+                if(unnormalised) then
                     file_name = trim(file_name) // '_unnormalised'
                 else
                     file_name = trim(file_name) // '_unnormalised_temp' 
@@ -693,7 +549,8 @@ module read_write_module
 
         if(present(i)) then
             write(cluster_num,'(I5)') i
-            file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) // '_phys_live_' // trim(adjustl(cluster_num)) //'.txt'
+            file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) &
+                    // '_phys_live_' // trim(adjustl(cluster_num)) //'.txt'
         else 
             file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_phys_live.txt'
         end if

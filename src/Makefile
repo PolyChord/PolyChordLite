@@ -49,6 +49,7 @@ FC = $(COMPILER_TYPE)
 # Define the files to be used (note no mpi_utils file)
 OBJECTS =                    \
 		  utils.o            \
+		  abort.o            \
 		  random_utils.o     \
 		  priors.o grades.o  \
 		  settings.o         \
