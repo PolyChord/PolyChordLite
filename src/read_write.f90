@@ -66,7 +66,7 @@ module read_write_module
 
         implicit none
         type(program_settings), intent(in) :: settings
-        type(run_time_info),    intent(out) :: RTI
+        type(run_time_info),    intent(in) :: RTI
 
         integer :: i_cluster
 

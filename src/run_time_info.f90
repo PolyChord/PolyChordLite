@@ -1,135 +1,135 @@
 module run_time_module
-        implicit none
+    implicit none
 
-        !> The run time information.
-        !!
-        !! This is what needs to be saved in order to resume a run.
-        !! Bundling these all into the same type enables easy passing of data 
-        !! from one fuction to another
-        type run_time_info
+    !> The run time information.
+    !!
+    !! This is what needs to be saved in order to resume a run.
+    !! Bundling these all into the same type enables easy passing of data 
+    !! from one fuction to another
+    type run_time_info
 
-            !> Number of dead points
-            integer :: ndead
+        !> Number of dead points
+        integer :: ndead
 
-            !> Total number of likelihood calls
-            integer :: nlike
+        !> Total number of likelihood calls
+        integer :: nlike
 
-            !> The number currently evolving clusters
-            integer :: ncluster
-            !> The number of live points in each cluster
-            integer, allocatable, dimension(:) :: nlive
-            !> The number of phantom points in each cluster
-            integer, allocatable, dimension(:) :: nphantom
-            !> The number of posterior points in each cluster
-            integer, allocatable, dimension(:) :: nposterior
+        !> The number currently evolving clusters
+        integer :: ncluster
+        !> The number of live points in each cluster
+        integer, allocatable, dimension(:) :: nlive
+        !> The number of phantom points in each cluster
+        integer, allocatable, dimension(:) :: nphantom
+        !> The number of posterior points in each cluster
+        integer, allocatable, dimension(:) :: nposterior
 
-            !> Live points
-            double precision, allocatable, dimension(:,:,:) :: live
-            !> Phantom points
-            double precision, allocatable, dimension(:,:,:) :: phantom
-            !> Posterior points
-            double precision, allocatable, dimension(:,:,:) :: posterior
+        !> Live points
+        double precision, allocatable, dimension(:,:,:) :: live
+        !> Phantom points
+        double precision, allocatable, dimension(:,:,:) :: phantom
+        !> Posterior points
+        double precision, allocatable, dimension(:,:,:) :: posterior
 
-            !> Covariance Matrices
-            double precision, allocatable, dimension(:,:,:) :: covmat
-            !> Cholesky decompositions
-            double precision, allocatable, dimension(:,:,:) :: cholesky
+        !> Covariance Matrices
+        double precision, allocatable, dimension(:,:,:) :: covmat
+        !> Cholesky decompositions
+        double precision, allocatable, dimension(:,:,:) :: cholesky
 
-            !> Global evidence estimate
-            double precision :: logZ
-            !> Global evidence^2 estimate
-            double precision :: logZ2
-            !> Local volume estimate
-            double precision, allocatable, dimension(:)   :: logXp
-            !> global evidence volume cross correlation
-            double precision, allocatable, dimension(:)   :: logZXp
-            !> Local evidence estimate
-            double precision, allocatable, dimension(:)   :: logZp
-            !> Local evidence^2 estimate 
-            double precision, allocatable, dimension(:)   :: logZp2
-            !> local evidence volume cross correlation
-            double precision, allocatable, dimension(:)   :: logZpXp
-            !> local volume cross correlation
-            double precision, allocatable, dimension(:,:) :: logXpXq
+        !> Global evidence estimate
+        double precision :: logZ
+        !> Global evidence^2 estimate
+        double precision :: logZ2
+        !> Local volume estimate
+        double precision, allocatable, dimension(:)   :: logXp
+        !> global evidence volume cross correlation
+        double precision, allocatable, dimension(:)   :: logZXp
+        !> Local evidence estimate
+        double precision, allocatable, dimension(:)   :: logZp
+        !> Local evidence^2 estimate 
+        double precision, allocatable, dimension(:)   :: logZp2
+        !> local evidence volume cross correlation
+        double precision, allocatable, dimension(:)   :: logZpXp
+        !> local volume cross correlation
+        double precision, allocatable, dimension(:,:) :: logXpXq
 
-            !> Minimum loglikelihood
-            double precision, allocatable :: logL
-            !> Minimum loglikelihoods
-            double precision, allocatable, dimension(:) :: logLp
-            !> Cluster containing the minimum loglikelihood point
-            integer :: p
-            !> The minimum loglikelihood point within this cluster
-            integer :: i
+        !> Minimum loglikelihood
+        double precision, allocatable :: logL
+        !> Minimum loglikelihoods
+        double precision, allocatable, dimension(:) :: logLp
+        !> Cluster containing the minimum loglikelihood point
+        integer :: p
+        !> The minimum loglikelihood point within this cluster
+        integer :: i
 
-        end type run_time_info
+    end type run_time_info
 
     contains
 
-        !> This is a self explanatory subroutine.
-        !!
-        !! It allocates the arrays for a single cluster 
-        subroutine initialise_run_time_info(settings,RTI)
-            use utils_module,    only: logzero,identity_matrix
-            use settings_module, only: program_settings
+    !> This is a self explanatory subroutine.
+    !!
+    !! It allocates the arrays for a single cluster 
+    subroutine initialise_run_time_info(settings,RTI)
+        use utils_module,    only: logzero,identity_matrix
+        use settings_module, only: program_settings
 
-            implicit none
-            !> Program settings
-            type(program_settings), intent(in) :: settings
-            !> Run time information
-            type(run_time_info),intent(out) :: RTI
+        implicit none
+        !> Program settings
+        type(program_settings), intent(in) :: settings
+        !> Run time information
+        type(run_time_info),intent(out) :: RTI
 
-            ! Allocate all of the arrays with one cluster
-            allocate(                                            &
-                RTI%live(settings%nTotal,settings%nlive,1),      &
-                RTI%phantom(settings%nTotal,settings%nlive,1),   &
-                RTI%posterior(settings%nTotal,settings%nlive,1), &
-                RTI%logZp(1),                                    &
-                RTI%logXp(1),                                    &
-                RTI%logZXp(1),                                   &
-                RTI%logZp2(1),                                   &
-                RTI%logZpXp(1),                                  &
-                RTI%logXpXq(1,1),                                &
-                RTI%logLp(1),                                    &
-                RTI%nlive(1),                                    &
-                RTI%nphantom(1),                                 &
-                RTI%nposterior(1),                               &
-                RTI%cholesky(settings%nDims,settings%nDims,1),   &
-                RTI%covmat(settings%nDims,settings%nDims,1)      &
-                )
+        ! Allocate all of the arrays with one cluster
+        allocate(                                            &
+            RTI%live(settings%nTotal,settings%nlive,1),      &
+            RTI%phantom(settings%nTotal,settings%nlive,1),   &
+            RTI%posterior(settings%nTotal,settings%nlive,1), &
+            RTI%logZp(1),                                    &
+            RTI%logXp(1),                                    &
+            RTI%logZXp(1),                                   &
+            RTI%logZp2(1),                                   &
+            RTI%logZpXp(1),                                  &
+            RTI%logXpXq(1,1),                                &
+            RTI%logLp(1),                                    &
+            RTI%nlive(1),                                    &
+            RTI%nphantom(1),                                 &
+            RTI%nposterior(1),                               &
+            RTI%cholesky(settings%nDims,settings%nDims,1),   &
+            RTI%covmat(settings%nDims,settings%nDims,1)      &
+            )
 
-            ! All evidences set to logzero
-            RTI%logZ=logzero
-            RTI%logZ2=logzero
-            RTI%logZp=logzero
-            RTI%logZXp=logzero
-            RTI%logZp2=logzero
-            RTI%logZpXp=logzero
+        ! All evidences set to logzero
+        RTI%logZ=logzero
+        RTI%logZ2=logzero
+        RTI%logZp=logzero
+        RTI%logZXp=logzero
+        RTI%logZp2=logzero
+        RTI%logZpXp=logzero
 
-            ! All volumes set to 1
-            RTI%logXp=1d0
-            RTI%logXpXq=1d0
+        ! All volumes set to 1
+        RTI%logXp=1d0
+        RTI%logXpXq=1d0
 
-            !Initially no live points at all
-            RTI%nlive=0
-            RTI%nphantom=0
-            RTI%nposterior=0
+        !Initially no live points at all
+        RTI%nlive=0
+        RTI%nphantom=0
+        RTI%nposterior=0
 
-            !No likelihood calls
-            RTI%nlike=0
+        !No likelihood calls
+        RTI%nlike=0
 
-            !No dead points
-            RTI%ndead=0
+        !No dead points
+        RTI%ndead=0
 
-            !Cholesky and covmat set to identity
-            RTI%cholesky(:,:,1) = identity_matrix(settings%nDims)
-            RTI%covmat(:,:,1)   = identity_matrix(settings%nDims)
+        !Cholesky and covmat set to identity
+        RTI%cholesky(:,:,1) = identity_matrix(settings%nDims)
+        RTI%covmat(:,:,1)   = identity_matrix(settings%nDims)
 
-            ! Loglikelihoods at zero
-            RTI%logL  = logzero
-            RTI%logLp = logzero
+        ! Loglikelihoods at zero
+        RTI%logL  = logzero
+        RTI%logLp = logzero
 
 
-        end subroutine initialise_run_time_info
+    end subroutine initialise_run_time_info
 
     subroutine update_evidence(RTI)
         use utils_module, only: logsumexp,logincexp
@@ -171,15 +171,15 @@ module run_time_module
 
         ! Global evidence error
         call logincexp( RTI%logZ2 ,                                 &
-                log2 + RTI%logZXp(p)  + logL - lognp1,              &
-                log2 + RTI%logXpXq(p,p)  + 2*logL - lognp1 - lognp2 &
-                )
+            log2 + RTI%logZXp(p)  + logL - lognp1,              &
+            log2 + RTI%logXpXq(p,p)  + 2*logL - lognp1 - lognp2 &
+            )
 
         ! global evidence volume cross correlation p=p
         RTI%logZXp(p) = RTI%logZXp(p) + lognp - lognp1
         call logincexp( RTI%logZXp(p), &
-                RTI%logXpXq(p,p)+ logL + lognp - lognp1 - lognp2 &
-                )
+            RTI%logXpXq(p,p)+ logL + lognp - lognp1 - lognp2 &
+            )
 
         ! global evidence volume cross correlation p/=q
         do q=1,RTI%ncluster
@@ -189,9 +189,9 @@ module run_time_module
 
         ! Local evidence error
         call logincexp( RTI%logZp2(p),                             &
-                log2 + RTI%logZpXp(p)  + logL - lognp1,            &
-                log2 + RTI%logXpXq(p,p)  + 2*logL - lognp1 - lognp2 &
-                )
+            log2 + RTI%logZpXp(p)  + logL - lognp1,            &
+            log2 + RTI%logXpXq(p,p)  + 2*logL - lognp1 - lognp2 &
+            )
 
 
         ! Local evidence volume cross correlation
@@ -231,24 +231,24 @@ module run_time_module
         do i_cluster = 1,RTI%ncluster
             ! Calculate the mean
             mean = ( sum(RTI%live(settings%h0:settings%h1,1:RTI%nlive(i_cluster),i_cluster),dim=2) &
-                    + sum(RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster),dim=2) ) &
-                    / (RTI%nlive(i_cluster) + RTI%nphantom(i_cluster) )
+                + sum(RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster),dim=2) ) &
+                / (RTI%nlive(i_cluster) + RTI%nphantom(i_cluster) )
 
             ! Calculate the covariance by using a matrix multiplication
             RTI%covmat(:,:,i_cluster) = & 
-                 matmul(&
-                            RTI%live(settings%h0:settings%h1,1:RTI%nlive(i_cluster),i_cluster) &
-                            - spread(mean,dim=2,ncopies=RTI%nlive(i_cluster)) , &
-                 transpose( RTI%live(settings%h0:settings%h1,1:RTI%nlive(i_cluster),i_cluster) &
-                            - spread(mean,dim=2,ncopies=RTI%nlive(i_cluster)) ) &
-                 )&
-                 +&
-                 matmul(&
-                            RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster) &
-                            - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) , &
-                 transpose( RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster) &
-                            - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) ) &
-                 )
+                matmul(&
+                RTI%live(settings%h0:settings%h1,1:RTI%nlive(i_cluster),i_cluster) &
+                - spread(mean,dim=2,ncopies=RTI%nlive(i_cluster)) , &
+                transpose( RTI%live(settings%h0:settings%h1,1:RTI%nlive(i_cluster),i_cluster) &
+                - spread(mean,dim=2,ncopies=RTI%nlive(i_cluster)) ) &
+                )&
+                +&
+                matmul(&
+                RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster) &
+                - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) , &
+                transpose( RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster) &
+                - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) ) &
+                )
 
             ! Calculate the cholesky decomposition
             RTI%cholesky(:,:,i_cluster) = calc_cholesky(RTI%covmat(:,:,i_cluster))
@@ -337,14 +337,14 @@ module run_time_module
 
         ! Initialise it with no log evidence
         live_logZ = logzero
-        
+
         ! Sum up over all the clusters mean(likelihood) * volume
         do i_cluster = 1,RTI%ncluster
             call logincexp(live_logZ, &
-                    logsumexp(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster)) &
-                    - log(RTI%nlive(i_cluster)+0d0) &
-                    + RTI%logXp(i_cluster) &
-                    )
+                logsumexp(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster)) &
+                - log(RTI%nlive(i_cluster)+0d0) &
+                + RTI%logXp(i_cluster) &
+                )
         end do
 
     end function live_logZ

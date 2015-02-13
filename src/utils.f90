@@ -71,14 +71,14 @@ module utils_module
     contains
 
     !> Swaps two integers via a temporary variable
-    subroutine swap_int(a,b)
-            implicit none
-            integer,intent(inout) :: a,b
-            integer :: temp
-            temp=a
-            a=b
-            b=temp
-    end subroutine swap_int
+    subroutine swap_integers(a,b)
+        implicit none
+        integer,intent(inout) :: a,b
+        integer :: temp
+        temp=a
+        a=b
+        b=temp
+    end subroutine swap_integers
 
     !> location of minimum in an array of doubles
     !!
@@ -89,7 +89,7 @@ module utils_module
         double precision, intent(in), dimension(:) :: a
         integer :: minpos
         integer :: minpos_vec(1)
-                               
+
         minpos_vec = minloc(a)
         minpos = minpos_vec(1)
     end function minpos
@@ -243,7 +243,7 @@ module utils_module
         ! Delete it if it exists
         if(deleted) close(delete_unit,status='delete')
     end function delete_file
-        
+
 
 
 
@@ -345,10 +345,10 @@ module utils_module
         n=0
 
         do while( abovetol(change,Hypergeometric1F1) )
-           change = Pochhammer(a,n) * Pochhammer(b,n) * z**n / gamma(1d0+n)
+            change = Pochhammer(a,n) * Pochhammer(b,n) * z**n / gamma(1d0+n)
 
-           Hypergeometric1F1 = Hypergeometric1F1 + change
-           n=n+1
+            Hypergeometric1F1 = Hypergeometric1F1 + change
+            n=n+1
         enddo
 
     end function Hypergeometric1F1
@@ -374,10 +374,10 @@ module utils_module
         n=0
 
         do while( abovetol(change,Hypergeometric2F1) )
-           change = Pochhammer(a,n) * Pochhammer(b,n) / Pochhammer(c,n) * z**n / gamma(1d0+n)
+            change = Pochhammer(a,n) * Pochhammer(b,n) / Pochhammer(c,n) * z**n / gamma(1d0+n)
 
-           Hypergeometric2F1 = Hypergeometric2F1 + change
-           n=n+1
+            Hypergeometric2F1 = Hypergeometric2F1 + change
+            n=n+1
         enddo
 
     end function Hypergeometric2F1
@@ -386,21 +386,21 @@ module utils_module
 
 
     recursive function Pochhammer (x,n) result (xn)
-        ! This function computes the rising factorial x^(n):
-        ! for a non-negative integer n and real x
-        !
-        ! http://en.wikipedia.org/wiki/Pochhammer_symbol
+    ! This function computes the rising factorial x^(n):
+    ! for a non-negative integer n and real x
+    !
+    ! http://en.wikipedia.org/wiki/Pochhammer_symbol
 
-        implicit none
-        double precision, intent(in)  :: x
-        integer,          intent(in)  :: n
-        double precision              :: xn
+    implicit none
+    double precision, intent(in)  :: x
+    integer,          intent(in)  :: n
+    double precision              :: xn
 
-        if (n<=0) then
-            xn = 1
-        else
-            xn = Pochhammer(x,n-1)*(x+n-1)
-        endif
+    if (n<=0) then
+        xn = 1
+    else
+        xn = Pochhammer(x,n-1)*(x+n-1)
+    endif
 
     end function Pochhammer
 

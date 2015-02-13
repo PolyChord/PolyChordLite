@@ -1,7 +1,7 @@
 module nested_sampling_module
 
 #ifdef MPI
-    use mpi_module
+    use mpi_module, only: get_rank,get_nprocs,get_root,catch_babies,throw_babies
 #endif
 
     implicit none
@@ -12,10 +12,10 @@ module nested_sampling_module
     !> Main subroutine for computing a generic nested sampling algorithm
     function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
-        use utils_module,      only: stdout_unit,swap_int
+        use utils_module,      only: stdout_unit,swap_integers
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp,calc_similarity_matrix,write_untxt_unit
-        use read_write_module, only: write_resume_file
+        use read_write_module, only: write_resume_file,resume_file_exists
         use feedback_module
         use run_time_module,   only: run_time_info
         use chordal_module,    only: SliceSampling
@@ -25,6 +25,10 @@ module nested_sampling_module
 
         implicit none
 
+        ! Program Inputs
+        ! ==============      
+
+        !> The loglikelihood function
         interface
             function loglikelihood(theta,phi,context)
                 double precision, intent(in),  dimension(:) :: theta
@@ -34,12 +38,17 @@ module nested_sampling_module
             end function
         end interface
 
+        !> Prior information
         type(prior), dimension(:), intent(in) :: priors
+
+        !> Program settings
         type(program_settings), intent(in) :: settings
 
+        !> MPI handle
         integer, intent(in) :: mpi_communicator
 
-        ! Output of the program
+        ! Program Outputs
+        ! ===============      
         ! 1) log(evidence)
         ! 2) error(log(evidence))
         ! 3) ndead
@@ -47,50 +56,65 @@ module nested_sampling_module
         ! 5) log(evidence) + log(prior volume)
         double precision, dimension(5) :: output_info
 
-        ! The run time info (very important, see src/run_time_info.f90)
+
+
+        ! Local variables
+        ! ===============
+
+        ! The run time info
+        ! ----------------
+        ! very important, see src/run_time_info.f90
         type(run_time_info) :: RTI
 
-        logical :: more_samples_needed
-
-        ! The new-born baby points
+        ! Temporary variables
+        ! -------------------
+        ! Seed point to generate babies from
+        double precision, dimension(settings%nTotal) :: seed_point
+        ! Cholesky matrix to generate babies from
+        double precision, dimension(settings%nDims,settings%nDims)   :: cholesky
+        ! Loglikelihood bound to generate babies from
+        double precision :: logL
+        ! New-born baby points, created by slice sampling routine
         double precision, dimension(settings%nTotal,settings%num_babies) :: baby_points
 
-        ! Point to seed a new one from
-        double precision, dimension(settings%nTotal) :: seed_point
-
-        ! Cholesky matrix to send
-        double precision, dimension(settings%nDims,settings%nDims)   :: cholesky
-
-
-        logical :: linear_mode ! Whether to run in linear mode if nprocs==1
-        logical :: resume      ! Whether to resume from file
-
         integer :: nlike ! Temporary storage for number of likelihood calls
-
-
-        integer :: nprocs
-        integer :: myrank
-        integer :: root
-
         integer :: i_cluster
-        integer :: clusters(settings%nlive)
-        integer :: num_new_clusters
-        double precision, dimension(settings%nlive,settings%nlive) :: similarity_matrix
+
+        ! MPI process variables
+        ! ---------------------
+        integer :: nprocs ! number of MPI processes
+        integer :: myrank ! rank of this MPI process
+        integer :: root   ! root MPI process (defines 'master')
+
 
 #ifdef MPI
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
-        integer :: i_slave
-        integer, dimension(:), allocatable :: slave_cluster       !> The cluster the slave is currently working on
+        ! MPI specific variables
+        ! ----------------------
+        integer                            :: i_slave       ! Slave iterator
+        integer                            :: slave_id      ! Slave identifier
+        integer, dimension(:), allocatable :: slave_cluster ! The cluster the slave is currently working on
+#endif
 
+
+
+
+
+
+
+
+
+
+        ! A) Initialisation
+        !    ==============
+#ifdef MPI
         ! MPI initialisation
         nprocs = get_nprocs(mpi_communicator)         ! Get the number of MPI processes
         myrank = get_rank(mpi_communicator)           ! Get the identity of this process
-        root   = assign_root(myrank,mpi_communicator) ! Assign the root process as the minimum integer
+        root   = get_root(myrank,mpi_communicator)    ! Assign the root process as the minimum integer
 
         allocate(slave_cluster(nprocs-1)) ! Allocate the slave arrays
 
 #else 
-
         ! non-MPI initialisation
         root=0      ! Define root node
         myrank=root ! set the only node's rank to be the root
@@ -98,35 +122,32 @@ module nested_sampling_module
 
 #endif
 
-        linear_mode = nprocs==1 ! Run in linear mode if only one process
-
-        if(myrank==root) call write_opening_statement(settings) 
 
 
+        !-------------------------------------------------------!
+        if(myrank==root) call write_opening_statement(settings) !
+        !-------------------------------------------------------!
 
 
-        !======= 1) Initialisation =====================================
 
         ! Check if we actually want to resume
-        resume = settings%read_resume .and. resume_file_exists(settings)
-
-        if (resume) then 
+        if ( settings%read_resume .and. resume_file_exists(settings) ) then 
 
             ! Read the resume file on root
             if(myrank==root) call read_resume_file(settings,RTI) 
 
         else 
-            
+
             ! Intialise the run by setting all of the relevant run time info, and generating live points
             call GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_communicator,nprocs,myrank,root)
 
             ! Write a resume file (as the generation of live points can be intensive)
             if(myrank==root.and.settings%write_resume) then
                 call delete_files(settings)     ! Delete any existing files
-                write_resume_file(settings,RTI) ! Write a new resume file
+                call write_resume_file(settings,RTI) ! Write a new resume file
             end if
 
-        end if !(.not.resume)
+        end if 
 
 
 
@@ -141,21 +162,21 @@ module nested_sampling_module
 
 
 
-        !======= 2) Main loop body =====================================
+        ! B) Main loop body
+        !    ==============
 
         if(myrank==root) then
 
 
             ! -------------------------------------------- !
-            call write_started_sampling(settings%feedback)
+            call write_started_sampling(settings%feedback) !
             ! -------------------------------------------- !
 
-            ! definitely more samples needed than this
-            more_samples_needed = .true.
+            do while ( more_samples_needed(settings,RTI) )
 
 
-            do while ( more_samples_needed )
-
+                ! 1) Generate a new live point
+                !    -------------------------
                 ! Generate a seed point --- update this
                 seed_point = GenerateSeed(settings,RTI,i_cluster)
 
@@ -166,29 +187,35 @@ module nested_sampling_module
                 logL = RTI%logLp(i_cluster)
 
 
-                if(linear_mode) then
+                if(nprocs==1) then
+                    ! Linear Mode
+                    ! -----------
+
                     ! Generate a new set of points within the likelihood bound of the late point
                     baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point,logL,nlike)
 #ifdef MPI
-                else !(.not.linear_mode)
+                else
+                    ! Parallel mode
+                    ! -------------
 
                     ! Recieve any new baby points from any slave currently sending
-                    i_slave = catch_babies(baby_points,nlike,mpi_communicator)
+                    slave_id = catch_babies(baby_points,nlike,mpi_communicator)
 
                     ! and throw seeding information back to slave (true => keep going)
-                    call throw_seed(seed_point,cholesky,logL,mpi_communicator,i_slave,.true.)
+                    call throw_seed(seed_point,cholesky,logL,mpi_communicator,slave_id,.true.)
 
-                    ! set logL to be the bound of the babies just recieved (saved in slave_logL)
-                    ! and set slave_logL to be the bound just sent off
-                    call swap_int(i_cluster,slave_cluster(i_slave))
+                    ! set i_cluster to be the cluster identity of the babies just recieved 
+                    ! (saved in slave_cluster from the last send) and set slave_cluster to 
+                    ! be the bound just sent off.
+                    call swap_integers(i_cluster,slave_cluster(slave_id))
 
 #endif
-                end if !(linear_mode / .not.linear_mode)
+                end if
 
                 ! Add the likelihood calls to our counter
                 RTI%nlike = RTI%nlike + nlike
 
-                
+
 
                 if( replace_point(settings,RTI,baby_points,i_cluster) ) then
 
@@ -200,131 +227,28 @@ module nested_sampling_module
 
                 end if
             end do
-                !vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-                !vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-                !vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 
 
 
-
-
-
-!                ! (2) Add the babies to the array, testing to see if these
-!                ! constitute a valid point. 
-!                if( add_babies(settings,info,live_points,phantom_points,nphantom,baby_points) ) then
-!
-!                    ! Record that we have a new dead point
-!                    ndead = ndead + 1
-!
-!                    ! (5) Update the covariance matrix of the distribution of live points
-!                    if(mod(ndead,settings%nlive) .eq.0) then
-!
-!                        if(settings%do_clustering) then 
-!
-!                            if(settings%feedback>=2) write(stdout_unit,'(" Doing Clustering ")')
-!                            i_cluster=1
-!                            do while(i_cluster<=info%ncluster_A)
-!                                ! For each active cluster, see if it is further sub-clustered
-!
-!                                ! Calculate a similarity matrix
-!                                similarity_matrix(:info%n(i_cluster),:info%n(i_cluster)) &
-!                                        = calc_similarity_matrix(live_points(settings%h0:settings%h1,:info%n(i_cluster),i_cluster))
-!
-!                                ! Do clustering on this matrix
-!                                num_new_clusters = NN_clustering( &
-!                                        similarity_matrix(:info%n(i_cluster),:info%n(i_cluster)), &
-!                                        settings%SNN_k,clusters(:info%n(i_cluster)))
-!
-!                                ! If we've found new clusters, then we should bifurcate the algorithm at this point
-!                                if(num_new_clusters>1) then
-!
-!                                    if( num_new_clusters+info%ncluster_A>settings%ncluster ) then
-!                                        call halt_program(" Too many clusters. Consider increasing settings%ncluster")
-!                                    else if (num_new_clusters + info%ncluster_T > settings%ncluster*2 ) then
-!                                        call halt_program(" Too many clusters. Consider increasing settings%nclustertot")
-!                                    else
-!                                        call create_new_clusters(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior,i_cluster,clusters(:info%n(i_cluster)),num_new_clusters)
-!
-!                                        write(stdout_unit,'( I8, " clusters found at iteration ", I8)') info%ncluster_A, ndead
-!                                    end if
-!                                else
-!                                    ! Otherwise move on to the next cluster
-!                                    i_cluster=i_cluster+1
-!                                end if
-!
-!
-!                            end do
-!
-!                        end if
-!                        ! Calculate the covariance matrices
-!                        covmats = calc_covmats(settings,info,live_points,phantom_points,nphantom)
-!                        ! Calculate the cholesky decomposition
-!                        choleskys = calc_choleskys(covmats)
-!
-!                    end if
-!
-!
-!
-!
-!
-!
-!                    ! (3) Feedback to command line every nlive iterations
-!                    ! Test to see if we need to finish
-!                    more_samples_needed =  (live_logZ(settings,info,live_points) > log(settings%precision_criterion) + info%logevidence ) 
-!
-!                    ! (4) Update the resume and posterior files every update_resume iterations, or at program termination
-!                    if ( (mod(ndead,settings%update_resume) == 0) .or.  (more_samples_needed.eqv..false.) )  then
-!
-!
-!                        ! ---------------------------------------------------------------------- !
-!                        call write_intermediate_results(settings,info,ndead,nphantom,nposterior,&
-!                                mean_likelihood_calls(settings,info,live_points) ) 
-!                        ! ---------------------------------------------------------------------- !
-!
-!                        if(settings%feedback>=2) write(stdout_unit,'(" Writing resume files ")')
-!                        if(settings%calculate_posterior) call write_posterior_file(settings,info,posterior_points,nposterior)  
-!                        if(settings%write_resume)        call write_resume_file(settings,info,live_points,nphantom,phantom_points,&
-!                                ndead,total_likelihood_calls)
-!                        if(settings%write_live)          call write_phys_live_points(settings,info,live_points)
-!                        call write_stats_file(settings,info,ndead) 
-!
-!                    end if
-!
-!                    ! If we've put a limit on the maximum number of iterations, then
-!                    ! check to see if we've reached this
-!                    if (settings%max_ndead >0 .and. ndead .ge. settings%max_ndead) more_samples_needed = .false.
-!
-!
-!
-!                    ! (6] delete the next outer point.
-!                    if(settings%feedback>=2) write(stdout_unit,'(" Deleting outer point ")')
-!                    call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
-!
-!
-!                end if
-!
-!            end do ! End main loop
-
-
+            ! C) Clean up
+            !    ========
 
 #ifdef MPI
-            if(.not.linear_mode) then
+            ! MPI cleanup
+            ! -----------
+            ! Kill off the final slaves.
+            ! If we're done, then clean up by receiving the last piece of
+            ! data from each node (and throw it away) and then send a kill signal back to it
+            do i_slave=nprocs-1,1,-1
 
-                ! Kill off the final slaves
-                ! If we're done, then clean up by receiving the last piece of
-                ! data from each node (and throw it away) and then send a kill signal back to it
-                do active_slaves=nprocs-1,1,-1
+                ! Recieve baby point from slave slave_id
+                slave_id = catch_babies(baby_points,mpi_communicator)
 
-                    ! Recieve baby point from slave i_slave
-                    i_slave = catch_babies(baby_points,mpi_communicator)
+                ! Send kill signal to slave slave_id (note that we no longer care about seed_point, so we'll just use the last one
+                call throw_seed(seed_point,mpi_communicator,slave_id,.false.) 
 
-                    ! Send kill signal to slave i_slave (note that we no longer care about seed_point, so we'll just use the last one
-                    call throw_seed(seed_point,mpi_communicator,i_slave,.false.) 
-
-                end do
-
-            end if !(.not.linear_mode / linear_mode )
+            end do
 #endif
 
 
@@ -340,7 +264,7 @@ module nested_sampling_module
             output_info(5) = output_info(1)+prior_log_volume(priors)
 
             ! ------------------------------------------------------------ !
-            call write_final_results(output_info,settings%feedback,priors)
+            call write_final_results(output_info,settings%feedback,priors) !
             ! ------------------------------------------------------------ !
 
 
@@ -355,20 +279,21 @@ module nested_sampling_module
             !
             ! This is considerably simpler than that of the master.
             ! All slaves do is:
-            ! 1) recieve a seed point from the master
-            ! 2) recieve a cholesky decomposition from the master
-            ! 3) using the seed and cholesky, generate a new set of baby points
-            ! 4) Send the baby points back to the master
+            ! 1) recieve a seed point,cholesky decomposition and loglikelihood
+            !    contour from the master
+            ! 2) using the above, generate a new set of baby points
+            ! 3) send the baby points and nlike back to the master.
 
 
-            ! BEGIN) On the first loop, send a nonsense set of baby_points
+            ! On the first loop, send a nonsense set of baby_points
             ! to indicate that we're ready to start receiving
 
-            baby_points = 0d0
-            baby_points(settings%l0) = logzero
-            nlike = 0
-
+            baby_points = 0d0                   ! Avoid sending nonsense
+            baby_points(settings%l0) = logzero  ! zero contour to ensure these are all thrown away
+            nlike = 0                           ! no likelihood calls in this round
             call throw_babies(baby_points,nlike,mpi_communicator,root)
+
+
 
             ! 1) Listen for a seed point being sent by the master
             !    Note that this also tests for a kill signal sent by the master
@@ -392,6 +317,47 @@ module nested_sampling_module
 
 
 
+
+
+
+
+
+
+
+
+
+    !> This function checks whether we've done enough to stop
+    function more_samples_needed(settings,RTI)
+        use settings_module,   only: program_settings
+        use run_time_module,   only: run_time_info
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        type(run_time_info), intent(inout) :: RTI
+
+        logical :: more_samples_needed
+
+        ! Set it to default to true
+        more_samples_needed = .true.
+
+        ! If we've put a maximum number of iterations on the algorithm, then
+        ! we'll stop if we've reached that number. 
+        ! If we don't want a maximum number of iterations, then max_ndead should
+        ! be set negative or 0
+        if(settings%max_ndead>0 .and. RTI%ndead >= settings%max_ndead) then
+            more_samples_needed = .false. 
+            return
+        end if
+
+        ! If the evidence in the live points is less than precision_criterion %
+        ! of the total accumulated evidence, then stop.
+        if( live_logZ(settings,RTI) < log(settings%precision_criterion) + RTI%logZ )  then
+            more_samples_needed = .false.
+            return
+        end if
+
+
+    end function more_samples_needed
 
 
 
