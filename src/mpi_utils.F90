@@ -256,6 +256,7 @@ module mpi_module
 
     !> slave catches seed thrown by master
     function catch_seed(seed_point,cholesky,logL,mpi_communicator,root) result(more_points_needed)
+        use abort_module, only: halt_program
         implicit none
 
 

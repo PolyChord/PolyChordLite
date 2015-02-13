@@ -69,6 +69,7 @@ module read_write_module
         type(run_time_info),    intent(in) :: RTI
 
         integer :: i_cluster
+        integer :: i_point
 
 
         character(len=fmt_len) :: fmt_int
@@ -144,13 +145,17 @@ module read_write_module
         ! write live points
         write(write_resume_unit,'("=== live points ===")')                    
         do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,fmt_dbl) RTI%live(:,:,i_cluster)
+            do i_point=1,RTI%nlive(i_cluster)
+                write(write_resume_unit,fmt_dbl) RTI%live(:,i_point,i_cluster)
+            end do
         end do
 
         ! write phantom points
         write(write_resume_unit,'("=== phantom points ===")')                    
         do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,fmt_dbl) RTI%phantom(:,:,i_cluster)
+            do i_point=1,RTI%nphantom(i_cluster)
+                write(write_resume_unit,fmt_dbl) RTI%phantom(:,i_point,i_cluster)
+            end do
         end do
 
         ! Close the writing file
@@ -166,12 +171,15 @@ module read_write_module
         use utils_module, only: DB_FMT,INT_FMT,fmt_len,read_resume_unit
         use run_time_module, only: run_time_info
         use settings_module, only: program_settings
+        use feedback_module, only: write_resuming
+        use abort_module, only: halt_program
         implicit none
 
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(out) :: RTI
 
         integer :: i_cluster
+        integer :: i_point
         integer :: i_temp
 
 
@@ -275,13 +283,17 @@ module read_write_module
         ! Read in live points
         read(read_resume_unit,*)                               
         do i_cluster=1,RTI%ncluster
-            read(read_resume_unit,fmt_dbl) RTI%live(:,:,i_cluster)
+            do i_point=1,RTI%nlive(i_cluster)
+                read(read_resume_unit,fmt_dbl) RTI%live(:,i_point,i_cluster)
+            end do
         end do
 
         ! Read in phantom points
         read(read_resume_unit,*)                               
         do i_cluster=1,RTI%ncluster
-            read(read_resume_unit,fmt_dbl) RTI%phantom(:,:,i_cluster)
+            do i_point=1,RTI%nphantom(i_cluster)
+                read(read_resume_unit,fmt_dbl) RTI%phantom(:,i_point,i_cluster)
+            end do
         end do
 
         ! Close the reading unit
@@ -307,8 +319,8 @@ module read_write_module
         use run_time_module, only: run_time_info 
         implicit none
 
-        type(program_settings), intent(in) :: settings
-        type(run_time_info),    intent(in) :: RTI
+        type(program_settings), intent(in)    :: settings
+        type(run_time_info),    intent(inout) :: RTI
 
         integer :: i_cluster
 
@@ -337,6 +349,9 @@ module read_write_module
             end if
 
         end do
+
+        ! Delete all of the posterior points
+        RTI%nposterior = 0
 
         close(write_untxt_unit)
 
@@ -395,7 +410,7 @@ module read_write_module
     subroutine write_stats_file(settings,RTI)
         use utils_module, only: DB_FMT,fmt_len,write_stats_unit,logsubexp
         use settings_module, only: program_settings
-        use run_time_module, only: run_time_info 
+        use run_time_module, only: run_time_info,calculate_logZ_estimate
         implicit none
 
         type(program_settings), intent(in) :: settings

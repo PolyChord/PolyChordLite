@@ -14,9 +14,9 @@ module nested_sampling_module
         use priors_module,     only: prior,prior_log_volume
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp,calc_similarity_matrix,stdout_unit,swap_integers,logzero
-        use read_write_module, only: write_resume_file,resume_file_exists
+        use read_write_module
         use feedback_module
-        use run_time_module,   only: run_time_info
+        use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: NN_clustering
@@ -75,9 +75,12 @@ module nested_sampling_module
         double precision :: logL
         ! New-born baby points, created by slice sampling routine
         double precision, dimension(settings%nTotal,settings%num_babies) :: baby_points
+        integer :: cluster_id ! Cluster identifier
+        integer :: nlike      ! Temporary storage for number of likelihood calls
 
-        integer :: nlike ! Temporary storage for number of likelihood calls
-        integer :: i_cluster
+        ! Logical Switches
+        ! ----------------
+        logical :: need_more_samples
 
         ! MPI process variables
         ! ---------------------
@@ -143,20 +146,10 @@ module nested_sampling_module
             ! Write a resume file (as the generation of live points can be intensive)
             if(myrank==root.and.settings%write_resume) then
                 call delete_files(settings)     ! Delete any existing files
-                call write_resume_file(settings,RTI) ! Write a new resume file
+                if(settings%write_resume) call write_resume_file(settings,RTI) ! Write a new resume file
             end if
 
         end if 
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -171,19 +164,22 @@ module nested_sampling_module
             call write_started_sampling(settings%feedback) !
             ! -------------------------------------------- !
 
-            do while ( more_samples_needed(settings,RTI) )
+            ! Definitely need more samples than this
+            need_more_samples = .true.
+
+            do while ( need_more_samples )
 
 
                 ! 1) Generate a new live point
                 !    -------------------------
                 ! Generate a seed point --- update this
-                seed_point = GenerateSeed(settings,RTI,i_cluster)
+                seed_point = GenerateSeed(settings,RTI,cluster_id)
 
                 ! Choose the cholesky decomposition for the cluster
-                cholesky = RTI%cholesky(:,:,i_cluster)
+                cholesky = RTI%cholesky(:,:,cluster_id)
 
                 ! Get the loglikelihood contour we're generating from
-                logL = RTI%logLp(i_cluster)
+                logL = RTI%logLp(cluster_id)
 
 
                 if(nprocs==1) then
@@ -203,10 +199,10 @@ module nested_sampling_module
                     ! and throw seeding information back to slave (true => keep going)
                     call throw_seed(seed_point,cholesky,logL,mpi_communicator,slave_id,.true.)
 
-                    ! set i_cluster to be the cluster identity of the babies just recieved 
+                    ! set cluster_id to be the cluster identity of the babies just recieved 
                     ! (saved in slave_cluster from the last send) and set slave_cluster to 
                     ! be the bound just sent off.
-                    call swap_integers(i_cluster,slave_cluster(slave_id))
+                    call swap_integers(cluster_id,slave_cluster(slave_id))
 
 #endif
                 end if
@@ -215,17 +211,28 @@ module nested_sampling_module
                 RTI%nlike = RTI%nlike + nlike
 
 
+                if( replace_point(settings,RTI,baby_points,cluster_id) ) then
 
-                if( replace_point(settings,RTI,baby_points,i_cluster) ) then
+                    need_more_samples = more_samples_needed(settings,RTI) 
 
-                    call check_end
+                    ! Update the resume files every settings%update_resume iterations,
+                    ! or at the end of the run
+                    if( mod(RTI%ndead,settings%update_resume)==0 .or. need_more_samples ) then
+                        ! Write the resume file if desired
+                        if(settings%write_resume)        call write_resume_file(settings,RTI)
+                        if(settings%calculate_posterior) call write_unnormalised_posterior_file(settings,RTI)  
+                        if(settings%write_live)          call write_phys_live_points(settings,RTI)
+                        if(settings%feedback>=1)         call write_intermediate_results(settings,RTI)
+                        if(settings%write_stats)         call write_stats_file(settings,RTI)
+                    end if
 
-                    call do_clustering
+                    !call do_clustering
 
-                    call write_info
+
 
                 end if
-            end do
+
+            end do ! End of main loop body
 
 
 

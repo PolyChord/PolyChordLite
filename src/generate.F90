@@ -49,7 +49,7 @@ module generate_module
         seed_cluster = random_integer_P(probs)
 
         ! 2) Pick whether to draw from phantom or live points
-        if(bernoulli_trial(RTI%nlive(seed_cluster)+0d0,RTI%nlive(seed_cluster)+0d0)) then
+        if(bernoulli_trial(RTI%nlive(seed_cluster)+0d0,RTI%nphantom(seed_cluster)+0d0)) then
 
             ! 3a) Pick a random integer in between 1 and the number of live points in the cluster 'p'
             seed_choice = random_integer(RTI%nlive(seed_cluster))
@@ -79,10 +79,10 @@ module generate_module
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating
-        use run_time_module,   only: run_time_info
+        use run_time_module,   only: run_time_info,initialise_run_time_info
         use abort_module
 #ifdef MPI
-        use mpi_module, only: throw_point,catch_point,more_points_needed,sum_nlike
+        use mpi_module, only: throw_point,catch_point,more_points_needed,sum_nlike,request_point,no_more_points
 #endif
 
         implicit none
@@ -149,7 +149,7 @@ module generate_module
             !===================== LINEAR MODE =========================
 
             i_live=0 ! Initially no live points have been generated
-            do while(i_live<=settings%nlive)
+            do while(i_live<settings%nlive)
 
                 ! Generate a random coordinate
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
@@ -157,16 +157,19 @@ module generate_module
                 ! Compute physical coordinates, likelihoods and derived parameters
                 call calculate_point( loglikelihood, priors, live_point, settings, nlike)
 
-                ! If this is a valid physical point, then add it to the live points array
+                ! If its valid, and we need more points, add it to the array
                 if(live_point(settings%l0)>logzero) then
 
                     i_live=i_live+1                      ! Increase the live point counter
                     RTI%live(:,i_live,1) = live_point    ! Add the new live point to the array
+                    RTI%nlive(1) = i_live                ! note down the number of live point in RTI
 
-                    ! Write the live points to the live_points file
-                    write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                    ! flush the unit to force write
-                    call flush(write_phys_unit)
+                    if(settings%write_live) then
+                        ! Write the live points to the live_points file
+                        write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
+                        ! flush the unit to force write
+                        call flush(write_phys_unit)
+                    end if
 
                 end if
 
@@ -194,11 +197,14 @@ module generate_module
 
                         i_live=i_live+1                      ! Increase the live point counter
                         RTI%live(:,i_live,1) = live_point    ! Add the new live point to the array
+                        RTI%nlive(1) = i_live                ! note down the number of live point in RTI
 
-                        ! Write the live points to the live_points file
-                        write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                        ! flush the unit to force write
-                        call flush(write_phys_unit)
+                        if(settings%write_live) then
+                            ! Write the live points to the live_points file
+                            write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
+                            ! flush the unit to force write
+                            call flush(write_phys_unit)
+                        end if
 
                     end if
 
@@ -208,7 +214,7 @@ module generate_module
                         call request_point(mpi_communicator,slave_id)
                     else
                         ! Otherwise, send a signal to stop
-                        call done_generating(mpi_communicator,slave_id)
+                        call no_more_points(mpi_communicator,slave_id)
 
                         active_slaves=active_slaves-1 ! decrease the active slave counter
                     end if

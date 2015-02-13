@@ -231,17 +231,18 @@ module utils_module
         character(STR_LENGTH),intent(in) :: file_name
 
         logical :: deleted ! whether or not there was a file to be deleted
-        integer :: io_stat ! input/output status variable
+
+        ! Check that file exists:
+        inquire( file=trim(file_name), exist=deleted)
+
+        if(deleted) then
+            ! open the file
+            open(delete_unit,file=trim(file_name)) 
+            ! Delete it if it exists
+            close(delete_unit,status='delete')
+        end if
 
 
-        ! Try to open the file
-        open(delete_unit,file=trim(file_name), action='write',iostat=io_stat) 
-
-        ! Note whether the file exists
-        deleted = (io_stat == 0) 
-
-        ! Delete it if it exists
-        if(deleted) close(delete_unit,status='delete')
     end function delete_file
 
 

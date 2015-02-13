@@ -53,7 +53,7 @@ module run_time_module
         double precision, allocatable, dimension(:,:) :: logXpXq
 
         !> Minimum loglikelihood
-        double precision, allocatable :: logL
+        double precision :: logL
         !> Minimum loglikelihoods
         double precision, allocatable, dimension(:) :: logLp
         !> Cluster containing the minimum loglikelihood point
@@ -79,6 +79,7 @@ module run_time_module
         type(run_time_info),intent(out) :: RTI
 
         ! Allocate all of the arrays with one cluster
+        RTI%ncluster = 1
         allocate(                                            &
             RTI%live(settings%nTotal,settings%nlive,1),      &
             RTI%phantom(settings%nTotal,settings%nlive,1),   &
@@ -285,44 +286,6 @@ module run_time_module
 
     end subroutine calculate_logZ_estimate
 
-
-    subroutine find_min_loglike(settings,RTI)
-        use utils_module, only: loginf
-        use settings_module, only: program_settings
-
-        implicit none
-        type(program_settings), intent(in) :: settings !> Program settings
-        type(run_time_info),intent(inout)  :: RTI      !> Run time information
-
-        ! The minimum loglikelihood to be returned
-        double precision :: logL
-
-        integer :: i_live(1)
-
-        integer :: i_cluster !> cluster iterator
-
-        RTI%logL = loginf
-
-        ! Find the separate minima of all the clusters
-        do i_cluster=1,RTI%ncluster
-
-            ! Find the position of the lowest point in this cluster
-            i_live = minloc(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster))
-            ! Find the likelihood of the lowest point in this cluster
-            logL = RTI%live(settings%l0,i_live(1),i_cluster) 
-
-            ! If this is the lowest likelihood we've found 
-            if(logL<RTI%logL) then
-                RTI%logL = logL      !> Record that we've found a new low
-                RTI%p    = i_cluster !> Record the cluster identity
-                RTI%i    = i_live(1) !> Record the live point identity
-            end if
-
-        end do
-
-
-    end subroutine find_min_loglike
-
     function live_logZ(settings,RTI)
         use utils_module, only: logzero,logsumexp,logincexp
         use settings_module, only: program_settings
@@ -331,9 +294,9 @@ module run_time_module
         type(program_settings), intent(in) :: settings !> Program settings
         type(run_time_info),intent(inout)  :: RTI      !> Run time information
 
-        double precision ::live_logZ !> Amount of evidence remaining in the live points
+        double precision ::live_logZ ! Amount of evidence remaining in the live points
 
-        integer :: i_cluster
+        integer :: i_cluster ! cluster iterator
 
         ! Initialise it with no log evidence
         live_logZ = logzero
@@ -348,5 +311,25 @@ module run_time_module
         end do
 
     end function live_logZ
+
+    function replace_point(settings,RTI,baby_points,cluster_id) result(replaced)
+        use utils_module, only: logzero,logsumexp,logincexp
+        use settings_module, only: program_settings
+
+        implicit none
+        type(program_settings), intent(in) :: settings !> Program settings
+        type(run_time_info),intent(inout)  :: RTI      !> Run time information
+        integer,intent(in) :: cluster_id               !> Cluster identifier
+        !> New-born baby points, created by slice sampling routine
+        double precision,intent(in),dimension(settings%nTotal,settings%num_babies) :: baby_points
+
+        logical :: replaced ! Have we successfully replaced a point?
+
+        replaced =.false.
+
+        stop
+
+
+    end function replace_point
 
 end module

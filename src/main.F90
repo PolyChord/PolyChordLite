@@ -86,6 +86,16 @@ program main
     double precision, allocatable, dimension(:) :: theta
     double precision, allocatable, dimension(:) :: phi
 
+    ! Interface for the loglikelihood function
+    interface
+        function loglikelihood(theta,phi,context)
+            double precision, intent(in),  dimension(:) :: theta
+            double precision, intent(out),  dimension(:) :: phi
+            integer,          intent(in)                 :: context
+            double precision :: loglikelihood
+        end function
+    end interface
+
 
 
     ! ======= (1) Initialisation =======

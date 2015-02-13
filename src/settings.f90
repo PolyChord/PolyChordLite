@@ -51,6 +51,9 @@ module settings_module
         !> Whether or not to write resume files
         logical :: write_resume = .false.
 
+        !> Whether or not to write stats file
+        logical :: write_stats = .false.
+
         !> How often to update the resume file
         integer :: update_resume = 500
 

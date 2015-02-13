@@ -208,9 +208,13 @@ module random_module
         logical :: bernoulli_trial
         logical :: bernoulli_trial_vec(1)
 
-        bernoulli_trial_vec = bernoulli_trials(1,p,q)
-        bernoulli_trial = bernoulli_trial_vec(1)
+        if(present(q)) then
+            bernoulli_trial_vec = bernoulli_trials(1,p,q)
+        else
+            bernoulli_trial_vec = bernoulli_trials(1,p)
+        end if
 
+        bernoulli_trial = bernoulli_trial_vec(1)
 
     end function bernoulli_trial
 

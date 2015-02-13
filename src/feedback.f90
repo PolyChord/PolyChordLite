@@ -188,7 +188,7 @@ module feedback_module
 
     !> Intermediate results
     subroutine write_intermediate_results(settings,RTI)
-        use run_time_module, only: run_time_info
+        use run_time_module, only: run_time_info,calculate_logZ_estimate
         use settings_module, only: program_settings
         use utils_module,    only: stdout_unit,logzero,fmt_len
         implicit none
