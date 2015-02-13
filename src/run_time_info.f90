@@ -153,12 +153,12 @@ module run_time_module
         double precision :: lognp2
 
 
+        logL  = RTI%logL
+        p     = RTI%p
+
         lognp = log( RTI%nlive(p) +0d0 )
         lognp1= log( RTI%nlive(p) +1d0 )
         lognp2= log( RTI%nlive(p) +2d0 )
-
-        logL  = RTI%logL
-        p     = RTI%p
 
 
         ! Global evidence
@@ -268,17 +268,19 @@ module run_time_module
         use utils_module, only: logzero
         implicit none
 
-        type(run_time_info),intent(in)                         :: RTI        !> Run time information
-        double precision, intent(out)                          :: logZ       !>
-        double precision, intent(out)                          :: sigmalogZ  !>
-        double precision, intent(out), dimension(RTI%ncluster) :: logZp      !>
-        double precision, intent(out), dimension(RTI%ncluster) :: sigmalogZp !>
+        type(run_time_info),intent(in)                                  :: RTI        !> Run time information
+        double precision, intent(out)                                   :: logZ       !>
+        double precision, intent(out)                                   :: sigmalogZ  !>
+        double precision, intent(out), dimension(RTI%ncluster),optional :: logZp      !>
+        double precision, intent(out), dimension(RTI%ncluster),optional :: sigmalogZp !>
 
         logZ       = max(logzero,2*RTI%logZ - 0.5*RTI%logZ2)
         sigmalogZ  = sqrt(abs(RTI%logZ2 - 2*RTI%logZ))
 
-        logZp      = max(logzero,2*RTI%logZp - 0.5*RTI%logZp2)
-        sigmalogZp = sqrt(abs(RTI%logZp2 - 2*RTI%logZp))
+        if(present(logZp).and.present(sigmalogZp))then
+            logZp      = max(logzero,2*RTI%logZp - 0.5*RTI%logZp2)
+            sigmalogZp = sqrt(abs(RTI%logZp2 - 2*RTI%logZp))
+        end if
 
 
     end subroutine calculate_logZ_estimate
@@ -296,7 +298,6 @@ module run_time_module
         double precision :: logL
 
         integer :: i_live(1)
-        integer :: i_logL   
 
         integer :: i_cluster !> cluster iterator
 
@@ -308,11 +309,11 @@ module run_time_module
             ! Find the position of the lowest point in this cluster
             i_live = minloc(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster))
             ! Find the likelihood of the lowest point in this cluster
-            i_logL = RTI%live(settings%l0,i_live(1),i_cluster) 
+            logL = RTI%live(settings%l0,i_live(1),i_cluster) 
 
             ! If this is the lowest likelihood we've found 
-            if(i_logL<RTI%logL) then
-                RTI%logL = i_logL    !> Record that we've found a new low
+            if(logL<RTI%logL) then
+                RTI%logL = logL      !> Record that we've found a new low
                 RTI%p    = i_cluster !> Record the cluster identity
                 RTI%i    = i_live(1) !> Record the live point identity
             end if
@@ -321,5 +322,31 @@ module run_time_module
 
 
     end subroutine find_min_loglike
+
+    function live_logZ(settings,RTI)
+        use utils_module, only: logzero,logsumexp,logincexp
+        use settings_module, only: program_settings
+
+        implicit none
+        type(program_settings), intent(in) :: settings !> Program settings
+        type(run_time_info),intent(inout)  :: RTI      !> Run time information
+
+        double precision ::live_logZ !> Amount of evidence remaining in the live points
+
+        integer :: i_cluster
+
+        ! Initialise it with no log evidence
+        live_logZ = logzero
+        
+        ! Sum up over all the clusters mean(likelihood) * volume
+        do i_cluster = 1,RTI%ncluster
+            call logincexp(live_logZ, &
+                    logsumexp(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster)) &
+                    - log(RTI%nlive(i_cluster)+0d0) &
+                    + RTI%logXp(i_cluster) &
+                    )
+        end do
+
+    end function live_logZ
 
 end module

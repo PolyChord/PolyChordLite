@@ -70,15 +70,15 @@ module utils_module
 
     contains
 
-    !> Swaps two doubles via a temporary variable
-    subroutine swap(a,b)
+    !> Swaps two integers via a temporary variable
+    subroutine swap_int(a,b)
             implicit none
-            double precision,intent(inout) :: a,b
-            double precision :: temp
+            integer,intent(inout) :: a,b
+            integer :: temp
             temp=a
             a=b
             b=temp
-    end subroutine swap
+    end subroutine swap_int
 
     !> location of minimum in an array of doubles
     !!
