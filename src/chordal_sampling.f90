@@ -3,7 +3,7 @@ module chordal_module
 
     contains
 
-    function SliceSampling(loglikelihood,priors,settings,cholesky,seed_point,logL,nlike)  result(baby_points)
+    function SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike)  result(baby_points)
         use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,random_real
@@ -121,7 +121,7 @@ module chordal_module
 
         if(do_timing.and.settings%do_grades) then 
             write(fmt_1,'("(",I0,"(",A,",""% ""), ""(Total time:"",",A,",""seconds)"")")') &
-                    settings%grades%max_grade-settings%grades%min_grade+1, FLT_FMT,FLT_FMT
+                settings%grades%max_grade-settings%grades%min_grade+1, FLT_FMT,FLT_FMT
             write(stdout_unit,fmt_1) timers/sum(timers)*100, sum(timers)
         end if
 
@@ -164,7 +164,7 @@ module chordal_module
 
                 do i_repeat=1, num_repeats
                     nhats(grade_index:grade_index+grade_nDims-1,i_babies:i_babies+grade_nDims-1) = &
-                            random_orthonormal_basis(grade_nDims)
+                        random_orthonormal_basis(grade_nDims)
                     grade_order(i_babies:i_babies+grade_nDims-1)=i_grade
                     i_babies = i_babies + grade_nDims
                 end do
@@ -304,7 +304,7 @@ module chordal_module
                 x1(S%l0) = logzero
                 return
             end if
-            
+
             ! Find the distance between x0 and L 
             x0Ld= distance(x0(S%h0:S%h1),L(S%h0:S%h1))
             ! Find the distance between x0 and R 

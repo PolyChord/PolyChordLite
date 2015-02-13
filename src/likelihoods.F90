@@ -352,8 +352,8 @@ module example_likelihoods
             mu(18) =  0.4724667E+00  !xi          
             mu(19) =  0.4426342E+01  !aksz        
             mu(20) =  0.5281187E+00  !bm_1_1      
-  
-  
+
+
             ! Generate a planck covariance matrix from file and compute inverses
             ! and logdets 
             call read_covariance(invcovmat,logdetcovmat,nDims)
@@ -568,7 +568,7 @@ module example_likelihoods
         ! Compute log likelihood
         gaussian_loglikelihood_cluster = logzero
         do i =1,num_peaks
-        log_likelihoods(i) = log_gauss(theta(:),mu(:,i),invcovmat(:,:,i),logdetcovmat(i))
+            log_likelihoods(i) = log_gauss(theta(:),mu(:,i),invcovmat(:,:,i),logdetcovmat(i))
         end do
         gaussian_loglikelihood_cluster = logsumexp(log_likelihoods)
         gaussian_loglikelihood_cluster = gaussian_loglikelihood_cluster - log(num_peaks+0d0)
@@ -611,7 +611,7 @@ module example_likelihoods
         ! Create the inverse covariance matrix in the eigenbasis
         invcovmat = 0d0
         do j=1,nDims
-        invcovmat(j,j) = 1d0/eigenvalues(j)**2
+            invcovmat(j,j) = 1d0/eigenvalues(j)**2
         end do
 
         ! Rotate the matrix into the coordinate basis
@@ -702,12 +702,12 @@ module example_likelihoods
         double precision, intent(out), dimension(:) :: phi
         !> Pointer to any additional information
         integer,          intent(in)                :: context
-                            
+
         double precision :: loglikelihood
 
         double precision, dimension(size(theta)) :: sigma ! Standard deviation (uncorrelated) 
         double precision, dimension(size(theta)) :: center    ! Mean
-        
+
         center= 5d-1   ! mean in the center
         sigma = 1d-3 
 
@@ -758,7 +758,7 @@ module example_likelihoods
         !For reducing the computational load by storing the normalisation:
         logical, save               :: stored   = .false.
         double precision, save      :: normalisation
-        
+
         !Getting the dimension and storing in dim
         dim      = size(theta)
         !Define where the center of the gaussian shell is

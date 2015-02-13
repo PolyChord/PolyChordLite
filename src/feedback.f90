@@ -37,7 +37,7 @@ module feedback_module
             write(stdout_unit,'("nDerived :",I8)')   settings%nDerived
             write(stdout_unit,'("")')
         end if
-       
+
 
 
 
@@ -120,7 +120,7 @@ module feedback_module
         !> The size of the progress bar
         integer,intent(in) :: bar_size
 
-        
+
         integer :: percent                    ! the percentage completed
         character(bar_size) :: bar                 ! the bounds on the progress bar
         integer :: i                          ! loop variable
@@ -196,7 +196,7 @@ module feedback_module
         type(run_time_info),    intent(in) :: RTI      !> run time info
 
         integer :: p
-        
+
         double precision                          :: logZ       
         double precision                          :: sigmalogZ  
         double precision, dimension(RTI%ncluster) :: logZp      

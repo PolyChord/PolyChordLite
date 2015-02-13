@@ -1,7 +1,7 @@
 module nested_sampling_module
 
 #ifdef MPI
-    use mpi_module, only: get_rank,get_nprocs,get_root,catch_babies,throw_babies
+    use mpi_module, only: get_rank,get_nprocs,get_root,catch_babies,throw_babies,throw_seed,catch_seed
 #endif
 
     implicit none
@@ -12,9 +12,8 @@ module nested_sampling_module
     !> Main subroutine for computing a generic nested sampling algorithm
     function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
-        use utils_module,      only: stdout_unit,swap_integers
         use settings_module,   only: program_settings
-        use utils_module,      only: logsumexp,calc_similarity_matrix,write_untxt_unit
+        use utils_module,      only: logsumexp,calc_similarity_matrix,stdout_unit,swap_integers,logzero
         use read_write_module, only: write_resume_file,resume_file_exists
         use feedback_module
         use run_time_module,   only: run_time_info
@@ -192,7 +191,7 @@ module nested_sampling_module
                     ! -----------
 
                     ! Generate a new set of points within the likelihood bound of the late point
-                    baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point,logL,nlike)
+                    baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike)
 #ifdef MPI
                 else
                     ! Parallel mode
@@ -243,10 +242,13 @@ module nested_sampling_module
             do i_slave=nprocs-1,1,-1
 
                 ! Recieve baby point from slave slave_id
-                slave_id = catch_babies(baby_points,mpi_communicator)
+                slave_id = catch_babies(baby_points,nlike,mpi_communicator)
+
+                ! Add the likelihood calls to our counter
+                RTI%nlike = RTI%nlike + nlike
 
                 ! Send kill signal to slave slave_id (note that we no longer care about seed_point, so we'll just use the last one
-                call throw_seed(seed_point,mpi_communicator,slave_id,.false.) 
+                call throw_seed(seed_point,cholesky,logL,mpi_communicator,slave_id,.false.) 
 
             end do
 #endif
@@ -288,9 +290,9 @@ module nested_sampling_module
             ! On the first loop, send a nonsense set of baby_points
             ! to indicate that we're ready to start receiving
 
-            baby_points = 0d0                   ! Avoid sending nonsense
-            baby_points(settings%l0) = logzero  ! zero contour to ensure these are all thrown away
-            nlike = 0                           ! no likelihood calls in this round
+            baby_points = 0d0                     ! Avoid sending nonsense
+            baby_points(settings%l0,:) = logzero  ! zero contour to ensure these are all thrown away
+            nlike = 0                             ! no likelihood calls in this round
             call throw_babies(baby_points,nlike,mpi_communicator,root)
 
 
@@ -300,7 +302,7 @@ module nested_sampling_module
             do while(catch_seed(seed_point,cholesky,logL,mpi_communicator,root))
 
                 ! 2) Generate a new set of baby points
-                baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,logL,seed_point,nlike)
+                baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike)
 
                 ! 3) Send the baby points back
                 call throw_babies(baby_points,nlike,mpi_communicator,root)
@@ -329,7 +331,7 @@ module nested_sampling_module
     !> This function checks whether we've done enough to stop
     function more_samples_needed(settings,RTI)
         use settings_module,   only: program_settings
-        use run_time_module,   only: run_time_info
+        use run_time_module,   only: run_time_info,live_logZ
         implicit none
 
         type(program_settings), intent(in) :: settings

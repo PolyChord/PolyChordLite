@@ -2,40 +2,40 @@
 !!
 !! we define this, so we can easily switch in and out differing likelihoods
 function loglikelihood(theta,phi,context)
-        use example_likelihoods
-        implicit none
-        double precision, intent(in),  dimension(:) :: theta
-        double precision, intent(out),  dimension(:) :: phi
-        integer,          intent(in)                 :: context
-        double precision :: loglikelihood
-        !       These can be written into src/example_likelihoods.f90, and should
-        !       have the interface:
-        !
-        !interface
-        !    function loglikelihood(theta,phi,context)
-        !        double precision, intent(in),  dimension(:) :: theta
-        !        double precision, intent(out),  dimension(:) :: phi
-        !        integer,          intent(in)                 :: context
-        !        double precision :: loglikelihood
-        !    end function
-        !end interface
-        !
-        ! where theta are the input params, phi are any derived params and 
-        ! context is an integer which can be useful as a C pointer
-        !
-        !
-        ! Possible example likelihoods already written are:
-        !       - gaussian_loglikelihood
-        !       - gaussian_shell
-        !       - rosenbrock_loglikelihood
-        !       - himmelblau_loglikelihood
-        !       - rastrigin_loglikelihood
-        !       - eggbox_loglikelihood
-        !       - gaussian_loglikelihood_corr
-        !       - gaussian_loglikelihood_cluster
-        !       - twin_gaussian_loglikelihood 
-        !
-        loglikelihood = rastrigin_loglikelihood(theta,phi,context)
+    use example_likelihoods
+    implicit none
+    double precision, intent(in),  dimension(:) :: theta
+    double precision, intent(out),  dimension(:) :: phi
+    integer,          intent(in)                 :: context
+    double precision :: loglikelihood
+    !       These can be written into src/example_likelihoods.f90, and should
+    !       have the interface:
+    !
+    !interface
+    !    function loglikelihood(theta,phi,context)
+    !        double precision, intent(in),  dimension(:) :: theta
+    !        double precision, intent(out),  dimension(:) :: phi
+    !        integer,          intent(in)                 :: context
+    !        double precision :: loglikelihood
+    !    end function
+    !end interface
+    !
+    ! where theta are the input params, phi are any derived params and 
+    ! context is an integer which can be useful as a C pointer
+    !
+    !
+    ! Possible example likelihoods already written are:
+    !       - gaussian_loglikelihood
+    !       - gaussian_shell
+    !       - rosenbrock_loglikelihood
+    !       - himmelblau_loglikelihood
+    !       - rastrigin_loglikelihood
+    !       - eggbox_loglikelihood
+    !       - gaussian_loglikelihood_corr
+    !       - gaussian_loglikelihood_cluster
+    !       - twin_gaussian_loglikelihood 
+    !
+    loglikelihood = rastrigin_loglikelihood(theta,phi,context)
 end function
 
 
@@ -157,8 +157,8 @@ program main
 
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down)
     settings%thin_posterior       = 1                        !Factor by which the posterior file should be thinned
-                                                             ! 0 uses just live points,
-                                                             ! 1 uses all inter-chain points
+    ! 0 uses just live points,
+    ! 1 uses all inter-chain points
 
     ! reading and writing
     settings%file_root            = 'rastrigin'              !file root

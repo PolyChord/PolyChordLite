@@ -39,7 +39,7 @@ module grades_module
 
             do i=2,size(grade_information)
                 if( grade_information(i)<grade_information(i-1) ) &
-                        call halt_program(" Parameters must be ordered in terms of grade, lowest to highest")
+                    call halt_program(" Parameters must be ordered in terms of grade, lowest to highest")
             end do
             do i=grades%min_grade,grades%max_grade
                 grades%grade_index(i:i)=minloc(grade_information,mask=grade_information==i)

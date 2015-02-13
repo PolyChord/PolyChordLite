@@ -301,7 +301,7 @@ module priors_module
         ! Scale by the standard deviation and shift by the mean
         ! Lower half of the parameters array are the means
         ! Upper half of the parameters array are the stdevs
-        
+
         hypercube_coords = ( physical_coords - parameters(:npars) )/parameters(npars+1:)
 
         ! Transform via the normal cumulative distribution function
@@ -309,7 +309,7 @@ module priors_module
 
     end function gaussian_pth
 
-    
+
 
 
 
@@ -400,7 +400,7 @@ module priors_module
         integer :: npars 
 
         npars=size(physical_coords)
-                         
+
         ! hypercube_coord -> min * (max/min)**hypercube_coord
         ! Lower half of the parameters array are the minimums
         ! Upper half of the parameters array are the maximums

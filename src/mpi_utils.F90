@@ -29,11 +29,11 @@ module mpi_module
         integer, intent(in) :: mpi_communicator
         integer :: nprocs
 
-        call MPI_COMM_SIZE(       & 
-                mpi_communicator, &!handle
-                nprocs,           &!return number of processors
-                mpierror          &!error flag
-                )
+        call MPI_COMM_SIZE(   & 
+            mpi_communicator, &!handle
+            nprocs,           &!return number of processors
+            mpierror          &!error flag
+            )
 
     end function get_nprocs
 
@@ -45,11 +45,11 @@ module mpi_module
         integer, intent(in) :: mpi_communicator
         integer :: myrank
 
-        call MPI_COMM_RANK(       & 
-                mpi_communicator, &!handle
-                myrank,           &!return rank of calling processor 
-                mpierror          &!error flag
-                )
+        call MPI_COMM_RANK(   & 
+            mpi_communicator, &!handle
+            myrank,           &!return rank of calling processor 
+            mpierror          &!error flag
+            )
 
     end function get_rank
 
@@ -68,15 +68,15 @@ module mpi_module
         integer :: root
 
 
-        call MPI_ALLREDUCE(        &
-                myrank,            &!send buffer 
-                root,              &!recieve buffer
-                1,                 &!number of elements sent
-                MPI_INTEGER,       &!type of element sent
-                MPI_MIN,           &!reduce by finding the minimum
-                mpi_communicator,  &!handle
-                mpierror           &!error flag
-                )
+        call MPI_ALLREDUCE(    &
+            myrank,            &!send buffer 
+            root,              &!recieve buffer
+            1,                 &!number of elements sent
+            MPI_INTEGER,       &!type of element sent
+            MPI_MIN,           &!reduce by finding the minimum
+            mpi_communicator,  &!handle
+            mpierror           &!error flag
+            )
 
     end function get_root
 
@@ -93,15 +93,15 @@ module mpi_module
         integer, intent(in) :: mpi_communicator
         integer :: nlike
 
-        call MPI_ALLREDUCE(        &
-                nlike_local,       &!send buffer 
-                nlike,             &!recieve buffer
-                1,                 &!number of elements sent
-                MPI_INTEGER,       &!type of element sent
-                MPI_SUM,           &!reduce by finding the minimum
-                mpi_communicator,  &!handle
-                mpierror           &!error flag
-                )
+        call MPI_ALLREDUCE(    &
+            nlike_local,       &!send buffer 
+            nlike,             &!recieve buffer
+            1,                 &!number of elements sent
+            MPI_INTEGER,       &!type of element sent
+            MPI_SUM,           &!reduce by finding the minimum
+            mpi_communicator,  &!handle
+            mpierror           &!error flag
+            )
 
     end function sum_nlike
 
@@ -136,16 +136,16 @@ module mpi_module
 
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status ! status identifier
 
-        call MPI_RECV(&
-                live_point,&
-                size(live_point), &
-                MPI_DOUBLE_PRECISION,&
-                MPI_ANY_SOURCE,&
-                tag_gen_point,&
-                mpi_communicator,&
-                mpi_status,&
-                mpierror&
-                )
+        call MPI_RECV(             &!
+            live_point,            &!
+            size(live_point),      &!
+            MPI_DOUBLE_PRECISION,  &!
+            MPI_ANY_SOURCE,        &!
+            tag_gen_point,         &!
+            mpi_communicator,      &!
+            mpi_status,            &!
+            mpierror               &!
+            )
 
         slave_id = mpi_status(MPI_SOURCE) ! Pass on the slave id
 
@@ -162,15 +162,15 @@ module mpi_module
         integer, intent(in) :: mpi_communicator                !> mpi communicator
         integer, intent(in) :: root                            !> 
 
-        call MPI_SEND(&
-                live_point,&
-                size(live_point),&
-                MPI_DOUBLE_PRECISION,&
-                root,&
-                tag_gen_point,&
-                mpi_communicator,&
-                mpierror&
-                )
+        call MPI_SEND(             &!
+            live_point,            &!
+            size(live_point),      &!
+            MPI_DOUBLE_PRECISION,  &!
+            root,                  &!
+            tag_gen_point,         &!
+            mpi_communicator,      &!
+            mpierror               &!
+            )
 
     end subroutine throw_point
 
@@ -191,31 +191,31 @@ module mpi_module
         integer :: slave_id ! slave identifier
 
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status ! status identifier
-    
-        call MPI_RECV(&
-                baby_points,&
-                size(baby_points,1)*size(baby_points,2),&
-                MPI_DOUBLE_PRECISION,&
-                MPI_ANY_SOURCE,&
-                tag_run_baby,&
-                mpi_communicator,&
-                mpi_status,&
-                mpierror&
-                )
+
+        call MPI_RECV(                               &!
+            baby_points,                             &!
+            size(baby_points,1)*size(baby_points,2), &!
+            MPI_DOUBLE_PRECISION,                    &!
+            MPI_ANY_SOURCE,                          &!
+            tag_run_baby,                            &!
+            mpi_communicator,                        &!
+            mpi_status,                              &!
+            mpierror                                 &!
+            )
 
         ! Pass on the slave id
         slave_id = mpi_status(MPI_SOURCE)
 
-        call MPI_RECV(&
-                nlike,&
-                1,&
-                MPI_INT,&
-                slave_id,&
-                tag_run_nlike,&
-                mpi_communicator,&
-                mpi_status,&
-                mpierror&
-                )
+        call MPI_RECV(         &! 
+            nlike,             &! 
+            1,                 &! 
+            MPI_INT,           &! 
+            slave_id,          &! 
+            tag_run_nlike,     &! 
+            mpi_communicator,  &! 
+            mpi_status,        &! 
+            mpierror           &! 
+            )
 
     end function catch_babies
 
@@ -228,24 +228,24 @@ module mpi_module
         integer, intent(in) :: mpi_communicator                   !> The mpi communicator
         integer, intent(in) :: root                               !> root node to throw to
 
-        call MPI_SEND(&
-                baby_points,&
-                size(baby_points,1)*size(baby_points,2),&
-                MPI_DOUBLE_PRECISION,&
-                root,&
-                tag_run_baby,&
-                mpi_communicator,&
-                mpierror&
-                )
-        call MPI_SEND(&
-                nlike,&
-                1,&
-                MPI_INT,&
-                root,&
-                tag_run_nlike,&
-                mpi_communicator,&
-                mpierror&
-                )
+        call MPI_SEND(                               &! 
+            baby_points,                             &! 
+            size(baby_points,1)*size(baby_points,2), &! 
+            MPI_DOUBLE_PRECISION,                    &! 
+            root,                                    &! 
+            tag_run_baby,                            &! 
+            mpi_communicator,                        &! 
+            mpierror                                 &! 
+            )                                        
+        call MPI_SEND(         &!  
+            nlike,             &!  
+            1,                 &!  
+            MPI_INT,           &!  
+            root,              &!  
+            tag_run_nlike,     &!  
+            mpi_communicator,  &!  
+            mpierror           &!  
+            )
 
     end subroutine throw_babies
 
@@ -258,7 +258,7 @@ module mpi_module
     function catch_seed(seed_point,cholesky,logL,mpi_communicator,root) result(more_points_needed)
         implicit none
 
-        
+
         double precision,intent(out),dimension(:) :: seed_point  !> The seed point to be caught
         double precision,intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
         double precision,intent(in)                :: logL       !> loglikelihood contour to be caught
@@ -269,17 +269,17 @@ module mpi_module
 
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status ! status identifier
 
-    
-        call MPI_RECV(&
-                seed_point,&
-                size(seed_point),&
-                MPI_DOUBLE_PRECISION,&
-                root,&
-                MPI_ANY_TAG,&
-                mpi_communicator,&
-                mpi_status,&
-                mpierror&
-                )
+
+        call MPI_RECV(                      &!
+            seed_point,                     &!
+            size(seed_point),               &!
+            MPI_DOUBLE_PRECISION,           &!
+            root,                           &!
+            MPI_ANY_TAG,                    &!
+            mpi_communicator,               &!
+            mpi_status,                     &!
+            mpierror                        &!
+            )
         if(mpi_status(MPI_TAG) == tag_run_stop ) then
             more_points_needed = .false.
             return
@@ -289,26 +289,26 @@ module mpi_module
             call halt_program('slave error: unrecognised tag')
         end if
 
-        call MPI_RECV(&
-                cholesky,&
-                size(cholesky,1)*size(cholesky,1),&
-                MPI_DOUBLE_PRECISION,&
-                root,&
-                tag_run_cholesky,&
-                mpi_communicator,&
-                mpi_status,&
-                mpierror&
-                )
-        call MPI_RECV(&
-                logL,&
-                1,&
-                MPI_DOUBLE_PRECISION,&
-                root,&
-                tag_run_logL,&
-                mpi_communicator,&
-                mpi_status,&
-                mpierror&
-                )
+        call MPI_RECV(                        &!
+            cholesky,                         &!
+            size(cholesky,1)*size(cholesky,1),&!
+            MPI_DOUBLE_PRECISION,             &!
+            root,                             &!
+            tag_run_cholesky,                 &!
+            mpi_communicator,                 &!
+            mpi_status,                       &!
+            mpierror                          &!
+            )
+        call MPI_RECV(                 &!
+            logL,                      &!
+            1,                         &!
+            MPI_DOUBLE_PRECISION,      &!
+            root,                      &!
+            tag_run_logL,              &!
+            mpi_communicator,          &!
+            mpi_status,                &!
+            mpierror                   &!
+            )
 
     end function catch_seed
 
@@ -318,7 +318,7 @@ module mpi_module
     subroutine throw_seed(seed_point,cholesky,logL,mpi_communicator,slave_id,keep_going)
         implicit none
 
-        double precision,intent(in),dimension(:,:) :: seed_point !> seed to be thrown
+        double precision,intent(in),dimension(:) :: seed_point   !> seed to be thrown
         double precision,intent(in),dimension(:,:) :: cholesky   !> cholesky to be thrown
         double precision,intent(in)                :: logL       !> loglikelihood contour to be thrown
         integer, intent(in) :: mpi_communicator                  !> mpi handle
@@ -331,36 +331,36 @@ module mpi_module
         if(keep_going) tag = tag_run_seed  ! If we want to keep going then change this to the seed tag
 
 
-        call MPI_SEND(&
-                seed_point,&
-                size(seed_point),&
-                MPI_DOUBLE_PRECISION,&
-                slave_id,&
-                tag_run_seed,&
-                mpi_communicator,&
-                mpierror&
-                )
+        call MPI_SEND(             &!  
+            seed_point,            &!  
+            size(seed_point),      &!  
+            MPI_DOUBLE_PRECISION,  &!  
+            slave_id,              &!  
+            tag_run_seed,          &!  
+            mpi_communicator,      &!  
+            mpierror               &!  
+            )
 
         if(.not. keep_going) return ! Stop here if we're wrapping up
 
-        call MPI_SEND(&
-                cholesky,&
-                size(cholesky,1)*size(cholesky,2),&
-                MPI_DOUBLE_PRECISION,&
-                slave_id,&
-                tag_run_cholesky,&
-                mpi_communicator,&
-                mpierror&
-                )
-        call MPI_SEND(&
-                logL,&
-                1,&
-                MPI_DOUBLE_PRECISION,&
-                slave_id,&
-                tag_run_logL,&
-                mpi_communicator,&
-                mpierror&
-                )
+        call MPI_SEND(                          &!  
+            cholesky,                           &!  
+            size(cholesky,1)*size(cholesky,2),  &!  
+            MPI_DOUBLE_PRECISION,               &!  
+            slave_id,                           &!  
+            tag_run_cholesky,                   &!  
+            mpi_communicator,                   &!  
+            mpierror                            &!  
+            )
+        call MPI_SEND(              &!  
+            logL,                   &!  
+            1,                      &!  
+            MPI_DOUBLE_PRECISION,   &!  
+            slave_id,               &!  
+            tag_run_logL,           &!  
+            mpi_communicator,       &!  
+            mpierror                &!  
+            )
 
 
     end subroutine throw_seed
@@ -385,18 +385,18 @@ module mpi_module
         integer, intent(in) :: mpi_communicator !> mpi handle
         integer, intent(in) :: slave_id         !> Slave to request a new point from
 
-        
+
         integer :: empty_buffer(0) ! empty buffer to send
 
-        call MPI_SEND(&
-                empty_buffer,&       ! not sending anything
-                0,&                  ! size of nothing
-                MPI_INT,&            ! sending no integers
-                slave_id,&           ! process id to send to
-                tag_gen_request,&    ! continuation tag
-                mpi_communicator,&   ! mpi handle
-                mpierror&            ! error flag
-                )
+        call MPI_SEND(         &
+            empty_buffer,      &! not sending anything
+            0,                 &! size of nothing
+            MPI_INT,           &! sending no integers
+            slave_id,          &! process id to send to
+            tag_gen_request,   &! continuation tag
+            mpi_communicator,  &! mpi handle
+            mpierror           &! error flag
+            )
 
     end subroutine request_point
 
@@ -409,18 +409,18 @@ module mpi_module
         integer, intent(in) :: mpi_communicator !> mpi handle
         integer, intent(in) :: slave_id         !> Slave to request a new point from
 
-        
+
         integer :: empty_buffer(0) ! empty buffer to send
 
-        call MPI_SEND(&
-                empty_buffer,&       ! not sending anything
-                0,&                  ! size of nothing
-                MPI_INT,&            ! sending no integers
-                slave_id,&           ! process id to send to
-                tag_gen_stop,&       ! continuation tag
-                mpi_communicator,&   ! mpi handle
-                mpierror&            ! error flag
-                )
+        call MPI_SEND(         &
+            empty_buffer,      &! not sending anything
+            0,                 &! size of nothing
+            MPI_INT,           &! sending no integers
+            slave_id,          &! process id to send to
+            tag_gen_stop,      &! continuation tag
+            mpi_communicator,  &! mpi handle
+            mpierror           &! error flag
+            )
 
     end subroutine no_more_points
 
@@ -438,15 +438,15 @@ module mpi_module
 
         logical :: more_points_needed !> Whether we need more points or not
 
-        call MPI_RECV(       &
-            empty_buffer,    &
-            0,               &
-            MPI_INT,         &
-            root,            &
-            MPI_ANY_TAG,     &
-            mpi_communicator,&
-            mpi_status,      &
-            mpierror         &
+        call MPI_RECV(       &!
+            empty_buffer,    &!
+            0,               &!
+            MPI_INT,         &!
+            root,            &!
+            MPI_ANY_TAG,     &!
+            mpi_communicator,&!
+            mpi_status,      &!
+            mpierror         &!
             )
 
         ! If we've recieved a kill signal, then exit this loop

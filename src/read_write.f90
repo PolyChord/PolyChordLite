@@ -48,10 +48,10 @@ module read_write_module
 
         i_cluster = 1
         do while ( &
-            delete_file( posterior_file(settings,i=i_cluster) ) .or.  &
-            delete_file( posterior_file(settings,.true.,i_cluster) ) .or.  &
-            delete_file( posterior_file(settings,.false.,i_cluster) )   &
-            )
+                delete_file( posterior_file(settings,i=i_cluster) ) .or.  &
+                delete_file( posterior_file(settings,.true.,i_cluster) ) .or.  &
+                delete_file( posterior_file(settings,.false.,i_cluster) )   &
+                )
             i_cluster = i_cluster + 1
         end do
 
@@ -324,12 +324,12 @@ module read_write_module
         do i_cluster=1,RTI%ncluster
             ! Print each cluster sequentially to the main unnormalised chains file
             write(write_untxt_unit,fmt_dbl) RTI%posterior(:,1:RTI%nposterior(i_cluster),:)
-            
+
 
             ! If we're clustering, then print out separate cluster files
             if(settings%do_clustering) then
                 open(write_untxt_cluster_unit,file=trim(posterior_file(settings,.true.,i_cluster)), &
-                        action='write',position='append') 
+                    action='write',position='append') 
 
                 write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior(:,1:RTI%nposterior(i_cluster),:) 
 
@@ -371,13 +371,13 @@ module read_write_module
 
             do i_live=1,RTI%nlive(i_cluster)
                 write(write_phys_unit,fmt_dbl) &
-                        RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
-                        RTI%live(settings%l0,i_live,i_cluster)
+                    RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
+                    RTI%live(settings%l0,i_live,i_cluster)
 
                 if(settings%do_clustering) then
                     write(write_phys_cluster_unit,fmt_dbl) &
-                            RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
-                            RTI%live(settings%l0,i_live,i_cluster)
+                        RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
+                        RTI%live(settings%l0,i_live,i_cluster)
                 end if
 
             end do
@@ -565,7 +565,7 @@ module read_write_module
         if(present(i)) then
             write(cluster_num,'(I5)') i
             file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) &
-                    // '_phys_live_' // trim(adjustl(cluster_num)) //'.txt'
+                // '_phys_live_' // trim(adjustl(cluster_num)) //'.txt'
         else 
             file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_phys_live.txt'
         end if

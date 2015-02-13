@@ -13,7 +13,7 @@ module random_module
 
 
     ! ===========================================================================================
-    
+
 
     !> Initialise the random number generators
     !! 
@@ -62,13 +62,13 @@ module random_module
             if (t == 0) then
                 call date_and_time(values=dt)
                 t = &
-                        (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 &
-                        + dt(2) * 31 * 24 * 60 * 60 * 1000 &
-                        + dt(3) * 24 * 60 * 60 * 1000 &
-                        + dt(5) * 60 * 60 * 1000 &
-                        + dt(6) * 60 * 1000 &
-                        + dt(7) * 1000 &
-                        + dt(8)
+                    (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 &
+                    + dt(2) * 31 * 24 * 60 * 60 * 1000 &
+                    + dt(3) * 24 * 60 * 60 * 1000 &
+                    + dt(5) * 60 * 60 * 1000 &
+                    + dt(6) * 60 * 1000 &
+                    + dt(7) * 1000 &
+                    + dt(8)
             end if
 
         end if
@@ -323,8 +323,8 @@ module random_module
             random_subdirection2 = dot_product(random_subdirection,random_subdirection)
 
         end do
-            ! normalise the vector
-            random_subdirection = random_subdirection / sqrt(random_subdirection2)
+        ! normalise the vector
+        random_subdirection = random_subdirection / sqrt(random_subdirection2)
 
     end function random_subdirection
 
