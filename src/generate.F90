@@ -6,9 +6,6 @@
 !! * GenerateLivePointsL
 module generate_module
 
-#ifdef MPI
-    use mpi_module
-#endif
 
     implicit none
 
@@ -84,6 +81,9 @@ module generate_module
         use feedback_module,  only: write_started_generating,write_finished_generating
         use run_time_module,   only: run_time_info
         use abort_module
+#ifdef MPI
+        use mpi_module, only: throw_point,catch_point,more_points_needed
+#endif
 
         implicit none
 
@@ -109,15 +109,16 @@ module generate_module
         integer, intent(in) :: nprocs           !> The number of processes
         integer, intent(in) :: myrank           !> The rank of the processor
         integer, intent(in) :: root             !> The root process
+#ifdef MPI
+        integer             :: active_slaves    !  Number of currently working slaves
+        integer             :: slave_id         !  Slave identifier to signal who to throw back to
+#endif
 
+        double precision, dimension(settings%nTotal) :: live_point ! Temporary live point array
 
-        ! Temporaray
-        double precision, dimension(settings%nTotal) :: live_point
+        integer i_live ! Loop variable
 
-        ! Loop variable
-        integer i_live
-
-        character(len=fmt_len) :: fmt_dbl
+        character(len=fmt_len) :: fmt_dbl ! writing format variable
 
 
         ! Initialise this to avoid warnings

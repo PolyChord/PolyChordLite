@@ -1,5 +1,4 @@
 module priors_module
-    use utils_module, only: stdout_unit
     implicit none
 
     integer, parameter :: uniform_type        = 1
@@ -84,7 +83,7 @@ module priors_module
     end function physical_to_hypercube
 
     function prior_log_volume(priors) result(log_volume)
-        use utils_module, only: TwoPi
+        use utils_module, only: logTwoPi
         implicit none
         type(prior), dimension(:), intent(in) :: priors
 
@@ -98,7 +97,7 @@ module priors_module
             case(uniform_type)
                 log_volume = log_volume + sum( log(priors(i)%parameters(priors(i)%npars+1:)- priors(i)%parameters(:priors(i)%npars) )) 
             case(gaussian_type)
-                log_volume = log_volume + sum( 0.5d0*log(TwoPi) + log(priors(i)%parameters(priors(i)%npars+1:)) )
+                log_volume = log_volume + sum( 0.5d0*logTwoPi + log(priors(i)%parameters(priors(i)%npars+1:)) )
             case(log_uniform_type)
                 log_volume = log_volume + sum( log(log( priors(i)%parameters(priors(i)%npars+1:)/priors(i)%parameters(:priors(i)%npars) )) ) 
             case(sorted_uniform_type)

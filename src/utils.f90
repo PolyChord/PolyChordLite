@@ -12,6 +12,8 @@ module utils_module
 
     !> \f$ 2\pi \f$ in double precision
     double precision, parameter :: TwoPi = 8d0*atan(1d0)
+    !> \f$ \log(2\pi) \f$ in double precision
+    double precision, parameter :: logTwoPi = log(8d0*atan(1d0))
 
     !> The default formats
     integer, parameter :: fmt_len = 200

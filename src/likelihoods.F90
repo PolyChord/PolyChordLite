@@ -1,10 +1,6 @@
 !> This file contains various likelihoods ready to be used in main.f90
 
 module example_likelihoods
-    use utils_module,    only: logzero,TwoPi,stdout_unit,Hypergeometric1F1,Hypergeometric2F1,Pochhammer 
-#ifdef MPI
-    use mpi_module
-#endif
 
     contains
 
@@ -17,6 +13,7 @@ module example_likelihoods
     !! The mean is set at 0.5 by default, and all sigmas at 0.01
 
     function gaussian_loglikelihood(theta,phi,context) result(loglikelihood)
+        use utils_module, only: logTwoPi
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -36,7 +33,7 @@ module example_likelihoods
         sigma = 1d-2  ! all sigma set relatively small
 
         ! Gaussian normalisation
-        loglikelihood = - sum( log( sigma ) + log( TwoPi )/2d0 ) 
+        loglikelihood = - sum( log( sigma ) + logTwoPi/2d0 ) 
 
         ! theta dependence
         loglikelihood = loglikelihood - sum( ( ( theta - mu ) / sigma ) ** 2d0 ) / 2d0
@@ -59,7 +56,7 @@ module example_likelihoods
     !! they are separated by 6 sigma widths and all sigmas at 0.01
 
     function twin_gaussian_loglikelihood(theta,phi,context) result(loglikelihood)
-        use utils_module, only: logaddexp
+        use utils_module, only: logaddexp,logTwoPi
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -85,7 +82,7 @@ module example_likelihoods
         mu2(1) = 5d-1 - 10*sigma(1)
 
         ! Gaussian normalisation
-        loglikelihood1 = - sum( log( sigma ) + log( TwoPi )/2d0 ) 
+        loglikelihood1 = - sum( log( sigma ) + logTwoPi/2d0 ) 
         loglikelihood2 = loglikelihood1
 
         ! theta dependence
@@ -399,6 +396,9 @@ module example_likelihoods
     !! effectively infinite priors.
 
     function gaussian_loglikelihood_corr(theta,phi,context)
+#ifdef MPI
+        use mpi
+#endif
         use random_module, only: random_reals
         implicit none
         !> Input parameters
@@ -442,7 +442,7 @@ module example_likelihoods
             ! Covariance matrix:
             call MPI_BCAST(           &
                 invcovmat,            & ! inverse covariance matrix data to be broadcast
-                nDims*nDims,      & ! size of the data
+                nDims*nDims,          & ! size of the data
                 MPI_DOUBLE_PRECISION, & ! type of data
                 0,                    & ! root node id
                 MPI_COMM_WORLD,       & ! communication info
@@ -480,7 +480,10 @@ module example_likelihoods
 
     function gaussian_loglikelihood_cluster(theta,phi,context)
         use random_module, only: random_reals
-        use utils_module,  only: logsumexp
+        use utils_module,  only: logsumexp,logzero
+#ifdef MPI
+        use mpi
+#endif
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -533,7 +536,7 @@ module example_likelihoods
             ! Means:
             call MPI_BCAST(                &
                 mu,                        & ! inverse covariance matrix data to be broadcast
-                nDims*num_peaks,         & ! size of the data
+                nDims*num_peaks,           & ! size of the data
                 MPI_DOUBLE_PRECISION,      & ! type of data
                 0,                         & ! root node id
                 MPI_COMM_WORLD,            & ! communication info
@@ -542,7 +545,7 @@ module example_likelihoods
             ! Inverse Covariance matrices
             call MPI_BCAST(                &
                 invcovmat,                 & ! inverse covariance matrix data to be broadcast
-                nDims*nDims*num_peaks, & ! size of the data
+                nDims*nDims*num_peaks,     & ! size of the data
                 MPI_DOUBLE_PRECISION,      & ! type of data
                 0,                         & ! root node id
                 MPI_COMM_WORLD,            & ! communication info
@@ -664,6 +667,7 @@ module example_likelihoods
 
     !> Compute the loglikelihood of a multivariate gaussian
     function log_gauss(theta,mean,invcovmat,logdetcovmat)
+        use utils_module, only: logTwoPi
         implicit none
         !> The input vector
         double precision, intent(in), dimension(:) :: theta
@@ -679,7 +683,7 @@ module example_likelihoods
         double precision :: log_gauss
 
         ! Gaussian normalisation
-        log_gauss = - ( size(theta) * log( TwoPi ) + logdetcovmat )/2d0 
+        log_gauss = - ( size(theta) * logTwoPi + logdetcovmat )/2d0 
 
         log_gauss = log_gauss - dot_product(theta-mean,matmul(invcovmat,theta-mean))/2d0
 
