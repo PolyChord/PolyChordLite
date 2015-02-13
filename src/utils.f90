@@ -70,6 +70,31 @@ module utils_module
 
     contains
 
+    !> Swaps two doubles via a temporary variable
+    subroutine swap(a,b)
+            implicit none
+            double precision,intent(inout) :: a,b
+            double precision :: temp
+            temp=a
+            a=b
+            b=temp
+    end subroutine swap
+
+    !> location of minimum in an array of doubles
+    !!
+    !! This is just a wrapper around minloc, but gets around the annoying ideosyncracy
+    !! of fortran that minloc must return a length 1 array
+    function minpos(a)
+        implicit none
+        double precision, intent(in), dimension(:) :: a
+        integer :: minpos
+        integer :: minpos_vec(1)
+                               
+        minpos_vec = minloc(a)
+        minpos = minpos_vec(1)
+    end function minpos
+
+
 
     !> Euclidean distance of two coordinates
     !!

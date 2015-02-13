@@ -65,6 +65,8 @@ module nested_sampling_module
         logical :: linear_mode ! Whether to run in linear mode if nprocs==1
         logical :: resume      ! Whether to resume from file
 
+        integer :: nlike ! Temporary storage for number of likelihood calls
+
 
         integer :: nprocs
         integer :: myrank
@@ -78,11 +80,15 @@ module nested_sampling_module
 #ifdef MPI
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status
         integer :: i_slave
+        double precision, dimension(:), allocatable :: slave_logL !> The loglikelihood bound the slave is currently working on
+        integer, dimension(:), allocatable :: slave_cluster       !> The cluster the slave is currently working on
 
         ! MPI initialisation
         nprocs = get_nprocs(mpi_communicator)         ! Get the number of MPI processes
         myrank = get_rank(mpi_communicator)           ! Get the identity of this process
         root   = assign_root(myrank,mpi_communicator) ! Assign the root process as the minimum integer
+
+        allocate(slave_logL(nprocs-1),slave_cluster(nprocs-1)) ! Allocate the slave arrays
 
 #else 
 
@@ -90,6 +96,7 @@ module nested_sampling_module
         root=0      ! Define root node
         myrank=root ! set the only node's rank to be the root
         nprocs=1    ! there's only one process
+
 #endif
 
         linear_mode = nprocs==1 ! Run in linear mode if only one process
@@ -123,13 +130,25 @@ module nested_sampling_module
         end if !(.not.resume)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+        !======= 2) Main loop body =====================================
+
         if(myrank==root) then
 
 
             ! --- consider revising
             call calc_covmats(settings,RTI)
-
-            !======= 2) Main loop body =====================================
 
             ! -------------------------------------------- !
             call write_started_sampling(settings%feedback)
@@ -138,46 +157,66 @@ module nested_sampling_module
             ! definitely more samples needed than this
             more_samples_needed = .true.
 
-            ! Delete the first outer point
-            !---consider revising
-            call delete_outer_point(settings,info,live_points,phantom_points,nphantom,posterior_points,nposterior)
-
 
             do while ( more_samples_needed )
 
-                ! (1) Generate a fresh incubation stack of baby_points
-                if(settings%feedback>=2) write(stdout_unit,'(" Generating incubation stack ")')
+                ! Generate a seed point --- update this
+                seed_point = GenerateSeed(settings,RTI,i_cluster)
+
+                ! Choose the cholesky decomposition for the cluster
+                cholesky = RTI%cholesky(:,:,i_cluster)
+
+                ! Get the loglikelihood contour we're generating from
+                logL = RTI%logLp(i_cluster)
+
 
                 if(linear_mode) then
-
-                    ! Generate a seed point --- update this
-                    seed_point = GenerateSeed(settings,info,live_points,i_cluster)
-
-                    ! Choose the cholesky decomposition for the cluster
-                    cholesky = choleskys(:,:,i_cluster)
-
                     ! Generate a new set of points within the likelihood bound of the late point
-                    baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
-
+                    baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point,logL,nlike)
 #ifdef MPI
                 else !(.not.linear_mode)
 
                     ! Recieve any new baby points from any slave currently sending
-                    i_slave = catch_babies(baby_points,mpi_communicator)
+                    i_slave = catch_babies(baby_points,nlike,mpi_communicator)
 
-                    seed_point = GenerateSeed(settings,info,live_points,i_cluster)  ! generate a new seed point --- update this
-                    call throw_seed(seed_point,mpi_communicator,i_slave,.true.)     ! and throw back to slave (true => keep going)
-                    
-                    cholesky = RTI%cholesky(:,:,i_cluster)                 ! Find the cholesky decomp for seed
-                    call throw_cholesky(cholesky,mpi_communicator,i_slave) ! Throw this back to slave
+                    ! and throw seeding information back to slave (true => keep going)
+                    call throw_seed(seed_point,cholesky,logL,mpi_communicator,i_slave,.true.)
+
+                    ! set logL to be the bound of the babies just recieved (saved in slave_logL)
+                    ! and set slave_logL to be the bound just sent off
+                    call swap(logL,slave_logL(i_slave))
 
 #endif
                 end if !(linear_mode / .not.linear_mode)
 
+                ! Add the likelihood calls to our counter
+                RTI%nlike = RTI%nlike + nlike
+
                 
+
+                if( logL > RTI%logLp(i_cluster) ) then
+
+                    call delete_point
+
+                    call add_point
+
+                    call check_end
+
+                    call do_clustering
+
+                    call write_info
+
+
+                end if
                 !vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
                 !vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
                 !vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+
+
+
+
+
 
                 ! (2) Add the babies to the array, testing to see if these
                 ! constitute a valid point. 
@@ -336,22 +375,19 @@ module nested_sampling_module
 
             baby_points = 0d0
             baby_points(settings%l0) = logzero
+            nlike = 0
 
-            call throw_babies(baby_points,mpi_communicator,root)
+            call throw_babies(baby_points,nlike,mpi_communicator,root)
 
             ! 1) Listen for a seed point being sent by the master
             !    Note that this also tests for a kill signal sent by the master
-            do while(catch_seed(seed_point,mpi_communicator,root))
+            do while(catch_seed(seed_point,cholesky,logL,mpi_communicator,root))
 
+                ! 2) Generate a new set of baby points
+                baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,logL,seed_point,nlike)
 
-                ! 2) Listen for the cholesky decomposition sent by the master
-                call catch_cholesky(cholesky,mpi_communicator,root) 
-
-                ! 3) Generate a new set of baby points
-                baby_points = SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)
-
-                ! 4) Send the baby points back
-                call throw_babies(baby_points,mpi_communicator,root)
+                ! 3) Send the baby points back
+                call throw_babies(baby_points,nlike,mpi_communicator,root)
 
             end do
 

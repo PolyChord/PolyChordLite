@@ -12,7 +12,9 @@ module mpi_module
     integer, parameter :: tag_run_baby=4
     integer, parameter :: tag_run_seed=5
     integer, parameter :: tag_run_cholesky=6
-    integer, parameter :: tag_run_stop=7
+    integer, parameter :: tag_run_logL=7
+    integer, parameter :: tag_run_nlike=8
+    integer, parameter :: tag_run_stop=9
 
 
 
@@ -78,6 +80,31 @@ module mpi_module
 
     end function get_root
 
+
+    !> This sums a whole set of integers across all processes
+    !!
+    !! All processes call this simultaneously
+    !!
+    !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Allreduce.html
+    !!
+    function sum_nlike(nlike_local,mpi_communicator) result(nlike)
+        implicit none
+        integer, intent(in) :: nlike_local
+        integer, intent(in) :: mpi_communicator
+        integer :: nlike
+
+        call MPI_ALLREDUCE(        &
+                nlike_local,       &!send buffer 
+                nlike,             &!recieve buffer
+                1,                 &!number of elements sent
+                MPI_INTEGER,       &!type of element sent
+                MPI_SUM,           &!reduce by finding the minimum
+                mpi_communicator,  &!handle
+                mpierror           &!error flag
+                )
+
+    end function sum_nlike
+
     !============== Throwing and catching routines ====================
     ! There are four points in the algorithm where arrays need to be transferred 
     ! between master and slaves
@@ -90,13 +117,9 @@ module mpi_module
     !     any slave   ----> root
     !     throw_babies      catch_babies
     !
-    ! 3) seed point for generation of babies
+    ! 3) seed information for generation of babies
     !     root      ----> specific slave
     !     throw_seed      catch_seed
-    ! 
-    ! 4) cholesky matrix defining sampling space
-    !     root      ----> specific slave
-    !     throw_cholesky  catch_cholesky
 
 
     !> Root catch
@@ -158,10 +181,11 @@ module mpi_module
 
 
     !> Master catches babies thrown by any slave, and returns the slave identity that did the throwing
-    function catch_babies(baby_points,mpi_communicator) result(slave_id)
+    function catch_babies(baby_points,nlike,mpi_communicator) result(slave_id)
         implicit none
 
         double precision,intent(out),dimension(:,:) :: baby_points !> The babies to be caught
+        integer, intent(out) :: nlike                              !> The number of likelihood evaluations to be caught
         integer, intent(in) :: mpi_communicator                    !> The mpi communicator
 
         integer :: slave_id ! slave identifier
@@ -182,13 +206,25 @@ module mpi_module
         ! Pass on the slave id
         slave_id = mpi_status(MPI_SOURCE)
 
+        call MPI_RECV(&
+                nlike,&
+                1,&
+                MPI_INT,&
+                slave_id,&
+                tag_run_nlike,&
+                mpi_communicator,&
+                mpi_status,&
+                mpierror&
+                )
+
     end function catch_babies
 
     !> Slave throws babies to the master
-    subroutine throw_babies(baby_points,mpi_communicator,root)
+    subroutine throw_babies(baby_points,nlike,mpi_communicator,root)
         implicit none
 
         double precision,intent(in),dimension(:,:) :: baby_points !> The babies to be thrown
+        integer, intent(in) :: nlike                              !> The number of likelihood evaluations to be thrown
         integer, intent(in) :: mpi_communicator                   !> The mpi communicator
         integer, intent(in) :: root                               !> root node to throw to
 
@@ -201,6 +237,15 @@ module mpi_module
                 mpi_communicator,&
                 mpierror&
                 )
+        call MPI_SEND(&
+                nlike,&
+                1,&
+                MPI_INT,&
+                root,&
+                tag_run_nlike,&
+                mpi_communicator,&
+                mpierror&
+                )
 
     end subroutine throw_babies
 
@@ -210,11 +255,13 @@ module mpi_module
 
 
     !> slave catches seed thrown by master
-    function catch_seed(seed_point,mpi_communicator,root) result(more_points_needed)
+    function catch_seed(seed_point,cholesky,logL,mpi_communicator,root) result(more_points_needed)
         implicit none
 
         
-        double precision,intent(out),dimension(:) :: seed_point  !> The babies to be caught
+        double precision,intent(out),dimension(:) :: seed_point  !> The seed point to be caught
+        double precision,intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
+        double precision,intent(in)                :: logL       !> loglikelihood contour to be caught
         integer, intent(in) :: mpi_communicator                  !> The mpi communicator
         integer, intent(in) :: root                              !> The root node
 
@@ -235,21 +282,45 @@ module mpi_module
                 )
         if(mpi_status(MPI_TAG) == tag_run_stop ) then
             more_points_needed = .false.
+            return
         else if(mpi_status(MPI_TAG) == tag_run_seed) then
             more_points_needed = .true.
         else
             call halt_program('slave error: unrecognised tag')
         end if
 
+        call MPI_RECV(&
+                cholesky,&
+                size(cholesky,1)*size(cholesky,1),&
+                MPI_DOUBLE_PRECISION,&
+                root,&
+                tag_run_cholesky,&
+                mpi_communicator,&
+                mpi_status,&
+                mpierror&
+                )
+        call MPI_RECV(&
+                logL,&
+                1,&
+                MPI_DOUBLE_PRECISION,&
+                root,&
+                tag_run_logL,&
+                mpi_communicator,&
+                mpi_status,&
+                mpierror&
+                )
+
     end function catch_seed
 
 
 
     !> root throws seed to slave
-    subroutine throw_seed(seed_point,mpi_communicator,slave_id,keep_going)
+    subroutine throw_seed(seed_point,cholesky,logL,mpi_communicator,slave_id,keep_going)
         implicit none
 
-        double precision,intent(in),dimension(:,:) :: seed_point !> Babies to be thrown
+        double precision,intent(in),dimension(:,:) :: seed_point !> seed to be thrown
+        double precision,intent(in),dimension(:,:) :: cholesky   !> cholesky to be thrown
+        double precision,intent(in)                :: logL       !> loglikelihood contour to be thrown
         integer, intent(in) :: mpi_communicator                  !> mpi handle
         integer, intent(in) :: slave_id                          !> identity of target slave
         logical, intent(in) :: keep_going                        !> Further signal whether to keep going 
@@ -265,48 +336,12 @@ module mpi_module
                 size(seed_point),&
                 MPI_DOUBLE_PRECISION,&
                 slave_id,&
-                tag,&
+                tag_run_seed,&
                 mpi_communicator,&
                 mpierror&
                 )
 
-    end subroutine throw_seed
-
-
-
-    !> slave catches cholesky matrix thrown by master
-    subroutine catch_cholesky(cholesky,mpi_communicator,root)
-        implicit none
-
-        
-        double precision,intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
-        integer, intent(in) :: mpi_communicator                  !> mpi communicator
-        integer, intent(in) :: root                              !> root node to be caught from
-
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status        ! status identifier
-    
-        call MPI_RECV(&
-                cholesky,&
-                size(cholesky,1)*size(cholesky,1),&
-                MPI_DOUBLE_PRECISION,&
-                root,&
-                tag_run_cholesky,&
-                mpi_communicator,&
-                mpi_status,&
-                mpierror&
-                )
-
-    end subroutine catch_cholesky
-
-
-
-    !> root throws cholesky to slave
-    subroutine throw_cholesky(cholesky,mpi_communicator,slave_id)
-        implicit none
-
-        double precision,intent(in),dimension(:,:) :: cholesky !> cholesky to be thrown
-        integer, intent(in) :: mpi_communicator                !> mpi communicator
-        integer, intent(in) :: slave_id                        !> identity of target slave
+        if(.not. keep_going) return ! Stop here if we're wrapping up
 
         call MPI_SEND(&
                 cholesky,&
@@ -317,8 +352,20 @@ module mpi_module
                 mpi_communicator,&
                 mpierror&
                 )
+        call MPI_SEND(&
+                logL,&
+                1,&
+                MPI_DOUBLE_PRECISION,&
+                slave_id,&
+                tag_run_logL,&
+                mpi_communicator,&
+                mpierror&
+                )
 
-    end subroutine throw_cholesky
+
+    end subroutine throw_seed
+
+
 
 
     !============== Pure messaging routines ===========================

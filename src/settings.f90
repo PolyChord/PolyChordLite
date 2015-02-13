@@ -95,16 +95,10 @@ module settings_module
         !! d0 indicates the starting index, d1 the finishing index
         integer :: d0,d1       
 
-        ! Algorithm indices
-        !> The number of likelihood evaluations required to calculate this point
-        integer :: nlike
-
         !> likelihood index
         !!
         !! This is the likelihood evaluated at the position of the live point
         integer :: l0          
-        !> This is the likelihood contour which generated the live point
-        integer :: l1          
 
 
         ! Posterior indices
@@ -175,15 +169,11 @@ module settings_module
         settings%d0=settings%p1+1
         settings%d1=settings%d0+settings%nDerived-1  
 
-        ! Algorithm indices
-        settings%nlike=settings%d1+1
-
-        ! Loglikelihood indices
-        settings%l0=settings%nlike+1
-        settings%l1=settings%l0+1
+        ! Loglikelihood index
+        settings%l0=settings%d1+1
 
         ! Total number of parameters
-        settings%nTotal = settings%l1
+        settings%nTotal = settings%l0
 
 
 

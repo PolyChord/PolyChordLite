@@ -82,11 +82,9 @@ module read_write_module
         ! write integers 
         write(fmt_int,'("(",I0,A,")")') 1,INT_FMT   ! define the integer format
 
-        ! number of dimensions
         write(write_resume_unit,'("=== Number of dimensions ===")')                    
         write(write_resume_unit,fmt_int) settings%nDims
 
-        ! number of derived parameters
         write(write_resume_unit,'("=== Number of derived parameters ===")')                    
         write(write_resume_unit,fmt_int) settings%nDerived
 
@@ -96,26 +94,35 @@ module read_write_module
         write(write_resume_unit,fmt_int) RTI%nlike
         write(write_resume_unit,'("=== Number of clusters ===")')                    
         write(write_resume_unit,fmt_int) RTI%ncluster
+        write(write_resume_unit,'("=== Minimum loglikelihood cluster ===")')                    
+        write(write_resume_unit,fmt_int) RTI%p
+        write(write_resume_unit,'("=== Minimum loglikelihood position ===")')                    
+        write(write_resume_unit,fmt_int) RTI%i
+
 
 
         ! write number of live and phantom points
         write(fmt_int,'("(",I0,A,")")') RTI%ncluster,INT_FMT   ! define the integer array format
 
         write(write_resume_unit,'("=== Number of live points in each cluster ===")')                    
-        write(write_resume_unit,fmt_int) RTI%nlive               ! number of live points
+        write(write_resume_unit,fmt_int) RTI%nlive           
         write(write_resume_unit,'("=== Number of phantom points in each cluster ===")')                    
-        write(write_resume_unit,fmt_int) RTI%nphantom            ! number of phantom points
+        write(write_resume_unit,fmt_int) RTI%nphantom         
 
         ! write evidences
         write(fmt_dbl,'("(",I0,A,")")') 1, DB_FMT              ! Initialise the double format
+        write(write_resume_unit,'("=== global loglikelihood bound ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%logL
         write(write_resume_unit,'("=== global evidence -- log(<Z>) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logZ                ! global evidence estimate
+        write(write_resume_unit,fmt_dbl) RTI%logZ                
         write(write_resume_unit,'("=== global evidence^2 -- log(<Z^2>) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logZ2               ! global evidence^2 estimate
+        write(write_resume_unit,fmt_dbl) RTI%logZ2              
 
 
 
         write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster, DB_FMT   ! Initialise the double array format
+        write(write_resume_unit,'("=== local loglikelihood bound ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%logLp
         write(write_resume_unit,'("=== local volume -- log(<X_p>) ===")')                    
         write(write_resume_unit,fmt_dbl) RTI%logXp
         write(write_resume_unit,'("=== global evidence volume cross correlation -- log(<ZX_p>) ===")')                    
@@ -128,7 +135,7 @@ module read_write_module
         write(write_resume_unit,fmt_dbl) RTI%logZpXp
         write(write_resume_unit,'("=== local volume cross correlation -- log(<X_pX_q>) ===")')                    
         do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,fmt_dbl) RTI%logXpXq         ! local volume cross correlation
+            write(write_resume_unit,fmt_dbl) RTI%logXpXq       
         end do
 
 
@@ -198,7 +205,11 @@ module read_write_module
         read(read_resume_unit,*)                    ! 
         read(read_resume_unit,fmt_int) RTI%nlike    ! number of likelihood calls
         read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) RTI%ncluster! number of clusters
+        read(read_resume_unit,fmt_int) RTI%ncluster ! number of clusters
+        read(read_resume_unit,*)                    !
+        read(read_resume_unit,fmt_int) RTI%p        ! minimum loglikelihood cluster
+        read(read_resume_unit,*)                    !
+        read(read_resume_unit,fmt_int) RTI%i        ! minimum loglikelihood position
 
         ! Allocate nlive and nphantom arrays based on these
         allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior(RTI%ncluster))
@@ -231,6 +242,8 @@ module read_write_module
 
         ! Read in evidences
         write(fmt_dbl,'("(",I0,A,")")') 1, DB_FMT              ! Initialise the double format
+        read(read_resume_unit,*)                               !
+        read(read_resume_unit,fmt_dbl) RTI%logL                ! global loglikelihood bound
         read(read_resume_unit,*)                               ! 
         read(read_resume_unit,fmt_dbl) RTI%logZ                ! global evidence estimate
         read(read_resume_unit,*)                               ! 
@@ -238,7 +251,9 @@ module read_write_module
 
 
 
-        write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster, DB_FMT  ! Initialise the double array format
+        write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster, DB_FMT   ! Initialise the double array format
+        read(read_resume_unit,*)                               !
+        read(read_resume_unit,fmt_dbl) RTI%logLp               ! local loglikehood bound
         read(read_resume_unit,*)                               ! 
         read(read_resume_unit,fmt_dbl) RTI%logXp               ! local volume estimate
         read(read_resume_unit,*)                               ! 

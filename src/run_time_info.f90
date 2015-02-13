@@ -52,6 +52,15 @@ module run_time_module
             !> local volume cross correlation
             double precision, allocatable, dimension(:,:) :: logXpXq
 
+            !> Minimum loglikelihood
+            double precision, allocatable :: logL
+            !> Minimum loglikelihoods
+            double precision, allocatable, dimension(:) :: logLp
+            !> Cluster containing the minimum loglikelihood point
+            integer :: p
+            !> The minimum loglikelihood point within this cluster
+            integer :: i
+
         end type run_time_info
 
     contains
@@ -80,6 +89,7 @@ module run_time_module
                 RTI%logZp2(1),                                   &
                 RTI%logZpXp(1),                                  &
                 RTI%logXpXq(1,1),                                &
+                RTI%logLp(1),                                    &
                 RTI%nlive(1),                                    &
                 RTI%nphantom(1),                                 &
                 RTI%nposterior(1),                               &
@@ -114,10 +124,14 @@ module run_time_module
             RTI%cholesky(:,:,1) = identity_matrix(settings%nDims)
             RTI%covmat(:,:,1)   = identity_matrix(settings%nDims)
 
+            ! Loglikelihoods at zero
+            RTI%logL  = logzero
+            RTI%logLp = logzero
+
 
         end subroutine initialise_run_time_info
 
-    subroutine update_evidence(RTI,p,logL)
+    subroutine update_evidence(RTI)
         use utils_module, only: logsumexp,logincexp
         implicit none
 
@@ -125,9 +139,9 @@ module run_time_module
         type(run_time_info), intent(inout) :: RTI
 
         !> The cluster index to update
-        integer,intent(in) :: p
+        integer :: p
         !> The loglikelihood to update
-        double precision,intent(in) :: logL
+        double precision :: logL
 
         ! Iterator
         integer :: q
@@ -142,6 +156,9 @@ module run_time_module
         lognp = log( RTI%nlive(p) +0d0 )
         lognp1= log( RTI%nlive(p) +1d0 )
         lognp2= log( RTI%nlive(p) +2d0 )
+
+        logL  = RTI%logL
+        p     = RTI%p
 
 
         ! Global evidence
@@ -248,7 +265,6 @@ module run_time_module
     !! What we accumulate in the routine update_evidence is log(<Z>), and log(<Z^2>).
     !! What we want is <log(Z)>,and 
     subroutine calculate_logZ_estimate(RTI,logZ,sigmalogZ,logZp,sigmalogZp)
-        use settings_module, only: program_settings
         use utils_module, only: logzero
         implicit none
 
@@ -267,5 +283,43 @@ module run_time_module
 
     end subroutine calculate_logZ_estimate
 
+
+    subroutine find_min_loglike(settings,RTI)
+        use utils_module, only: loginf
+        use settings_module, only: program_settings
+
+        implicit none
+        type(program_settings), intent(in) :: settings !> Program settings
+        type(run_time_info),intent(inout)  :: RTI      !> Run time information
+
+        ! The minimum loglikelihood to be returned
+        double precision :: logL
+
+        integer :: i_live(1)
+        integer :: i_logL   
+
+        integer :: i_cluster !> cluster iterator
+
+        RTI%logL = loginf
+
+        ! Find the separate minima of all the clusters
+        do i_cluster=1,RTI%ncluster
+
+            ! Find the position of the lowest point in this cluster
+            i_live = minloc(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster))
+            ! Find the likelihood of the lowest point in this cluster
+            i_logL = RTI%live(settings%l0,i_live(1),i_cluster) 
+
+            ! If this is the lowest likelihood we've found 
+            if(i_logL<RTI%logL) then
+                RTI%logL = i_logL    !> Record that we've found a new low
+                RTI%p    = i_cluster !> Record the cluster identity
+                RTI%i    = i_live(1) !> Record the live point identity
+            end if
+
+        end do
+
+
+    end subroutine find_min_loglike
 
 end module

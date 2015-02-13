@@ -17,7 +17,7 @@ module generate_module
     !! It uses the existing set of live points and the details of the clustering
     !! in order to select a seed point to generate from in proportion to the
     !! estimates of the prior volume of each cluster.
-    function GenerateSeed(settings,RTI,p) result(seed_point)
+    function GenerateSeed(settings,RTI,seed_cluster) result(seed_point)
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info
         use random_module,     only: random_integer,random_integer_P,bernoulli_trial
@@ -29,7 +29,7 @@ module generate_module
         !> The evidence storage
         type(run_time_info), intent(in) :: RTI
         !> The cluster number chosen
-        integer,intent(out) :: p
+        integer,intent(out) :: seed_cluster
 
 
         ! The seed point to be produced
@@ -46,23 +46,23 @@ module generate_module
         probs = exp(probs)                ! prob_p = X_p/(sum_q X_q)
 
         ! 1) Pick cluster in proportion to the set of volume estimates of the active clusters
-        p = random_integer_P(probs)
+        seed_cluster = random_integer_P(probs)
 
         ! 2) Pick whether to draw from phantom or live points
-        if(bernoulli_trial(RTI%nlive(p)+0d0,RTI%nlive(p)+0d0)) then
+        if(bernoulli_trial(RTI%nlive(seed_cluster)+0d0,RTI%nlive(seed_cluster)+0d0)) then
 
             ! 3a) Pick a random integer in between 1 and the number of live points in the cluster 'p'
-            seed_choice = random_integer(RTI%nlive(p))
+            seed_choice = random_integer(RTI%nlive(seed_cluster))
 
             ! 4a) Select the live point at index 'seed_choice' in cluster 'p' for the seed point
-            seed_point = RTI%live(:,seed_choice,p)
+            seed_point = RTI%live(:,seed_choice,seed_cluster)
         else
 
             ! 3b) Pick a random integer in between 1 and the number of phantom points in cluster 'p'
-            seed_choice = random_integer(RTI%nphantom(p))
+            seed_choice = random_integer(RTI%nphantom(seed_cluster))
 
             ! 4b) Select the phantom point at index 'seed_choice' in cluster 'p' for the seed point
-            seed_point = RTI%phantom(:,seed_choice,p)
+            seed_point = RTI%phantom(:,seed_choice,seed_cluster)
         end if
 
     end function GenerateSeed
@@ -75,14 +75,14 @@ module generate_module
         use priors_module,    only: prior
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
-        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len
+        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len,minpos
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating
         use run_time_module,   only: run_time_info
         use abort_module
 #ifdef MPI
-        use mpi_module, only: throw_point,catch_point,more_points_needed
+        use mpi_module, only: throw_point,catch_point,more_points_needed,sum_nlike
 #endif
 
         implicit none
@@ -120,9 +120,11 @@ module generate_module
 
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
+        integer :: nlike ! number of likelihood calls
 
-        ! Initialise this to avoid warnings
-        live_point = 0d0
+
+        ! Initialise number of likelihood calls to zero here
+        nlike = 0
 
 
         if(myrank==root) then
@@ -153,7 +155,7 @@ module generate_module
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
 
                 ! Compute physical coordinates, likelihoods and derived parameters
-                call calculate_point( loglikelihood, priors, live_point, settings )
+                call calculate_point( loglikelihood, priors, live_point, settings, nlike)
 
                 ! If this is a valid physical point, then add it to the live points array
                 if(live_point(settings%l0)>logzero) then
@@ -186,8 +188,6 @@ module generate_module
 
                     ! Recieve a point from any slave
                     slave_id = catch_point(live_point,mpi_communicator)
-
-                    RTI%nlike = RTI%nlike+1 ! Note that this required an extra likelihood call
 
                     ! If its valid, and we need more points, add it to the array
                     if(live_point(settings%l0)>logzero .and. i_live<settings%nlive) then
@@ -229,7 +229,7 @@ module generate_module
                     live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
 
                     ! Compute physical coordinates, likelihoods and derived parameters
-                    call calculate_point( loglikelihood, priors, live_point, settings )
+                    call calculate_point( loglikelihood, priors, live_point, settings,nlike)
 
                     ! Send it to the root node
                     call throw_point(live_point,mpi_communicator,root)
@@ -252,14 +252,21 @@ module generate_module
             call halt_program('generate error: nprocs<0')
         end if !(nprocs case)
 
+#ifdef MPI
+        nlike = sum_nlike(nlike,mpi_communicator) ! Gather the likelihood calls onto one node
+#endif
 
 
         if(myrank==root) then
-            ! Set the likelihood contours to logzero for now
-            RTI%live(settings%l1,:,1) = logzero
 
-            ! Zero the likelihood calls, as they've now been recorded
-            RTI%live(settings%nlike,:,1) = 0
+            ! Pass over the number of likelihood calls
+            RTI%nlike = nlike
+
+            ! Set the local and global loglikelihood bounds
+            RTI%p     = 1                                 ! Only one cluster at this point
+            RTI%i     = minpos(RTI%live(settings%l0,:,1)) ! Find the position of the minimum loglikelihood
+            RTI%logL  = RTI%live(settings%l0,RTI%i,1)     ! Store the value of the minimum loglikelihood 
+            RTI%logLp = RTI%logL                          ! global = local for one cluster
 
             ! Close the file
             close(write_phys_unit)

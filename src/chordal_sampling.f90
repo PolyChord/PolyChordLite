@@ -3,7 +3,7 @@ module chordal_module
 
     contains
 
-    function SliceSampling(loglikelihood,priors,settings,cholesky,seed_point)  result(baby_points)
+    function SliceSampling(loglikelihood,priors,settings,cholesky,seed_point,logL,nlike)  result(baby_points)
         use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,random_real
@@ -29,23 +29,26 @@ module chordal_module
         !> The seed point
         double precision, intent(in), dimension(settings%nTotal)   :: seed_point
 
+        !> The loglikelihood contour to sample on
+        double precision, intent(in)   :: logL
+
         !> The directions of the chords
         double precision, intent(in), dimension(settings%nDims,settings%nDims) :: cholesky
 
         ! ------- Outputs -------
+        !> The number of likelihood evaluations
+        integer, intent(out) :: nlike
+
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
         double precision,    dimension(settings%nTotal,settings%num_babies)   :: baby_points
-
-        
-        double precision, dimension(settings%nTotal)   :: previous_point
 
 
         ! ------- Local Variables -------
         double precision,    dimension(settings%nDims)   :: nhat
         double precision,    dimension(settings%nDims,settings%num_babies)   :: nhats
 
-        double precision  :: max_chord
+        double precision, dimension(settings%nTotal)   :: previous_point
 
         integer :: i_babies
 
@@ -54,8 +57,6 @@ module chordal_module
         integer, dimension(settings%num_babies) :: grade_order
 
         logical do_timing
-
-        integer :: nlike
 
         double precision :: w
 
@@ -66,11 +67,8 @@ module chordal_module
         ! Start the baby point at the seed point
         previous_point = seed_point
 
-        ! Set the number of likelihood evaluations to zero
-        previous_point(settings%nlike) = 0
-
-        ! Initialise max_chord at 0
-        max_chord = 0
+        ! Initialise the likelihood counter at 0
+        nlike = 0
 
         if(settings%do_timing) then
             do_timing = random_real()<1d0/settings%print_timing
@@ -104,22 +102,15 @@ module chordal_module
             w = w * 3d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
 
             ! Generate a new random point along the chord defined by the previous point and nhat
-            baby_points(:,i_babies) = slice_sample(loglikelihood,priors, nhat, previous_point, w, settings)
+            baby_points(:,i_babies) = slice_sample(loglikelihood,priors,logL, nhat, previous_point, w, settings,nlike)
 
             if(baby_points(settings%l0,i_babies)<=logzero) then
                 baby_points(settings%l0,settings%num_babies)=logzero
                 return
             end if
 
-            if(settings%do_grades) then
-                if(grade_order(i_babies)/=settings%grades%min_grade) baby_points(settings%nlike,i_babies) = 0
-            end if
-
             ! Save this for the next loop
             previous_point = baby_points(:,i_babies)
-
-            ! Zero the likelihood calls
-            previous_point(settings%nlike) = 0
 
             ! Note the time for this grade
             if(do_timing) then
@@ -129,14 +120,11 @@ module chordal_module
         end do
 
         if(do_timing.and.settings%do_grades) then 
-            write(fmt_1,'("(",I0,"(",A,",""% ""), ""(Total time:"",",A,",""seconds)"")")') settings%grades%max_grade-settings%grades%min_grade+1, FLT_FMT,FLT_FMT
+            write(fmt_1,'("(",I0,"(",A,",""% ""), ""(Total time:"",",A,",""seconds)"")")') &
+                    settings%grades%max_grade-settings%grades%min_grade+1, FLT_FMT,FLT_FMT
             write(stdout_unit,fmt_1) timers/sum(timers)*100, sum(timers)
         end if
 
-        ! Give all the likelihood calls to the baby point
-        nlike = nint(sum(baby_points(settings%nlike,:) ))
-        baby_points(settings%nlike,:) = 0
-        baby_points(settings%nlike,settings%num_babies) = nlike
 
     end function SliceSampling
 
@@ -175,7 +163,8 @@ module chordal_module
                 num_repeats = settings%grades%num_repeats(i_grade) 
 
                 do i_repeat=1, num_repeats
-                    nhats(grade_index:grade_index+grade_nDims-1,i_babies:i_babies+grade_nDims-1) = random_orthonormal_basis(grade_nDims)
+                    nhats(grade_index:grade_index+grade_nDims-1,i_babies:i_babies+grade_nDims-1) = &
+                            random_orthonormal_basis(grade_nDims)
                     grade_order(i_babies:i_babies+grade_nDims-1)=i_grade
                     i_babies = i_babies + grade_nDims
                 end do
@@ -207,7 +196,7 @@ module chordal_module
 
 
 
-    !> Slice sample along the direction defined by nhat, starting at x0.
+    !> Slice sample at slice logL, along the direction defined by nhat, starting at x0.
     !!
     !! We loosely follow the notation found in Neal's landmark paper:
     !! [Neal 2003](http://projecteuclid.org/download/pdf_1/euclid.aos/1056562461).
@@ -218,7 +207,7 @@ module chordal_module
     !!
     !! Each seed point x0 contains an initial estimate of the width w.
     !!
-    function slice_sample(loglikelihood,priors,nhat,x0,w,S) result(baby_point)
+    function slice_sample(loglikelihood,priors,logL,nhat,x0,w,S,n) result(baby_point)
         use settings_module, only: program_settings
         use priors_module, only: prior
         use utils_module,  only: logzero, distance
@@ -238,12 +227,16 @@ module chordal_module
         type(prior), dimension(:), intent(in) :: priors
         !> program settings
         type(program_settings), intent(in) :: S
+        !> The Loglikelihood bound
+        double precision, intent(in)                           :: logL
         !> The direction to search for the root in
         double precision, intent(in),    dimension(S%nDims)   :: nhat
         !> The start point
         double precision, intent(in),    dimension(S%nTotal)   :: x0
         !> The initial width
         double precision, intent(in) :: w
+        !> The number of likelihood calls
+        integer, intent(inout) :: n
 
         ! The output finish point
         double precision,    dimension(S%nTotal)   :: baby_point
@@ -258,45 +251,37 @@ module chordal_module
 
         integer :: i_step
 
-
-        ! record the number of likelihood calls
-        R(S%nlike) = x0(S%nlike)
-        L(S%nlike) = 0
-
-
         ! Select initial start and end points
         temp_random = random_real()
         L(S%h0:S%h1) = x0(S%h0:S%h1) -   temp_random   * w * nhat 
         R(S%h0:S%h1) = x0(S%h0:S%h1) + (1-temp_random) * w * nhat 
 
         ! Calculate initial likelihoods
-        call calculate_point(loglikelihood,priors,R,S)
-        call calculate_point(loglikelihood,priors,L,S)
+        call calculate_point(loglikelihood,priors,R,S,n)
+        call calculate_point(loglikelihood,priors,L,S,n)
 
         ! expand R until it's outside the likelihood region
         i_step=0
-        do while(R(S%l0) >= x0(S%l1) .and. R(S%l0) > logzero )
+        do while( R(S%l0) >= logL .and. R(S%l0) > logzero )
             i_step=i_step+1
             R(S%h0:S%h1) = x0(S%h0:S%h1) + nhat * w * i_step
-            call calculate_point(loglikelihood,priors,R,S)
+            call calculate_point(loglikelihood,priors,R,S,n)
+            n=n+1
         end do
         if(i_step>100) write(*,'(" too many R steps (",I10,")")') i_step
 
         ! expand L until it's outside the likelihood region
         i_step=0
-        do while(L(S%l0) >= x0(S%l1) .and. L(S%l0) > logzero )
+        do while(L(S%l0) >= logL      .and. L(S%l0) > logzero )
             i_step=i_step+1
             L(S%h0:S%h1) = x0(S%h0:S%h1) - nhat * w * i_step
-            call calculate_point(loglikelihood,priors,L,S)
+            call calculate_point(loglikelihood,priors,L,S,n)
         end do
         if(i_step>100) write(*,'(" too many L steps (",I10,")")') i_step
 
         ! Sample within this bound
         i_step=0
         baby_point = find_positive_within(L,R)
-
-        ! Pass on the loglikelihood bound
-        baby_point(S%l1) = x0(S%l1)
 
         contains
 
@@ -328,19 +313,11 @@ module chordal_module
             ! Draw a random point within L and R
             x1(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 
 
-            ! Pass on the number of likelihood calls that have been made
-            x1(S%nlike) = L(S%nlike) + R(S%nlike)
-            ! zero the likelihood calls for L and R, as these are
-            ! now stored in point
-            L(S%nlike) = 0
-            R(S%nlike) = 0
-
-
             ! calculate the likelihood 
-            call calculate_point(loglikelihood,priors,x1,S)
+            call calculate_point(loglikelihood,priors,x1,S,n)
 
             ! If we're not within the likelihood bound then we need to sample further
-            if( x1(S%l0) < x0(S%l1) .or. x1(S%l0) <= logzero ) then
+            if( x1(S%l0) < logL .or. x1(S%l0) <= logzero ) then
 
                 if ( dot_product(x1(S%h0:S%h1)-x0(S%h0:S%h1),nhat) > 0d0 ) then
                     ! If x1 is on the R side of x0, then
