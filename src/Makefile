@@ -31,8 +31,8 @@ OBJECTS =                    \
 		  priors.o           \
           grades.o           \
 		  settings.o         \
-		  run_time_info.o    \
 		  calculate.o        \
+		  run_time_info.o    \
 		  feedback.o         \
 		  read_write.o       \
 		  clustering.o       \
@@ -53,8 +53,8 @@ OBJECTS =                    \
 		  random_utils.o     \
 		  priors.o grades.o  \
 		  settings.o         \
-		  run_time_info.o    \
 		  calculate.o        \
+		  run_time_info.o    \
 		  feedback.o         \
 		  read_write.o       \
 		  clustering.o       \

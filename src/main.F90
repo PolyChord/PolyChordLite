@@ -176,7 +176,7 @@ program main
     settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .true.                   !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
-    settings%write_live           = .true.                   !write out the physical live points?
+    settings%write_live           = .false.                  !write out the physical live points?
 
 
     ! Calculate all of the rest of the settings

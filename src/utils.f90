@@ -115,15 +115,15 @@ module utils_module
         end if
         
         if( .not. present(u2) ) then
-            size1 = size(array,2)
+            size2 = size(array,2)
         else
-            size1 = u2
+            size2 = u2
         end if
         
         if( .not. present(u3) ) then
-            size1 = size(array,3)
+            size3 = size(array,3)
         else
-            size1 = u3
+            size3 = u3
         end if
 
         temp_array = array                  ! Save the old array 

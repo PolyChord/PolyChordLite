@@ -132,7 +132,7 @@ module run_time_module
 
     end subroutine initialise_run_time_info
 
-    subroutine update_evidence(RTI)
+    function update_evidence(RTI) result(logweight)
         use utils_module, only: logsumexp,logincexp
         implicit none
 
@@ -143,6 +143,9 @@ module run_time_module
         integer :: p
         !> The loglikelihood to update
         double precision :: logL
+
+        ! The logweight of the deleted point
+        double precision :: logweight
 
         ! Iterator
         integer :: q
@@ -161,6 +164,8 @@ module run_time_module
         lognp1= log( RTI%nlive(p) +1d0 )
         lognp2= log( RTI%nlive(p) +2d0 )
 
+        ! Output the logweight
+        logweight = -lognp1 - RTI%logXp(p)
 
         ! Global evidence
         call logincexp( RTI%logZ, RTI%logXp(p)+logL-lognp1  )
@@ -211,7 +216,10 @@ module run_time_module
             end if
         end do
 
-    end subroutine update_evidence
+        ! Update the number of dead points
+        RTI%ndead = RTI%ndead+1
+
+    end function update_evidence
 
     subroutine calculate_covmats(settings,RTI)
         use settings_module, only: program_settings
@@ -332,9 +340,9 @@ module run_time_module
         ! The loglikelihood contour is defined by the cluster it belongs to
         logL = RTI%logLp(cluster_id)
 
-        ! Assign the points to cluster_id, if they are:
-        ! 1) Within the isolikelihood contour of the cluster.
-        ! 2) Within the voronoi cell of the cluster.
+        ! Assign the phantom points to cluster_id, if they are:
+        ! (1) Within the isolikelihood contour of the cluster.
+        ! (2) Within the voronoi cell of the cluster.
 
         do i_point=1,settings%num_babies-1
             ! Assign a temporary variable
@@ -353,10 +361,9 @@ module run_time_module
         if( point(settings%l0) > logL ) then ! (1)
             if( identify_cluster(settings,RTI,point) == cluster_id) then !(2)
 
-                replaced = .true.                                   ! Mark this as a replaced live point
-                call kill_outermost_live_point(settings,RTI)        ! Kill the outermost live point
-                call add_point(point,RTI%live,RTI%nlive,cluster_id) ! Add the new live point
+                replaced = .true.  ! Mark this as a replaced live point
 
+                call update_points(settings,RTI,point,cluster_id)            
             else
                 replaced = .false.                                  ! We haven't killed of any points
             end if
@@ -365,6 +372,7 @@ module run_time_module
     end function replace_point
 
     subroutine add_point(point,array,narray,cluster_id)
+        use utils_module, only: reallocate_3
         implicit none
         !> Point to be added to end of array
         double precision, dimension(:), intent(in) :: point      
@@ -387,7 +395,7 @@ module run_time_module
 
     end subroutine add_point
 
-    subroutine delete_point(i_point,array,narray,cluster_id)
+    function delete_point(i_point,array,narray,cluster_id) result(point)
         implicit none
         !> Position of point to be deleted from array
         integer, intent(in) :: i_point
@@ -397,6 +405,11 @@ module run_time_module
         integer,dimension(:), allocatable, intent(inout) :: narray
         !> cluster identity (third index)
         integer, intent(in) :: cluster_id
+        ! The point we have just deleted
+        double precision, dimension(size(array,1)) :: point      
+
+        ! Output the point to be deleted
+        point = array(:,i_point,cluster_id)
 
         ! delete the point by overwriting it with the point at the end 
         array(:,i_point,cluster_id) = array(:,narray(cluster_id),cluster_id)
@@ -404,32 +417,96 @@ module run_time_module
         ! reduce the number of points in the cluster
         narray(cluster_id) = narray(cluster_id) - 1
 
-    end subroutine delete_point
+    end function delete_point
 
 
-    subroutine kill_outermost_live_point(settings,RTI) 
+    subroutine update_points(settings,RTI,point,cluster_id) 
         use settings_module,   only: program_settings
+        use calculate_module,  only: calculate_posterior_point
+        use random_module,     only: bernoulli_trial
         implicit none
 
         type(program_settings), intent(in) :: settings
         type(run_time_info), intent(inout) :: RTI
+        double precision,dimension(settings%nTotal),intent(in) :: point  ! live point to be added
+        integer,intent(in) :: cluster_id  ! cluster which live point belongs to 
 
-        call update_evidence(RTI)                        ! Update the evidence value
-        call delete_point(RTI%i,RTI%live,RTI%nlive,RTI%p)! Delete the live point from the array
-        call find_global_min(settings,RTI)               ! Find the new global minimum
 
-    end subroutine kill_outermost_live_point
+        double precision,dimension(settings%nTotal) :: deleted_point   ! point we have just deleted
+        integer                                     :: deleted_cluster ! cluster it has been deleted from
+        double precision                            :: logweight       ! The log weighting of this point
+        
+        integer :: i_phantom ! phantom iterator
 
-    subroutine find_global_min(settings,RTI) 
-        use settings_module,   only: program_settings
+        deleted_cluster = RTI%p ! save the cluster we're deleting from
+
+        logweight = update_evidence(RTI)                               ! Update the evidence value
+        deleted_point = delete_point(RTI%i,RTI%live,RTI%nlive,RTI%p)   ! Delete the live point from the array
+        call add_point(point,RTI%live,RTI%nlive,cluster_id)            ! Add the new live point
+        call find_global_min(settings,RTI)                             ! Find the new global minimum likelihood
+
+
+        ! Calculate the posterior point and add it to the array
+        if(settings%calculate_posterior) &
+            call add_point(&
+            calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ),&
+            RTI%posterior,RTI%nposterior,deleted_cluster )
+
+
+        ! Now we delete the phantoms
+        i_phantom = 1
+        do while(i_phantom<=RTI%nphantom(deleted_cluster))
+
+            if ( RTI%phantom(settings%l0,i_phantom,deleted_cluster) < RTI%logL ) then
+                ! Delete this point
+                deleted_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom,deleted_cluster)
+
+                ! Calculate the posterior point and add it to the array
+                if(settings%calculate_posterior .and. bernoulli_trial(settings%thin_posterior)) &
+                    call add_point(&
+                    calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ),&
+                    RTI%posterior,RTI%nposterior,deleted_cluster )
+            else
+                i_phantom = i_phantom+1
+            end if
+
+        end do
+
+    end subroutine update_points
+
+    subroutine find_global_min(settings,RTI)
+        use utils_module, only: loginf
+        use settings_module, only: program_settings
+
         implicit none
+        type(program_settings), intent(in) :: settings !> Program settings
+        type(run_time_info),intent(inout)  :: RTI      !> Run time information
 
-        type(program_settings), intent(in) :: settings
-        type(run_time_info), intent(inout) :: RTI
+        
+        double precision :: logL ! temporary variable for storing lowest likelihood
+        integer :: i_live(1)     ! temporary variable for finding position of cluster
+        integer :: i_cluster     ! cluster iterator
 
+        RTI%logL = loginf ! Initialise minimum loglikelihood arbitrarily large
+
+        ! Iterate through each cluster
+        do i_cluster=1,RTI%ncluster
+
+            ! Find the position of the lowest point in this cluster
+            i_live = minloc(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster))
+            ! Find the likelihood of the lowest point in this cluster
+            logL = RTI%live(settings%l0,i_live(1),i_cluster) 
+
+            ! If this is the lowest likelihood we've found:
+            if(logL<RTI%logL) then
+                RTI%logL = logL      ! Record that we've found a new low
+                RTI%p    = i_cluster ! Record the cluster identity
+                RTI%i    = i_live(1) ! Record the live point identity
+            end if
+
+        end do
 
     end subroutine find_global_min
-
 
 
 

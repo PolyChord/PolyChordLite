@@ -217,7 +217,7 @@ module nested_sampling_module
 
                     ! Update the resume files every settings%update_resume iterations,
                     ! or at the end of the run
-                    if( mod(RTI%ndead,settings%update_resume)==0 .or. need_more_samples ) then
+                    if( mod(RTI%ndead,settings%update_resume)==0 .or. .not. need_more_samples ) then
                         ! Write the resume file if desired
                         if(settings%write_resume)        call write_resume_file(settings,RTI)
                         if(settings%calculate_posterior) call write_unnormalised_posterior_file(settings,RTI)  
