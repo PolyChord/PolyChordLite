@@ -211,10 +211,6 @@ module run_time_module
             end if
         end do
 
-        ! Decrease the number of live points in cluster p
-        RTI%nlive(p) = RTI%nlive(p) - 1
-
-
     end subroutine update_evidence
 
     subroutine calculate_covmats(settings,RTI)
@@ -325,11 +321,157 @@ module run_time_module
 
         logical :: replaced ! Have we successfully replaced a point?
 
-        replaced =.false.
+        ! live point, last of the baby points
+        double precision,dimension(settings%nTotal) :: point
 
-        stop
+        double precision :: logL ! loglikelihood bound
 
+        integer :: i_point ! point iterator
+
+
+        ! The loglikelihood contour is defined by the cluster it belongs to
+        logL = RTI%logLp(cluster_id)
+
+        ! Assign the points to cluster_id, if they are:
+        ! 1) Within the isolikelihood contour of the cluster.
+        ! 2) Within the voronoi cell of the cluster.
+
+        do i_point=1,settings%num_babies-1
+            ! Assign a temporary variable
+            point = baby_points(:,i_point)
+
+            if( point(settings%l0) > logL ) then ! (1)
+                if( identify_cluster(settings,RTI,point) == cluster_id) then !(2)
+                    call add_point(point,RTI%phantom,RTI%nphantom,cluster_id)  ! Add the new phantom point
+                end if
+            end if
+
+        end do
+
+        ! Now assign the live point
+        point = baby_points(:,i_point)
+        if( point(settings%l0) > logL ) then ! (1)
+            if( identify_cluster(settings,RTI,point) == cluster_id) then !(2)
+
+                replaced = .true.                                   ! Mark this as a replaced live point
+                call kill_outermost_live_point(settings,RTI)        ! Kill the outermost live point
+                call add_point(point,RTI%live,RTI%nlive,cluster_id) ! Add the new live point
+
+            else
+                replaced = .false.                                  ! We haven't killed of any points
+            end if
+        end if
 
     end function replace_point
+
+    subroutine add_point(point,array,narray,cluster_id)
+        implicit none
+        !> Point to be added to end of array
+        double precision, dimension(:), intent(in) :: point      
+        !> Array to be added to
+        double precision, dimension(:,:,:), allocatable, intent(inout) :: array
+        !> number of points in array (second index)
+        integer,dimension(:), allocatable, intent(inout) :: narray
+        !> cluster identity (third index)
+        integer, intent(in) :: cluster_id
+
+
+        ! Increase the number of points in the cluster
+        narray(cluster_id) = narray(cluster_id) + 1
+
+        ! If this takes us over the size of the array, then double it
+        if(narray(cluster_id) > size(array,2) ) call reallocate_3(array, u2=size(array,2)*2 )
+
+        ! Add the point to the end position
+        array(:,narray(cluster_id),cluster_id) = point
+
+    end subroutine add_point
+
+    subroutine delete_point(i_point,array,narray,cluster_id)
+        implicit none
+        !> Position of point to be deleted from array
+        integer, intent(in) :: i_point
+        !> Array to be delete from
+        double precision, dimension(:,:,:), allocatable, intent(inout) :: array
+        !> number of points in array (second index)
+        integer,dimension(:), allocatable, intent(inout) :: narray
+        !> cluster identity (third index)
+        integer, intent(in) :: cluster_id
+
+        ! delete the point by overwriting it with the point at the end 
+        array(:,i_point,cluster_id) = array(:,narray(cluster_id),cluster_id)
+
+        ! reduce the number of points in the cluster
+        narray(cluster_id) = narray(cluster_id) - 1
+
+    end subroutine delete_point
+
+
+    subroutine kill_outermost_live_point(settings,RTI) 
+        use settings_module,   only: program_settings
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        type(run_time_info), intent(inout) :: RTI
+
+        call update_evidence(RTI)                        ! Update the evidence value
+        call delete_point(RTI%i,RTI%live,RTI%nlive,RTI%p)! Delete the live point from the array
+        call find_global_min(settings,RTI)               ! Find the new global minimum
+
+    end subroutine kill_outermost_live_point
+
+    subroutine find_global_min(settings,RTI) 
+        use settings_module,   only: program_settings
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        type(run_time_info), intent(inout) :: RTI
+
+
+    end subroutine find_global_min
+
+
+
+
+    function identify_cluster(settings,RTI,point) result(cluster)
+        use settings_module,   only: program_settings
+        use utils_module,      only: loginf,distance2
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        type(run_time_info), intent(in) :: RTI
+
+        double precision, dimension(settings%nTotal),intent(in)   :: point
+
+        integer :: cluster
+
+        integer :: i_cluster
+        integer :: i_live
+
+        double precision :: temp_distance2
+        double precision :: closest_distance2
+
+        if( RTI%ncluster == 1) then
+            cluster=1
+            return
+        end if
+
+        closest_distance2=loginf
+
+        ! Find the cluster this point is nearest to
+        do i_cluster=1,RTI%ncluster
+            do i_live=1,RTI%nlive(i_cluster)
+                temp_distance2 = distance2(point(settings%h0:settings%h1),RTI%live(settings%h0:settings%h1,i_live,i_cluster) )
+                if(temp_distance2 < closest_distance2) then
+                    cluster = i_cluster
+                    closest_distance2 = temp_distance2
+                end if
+            end do
+        end do
+
+    end function identify_cluster
+
+
+
 
 end module

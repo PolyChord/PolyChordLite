@@ -139,15 +139,15 @@ module nested_sampling_module
             if(myrank==root) call read_resume_file(settings,RTI) 
 
         else 
+            
+            ! Delete any existing files if we're going to be producing our own new ones
+            if(myrank==root.and.settings%write_resume) call delete_files(settings) 
 
             ! Intialise the run by setting all of the relevant run time info, and generating live points
             call GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_communicator,nprocs,myrank,root)
 
             ! Write a resume file (as the generation of live points can be intensive)
-            if(myrank==root.and.settings%write_resume) then
-                call delete_files(settings)     ! Delete any existing files
-                if(settings%write_resume) call write_resume_file(settings,RTI) ! Write a new resume file
-            end if
+            if(myrank==root.and.settings%write_resume) call write_resume_file(settings,RTI) 
 
         end if 
 
@@ -367,43 +367,6 @@ module nested_sampling_module
 
 
     end function more_samples_needed
-
-
-
-
-    function identify_cluster(settings,RTI,point) result(cluster)
-        use settings_module,   only: program_settings
-        use run_time_module,   only: run_time_info
-        use utils_module,      only: loginf,distance2
-        implicit none
-
-        type(program_settings), intent(in) :: settings
-        type(run_time_info), intent(inout) :: RTI
-
-        double precision, dimension(settings%nTotal),intent(in)   :: point
-
-        integer :: cluster
-
-        integer :: i_cluster
-        integer :: i_live
-
-        double precision :: temp_distance2
-        double precision :: closest_distance2
-
-        closest_distance2=loginf
-
-        ! Find the cluster this point is nearest to
-        do i_cluster=1,RTI%ncluster
-            do i_live=1,RTI%nlive(i_cluster)
-                temp_distance2 = distance2(point(settings%h0:settings%h1),RTI%live(settings%h0:settings%h1,i_live,i_cluster) )
-                if(temp_distance2 < closest_distance2) then
-                    cluster = i_cluster
-                    closest_distance2 = temp_distance2
-                end if
-            end do
-        end do
-
-    end function identify_cluster
 
 
 

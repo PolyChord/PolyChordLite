@@ -19,7 +19,7 @@ module utils_module
     integer, parameter :: fmt_len = 200
     character(7) :: DB_FMT='E17.8E3'
     character(4) :: FLT_FMT='F8.2'
-    character(3) :: INT_FMT='I20'
+    character(3) :: INT_FMT='I12'
 
     !> unit for stdout
     integer, parameter :: stdout_unit = 6
@@ -93,6 +93,45 @@ module utils_module
         minpos_vec = minloc(a)
         minpos = minpos_vec(1)
     end function minpos
+
+
+
+
+
+    !> Reallocate a 3D array of doubles
+    subroutine reallocate_3(array,u1,u2,u3)
+        implicit none
+        double precision, dimension(:,:,:),allocatable, intent(inout) :: array
+        integer, intent(in),optional :: u1,u2,u3
+
+        integer :: size1,size2,size3
+
+        double precision, dimension(size(array,1),size(array,2),size(array,3)) :: temp_array
+
+        if( .not. present(u1) ) then
+            size1 = size(array,1)
+        else
+            size1 = u1
+        end if
+        
+        if( .not. present(u2) ) then
+            size1 = size(array,2)
+        else
+            size1 = u2
+        end if
+        
+        if( .not. present(u3) ) then
+            size1 = size(array,3)
+        else
+            size1 = u3
+        end if
+
+        temp_array = array                  ! Save the old array 
+        deallocate(array)                   ! Deallocate it      
+        allocate(array(size1,size2,size3))  ! Re-allocate with new size
+        array(1:size(array,1),1:size(array,2),1:size(array,3)) = temp_array
+
+    end subroutine
 
 
 

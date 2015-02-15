@@ -21,9 +21,6 @@ module settings_module
         !> The number of live points
         integer :: nlive =500
 
-        !> The number of live points
-        integer :: nstack =500*10
-
         !> The degree of feedback to provide
         integer :: feedback = 1
 
@@ -182,8 +179,6 @@ module settings_module
 
         ! Number of babies to generate,
         settings%num_babies           = settings%nDims*settings%num_repeats
-        ! Space in stack for excess phantoms
-        settings%nstack               = settings%nlive*settings%num_babies*2
 
 
         ! Posterior indices
