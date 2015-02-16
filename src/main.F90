@@ -35,7 +35,7 @@ function loglikelihood(theta,phi,context)
     !       - gaussian_loglikelihood_cluster
     !       - twin_gaussian_loglikelihood 
     !
-    loglikelihood = rastrigin_loglikelihood(theta,phi,context)
+    loglikelihood = gaussian_loglikelihood(theta,phi,context)
 end function
 
 
@@ -146,8 +146,8 @@ program main
         hypercube_indices(settings%nDims)    &
         )
 
-    minimums=-2
-    maximums= 2
+    minimums=0
+    maximums=1
     hypercube_indices  = [ (i,i=1,settings%nDims) ]
     physical_indices  = hypercube_indices
 
@@ -160,12 +160,11 @@ program main
     settings%nlive                = 500                      !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw (this is multiplied by nDims)
 
-    settings%do_clustering        = .true.                   !whether or not to do clustering
-    settings%ncluster             = 30                       !maximum number of clusters + 1 (memory allocation purposes)
+    settings%do_clustering        = .false.                  !whether or not to do clustering
 
     settings%feedback             = 1                        !degree of feedback
 
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down)
+    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down)
     settings%thin_posterior       = 1                        !Factor by which the posterior file should be thinned
     ! 0 uses just live points,
     ! 1 uses all inter-chain points

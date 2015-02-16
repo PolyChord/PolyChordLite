@@ -27,6 +27,7 @@ OBJECTS =                    \
 		  utils.o            \
 		  abort.o            \
 		  mpi_utils.o        \
+		  array_utils.o      \
 		  random_utils.o     \
 		  priors.o           \
           grades.o           \
@@ -50,6 +51,7 @@ FC = $(COMPILER_TYPE)
 OBJECTS =                    \
 		  utils.o            \
 		  abort.o            \
+		  array_utils.o      \
 		  random_utils.o     \
 		  priors.o grades.o  \
 		  settings.o         \

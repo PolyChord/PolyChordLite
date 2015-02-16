@@ -80,6 +80,7 @@ module generate_module
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating
         use run_time_module,   only: run_time_info,initialise_run_time_info
+        use array_module,     only: add_point
         use abort_module
 #ifdef MPI
         use mpi_module, only: throw_point,catch_point,more_points_needed,sum_nlike,request_point,no_more_points
@@ -116,12 +117,14 @@ module generate_module
 
         double precision, dimension(settings%nTotal) :: live_point ! Temporary live point array
 
-        integer i_live ! Loop variable
 
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
         integer :: nlike ! number of likelihood calls
 
+#ifndef MPI
+        nlike=mpi_communicator ! Stop an annoying unused variable warning -- this does nothing
+#endif
 
         ! Initialise number of likelihood calls to zero here
         nlike = 0
@@ -148,8 +151,7 @@ module generate_module
         if(nprocs==1) then
             !===================== LINEAR MODE =========================
 
-            i_live=0 ! Initially no live points have been generated
-            do while(i_live<settings%nlive)
+            do while(RTI%nlive(1)<settings%nlive)
 
                 ! Generate a random coordinate
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
@@ -160,15 +162,12 @@ module generate_module
                 ! If its valid, and we need more points, add it to the array
                 if(live_point(settings%l0)>logzero) then
 
-                    i_live=i_live+1                      ! Increase the live point counter
-                    RTI%live(:,i_live,1) = live_point    ! Add the new live point to the array
-                    RTI%nlive(1) = i_live                ! note down the number of live point in RTI
+                    call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
                     if(settings%write_live) then
                         ! Write the live points to the live_points file
                         write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                        ! flush the unit to force write
-                        call flush(write_phys_unit)
+                        call flush(write_phys_unit) ! flush the unit to force write
                     end if
 
                 end if
@@ -185,7 +184,6 @@ module generate_module
 
 
                 active_slaves=nprocs-1 ! Set the number of active processors to the number of slaves
-                i_live=0               ! No live points initially
 
                 do while(active_slaves>0) 
 
@@ -193,30 +191,24 @@ module generate_module
                     slave_id = catch_point(live_point,mpi_communicator)
 
                     ! If its valid, and we need more points, add it to the array
-                    if(live_point(settings%l0)>logzero .and. i_live<settings%nlive) then
+                    if(live_point(settings%l0)>logzero .and. RTI%nlive(1)<settings%nlive) then
 
-                        i_live=i_live+1                      ! Increase the live point counter
-                        RTI%live(:,i_live,1) = live_point    ! Add the new live point to the array
-                        RTI%nlive(1) = i_live                ! note down the number of live point in RTI
+                        call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
                         if(settings%write_live) then
                             ! Write the live points to the live_points file
                             write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                            ! flush the unit to force write
-                            call flush(write_phys_unit)
+                            call flush(write_phys_unit) ! flush the unit to force write
                         end if
 
                     end if
 
 
-                    if(i_live<settings%nlive) then
-                        ! If we still need more points, send a signal to have another go
-                        call request_point(mpi_communicator,slave_id)
+                    if(RTI%nlive(1)<settings%nlive) then
+                        call request_point(mpi_communicator,slave_id)  ! If we still need more points, send a signal to have another go
                     else
-                        ! Otherwise, send a signal to stop
-                        call no_more_points(mpi_communicator,slave_id)
-
-                        active_slaves=active_slaves-1 ! decrease the active slave counter
+                        call no_more_points(mpi_communicator,slave_id) ! Otherwise, send a signal to stop
+                        active_slaves=active_slaves-1                  ! decrease the active slave counter
                     end if
 
                 end do
@@ -226,22 +218,13 @@ module generate_module
 
             else
 
-                ! The slaves simply generate and send points until they're told to stop by
-                ! the master
-
+                ! The slaves simply generate and send points until they're told to stop by the master
                 do while(.true.)
-
-                    ! Generate a random hypercube coordinate
-                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
-
-                    ! Compute physical coordinates, likelihoods and derived parameters
-                    call calculate_point( loglikelihood, priors, live_point, settings,nlike)
-
-                    ! Send it to the root node
-                    call throw_point(live_point,mpi_communicator,root)
-
-                    ! If we've recieved a kill signal, then exit this loop
-                    if(.not. more_points_needed(mpi_communicator,root)) exit
+        
+                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                    call calculate_point( loglikelihood, priors, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
+                    call throw_point(live_point,mpi_communicator,root)                       ! Send it to the root node
+                    if(.not. more_points_needed(mpi_communicator,root)) exit                 ! If we've recieved a kill signal, then exit this loop
 
                 end do
 
@@ -269,10 +252,8 @@ module generate_module
             RTI%nlike = nlike
 
             ! Set the local and global loglikelihood bounds
-            RTI%p     = 1                                 ! Only one cluster at this point
-            RTI%i     = minpos(RTI%live(settings%l0,:,1)) ! Find the position of the minimum loglikelihood
-            RTI%logL  = RTI%live(settings%l0,RTI%i,1)     ! Store the value of the minimum loglikelihood 
-            RTI%logLp = RTI%logL                          ! global = local for one cluster
+            RTI%i(1)  = minpos(RTI%live(settings%l0,:,1)) ! Find the position of the minimum loglikelihood
+            RTI%logLp = RTI%live(settings%l0,RTI%i(1),1)  ! Store the value of the minimum loglikelihood 
 
             ! Close the file
             close(write_phys_unit)

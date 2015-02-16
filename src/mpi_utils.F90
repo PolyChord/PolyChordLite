@@ -337,7 +337,7 @@ module mpi_module
             size(seed_point),      &!  
             MPI_DOUBLE_PRECISION,  &!  
             slave_id,              &!  
-            tag_run_seed,          &!  
+            tag,                   &!  
             mpi_communicator,      &!  
             mpierror               &!  
             )

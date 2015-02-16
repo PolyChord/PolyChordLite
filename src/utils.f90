@@ -98,42 +98,6 @@ module utils_module
 
 
 
-    !> Reallocate a 3D array of doubles
-    subroutine reallocate_3(array,u1,u2,u3)
-        implicit none
-        double precision, dimension(:,:,:),allocatable, intent(inout) :: array
-        integer, intent(in),optional :: u1,u2,u3
-
-        integer :: size1,size2,size3
-
-        double precision, dimension(size(array,1),size(array,2),size(array,3)) :: temp_array
-
-        if( .not. present(u1) ) then
-            size1 = size(array,1)
-        else
-            size1 = u1
-        end if
-        
-        if( .not. present(u2) ) then
-            size2 = size(array,2)
-        else
-            size2 = u2
-        end if
-        
-        if( .not. present(u3) ) then
-            size3 = size(array,3)
-        else
-            size3 = u3
-        end if
-
-        temp_array = array                  ! Save the old array 
-        deallocate(array)                   ! Deallocate it      
-        allocate(array(size1,size2,size3))  ! Re-allocate with new size
-        array(1:size(array,1),1:size(array,2),1:size(array,3)) = temp_array
-
-    end subroutine
-
-
 
     !> Euclidean distance of two coordinates
     !!

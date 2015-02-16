@@ -115,6 +115,7 @@ module nested_sampling_module
         root   = get_root(myrank,mpi_communicator)    ! Assign the root process as the minimum integer
 
         allocate(slave_cluster(nprocs-1)) ! Allocate the slave arrays
+        slave_cluster = 1                 ! initialise with 1
 
 #else 
         ! non-MPI initialisation
@@ -235,6 +236,25 @@ module nested_sampling_module
             end do ! End of main loop body
 
 
+            ! Create the output array
+            ! (1) log evidence
+            ! (2) Error in the log evidence
+            ! (3) Number of dead points
+            ! (4) Number of likelihood calls
+            ! (5) log(evidence * prior volume)
+            call calculate_logZ_estimate(RTI,output_info(1),output_info(2))
+            output_info(3) = RTI%ndead
+            output_info(4) = RTI%nlike
+            output_info(5) = output_info(1)+prior_log_volume(priors)
+
+            ! ------------------------------------------------------------ !
+            call write_final_results(output_info,settings%feedback,priors) !
+            ! ------------------------------------------------------------ !
+
+
+
+
+
 
 
             ! C) Clean up
@@ -258,29 +278,8 @@ module nested_sampling_module
                 call throw_seed(seed_point,cholesky,logL,mpi_communicator,slave_id,.false.) 
 
             end do
-#endif
 
 
-            ! Create the output array
-            ! (1) log evidence
-            ! (2) Error in the log evidence
-            ! (3) Number of dead points
-            ! (4) Number of likelihood calls
-            ! (5) log(evidence * prior volume)
-            call calculate_logZ_estimate(RTI,output_info(1),output_info(2))
-            output_info(3) = RTI%ndead
-            output_info(4) = RTI%nlike
-            output_info(5) = output_info(1)+prior_log_volume(priors)
-
-            ! ------------------------------------------------------------ !
-            call write_final_results(output_info,settings%feedback,priors) !
-            ! ------------------------------------------------------------ !
-
-
-
-
-
-#ifdef MPI
         else !(myrank/=root)
 
             ! These are the slave tasks
