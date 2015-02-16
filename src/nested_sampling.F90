@@ -160,7 +160,6 @@ module nested_sampling_module
 
         if(myrank==root) then
 
-
             ! -------------------------------------------- !
             call write_started_sampling(settings%feedback) !
             ! -------------------------------------------- !

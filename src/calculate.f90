@@ -38,24 +38,27 @@ module calculate_module
     end subroutine calculate_point
 
     !> Calculate a posterior point from a live/phantom point
-    function calculate_posterior_point(settings,point,logweight,evidence) result(posterior_point)
+    function calculate_posterior_point(settings,point,logweight,evidence,volume) result(posterior_point)
         use settings_module,   only: program_settings
-        use utils_module, only: logincexp
+        use utils_module,      only: logincexp
         implicit none
 
         type(program_settings), intent(in) :: settings
         double precision, dimension(settings%nTotal),intent(in) :: point
         double precision,intent(in) :: logweight
         double precision,intent(in) :: evidence
+        double precision,intent(in) :: volume
         double precision, dimension(settings%nposterior) :: posterior_point
 
 
-        ! Un-normalised weighting (needs to be unnormalised since the evidence is only correct at the end)
-        posterior_point(settings%pos_w)  = point(settings%l0) + logweight
-        ! un-normalise cumulative weighting
-        posterior_point(settings%pos_Z)  = evidence
+        ! Volume
+        posterior_point(settings%pos_X)  = volume
         ! Likelihood
         posterior_point(settings%pos_l)  = point(settings%l0)
+        ! Un-normalised weighting 
+        posterior_point(settings%pos_w)  = logweight
+        ! un-normalise cumulative weighting
+        posterior_point(settings%pos_Z)  = evidence
         ! Physical parameters
         posterior_point(settings%pos_p0:settings%pos_p1) = point(settings%p0:settings%p1)
         ! Derived parameters

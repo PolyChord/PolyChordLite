@@ -69,6 +69,7 @@ module read_write_module
         type(run_time_info),    intent(in) :: RTI
 
         integer :: i_cluster
+        integer :: i_dims
         integer :: i_point
 
 
@@ -136,6 +137,23 @@ module read_write_module
         end do
 
 
+        write(fmt_dbl,'("(",I0,A,")")') settings%nDims, DB_FMT   ! Initialise the double array format for matrices
+        write(write_resume_unit,'("=== covariance matrices ===")') 
+        do i_cluster=1,RTI%ncluster
+            write(write_resume_unit,'("--- covariance matrix ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
+            do i_dims=1,settings%nDims
+                write(write_resume_unit,fmt_dbl) RTI%covmat(:,i_dims,i_cluster)
+            end do
+        end do
+        write(write_resume_unit,'("=== cholesky decompositions ===")') 
+        do i_cluster=1,RTI%ncluster
+            write(write_resume_unit,'("--- cholesky decomposition ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
+            do i_dims=1,settings%nDims
+                write(write_resume_unit,fmt_dbl) RTI%cholesky(:,i_dims,i_cluster)
+            end do
+        end do
+
+
         write(fmt_dbl,'("(",I0,A,")")') settings%nTotal, DB_FMT   ! Initialise the double array format for live points
 
         ! write live points
@@ -169,12 +187,14 @@ module read_write_module
         use settings_module, only: program_settings
         use feedback_module, only: write_resuming
         use abort_module, only: halt_program
+        use array_module, only: add_point
         implicit none
 
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(out) :: RTI
 
         integer :: i_cluster
+        integer :: i_dims
         integer :: i_point
         integer :: i_temp
 
@@ -182,6 +202,10 @@ module read_write_module
         character(len=fmt_len) :: fmt_int
         character(len=fmt_len) :: fmt_dbl
 
+        double precision, dimension(settings%nTotal) :: temp_point
+
+        integer, allocatable,dimension(:) :: nlive
+        integer, allocatable,dimension(:) :: nphantom
 
         ! -------------------------------------------- !
         call write_resuming(settings%feedback)
@@ -212,33 +236,38 @@ module read_write_module
         read(read_resume_unit,fmt_int) RTI%ncluster ! number of clusters
 
         ! Allocate nlive and nphantom arrays based on these
-        allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior(RTI%ncluster))
+        allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior(RTI%ncluster),RTI%i(RTI%ncluster),nphantom(RTI%ncluster),nlive(RTI%ncluster))
+        RTI%nphantom=0
+        RTI%nlive=0
 
         ! Read in number of live and phantom points
         write(fmt_int,'("(",I0,A,")")') RTI%ncluster,INT_FMT  ! define the integer array format
 
         read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) RTI%nlive    ! number of live points
+        read(read_resume_unit,fmt_int) nlive        ! temporary number of live points
         read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) RTI%nphantom ! number of phantom points
+        read(read_resume_unit,fmt_int) nphantom     ! temporary number of phantom points
         read(read_resume_unit,*)                    !
         read(read_resume_unit,fmt_int) RTI%i        ! minimum loglikelihood positions
 
 
         ! Check to see if this is consistent with settings
-        if(settings%nlive/=sum(RTI%nlive)) call halt_program('resume error: nlive does not match')
+        if(settings%nlive/=sum(nlive)) call halt_program('resume error: nlive does not match')
 
 
         ! Allocate the rest of the arrays
-        allocate(                                                        &
+        allocate(                                                       &
             RTI%live(settings%nTotal,settings%nlive,RTI%ncluster),      &
             RTI%phantom(settings%nTotal,settings%nlive,RTI%ncluster),   &
+            RTI%logLp(RTI%ncluster),                                    &
             RTI%logXp(RTI%ncluster),                                    &
             RTI%logZp(RTI%ncluster),                                    &
             RTI%logZXp(RTI%ncluster),                                   &
             RTI%logZp2(RTI%ncluster),                                   &
             RTI%logZpXp(RTI%ncluster),                                  &
-            RTI%logXpXq(RTI%ncluster,RTI%ncluster)                      &
+            RTI%logXpXq(RTI%ncluster,RTI%ncluster),                     &
+            RTI%covmat(settings%nDims,settings%nDims,RTI%ncluster),     &
+            RTI%cholesky(settings%nDims,settings%nDims,RTI%ncluster)    &
             )
 
 
@@ -270,21 +299,40 @@ module read_write_module
         end do
 
 
+        write(fmt_dbl,'("(",I0,A,")")') settings%nDims, DB_FMT   ! Initialise the double array format for matrices
+        read(read_resume_unit,*) 
+        do i_cluster=1,RTI%ncluster
+            read(read_resume_unit,*)
+            do i_dims=1,settings%nDims
+                read(read_resume_unit,fmt_dbl) RTI%covmat(:,i_dims,i_cluster)
+            end do
+        end do
+        read(read_resume_unit,*) 
+        do i_cluster=1,RTI%ncluster
+            read(read_resume_unit,*)
+            do i_dims=1,settings%nDims
+                read(read_resume_unit,fmt_dbl) RTI%cholesky(:,i_dims,i_cluster)
+            end do
+        end do
+
+
         write(fmt_dbl,'("(",I0,A,")")') settings%nTotal, DB_FMT   ! Initialise the double array format for live points
 
         ! Read in live points
         read(read_resume_unit,*)                               
         do i_cluster=1,RTI%ncluster
-            do i_point=1,RTI%nlive(i_cluster)
-                read(read_resume_unit,fmt_dbl) RTI%live(:,i_point,i_cluster)
+            do i_point=1,nlive(i_cluster)
+                read(read_resume_unit,fmt_dbl) temp_point
+                call add_point(temp_point,RTI%live,RTI%nlive,i_cluster)
             end do
         end do
 
         ! Read in phantom points
         read(read_resume_unit,*)                               
         do i_cluster=1,RTI%ncluster
-            do i_point=1,RTI%nphantom(i_cluster)
-                read(read_resume_unit,fmt_dbl) RTI%phantom(:,i_point,i_cluster)
+            do i_point=1,nphantom(i_cluster)
+                read(read_resume_unit,fmt_dbl) temp_point
+                call add_point(temp_point,RTI%phantom,RTI%nphantom,i_cluster)
             end do
         end do
 
@@ -293,14 +341,8 @@ module read_write_module
 
 
         ! Allocate the posterior array if we're calculating this
-        if(settings%calculate_posterior) allocate(RTI%posterior(settings%nTotal,settings%nlive,RTI%ncluster))
+        if(settings%calculate_posterior) allocate(RTI%posterior(settings%nposterior,settings%nlive,RTI%ncluster))
         RTI%nposterior = 0 ! Initialise number of posterior points at 0
-
-        ! Allocate the cholesky and covmat arrays
-        allocate(                                                      &
-            RTI%cholesky(settings%nDims,settings%nDims,RTI%ncluster), &
-            RTI%covmat(settings%nDims,settings%nDims,RTI%ncluster)    &
-            )
 
     end subroutine read_resume_file
 
@@ -315,6 +357,7 @@ module read_write_module
         type(run_time_info),    intent(inout) :: RTI
 
         integer :: i_cluster
+        integer :: i_post
 
         character(len=fmt_len) :: fmt_dbl
 
@@ -326,19 +369,20 @@ module read_write_module
         write(fmt_dbl,'("(",I0,A,")")') settings%nposterior, DB_FMT
 
         do i_cluster=1,RTI%ncluster
-            ! Print each cluster sequentially to the main unnormalised chains file
-            write(write_untxt_unit,fmt_dbl) RTI%posterior(:,1:RTI%nposterior(i_cluster),:)
 
+            if(settings%do_clustering) open(write_untxt_cluster_unit,file=trim(posterior_file(settings,.true.,i_cluster)),action='write',position='append') 
 
-            ! If we're clustering, then print out separate cluster files
-            if(settings%do_clustering) then
-                open(write_untxt_cluster_unit,file=trim(posterior_file(settings,.true.,i_cluster)), &
-                    action='write',position='append') 
+            do i_post=1,RTI%nposterior(i_cluster)
 
-                write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior(:,1:RTI%nposterior(i_cluster),:) 
+                ! Print each cluster sequentially to the main unnormalised chains file
+                write(write_untxt_unit,fmt_dbl) RTI%posterior(:,i_post,i_cluster)
 
-                close(write_untxt_cluster_unit)
-            end if
+                ! If we're clustering, then print out separate cluster files
+                if(settings%do_clustering) write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior(:,i_post,i_cluster) 
+
+            end do
+
+            if(settings%do_clustering) close(write_untxt_cluster_unit)
 
         end do
 

@@ -76,23 +76,23 @@ module run_time_module
 
         ! Allocate all of the arrays with one cluster
         RTI%ncluster = 1
-        allocate(                                            &
-            RTI%live(settings%nTotal,settings%nlive,1),      &
-            RTI%phantom(settings%nTotal,settings%nlive,1),   &
-            RTI%posterior(settings%nTotal,settings%nlive,1), &
-            RTI%logZp(1),                                    &
-            RTI%logXp(1),                                    &
-            RTI%logZXp(1),                                   &
-            RTI%logZp2(1),                                   &
-            RTI%logZpXp(1),                                  &
-            RTI%logXpXq(1,1),                                &
-            RTI%logLp(1),                                    &
-            RTI%i(1),                                        &
-            RTI%nlive(1),                                    &
-            RTI%nphantom(1),                                 &
-            RTI%nposterior(1),                               &
-            RTI%cholesky(settings%nDims,settings%nDims,1),   &
-            RTI%covmat(settings%nDims,settings%nDims,1)      &
+        allocate(                                               &
+            RTI%live(settings%nTotal,settings%nlive,1),         &
+            RTI%phantom(settings%nTotal,settings%nlive,1),      &
+            RTI%posterior(settings%nposterior,settings%nlive,1),&
+            RTI%logZp(1),                                       &
+            RTI%logXp(1),                                       &
+            RTI%logZXp(1),                                      &
+            RTI%logZp2(1),                                      &
+            RTI%logZpXp(1),                                     &
+            RTI%logXpXq(1,1),                                   &
+            RTI%logLp(1),                                       &
+            RTI%i(1),                                           &
+            RTI%nlive(1),                                       &
+            RTI%nphantom(1),                                    &
+            RTI%nposterior(1),                                  &
+            RTI%cholesky(settings%nDims,settings%nDims,1),      &
+            RTI%covmat(settings%nDims,settings%nDims,1)         &
             )
 
         ! All evidences set to logzero
@@ -104,8 +104,8 @@ module run_time_module
         RTI%logZpXp=logzero
 
         ! All volumes set to 1
-        RTI%logXp=1d0
-        RTI%logXpXq=1d0
+        RTI%logXp=0d0
+        RTI%logXpXq=0d0
 
         !Initially no live points at all
         RTI%nlive=0
@@ -388,9 +388,9 @@ module run_time_module
 
 
                 ! Calculate the posterior point and add it to the array
-                if(settings%calculate_posterior) &
+                if(settings%calculate_posterior .and.  bernoulli_trial(settings%thin_posterior)) &
                     call add_point(&
-                    calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ),&
+                    calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp)),&
                     RTI%posterior,RTI%nposterior,cluster_del )
 
 
@@ -407,7 +407,7 @@ module run_time_module
                         ! Calculate the posterior point and add it to the array
                         if(settings%calculate_posterior .and. bernoulli_trial(settings%thin_posterior)) &
                             call add_point(&
-                            calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ),&
+                            calculate_posterior_point(settings,deleted_point,logweight,RTI%logZp(cluster_del),RTI%logXp(cluster_del)),&
                             RTI%posterior,RTI%nposterior,cluster_del )
 
                     else

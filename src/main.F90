@@ -123,7 +123,7 @@ program main
     ! (i) Choose the loglikelihood at the top of this file
 
     ! (ii) Set the dimensionality
-    settings%nDims= 2                 ! Dimensionality of the space
+    settings%nDims= 20                ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Set up priors
@@ -157,25 +157,25 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 500                      !number of live points
+    settings%nlive                = 25*settings%nDims        !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw (this is multiplied by nDims)
 
     settings%do_clustering        = .false.                  !whether or not to do clustering
 
     settings%feedback             = 1                        !degree of feedback
 
-    settings%calculate_posterior  = .false.                  !calculate the posterior (slows things down)
-    settings%thin_posterior       = 1                        !Factor by which the posterior file should be thinned
+    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down)
+    settings%thin_posterior       = 1d0                      !Factor by which the posterior file should be thinned
     ! 0 uses just live points,
     ! 1 uses all inter-chain points
 
     ! reading and writing
-    settings%file_root            = 'rastrigin'              !file root
+    settings%file_root            = 'gaussian'               !file root
     settings%base_dir             = 'chains'                 !directory to put chains in
     settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .true.                   !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
-    settings%write_live           = .false.                  !write out the physical live points?
+    settings%write_live           = .true.                   !write out the physical live points?
 
 
     ! Calculate all of the rest of the settings

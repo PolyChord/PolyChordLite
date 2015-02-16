@@ -90,7 +90,7 @@ ifdef DEBUG
 # check all      : all checks (whilst compiling)
 # fpe0           : halts program if dividing by zero, etc
 # warn all       : all warnings (whilst running)
-FCFLAGS += -g -O0 -traceback -fp-stack-check -check all -fpe0 -warn all
+FCFLAGS += -g -O0 -traceback -fp-stack-check -check all,noarg_temp_created -fpe0 -warn all
 else
 # Optimised mode
 # --------------
