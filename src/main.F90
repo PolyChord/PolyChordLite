@@ -160,7 +160,8 @@ program main
     settings%nlive                = 25*settings%nDims        !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw (this is multiplied by nDims)
 
-    settings%do_clustering        = .false.                  !whether or not to do clustering
+    settings%do_clustering        = .true.                   !whether or not to do clustering
+    settings%update_clustering    = settings%nlive           !how often to do clustering algorithm
 
     settings%feedback             = 1                        !degree of feedback
 
@@ -172,7 +173,7 @@ program main
     ! reading and writing
     settings%file_root            = 'gaussian'               !file root
     settings%base_dir             = 'chains'                 !directory to put chains in
-    settings%read_resume          = .false.                  !whether or not to resume from file
+    settings%read_resume          = .true.                   !whether or not to resume from file
     settings%write_resume         = .true.                   !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%write_live           = .true.                   !write out the physical live points?

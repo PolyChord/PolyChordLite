@@ -139,6 +139,9 @@ module settings_module
         !> Whether to do clustering or not
         logical :: do_clustering = .false.
 
+        !> How often to update clustering
+        integer :: update_clustering = 500
+
     end type program_settings
 
     contains

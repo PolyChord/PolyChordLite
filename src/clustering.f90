@@ -1,4 +1,4 @@
-module cluster_module
+module KNN_clustering
 
     implicit none
     contains
@@ -11,141 +11,163 @@ module cluster_module
     !!
     !! The algorithm computes the k nearest neihbor sets from the similarity
     !! matrix, and then tests
-    function NN_clustering(similarity_matrix,k,cluster_list_output) result(num_clusters_output)
+    recursive function NN_clustering(similarity_matrix,cluster_list_output) result(num_clusters_output)
         implicit none
-        double precision, intent(in), dimension(:,:) :: similarity_matrix
-        integer, intent(in) :: k
-        integer, dimension(size(similarity_matrix,1)),intent(out) :: cluster_list_output
 
+        double precision, intent(in), dimension(:,:) :: similarity_matrix
+
+        integer, dimension(size(similarity_matrix,1)),intent(out) :: cluster_list_output
         integer :: num_clusters_output
 
 
+        integer, dimension(size(similarity_matrix,1),size(similarity_matrix,1)) :: cluster_list
+        integer, dimension(size(similarity_matrix,1)) :: num_clusters
 
-        integer, dimension(size(similarity_matrix,1),k) :: cluster_list
-        integer, dimension(size(similarity_matrix,1),k) :: cluster_list_final
-
-        integer, dimension(k) :: num_clusters
-
-        integer, dimension(k,size(similarity_matrix,1)) :: knn
-
-        integer :: i_point,j_point,i_cluster
-
-        integer :: cluster_orig_i,cluster_orig_j
+        integer, dimension(size(similarity_matrix,1),size(similarity_matrix,1)) :: knn
 
         integer :: nlive
-
-        integer :: cluster_map(size(similarity_matrix,1))
-
         integer :: n
 
 
+        ! Get the number of points to be clustered
         nlive=size(similarity_matrix,1)
 
-        if(nlive<k) then
-            cluster_list_output=1
-            num_clusters_output=1
-        end if
-
-
         ! compute the k nearest neighbors for each point
-        knn = compute_knn(similarity_matrix,k)
+        knn = compute_knn(similarity_matrix)
 
         ! Loop through all pairs of points
-        do n=2,k
+        do n=2,nlive
 
-            ! Set up the cluster list
-            cluster_list = spread([( i_point,i_point=1,nlive )],dim=2,ncopies=n)
+            ! Get a raw clustering 
+            cluster_list(:,n) = do_clustering_k( knn(:,:n) )
 
-            do i_point=1,nlive
-                do j_point=i_point+1,nlive
-
-                    cluster_orig_i = cluster_list(i_point,n)
-                    cluster_orig_j = cluster_list(j_point,n)
-
-                    ! If they're not in the same cluster already...
-                    if(cluster_orig_i/=cluster_orig_j) then
-                        ! ... check to see if they are within each others k nearest neihbors...
-                        if( neighbors( knn(:n,i_point),knn(:n,j_point) ) ) then
-                            if(cluster_orig_i>cluster_orig_j) then
-                                where(cluster_list(:,n)==cluster_orig_i) cluster_list(:,n)=cluster_orig_j
-                            else
-                                where(cluster_list(:,n)==cluster_orig_j) cluster_list(:,n)=cluster_orig_i
-                            end if
-                        end if
-                    end if
-
-                end do
-            end do
-
-            ! We now wish to relabel the cluster_list that we've got out, so that it
-            ! uses integers 1,2,3,..., rather than a set of random integers between
-            ! 1 and the number of points
-            !
-            ! The array cluster_map will detail this mapping between them
-
-            ! Initialise the counter for the number of clusters
-            num_clusters(n)=1
-            ! We will re-label the cluster type in cluster_list(1) with the integer 1
-            cluster_map(1) = cluster_list(1,n)
-
-            do i_point=1,nlive
-                ! If the cluster type for i_point is not already included in the
-                ! cluster_map, then add it
-                if(all(cluster_list(i_point,n)/=cluster_map(1:num_clusters(n)))) then
-                    num_clusters(n)=num_clusters(n)+1
-                    cluster_map(num_clusters(n)) = cluster_list(i_point,n)
-                end if
-            end do
-
-            ! cluster_map now contains the random integers that are found in cluster_list
-
-            ! We now relabel according to 
-            do i_cluster=1,num_clusters(n)
-                where(cluster_list(:,n)==cluster_map(i_cluster)) cluster_list_final(:,n)=i_cluster
-            end do
-
+            ! Re-label the cluster list using integers 1,2,3,....
+            cluster_list(:,n) = relabel_clustering(cluster_list(:,n),1,num_clusters(n))
 
             if(num_clusters(n) == 1 ) then
-                ! If we're down to a single cluster, then just return
-                exit
-            else if(n>3) then
-                ! Otherwise, check that the clustering hasn't changed for the
-                ! past 3 passes.
 
-                if( num_clusters(n)==num_clusters(n-1) .and. num_clusters(n)==num_clusters(n-2) ) then
-                    if( all( cluster_list_final(:,n) == cluster_list_final(:,n-1) &
-                        .and. cluster_list_final(:,n) == cluster_list_final(:,n-2)) ) exit
+                exit  ! If we're down to a single cluster, then just return
+
+            else if(n>3) then
+
+                ! Otherwise, check that the clustering hasn't changed for the past 3 passes.
+                if( num_clusters(n) == num_clusters(n-1) .and. num_clusters(n-1) == num_clusters(n-2) ) then
+                    if( all( cluster_list(:,n) == cluster_list(:,n-1) .and. cluster_list(:,n-1) == cluster_list(:,n-2) ) ) exit
                 end if
 
             end if
 
         end do
 
-        num_clusters_output = num_clusters(min(k,n))
-        cluster_list_output = cluster_list_final(:,min(k,n))
+        num_clusters_output = num_clusters_output + NN_clustering(similarity_matrix,cluster_list_output)
+
+        num_clusters_output = num_clusters(n)
+        cluster_list_output = cluster_list(:,n)
 
 
     end function NN_clustering
 
 
+    function do_clustering_k(knn) result(cluster)
+        implicit none
 
-    function compute_knn(similarity_matrix,n) result(knn)
+        integer, dimension(:,:) :: knn
+        integer, dimension(size(knn,1)) :: cluster
+
+        integer :: nlive
+
+        integer :: cluster_i,cluster_j
+        integer :: i_point,j_point
+
+        nlive = size(knn,1)
+
+        ! Set up the cluster list
+        cluster = [( i_point,i_point=1,nlive )]
+
+        do i_point=1,nlive
+            do j_point=i_point+1,nlive
+
+                cluster_i = cluster(i_point)
+                cluster_j = cluster(j_point)
+
+                ! If they're not in the same cluster already...
+                if(cluster_i/=cluster_j) then
+                    ! ... check to see if they are within each others k nearest neihbors...
+                    if( neighbors( knn(:,i_point),knn(:,j_point) ) ) then
+
+                        if(cluster_i>cluster_j) then
+                            where(cluster==cluster_i) cluster=cluster_j
+                        else
+                            where(cluster==cluster_j) cluster=cluster_i
+                        end if
+
+                    end if
+                end if
+
+            end do
+        end do
+
+    end function do_clustering_k
+
+
+    function relabel_clustering(cluster,i_start,i_finish) result(cluster_relabel)
+        implicit none
+        integer,intent(in),dimension(:)  :: cluster
+        integer,intent(in)               :: i_start
+        integer,intent(out)              :: i_finish
+
+        integer,dimension(size(cluster)) :: cluster_relabel
+
+        integer,dimension(size(cluster)) :: cluster_map
+
+        integer :: npoints
+        integer :: i_point
+        integer :: i_cluster
+
+        ! Find the number of points
+        npoints = size(cluster)
+
+        ! We will re-label the cluster type in cluster(1) with the integer 1
+        cluster_map(1) = cluster(1)
+        i_finish = 1
+
+        do i_point=1,npoints
+            ! If the cluster type for i_point is not already included in the
+            ! cluster_map, then add it
+            if( all(cluster(i_point)/=cluster_map(1:i_finish)) ) then
+                i_finish=i_finish+1
+                cluster_map(i_finish) = cluster(i_point)
+            end if
+        end do
+
+        ! cluster_map now contains the random integers that are found in cluster
+
+        ! We now relabel according to 
+        do i_cluster=1,i_finish
+            where(cluster==cluster_map(i_cluster)) cluster_relabel=i_cluster
+        end do
+
+        ! Add the offset of i_start
+        cluster_relabel = cluster_relabel+i_start-1
+        i_finish        = i_finish       +i_start-1
+
+    end function
+
+    function compute_knn(similarity_matrix) result(knn)
         use utils_module, only: loginf
         implicit none
 
         !> The data to compute on
         double precision, intent(in),dimension(:,:) :: similarity_matrix
-        !> The number of knn to compute
-        integer,intent(in) :: n
 
         ! The indices of the k nearest neighbors
-        integer, dimension(n,size(similarity_matrix,1)) :: knn
+        integer, dimension(size(similarity_matrix,1),size(similarity_matrix,1)) :: knn
 
         integer :: nPoints,i,j
 
         integer :: insert_index(1)
 
-        double precision, dimension(n) :: distance2s
+        double precision, dimension(size(similarity_matrix,1)) :: distance2s
 
         nPoints = size(similarity_matrix,1)
         knn=0
@@ -204,4 +226,81 @@ module cluster_module
     end function matches
 
 
+end module KNN_clustering
+
+
+
+
+
+
+
+
+
+
+
+module cluster_module
+    implicit none
+    contains
+
+    subroutine do_clustering(settings,RTI)
+        use settings_module,   only: program_settings
+        use run_time_module,   only: run_time_info
+        use calculate_module,  only: calculate_similarity_matrix
+        use KNN_clustering,    only: NN_clustering
+        implicit none
+
+        !> Program settings
+        type(program_settings), intent(in) :: settings
+        !> The evidence storage
+        type(run_time_info), intent(in) :: RTI
+
+        ! Similarity matrix
+        double precision,dimension(settings%nlive,settings%nlive) :: similarity_matrix
+        integer,dimension(settings%nlive) :: clusters
+
+        ! number of live points
+        integer :: nlive
+
+        integer :: i_cluster
+
+
+        i_cluster = 1
+        do while(i_cluster<=RTI%ncluster)
+
+            nlive = RTI%nlive(i_cluster) ! Get the number of live points in a temp variable
+
+            ! Calculate the similarity matrix for this cluster
+            similarity_matrix(:nlive,:nlive) = calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:,i_cluster))
+
+            ! Do clustering on this 
+            if ( NN_clustering(similarity_matrix(:nlive,:nlive),clusters(:nlive)) > 1 ) then
+                ! If we find a cluster
+
+                ! ... do re-organising ...
+                ! we split this cluster into n, and move all the other
+                ! clusters and files up by n-1
+                
+            end if
+
+
+            
+        end do
+
+
+    end subroutine do_clustering
+
+
+
 end module cluster_module
+
+
+
+
+
+
+
+
+
+
+
+

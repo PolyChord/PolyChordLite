@@ -66,4 +66,40 @@ module calculate_module
 
     end function calculate_posterior_point
 
+
+    !> This function computes the similarity matrix of an array of data.
+    !!
+    !! Assume that the data_array can be considered an indexed array of vectors
+    !! V = ( v_i : i=1,n )
+    !!
+    !! The similarity matrix can be expressed very neatly as
+    !! d_ij = (v_i-v_j) . (v_i-v_j)
+    !!      = v_i.v_i + v_j.v_j - 2 v_i.v_j
+    !!
+    !! The final term can be written as a data_array^T data_array, and the first
+    !! two are easy to write. We can therefore calculate this in two lines with
+    !! instrisic functions
+    function calculate_similarity_matrix(data_array) result(similarity_matrix)
+
+        double precision, intent(in), dimension(:,:) :: data_array
+
+        double precision, dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
+
+        integer :: i
+
+
+
+        similarity_matrix = spread( [( dot_product(data_array(:,i),data_array(:,i)),i=1,size(data_array,2) )], dim=2,ncopies=size(data_array,2) )
+
+        similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(data_array),data_array )
+
+    end function calculate_similarity_matrix
+
+
+
+
+
+
+
+
 end module calculate_module

@@ -16,10 +16,10 @@ module nested_sampling_module
         use utils_module,      only: logsumexp,calc_similarity_matrix,stdout_unit,swap_integers,logzero
         use read_write_module
         use feedback_module
-        use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate
+        use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
-        use cluster_module,    only: NN_clustering
+        use cluster_module,    only: do_clustering
         use generate_module,   only: GenerateSeed,GenerateLivePoints
 
         implicit none
@@ -215,19 +215,21 @@ module nested_sampling_module
 
                     need_more_samples = more_samples_needed(settings,RTI) 
 
+                    if(settings%do_clustering .and. need_more_samples) call do_clustering(settings,RTI)
+
                     ! Update the resume files every settings%update_resume iterations,
                     ! or at the end of the run
                     if( mod(RTI%ndead,settings%update_resume)==0 .or. .not. need_more_samples ) then
-                        ! Write the resume file if desired
+
                         if(settings%write_resume)        call write_resume_file(settings,RTI)
                         if(settings%calculate_posterior) call write_unnormalised_posterior_file(settings,RTI)  
                         if(settings%write_live)          call write_phys_live_points(settings,RTI)
                         if(settings%feedback>=1)         call write_intermediate_results(settings,RTI)
                         if(settings%write_stats)         call write_stats_file(settings,RTI)
+
+                        if(need_more_samples) call calculate_covmats(settings,RTI)
+
                     end if
-
-                    !call do_clustering
-
 
 
                 end if
