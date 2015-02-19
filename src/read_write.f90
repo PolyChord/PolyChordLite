@@ -266,7 +266,7 @@ module read_write_module
 
             if(logweight < log(huge(1d0)) .and. logweight > log(tiny(1d0)) ) &
                 write(write_txt_unit,fmt_dbl_nposterior_norm) &
-                exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1),'GOODBYE'
+                exp(logweight),-2*posterior_point(settings%pos_l),posterior_point(settings%pos_p0:settings%pos_d1)
         end do
 
         ! Close the files
