@@ -35,7 +35,7 @@ function loglikelihood(theta,phi,context)
     !       - gaussian_loglikelihood_cluster
     !       - twin_gaussian_loglikelihood 
     !
-    loglikelihood = gaussian_loglikelihood(theta,phi,context)
+    loglikelihood = rastrigin_loglikelihood(theta,phi,context)
 end function
 
 
@@ -123,7 +123,7 @@ program main
     ! (i) Choose the loglikelihood at the top of this file
 
     ! (ii) Set the dimensionality
-    settings%nDims= 20                ! Dimensionality of the space
+    settings%nDims= 2                 ! Dimensionality of the space
     settings%nDerived = 0             ! Assign the number of derived parameters
 
     ! (iii) Set up priors
@@ -146,8 +146,8 @@ program main
         hypercube_indices(settings%nDims)    &
         )
 
-    minimums=0
-    maximums=1
+    minimums=-2
+    maximums=2
     hypercube_indices  = [ (i,i=1,settings%nDims) ]
     physical_indices  = hypercube_indices
 
@@ -157,7 +157,7 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 25*settings%nDims        !number of live points
+    settings%nlive                = 500                      !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw (this is multiplied by nDims)
 
     settings%do_clustering        = .true.                   !whether or not to do clustering
@@ -171,9 +171,9 @@ program main
     ! 1 uses all inter-chain points
 
     ! reading and writing
-    settings%file_root            = 'gaussian'               !file root
+    settings%file_root            = 'rastrigin'              !file root
     settings%base_dir             = 'chains'                 !directory to put chains in
-    settings%read_resume          = .true.                   !whether or not to resume from file
+    settings%read_resume          = .false.                  !whether or not to resume from file
     settings%write_resume         = .true.                   !whether or not to write resume files
     settings%update_resume        = settings%nlive           !How often to update the resume files
     settings%write_live           = .true.                   !write out the physical live points?

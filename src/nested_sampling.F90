@@ -215,8 +215,6 @@ module nested_sampling_module
 
                     need_more_samples = more_samples_needed(settings,RTI) 
 
-                    if(settings%do_clustering .and. need_more_samples) call do_clustering(settings,RTI)
-
                     ! Update the resume files every settings%update_resume iterations,
                     ! or at the end of the run
                     if( mod(RTI%ndead,settings%update_resume)==0 .or. .not. need_more_samples ) then
@@ -228,6 +226,8 @@ module nested_sampling_module
                         if(settings%write_stats)         call write_stats_file(settings,RTI)
 
                         if(need_more_samples) call calculate_covmats(settings,RTI)
+                        if(settings%do_clustering .and. need_more_samples) call do_clustering(settings,RTI)
+
 
                     end if
 

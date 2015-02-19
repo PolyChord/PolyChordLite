@@ -2,6 +2,45 @@ module array_module
     contains
 
 
+    !> Reallocate a 1D array of doubles
+    subroutine reallocate(array,u1)
+        implicit none
+        double precision, dimension(:),allocatable, intent(inout) :: array
+        integer, intent(in) :: u1
+
+        double precision, dimension(size(array,1)) :: temp_array
+
+        temp_array = array                  ! Save the old array 
+        deallocate(array)                   ! Deallocate it      
+        allocate(array(u1))                 ! Re-allocate with new size
+        array(1:size(temp_array,1)) = temp_array
+
+    end subroutine
+
+    !> Reallocate a 2D array of doubles
+    subroutine reallocate_2(array,u1,u2)
+        implicit none
+        double precision, dimension(:,:),allocatable, intent(inout) :: array
+        integer, intent(in),optional :: u1,u2
+
+        integer :: size1,size2
+
+        double precision, dimension(size(array,1),size(array,2)) :: temp_array
+
+        ! Default reallocation size is the size of the original array
+        size1 = size(array,1)
+        size2 = size(array,2)
+
+        ! If the argument is present, then reallocate to the new size
+        if( present(u1) ) size1 = u1
+        if( present(u2) ) size2 = u2
+
+        temp_array = array                  ! Save the old array 
+        deallocate(array)                   ! Deallocate it      
+        allocate(array(size1,size2))        ! Re-allocate with new size
+        array(1:size(temp_array,1),1:size(temp_array,2)) = temp_array
+
+    end subroutine
 
     !> Reallocate a 3D array of doubles
     subroutine reallocate_3(array,u1,u2,u3)
@@ -29,7 +68,6 @@ module array_module
         array(1:size(temp_array,1),1:size(temp_array,2),1:size(temp_array,3)) = temp_array
 
     end subroutine
-
 
 
 

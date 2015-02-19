@@ -11,59 +11,78 @@ module KNN_clustering
     !!
     !! The algorithm computes the k nearest neihbor sets from the similarity
     !! matrix, and then tests
-    recursive function NN_clustering(similarity_matrix,cluster_list_output) result(num_clusters_output)
+    recursive function NN_clustering(similarity_matrix,num_clusters) result(cluster_list)
         implicit none
 
         double precision, intent(in), dimension(:,:) :: similarity_matrix
 
-        integer, dimension(size(similarity_matrix,1)),intent(out) :: cluster_list_output
-        integer :: num_clusters_output
+        integer, dimension(size(similarity_matrix,1)) :: cluster_list
+        integer, intent(out):: num_clusters
 
 
-        integer, dimension(size(similarity_matrix,1),size(similarity_matrix,1)) :: cluster_list
-        integer, dimension(size(similarity_matrix,1)) :: num_clusters
+        integer, dimension(size(similarity_matrix,1)) :: cluster_list_old
+        integer :: num_clusters_old
 
         integer, dimension(size(similarity_matrix,1),size(similarity_matrix,1)) :: knn
 
+        integer :: k
         integer :: nlive
         integer :: n
+        integer :: i_cluster
+        integer :: i_point
+
+        integer, allocatable, dimension(:) :: points
 
 
         ! Get the number of points to be clustered
         nlive=size(similarity_matrix,1)
+        k = ceiling(sqrt(dble(nlive)))
 
         ! compute the k nearest neighbors for each point
-        knn = compute_knn(similarity_matrix)
+        knn(:k,:) = compute_knn(similarity_matrix,k)
 
-        ! Loop through all pairs of points
-        do n=2,nlive
+        ! Set up the cluster list
+        cluster_list_old = [( i_point,i_point=1,nlive )]
+        num_clusters_old = nlive
 
-            ! Get a raw clustering 
-            cluster_list(:,n) = do_clustering_k( knn(:,:n) )
+        do n=2,k
+
+            write(*,*) n,'/',k
+            cluster_list = do_clustering_k( knn(:n,:) )     ! Get a raw clustering 
 
             ! Re-label the cluster list using integers 1,2,3,....
-            cluster_list(:,n) = relabel_clustering(cluster_list(:,n),1,num_clusters(n))
+            cluster_list = relabel_clustering(cluster_list,num_clusters)
 
-            if(num_clusters(n) == 1 ) then
-
-                exit  ! If we're down to a single cluster, then just return
-
-            else if(n>3) then
-
-                ! Otherwise, check that the clustering hasn't changed for the past 3 passes.
-                if( num_clusters(n) == num_clusters(n-1) .and. num_clusters(n-1) == num_clusters(n-2) ) then
-                    if( all( cluster_list(:,n) == cluster_list(:,n-1) .and. cluster_list(:,n-1) == cluster_list(:,n-2) ) ) exit
-                end if
-
+            if( num_clusters == 1 ) then
+                return  ! If we're down to a single cluster, then just return
+            else if( all( cluster_list == cluster_list_old ) ) then
+                exit ! check that the clustering hasn't changed since the last pass
+            else if(n==k) then
+                write(*,*) 're-computing knn'
+                k=min(k*2,nlive)
+                knn(:k,:) = compute_knn(similarity_matrix,k)
             end if
+
+            cluster_list_old = cluster_list
+            num_clusters_old = num_clusters
 
         end do
 
-        num_clusters_output = num_clusters_output + NN_clustering(similarity_matrix,cluster_list_output)
 
-        num_clusters_output = num_clusters(n)
-        cluster_list_output = cluster_list(:,n)
+        ! If we've found clusters, then search within these clusters
+        if(num_clusters>1) then
+            do i_cluster=1,num_clusters
+                ! Get the indices of cluster i_cluster
+                call get_indices_of_cluster(cluster_list,points,i_cluster)
 
+                ! Call this function again on the similarity sub matrix, adding an offset
+                write(*,*) 'going deeper', num_clusters
+                cluster_list(points) = num_clusters + NN_clustering(similarity_matrix(points,points),num_clusters)
+
+                ! re-label the clusters
+                cluster_list = relabel_clustering(cluster_list,num_clusters)
+            end do
+        end if
 
     end function NN_clustering
 
@@ -72,14 +91,14 @@ module KNN_clustering
         implicit none
 
         integer, dimension(:,:) :: knn
-        integer, dimension(size(knn,1)) :: cluster
+        integer, dimension(size(knn,2)) :: cluster
 
         integer :: nlive
 
         integer :: cluster_i,cluster_j
         integer :: i_point,j_point
 
-        nlive = size(knn,1)
+        nlive = size(knn,2)
 
         ! Set up the cluster list
         cluster = [( i_point,i_point=1,nlive )]
@@ -110,11 +129,10 @@ module KNN_clustering
     end function do_clustering_k
 
 
-    function relabel_clustering(cluster,i_start,i_finish) result(cluster_relabel)
+    function relabel_clustering(cluster,num_clusters) result(cluster_relabel)
         implicit none
         integer,intent(in),dimension(:)  :: cluster
-        integer,intent(in)               :: i_start
-        integer,intent(out)              :: i_finish
+        integer,intent(out)              :: num_clusters
 
         integer,dimension(size(cluster)) :: cluster_relabel
 
@@ -129,39 +147,38 @@ module KNN_clustering
 
         ! We will re-label the cluster type in cluster(1) with the integer 1
         cluster_map(1) = cluster(1)
-        i_finish = 1
+        num_clusters = 1
 
         do i_point=1,npoints
             ! If the cluster type for i_point is not already included in the
             ! cluster_map, then add it
-            if( all(cluster(i_point)/=cluster_map(1:i_finish)) ) then
-                i_finish=i_finish+1
-                cluster_map(i_finish) = cluster(i_point)
+            if( all(cluster(i_point)/=cluster_map(1:num_clusters)) ) then
+                num_clusters=num_clusters+1
+                cluster_map(num_clusters) = cluster(i_point)
             end if
         end do
 
         ! cluster_map now contains the random integers that are found in cluster
 
         ! We now relabel according to 
-        do i_cluster=1,i_finish
+        do i_cluster=1,num_clusters
             where(cluster==cluster_map(i_cluster)) cluster_relabel=i_cluster
         end do
 
-        ! Add the offset of i_start
-        cluster_relabel = cluster_relabel+i_start-1
-        i_finish        = i_finish       +i_start-1
-
     end function
 
-    function compute_knn(similarity_matrix) result(knn)
+    function compute_knn(similarity_matrix,k) result(knn)
         use utils_module, only: loginf
         implicit none
 
         !> The data to compute on
         double precision, intent(in),dimension(:,:) :: similarity_matrix
 
-        ! The indices of the k nearest neighbors
-        integer, dimension(size(similarity_matrix,1),size(similarity_matrix,1)) :: knn
+        !> The number of nearest neighbors to compute
+        integer, intent(in) :: k
+
+        ! The indices of the k nearest neighbors to output
+        integer, dimension(k,size(similarity_matrix,1)) :: knn
 
         integer :: nPoints,i,j
 
@@ -170,10 +187,9 @@ module KNN_clustering
         double precision, dimension(size(similarity_matrix,1)) :: distance2s
 
         nPoints = size(similarity_matrix,1)
+
         knn=0
 
-
-        ! Loop over each point
         do i=1,nPoints
             ! Find the k nearest neighbors for each point
             distance2s = loginf
@@ -185,8 +201,8 @@ module KNN_clustering
                 ! If it needs to be inserted, insert into both the integer
                 ! array, and the local distance2s array
                 if(insert_index(1)/=0) then
-                    distance2s(insert_index(1):) =  eoshift( distance2s(insert_index(1):),  -1,dim=1,boundary=similarity_matrix(i,j))
-                    knn(insert_index(1):,i) =  eoshift( knn(       insert_index(1):,i),-1,dim=1,boundary=j)
+                    distance2s(insert_index(1):) =  eoshift( distance2s(insert_index(1):), -1,dim=1,boundary=similarity_matrix(i,j))
+                    knn(insert_index(1):,i) =  eoshift( knn(insert_index(1):,i) ,-1 ,dim=1, boundary=j)
                 end if
             end do
             if(knn(1,i)/=i) write(*,*) 'Catastrophic error'
@@ -226,6 +242,33 @@ module KNN_clustering
     end function matches
 
 
+    subroutine get_indices_of_cluster(cluster_list,points,i_cluster)
+        implicit none
+        integer, dimension(:), intent(in)                 :: cluster_list
+        integer, intent(out), allocatable, dimension(:)   :: points
+        integer, intent(in)                               :: i_cluster
+
+        integer :: nlive,npoints,j
+
+        nlive = count(cluster_list==i_cluster)
+
+        if(allocated(points)) deallocate(points)
+
+        allocate( points(nlive) )
+
+        npoints=0
+        do j=1,size(cluster_list)
+            if(cluster_list(j)==i_cluster) then
+                npoints = npoints+1
+                points(npoints) = j
+            end if
+        end do
+
+
+    end subroutine get_indices_of_cluster
+
+
+
 end module KNN_clustering
 
 
@@ -258,6 +301,8 @@ module cluster_module
         double precision,dimension(settings%nlive,settings%nlive) :: similarity_matrix
         integer,dimension(settings%nlive) :: clusters
 
+        integer :: num_clusters
+
         ! number of live points
         integer :: nlive
 
@@ -272,20 +317,28 @@ module cluster_module
             ! Calculate the similarity matrix for this cluster
             similarity_matrix(:nlive,:nlive) = calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:,i_cluster))
 
+            clusters(:nlive) = NN_clustering(similarity_matrix(:nlive,:nlive),num_clusters)
+
             ! Do clustering on this 
-            if ( NN_clustering(similarity_matrix(:nlive,:nlive),clusters(:nlive)) > 1 ) then
+            if ( num_clusters>1 ) then
+                write(*,'(I4)') num_clusters
+                write(*,'(<nlive>I4)') clusters(:nlive)
                 ! If we find a cluster
 
                 ! ... do re-organising ...
                 ! we split this cluster into n, and move all the other
                 ! clusters and files up by n-1
+
+
+                stop
+            else
+                i_cluster=i_cluster+1
                 
             end if
 
 
             
         end do
-
 
     end subroutine do_clustering
 
