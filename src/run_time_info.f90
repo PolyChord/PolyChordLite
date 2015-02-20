@@ -16,29 +16,33 @@ module run_time_module
 
         !> The number currently evolving clusters
         integer :: ncluster
-        !> The number of live points in each cluster
-        integer, allocatable, dimension(:) :: nlive
-        !> The number of phantom points in each cluster
-        integer, allocatable, dimension(:) :: nphantom
-        !> The number of posterior points in each cluster
-        integer, allocatable, dimension(:) :: nposterior
 
         !> Live points
         double precision, allocatable, dimension(:,:,:) :: live
+        !> The number of live points in each cluster
+        integer, allocatable, dimension(:) :: nlive
         !> Phantom points
         double precision, allocatable, dimension(:,:,:) :: phantom
+        !> The number of phantom points in each cluster
+        integer, allocatable, dimension(:) :: nphantom
         !> Posterior points
         double precision, allocatable, dimension(:,:,:) :: posterior
+        !> The number of posterior points in each cluster
+        integer, allocatable, dimension(:) :: nposterior
+
 
         !> Covariance Matrices
         double precision, allocatable, dimension(:,:,:) :: covmat
         !> Cholesky decompositions
         double precision, allocatable, dimension(:,:,:) :: cholesky
 
+
         !> Global evidence estimate
         double precision :: logZ
         !> Global evidence^2 estimate
         double precision :: logZ2
+
+
         !> Local volume estimate
         double precision, allocatable, dimension(:)   :: logXp
         !> global evidence volume cross correlation
@@ -218,6 +222,156 @@ module run_time_module
 
     end function update_evidence
 
+    !> This function takes the evidence info in cluster i and splits it into
+    !! several clusters according to the cluster numbers ni.
+    !!
+    !! It places these new clusters at the end of the active array, but it does
+    !! not delete the old cluster. This will be done by the delete_clusters
+    !! routine below.
+    !!
+    subroutine add_cluster(settings,RTI,i_new_cluster,cluster_list,num_new_clusters) 
+        use settings_module, only: program_settings
+        use utils_module, only: logzero
+        use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i,add_point
+        implicit none
+
+        type(program_settings), intent(in) :: settings  !> Program settings
+        !> The variable containing all of the runtime information
+        type(run_time_info), intent(inout) :: RTI
+
+        !> The cluster index to be split
+        integer,intent(in)              :: i_new_cluster
+        !> The numbers in each new clusters
+        integer,intent(in),dimension(:) :: cluster_list
+        !> The number of new clusters
+        integer,intent(in) :: num_new_clusters
+
+
+        !Iterators
+        integer :: i_live
+        integer :: i_phantom
+        integer :: i_cluster
+
+        ! Constructor
+        integer :: i
+
+
+        integer, dimension(num_new_clusters) :: new_cluster_indices
+        integer, dimension(RTI%ncluster) :: old_cluster_indices
+
+        double precision, dimension(size(RTI%live,1),size(cluster_list))     :: old_live
+        double precision, dimension(size(RTI%phantom,1),size(RTI%phantom,2),size(RTI%phantom,3)) :: old_phantom
+        double precision, dimension(size(RTI%nphantom)) :: old_nphantom
+
+        double precision, dimension(num_new_clusters) :: lognq
+        double precision :: logn
+        double precision :: logXp
+        double precision :: logXp2
+        double precision :: logZXp
+
+
+        ! 1) Save the old points as necessary
+        old_live  = RTI%live(:,:RTI%nlive(i_new_cluster),i_new_cluster)  ! Save the old live points
+        old_phantom = RTI%phantom ! Save the old phantom points
+        old_nphantom= RTI%nphantom! Save the old numbers of phantom points
+
+        RTI%ncluster = RTI%ncluster+num_new_clusters-1 ! Update the number of clusters
+
+        ! Where we're going to insert the new clusters
+        new_cluster_indices = [(i,i=i_new_cluster,i_new_cluster+num_new_clusters-1)]
+
+        ! Where we're going to move the old clusters
+        old_cluster_indices = [ (i,i=1,i_new_cluster) , (i,i=i_new_cluster+num_new_clusters,RTI%ncluster) ]
+
+
+        ! 2) Reallocate the arrays
+
+        ! Reallocate the live,phantom and posterior points
+        call reallocate_3_d(RTI%live,      u3=RTI%ncluster, p3=old_cluster_indices)
+        call reallocate_1_i(RTI%nlive,        RTI%ncluster,    old_cluster_indices)
+        call reallocate_3_d(RTI%phantom,   u3=RTI%ncluster)
+        call reallocate_1_i(RTI%nphantom,     RTI%ncluster)
+        call reallocate_3_d(RTI%posterior, u3=RTI%ncluster)
+        call reallocate_1_i(RTI%nposterior,   RTI%ncluster)
+
+        ! Reallocate the cholesky matrices
+        call reallocate_3_d(RTI%cholesky,u3=RTI%ncluster)
+        call reallocate_3_d(RTI%covmat,u3=RTI%ncluster)
+
+        ! Reallocate the evidence arrays 
+        call reallocate_1_d(RTI%logXp,   RTI%ncluster,old_cluster_indices)
+        call reallocate_1_d(RTI%logZXp,  RTI%ncluster,old_cluster_indices)
+        call reallocate_1_d(RTI%logZp,   RTI%ncluster,old_cluster_indices)
+        call reallocate_1_d(RTI%logZp2,  RTI%ncluster,old_cluster_indices)
+        call reallocate_1_d(RTI%logZpXp, RTI%ncluster,old_cluster_indices)
+        call reallocate_2_d(RTI%logXpXq, RTI%ncluster,RTI%ncluster,old_cluster_indices,old_cluster_indices)
+
+        call reallocate_1_d(RTI%logLp, RTI%ncluster,old_cluster_indices)
+        call reallocate_1_i(RTI%i, RTI%ncluster,old_cluster_indices)
+
+
+
+        ! 3) Assign the new live points to their new clusters
+
+        RTI%nlive(new_cluster_indices) = 0 ! Zero the number of live points in the new clusters
+        do i_live=1,size(cluster_list)
+            ! Insert the new points in the correct positions
+            call add_point(old_live(:,i_live),RTI%live,RTI%nlive,new_cluster_indices(cluster_list(i_live)))
+        end do
+
+        ! 4) Reassign all the phantom points 
+        RTI%nphantom = 0
+        RTI%nposterior = 0
+        do i_cluster=1,size(old_nphantom)
+            do i_phantom=1,old_nphantom(i_cluster)
+                ! Reallocate all of the phantom points
+                call add_point(old_phantom(:,i_phantom,i_cluster),RTI%phantom,RTI%nphantom,identify_cluster(settings,RTI,old_phantom(:,i_phantom,i_cluster)))
+            end do
+        end do
+
+        ! 5) Initialise the new evidences and volumes
+
+        ! Find the number of live+phantom points in each cluster
+        lognq  = log(RTI%nlive(new_cluster_indices) + RTI%nphantom(new_cluster_indices) + 0d0)
+        lognq1 = log(RTI%nlive(new_cluster_indices) + RTI%nphantom(new_cluster_indices) + 1d0)
+        logn   = logsumexp(lognq)
+        logn1  = logaddexp(logn,0d0)
+        logXp  = RTI%logXp(i_new_cluster)
+        logXp2 = RTI%logXpXq(i_new_cluster,i_new_cluster)
+        logZXp = RTI%logZXp(i_new_cluster)
+
+        RTI%logXp(new_cluster_indices) = logXp + lognq - logn
+        RTI%logZXp(new_cluster_indices) = logZXp + lognq - logn 
+        RTI%logZp(new_cluster_indices) = logzero
+        RTI%logZp2(new_cluster_indices) = logzero
+        RTI%logZpXp(new_cluster_indices) = logzero
+
+
+        RTI%logXpXq(new_cluster_indices,old_cluster_indices) &
+            = logXpXq(i_new_cluster + spread(lognp,1,num_new_clusters) + spread(lognp,2,num_new_clusters) -logn-logn1
+
+        RTI%logXpXq(new_cluster_indices,new_cluster_indices) &
+            = logXp2 + spread(lognp,1,num_new_clusters) + spread(lognp,2,num_new_clusters) -logn-logn1
+
+        do i_cluster=1,num_new_clusters
+
+            RTI%logXpXq(new_cluster_indices(i_cluster),new_cluster_indices(i_cluster)) &
+                = logXp2 + lognq(i_cluster)+ lognq(np(i_cluster)+1)-logn-logn1
+
+        end do
+
+        call find_min_loglikelihoods(settings,RTI) 
+
+
+
+        write(*,*)
+        write(*,'(<RTI%ncluster>I4)') RTI%nlive
+        write(*,'(<RTI%ncluster>I4)') RTI%nphantom
+
+        stop
+        
+
+    end subroutine add_cluster
 
 
 

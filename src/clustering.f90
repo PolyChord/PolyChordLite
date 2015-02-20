@@ -47,7 +47,6 @@ module KNN_clustering
 
         do n=2,k
 
-            write(*,*) n,'/',k
             cluster_list = do_clustering_k( knn(:n,:) )     ! Get a raw clustering 
 
             ! Re-label the cluster list using integers 1,2,3,....
@@ -58,7 +57,6 @@ module KNN_clustering
             else if( all( cluster_list == cluster_list_old ) ) then
                 exit ! check that the clustering hasn't changed since the last pass
             else if(n==k) then
-                write(*,*) 're-computing knn'
                 k=min(k*2,nlive)
                 knn(:k,:) = compute_knn(similarity_matrix,k)
             end if
@@ -76,7 +74,6 @@ module KNN_clustering
                 call get_indices_of_cluster(cluster_list,points,i_cluster)
 
                 ! Call this function again on the similarity sub matrix, adding an offset
-                write(*,*) 'going deeper', num_clusters
                 cluster_list(points) = num_clusters + NN_clustering(similarity_matrix(points,points),num_clusters)
 
                 ! re-label the clusters
@@ -287,7 +284,7 @@ module cluster_module
 
     subroutine do_clustering(settings,RTI)
         use settings_module,   only: program_settings
-        use run_time_module,   only: run_time_info
+        use run_time_module,   only: run_time_info,add_cluster
         use calculate_module,  only: calculate_similarity_matrix
         use KNN_clustering,    only: NN_clustering
         implicit none
@@ -295,7 +292,7 @@ module cluster_module
         !> Program settings
         type(program_settings), intent(in) :: settings
         !> The evidence storage
-        type(run_time_info), intent(in) :: RTI
+        type(run_time_info), intent(inout) :: RTI
 
         ! Similarity matrix
         double precision,dimension(settings%nlive,settings%nlive) :: similarity_matrix
@@ -328,12 +325,12 @@ module cluster_module
                 ! ... do re-organising ...
                 ! we split this cluster into n, and move all the other
                 ! clusters and files up by n-1
+                call add_cluster(settings,RTI,i_cluster,clusters(:nlive),num_clusters)
 
 
-                stop
+                i_cluster=i_cluster+num_clusters-1
             else
                 i_cluster=i_cluster+1
-                
             end if
 
 
