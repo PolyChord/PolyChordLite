@@ -13,7 +13,7 @@ module nested_sampling_module
     function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
         use settings_module,   only: program_settings
-        use utils_module,      only: logsumexp,calc_similarity_matrix,stdout_unit,swap_integers,logzero
+        use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero
         use read_write_module
         use feedback_module
         use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats

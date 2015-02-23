@@ -318,8 +318,8 @@ module cluster_module
 
             ! Do clustering on this 
             if ( num_clusters>1 ) then
-                write(*,'(I4)') num_clusters
-                write(*,'(<nlive>I4)') clusters(:nlive)
+                !write(*,'(I4)') num_clusters
+                !write(*,'(<nlive>I4)') clusters(:nlive)
                 ! If we find a cluster
 
                 ! ... do re-organising ...
