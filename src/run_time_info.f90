@@ -229,7 +229,7 @@ module run_time_module
     !!
     subroutine add_cluster(settings,RTI,p,cluster_list,num_new_clusters) 
         use settings_module, only: program_settings
-        use utils_module, only: logzero,logsumexp,logaddexp,heisenbug_fb,stdout_unit
+        use utils_module, only: logzero,logsumexp,logaddexp
         use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i,add_point
         implicit none
 
@@ -271,8 +271,6 @@ module run_time_module
         double precision, dimension(RTI%ncluster-1) :: logXpXq
         double precision :: logXp2
         double precision :: logZXp
-
-        if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Adding ",I0," new clusters")') num_new_clusters
 
         ! 1) Save the old points as necessary
         old_live  = RTI%live(:,:RTI%nlive(p),p)  ! Save the old live points
@@ -382,16 +380,11 @@ module run_time_module
 
         end do
 
-        ! Calculate the new covariance matrices
-        call calculate_covmats(settings,RTI)
-        
-
     end subroutine add_cluster
 
     subroutine delete_cluster(settings,RTI) 
         use settings_module, only: program_settings
         use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i
-        use utils_module, only: heisenbug_fb, stdout_unit
         implicit none
         type(program_settings), intent(in) :: settings  !> Program settings
         !> The variable containing all of the runtime information
@@ -408,7 +401,6 @@ module run_time_module
 
 
         if(any(RTI%nlive==0)) then
-            if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Deleting cluster")')
 
             p=minloc(RTI%nlive,RTI%nlive==0)
 
@@ -465,7 +457,7 @@ module run_time_module
                 / (RTI%nlive(i_cluster) + RTI%nphantom(i_cluster) )
 
             ! Calculate the covariance by using a matrix multiplication
-            RTI%covmat(:,:,i_cluster) = & 
+            RTI%covmat(:,:,i_cluster) =( & 
                 matmul(&
                 RTI%live(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster) &
                 - spread(mean,dim=2,ncopies=RTI%nlive(i_cluster)) , &
@@ -478,7 +470,8 @@ module run_time_module
                 - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) , &
                 transpose( RTI%phantom(settings%h0:settings%h1,:RTI%nphantom(i_cluster),i_cluster) &
                 - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) ) &
-                )
+                ) &
+                )/ (RTI%nlive(i_cluster) + RTI%nphantom(i_cluster) ) 
 
             ! Calculate the cholesky decomposition
             RTI%cholesky(:,:,i_cluster) = calc_cholesky(RTI%covmat(:,:,i_cluster))
@@ -554,7 +547,7 @@ module run_time_module
 
 
     function replace_point(settings,RTI,baby_points,cluster_add) result(replaced)
-        use utils_module, only: logsumexp,logincexp,minpos,heisenbug_fb,stdout_unit
+        use utils_module, only: logsumexp,logincexp,minpos
         use settings_module, only: program_settings
         use calculate_module, only: calculate_posterior_point
         use random_module, only: bernoulli_trial
@@ -582,7 +575,6 @@ module run_time_module
         
         integer :: i_phantom ! phantom iterator
 
-        if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Replacing point")')
 
         ! The loglikelihood contour is defined by the cluster it belongs to
         logL = RTI%logLp(cluster_add)

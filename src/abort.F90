@@ -5,7 +5,7 @@ module abort_module
     contains
 
     subroutine halt_program(message)
-        use utils_module, only: stdout_unit
+        use utils_module, only: stderr_unit
         implicit none
 
         character(LEN=*), intent(in), optional :: message
@@ -16,11 +16,10 @@ module abort_module
 #endif
 
         if (present(message)) then
-            write(stdout_unit,'( 20("=") )')
-            write(stdout_unit,'(A)') trim(adjustl(message))
-            write(stdout_unit,'( 20("=") )')
+            write(stderr_unit,'( 20("=") )')
+            write(stderr_unit,'(A)') trim(adjustl(message))
+            write(stderr_unit,'( 20("=") )')
         end if 
-
 
 #ifdef MPI
         call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)

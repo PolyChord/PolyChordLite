@@ -25,8 +25,11 @@ module utils_module
     integer, parameter :: title_fb = 0
     integer, parameter :: normal_fb = 1
     integer, parameter :: verbose_fb = 2
-    integer, parameter :: heisenbug_fb = 3
 
+    !> unit for stderr
+    integer, parameter :: stderr_unit = 0
+    !> unit for stdin
+    integer, parameter :: stdin_unit = 5
     !> unit for stdout
     integer, parameter :: stdout_unit = 6
     !> unit for reading from resume file
@@ -233,6 +236,20 @@ module utils_module
 
 
     end function identity_matrix
+
+    !> Trace of a matrix
+    function trace(a)
+        implicit none
+        !> The identity matrix to be returned
+        double precision, dimension(:,:),intent(in) :: a
+
+        double precision :: trace
+
+        integer :: i ! iterator over dimensions
+
+        trace= sum ( [( a(i,i), i=1,min(size(a,1),size(a,2)) )] ) 
+
+    end function trace
 
 
     function delete_file(file_name,feedback) result(deleted)
@@ -447,8 +464,9 @@ module utils_module
 
             L(i,i)= a(i,i) - sum(L(i,:i-1)**2) 
             if (L(i,i).le.0d0) then
-
-                L = identity_matrix(size(a,1))
+                ! If the cholesky decomposition does not exist, then set it to
+                ! be a re-scaled identity matrix
+                L = identity_matrix(size(a,1)) * sqrt(trace(a))
                 return
             else
                 L(i,i)=sqrt(L(i,i))

@@ -7,7 +7,7 @@ module chordal_module
         use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,random_real
-        use utils_module, only: logzero,FLT_FMT,fmt_len,stdout_unit,heisenbug_fb,stdout_unit
+        use utils_module, only: logzero,FLT_FMT,fmt_len,stdout_unit
 
         implicit none
         interface
@@ -62,8 +62,6 @@ module chordal_module
 
         character(len=fmt_len) :: fmt_1
 
-        if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Slicing")')
-
 
         ! Start the baby point at the seed point
         previous_point = seed_point
@@ -100,7 +98,7 @@ module chordal_module
             ! Normalise it
             w = sqrt(dot_product(nhat,nhat))
             nhat = nhat/w
-            w = w * 1d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
+            w = w * 3d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
 
             ! Generate a new random point along the chord defined by the previous point and nhat
             baby_points(:,i_babies) = slice_sample(loglikelihood,priors,logL, nhat, previous_point, w, settings,nlike)

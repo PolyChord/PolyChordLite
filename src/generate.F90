@@ -21,7 +21,7 @@ module generate_module
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info
         use random_module,     only: random_integer,random_integer_P,bernoulli_trial
-        use utils_module,      only: logsumexp,heisenbug_fb,stdout_unit
+        use utils_module,      only: logsumexp
         implicit none
 
         !> Program settings
@@ -38,9 +38,6 @@ module generate_module
         integer :: seed_choice
 
         double precision, dimension(RTI%ncluster) :: probs
-
-        if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Generating seed")')
-
 
         ! 0) Calculate an array proportional to the volumes
         probs = RTI%logXp                 ! prob_p = log( X_p )

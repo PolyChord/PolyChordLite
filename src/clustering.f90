@@ -286,7 +286,6 @@ module cluster_module
         use run_time_module,   only: run_time_info,add_cluster
         use calculate_module,  only: calculate_similarity_matrix
         use KNN_clustering,    only: NN_clustering
-        use utils_module,      only: heisenbug_fb, stdout_unit
         implicit none
 
         !> Program settings
@@ -318,7 +317,6 @@ module cluster_module
                 ! Calculate the similarity matrix for this cluster
                 similarity_matrix(:nlive,:nlive) = calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
 
-                if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Searching for clusters in cluster ",I0," of ",I0)') i_cluster, RTI%ncluster
                 clusters(:nlive) = NN_clustering(similarity_matrix(:nlive,:nlive),num_clusters)
 
                 ! Do clustering on this 
@@ -329,7 +327,6 @@ module cluster_module
                     call add_cluster(settings,RTI,i_cluster,clusters(:nlive),num_clusters)
 
                 else
-                    if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("No clusters found")')
                     i_cluster=i_cluster+1
                 end if
             else
