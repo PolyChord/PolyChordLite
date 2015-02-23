@@ -247,7 +247,7 @@ module run_time_module
 
         !Iterators
         integer :: i_live
-        integer :: i_phantom
+        integer :: i_phantom,j_phantom
         integer :: i_cluster
 
         ! Constructor
@@ -329,13 +329,18 @@ module run_time_module
             call add_point(old_live(:,i_live),RTI%live,RTI%nlive,new_target(cluster_list(i_live)))
         end do
 
+        ! Find the new minimum loglikelihoods
+        call find_min_loglikelihoods(settings,RTI) 
+
         ! 4) Reassign all the phantom points 
         RTI%nphantom = 0
         RTI%nposterior = 0
         do i_cluster=1,size(old_nphantom)
             do i_phantom=1,old_nphantom(i_cluster)
                 ! Reallocate all of the phantom points
-                call add_point(old_phantom(:,i_phantom,i_cluster),RTI%phantom,RTI%nphantom,identify_cluster(settings,RTI,old_phantom(:,i_phantom,i_cluster)))
+                j_phantom = identify_cluster(settings,RTI,old_phantom(:,i_phantom,i_cluster))
+                if(old_phantom(settings%l0,i_phantom,i_cluster) > RTI%logLp(j_phantom) ) &
+                    call add_point(old_phantom(:,i_phantom,i_cluster),RTI%phantom,RTI%nphantom,j_phantom)
             end do
         end do
 
@@ -376,9 +381,6 @@ module run_time_module
                 = logXp2 + logni(i_cluster)+ logni1(i_cluster)-logn-logn1
 
         end do
-
-        ! Find the new minimum loglikelihoods
-        call find_min_loglikelihoods(settings,RTI) 
 
         ! Calculate the new covariance matrices
         call calculate_covmats(settings,RTI)
@@ -457,31 +459,29 @@ module run_time_module
 
         ! For each cluster:
         do i_cluster = 1,RTI%ncluster
-            if(RTI%nlive(i_cluster)>0) then
-                ! Calculate the mean
-                mean = ( sum(RTI%live(settings%h0:settings%h1,1:RTI%nlive(i_cluster),i_cluster),dim=2) &
-                    + sum(RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster),dim=2) ) &
-                    / (RTI%nlive(i_cluster) + RTI%nphantom(i_cluster) )
+            ! Calculate the mean
+            mean = ( sum(RTI%live(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster),dim=2) &
+                + sum(RTI%phantom(settings%h0:settings%h1,:RTI%nphantom(i_cluster),i_cluster),dim=2) ) &
+                / (RTI%nlive(i_cluster) + RTI%nphantom(i_cluster) )
 
-                ! Calculate the covariance by using a matrix multiplication
-                RTI%covmat(:,:,i_cluster) = & 
-                    matmul(&
-                    RTI%live(settings%h0:settings%h1,1:RTI%nlive(i_cluster),i_cluster) &
-                    - spread(mean,dim=2,ncopies=RTI%nlive(i_cluster)) , &
-                    transpose( RTI%live(settings%h0:settings%h1,1:RTI%nlive(i_cluster),i_cluster) &
-                    - spread(mean,dim=2,ncopies=RTI%nlive(i_cluster)) ) &
-                    )&
-                    +&
-                    matmul(&
-                    RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster) &
-                    - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) , &
-                    transpose( RTI%phantom(settings%h0:settings%h1,1:RTI%nphantom(i_cluster),i_cluster) &
-                    - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) ) &
-                    )
+            ! Calculate the covariance by using a matrix multiplication
+            RTI%covmat(:,:,i_cluster) = & 
+                matmul(&
+                RTI%live(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster) &
+                - spread(mean,dim=2,ncopies=RTI%nlive(i_cluster)) , &
+                transpose( RTI%live(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster) &
+                - spread(mean,dim=2,ncopies=RTI%nlive(i_cluster)) ) &
+                )&
+                +&
+                matmul(&
+                RTI%phantom(settings%h0:settings%h1,:RTI%nphantom(i_cluster),i_cluster) &
+                - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) , &
+                transpose( RTI%phantom(settings%h0:settings%h1,:RTI%nphantom(i_cluster),i_cluster) &
+                - spread(mean,dim=2,ncopies=RTI%nphantom(i_cluster)) ) &
+                )
 
-                ! Calculate the cholesky decomposition
-                RTI%cholesky(:,:,i_cluster) = calc_cholesky(RTI%covmat(:,:,i_cluster))
-            end if
+            ! Calculate the cholesky decomposition
+            RTI%cholesky(:,:,i_cluster) = calc_cholesky(RTI%covmat(:,:,i_cluster))
         end do
 
 

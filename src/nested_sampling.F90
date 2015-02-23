@@ -213,7 +213,6 @@ module nested_sampling_module
                 ! Add the likelihood calls to our counter
                 RTI%nlike = RTI%nlike + nlike
                 nlikesum  = nlikesum  + nlike
-                write(*,*) nlike
 
 
                 if( replace_point(settings,RTI,baby_points,cluster_id) ) then

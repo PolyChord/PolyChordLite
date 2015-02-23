@@ -300,8 +300,10 @@ module chordal_module
             double precision :: x0Ld
 
             i_step=i_step+1
-            if (i_step>1000) then
-                write(*,*) 'Polychord Warning: Non deterministic loglikelihood'
+            if (i_step>100) then
+                write(*,'("Polychord Warning: Non deterministic loglikelihood")')
+                x1(S%l0) = logzero
+                return
             end if
 
             ! Find the distance between x0 and L 
