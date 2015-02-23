@@ -173,7 +173,7 @@ module generate_module
                     if(settings%write_live) then
                         ! Write the live points to the live_points file
                         write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                        call flush(write_phys_unit) ! flush the unit to force write
+                        flush(write_phys_unit) ! flush the unit to force write
                     end if
 
                 end if
@@ -208,7 +208,7 @@ module generate_module
                         if(settings%write_live) then
                             ! Write the live points to the live_points file
                             write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                            call flush(write_phys_unit) ! flush the unit to force write
+                            flush(write_phys_unit) ! flush the unit to force write
                         end if
 
                     end if

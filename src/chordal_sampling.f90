@@ -100,7 +100,7 @@ module chordal_module
             ! Normalise it
             w = sqrt(dot_product(nhat,nhat))
             nhat = nhat/w
-            w = w * 3d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
+            w = w * 1d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
 
             ! Generate a new random point along the chord defined by the previous point and nhat
             baby_points(:,i_babies) = slice_sample(loglikelihood,priors,logL, nhat, previous_point, w, settings,nlike)
@@ -300,10 +300,8 @@ module chordal_module
             double precision :: x0Ld
 
             i_step=i_step+1
-            if (i_step>100) then
+            if (i_step>1000) then
                 write(*,*) 'Polychord Warning: Non deterministic loglikelihood'
-                x1(S%l0) = logzero
-                return
             end if
 
             ! Find the distance between x0 and L 

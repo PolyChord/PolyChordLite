@@ -88,8 +88,9 @@ module calculate_module
         integer :: i
 
 
-
-        similarity_matrix = spread( [( dot_product(data_array(:,i),data_array(:,i)),i=1,size(data_array,2) )], dim=2,ncopies=size(data_array,2) )
+        similarity_matrix = spread( &
+            [ ( dot_product(data_array(:,i),data_array(:,i)), i=1,size(data_array,2) ) ], &
+            dim=2,ncopies=size(data_array,2) )
 
         similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(data_array),data_array )
 

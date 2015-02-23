@@ -33,8 +33,6 @@ module KNN_clustering
 
         integer, allocatable, dimension(:) :: points
 
-        write(*,*) 'got to start'
-
         ! Get the number of points to be clustered
         nlive=size(similarity_matrix,1)
         k = ceiling(sqrt(dble(nlive)))
@@ -81,7 +79,6 @@ module KNN_clustering
                 cluster_list = relabel_clustering(cluster_list,num_clusters)
             end do
         end if
-        write(*,*) 'got to here'
 
     end function NN_clustering
 
@@ -318,7 +315,7 @@ module cluster_module
             nlive = RTI%nlive(i_cluster) ! Get the number of live points in a temp variable
 
             ! Calculate the similarity matrix for this cluster
-            similarity_matrix(:nlive,:nlive) = calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:,i_cluster))
+            similarity_matrix(:nlive,:nlive) = calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
 
             if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Searching for clusters in cluster ",I0," of ",I0)') i_cluster, RTI%ncluster
             clusters(:nlive) = NN_clustering(similarity_matrix(:nlive,:nlive),num_clusters)

@@ -157,13 +157,13 @@ program main
 
 
     ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 50                       !number of live points
+    settings%nlive                = 500                      !number of live points
     settings%num_repeats          = 1                        !Number of chords to draw (this is multiplied by nDims)
 
     settings%do_clustering        = .true.                   !whether or not to do clustering
     settings%update_clustering    = settings%nlive           !how often to do clustering algorithm
 
-    settings%feedback             = 3                        !degree of feedback
+    settings%feedback             = 1                        !degree of feedback
 
     settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down)
     settings%thin_posterior       = 1d0                      !Factor by which the posterior file should be thinned

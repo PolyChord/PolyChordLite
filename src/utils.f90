@@ -445,7 +445,14 @@ module utils_module
         ! Zero out the upper half
         do i=1,size(a,1)
 
-            L(i,i)= sqrt( a(i,i) - sum(L(i,:i-1)**2) )
+            L(i,i)= a(i,i) - sum(L(i,:i-1)**2) 
+            if (L(i,i).le.0d0) then
+
+                L = identity_matrix(size(a,1))
+                return
+            else
+                L(i,i)=sqrt(L(i,i))
+            end if
 
             do j=i+1,size(a,1)
                 L(j,i) = (a(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)

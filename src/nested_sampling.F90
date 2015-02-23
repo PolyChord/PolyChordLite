@@ -77,6 +77,7 @@ module nested_sampling_module
         double precision, dimension(settings%nTotal,settings%num_babies) :: baby_points
         integer :: cluster_id ! Cluster identifier
         integer :: nlike      ! Temporary storage for number of likelihood calls
+        integer :: nlikesum   ! rolling average of number of loglikelihood calls
 
         ! Logical Switches
         ! ----------------
@@ -125,6 +126,8 @@ module nested_sampling_module
 
 #endif
 
+        ! Rolling loglikelihood calculation
+        nlikesum=0
 
 
         !-------------------------------------------------------!
@@ -209,6 +212,8 @@ module nested_sampling_module
 
                 ! Add the likelihood calls to our counter
                 RTI%nlike = RTI%nlike + nlike
+                nlikesum  = nlikesum  + nlike
+                write(*,*) nlike
 
 
                 if( replace_point(settings,RTI,baby_points,cluster_id) ) then
@@ -219,20 +224,24 @@ module nested_sampling_module
                     ! or at the end of the run
                     if( mod(RTI%ndead,settings%update_resume)==0 .or. .not. need_more_samples ) then
 
+                        !--------------------------------------------!
+                        call write_intermediate_results(settings,RTI,nlikesum)
+                        !--------------------------------------------!
+                        nlikesum=0
+
                         if(settings%write_resume)        call write_resume_file(settings,RTI)
                         if(settings%calculate_posterior) call write_unnormalised_posterior_file(settings,RTI)  
                         if(settings%write_live)          call write_phys_live_points(settings,RTI)
                         if(settings%write_stats)         call write_stats_file(settings,RTI)
-
-                        if(need_more_samples) call calculate_covmats(settings,RTI)
-                        if(settings%do_clustering .and. need_more_samples) call do_clustering(settings,RTI)
-
-                        !--------------------------------------------!
-                        call write_intermediate_results(settings,RTI)
-                        !--------------------------------------------!
                     end if
 
                     call delete_cluster(settings,RTI) ! Delete any clusters as necessary
+
+                    if( mod(RTI%ndead,settings%update_resume)==0 ) then
+                        if(settings%do_clustering) call do_clustering(settings,RTI)
+                        call calculate_covmats(settings,RTI)
+                    end if
+
 
                 end if
 
