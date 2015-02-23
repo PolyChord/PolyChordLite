@@ -229,7 +229,7 @@ module run_time_module
     !!
     subroutine add_cluster(settings,RTI,p,cluster_list,num_new_clusters) 
         use settings_module, only: program_settings
-        use utils_module, only: logzero,logsumexp,logaddexp
+        use utils_module, only: logzero,logsumexp,logaddexp,heisenbug_fb,stdout_unit
         use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i,add_point
         implicit none
 
@@ -254,10 +254,10 @@ module run_time_module
         integer :: i
 
 
-        integer, dimension(num_new_clusters) :: new_cluster_indices
-        integer, dimension(RTI%ncluster-1)   :: old_cluster_indices
+        integer, dimension(RTI%ncluster-1)   :: old_save
+        integer, dimension(RTI%ncluster-1)   :: old_target
+        integer, dimension(num_new_clusters) :: new_target
         integer                              :: num_old_clusters
-        integer, dimension(RTI%ncluster)     :: reallocate_indices
 
         double precision, dimension(size(RTI%live,1),size(cluster_list))     :: old_live
         double precision, dimension(size(RTI%phantom,1),size(RTI%phantom,2),size(RTI%phantom,3)) :: old_phantom
@@ -272,23 +272,19 @@ module run_time_module
         double precision :: logXp2
         double precision :: logZXp
 
+        if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Adding ",I0," new clusters")') num_new_clusters
 
         ! 1) Save the old points as necessary
         old_live  = RTI%live(:,:RTI%nlive(p),p)  ! Save the old live points
-        old_phantom = RTI%phantom ! Save the old phantom points
-        old_nphantom= RTI%nphantom! Save the old numbers of phantom points
+        old_phantom = RTI%phantom                ! Save the old phantom points
+        old_nphantom= RTI%nphantom               ! Save the old numbers of phantom points
 
-        num_old_clusters = RTI%ncluster-1
-        RTI%ncluster = RTI%ncluster+num_new_clusters-1 ! Update the number of clusters
+        old_save   = [(i,i=1,p-1),(i,i=p+1,RTI%ncluster)]    ! The indices of the old clusters to save
+        num_old_clusters = RTI%ncluster-1                    ! The number of old clusters
+        RTI%ncluster = RTI%ncluster+num_new_clusters-1       ! The total number of new clusters
 
-        ! Where we're going to insert the new clusters
-        new_cluster_indices = [(i,i=p,p+num_new_clusters-1)]
-
-        ! Where the old clusters will be
-        old_cluster_indices = [ (i,i=1,p-1) , (i,i=p+num_new_clusters,RTI%ncluster) ]
-
-        ! Where we're going to move the old clusters in reallocating the arrays
-        reallocate_indices = [ (i,i=1,p) , (i,i=p+num_new_clusters,RTI%ncluster) ]
+        old_target = [(i,i=1,num_old_clusters)]              ! Where the old clusters will be
+        new_target = [(i,i=num_old_clusters+1,RTI%ncluster)] ! Where we're going to insert the new clusters
 
         ! Define some useful variables
         logXp  = RTI%logXp(p)
@@ -301,36 +297,36 @@ module run_time_module
         ! 2) Reallocate the arrays
 
         ! Reallocate the live,phantom and posterior points
-        call reallocate_3_d(RTI%live,      u3=RTI%ncluster, p3=reallocate_indices)
-        call reallocate_1_i(RTI%nlive,        RTI%ncluster,    reallocate_indices)
-        call reallocate_3_d(RTI%phantom,   u3=RTI%ncluster)
-        call reallocate_1_i(RTI%nphantom,     RTI%ncluster)
-        call reallocate_3_d(RTI%posterior, u3=RTI%ncluster)
-        call reallocate_1_i(RTI%nposterior,   RTI%ncluster)
+        call reallocate_3_d(RTI%live,      new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate_1_i(RTI%nlive,     new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate_3_d(RTI%phantom,   new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate_1_i(RTI%nphantom,  new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate_3_d(RTI%posterior, new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate_1_i(RTI%nposterior,new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
 
         ! Reallocate the cholesky matrices
-        call reallocate_3_d(RTI%cholesky,u3=RTI%ncluster)
-        call reallocate_3_d(RTI%covmat,u3=RTI%ncluster)
+        call reallocate_3_d(RTI%cholesky, new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate_3_d(RTI%covmat,   new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
 
         ! Reallocate the evidence arrays 
-        call reallocate_1_d(RTI%logXp,   RTI%ncluster,reallocate_indices)
-        call reallocate_1_d(RTI%logZXp,  RTI%ncluster,reallocate_indices)
-        call reallocate_1_d(RTI%logZp,   RTI%ncluster,reallocate_indices)
-        call reallocate_1_d(RTI%logZp2,  RTI%ncluster,reallocate_indices)
-        call reallocate_1_d(RTI%logZpXp, RTI%ncluster,reallocate_indices)
-        call reallocate_2_d(RTI%logXpXq, RTI%ncluster,RTI%ncluster,reallocate_indices,reallocate_indices)
+        call reallocate_1_d(RTI%logXp,   RTI%ncluster,old_save,old_target)
+        call reallocate_1_d(RTI%logZXp,  RTI%ncluster,old_save,old_target)
+        call reallocate_1_d(RTI%logZp,   RTI%ncluster,old_save,old_target)
+        call reallocate_1_d(RTI%logZp2,  RTI%ncluster,old_save,old_target)
+        call reallocate_1_d(RTI%logZpXp, RTI%ncluster,old_save,old_target)
+        call reallocate_2_d(RTI%logXpXq, RTI%ncluster,RTI%ncluster,old_save,old_save,old_target,old_target)
 
-        call reallocate_1_d(RTI%logLp, RTI%ncluster,reallocate_indices)
-        call reallocate_1_i(RTI%i, RTI%ncluster,reallocate_indices)
+        call reallocate_1_d(RTI%logLp,   RTI%ncluster,old_save,old_target) 
+        call reallocate_1_i(RTI%i,       RTI%ncluster,old_save,old_target)
 
 
 
         ! 3) Assign the new live points to their new clusters
 
-        RTI%nlive(new_cluster_indices) = 0 ! Zero the number of live points in the new clusters
+        RTI%nlive(new_target) = 0 ! Zero the number of live points in the new clusters
         do i_live=1,size(cluster_list)
             ! Insert the new points in the correct positions
-            call add_point(old_live(:,i_live),RTI%live,RTI%nlive,new_cluster_indices(cluster_list(i_live)))
+            call add_point(old_live(:,i_live),RTI%live,RTI%nlive,new_target(cluster_list(i_live)))
         end do
 
         ! 4) Reassign all the phantom points 
@@ -348,38 +344,35 @@ module run_time_module
         ! so that we don't include the deleted cluster
 
         ! Find the number of live+phantom points in each cluster
-        logni  = log(RTI%nlive(new_cluster_indices) + RTI%nphantom(new_cluster_indices) + 0d0)
-        logni1 = log(RTI%nlive(new_cluster_indices) + RTI%nphantom(new_cluster_indices) + 1d0)
+        logni  = log(RTI%nlive(new_target) + RTI%nphantom(new_target) + 0d0)
+        logni1 = log(RTI%nlive(new_target) + RTI%nphantom(new_target) + 1d0)
         logn   = logsumexp(logni)
         logn1  = logaddexp(logn,0d0)
 
         ! Initialise the new volumes
-        RTI%logXp(new_cluster_indices) = logXp + logni - logn
+        RTI%logXp(new_target) = logXp + logni - logn
         ! Initialise the new global evidence -local volume cross correlation
-        RTI%logZXp(new_cluster_indices) = logZXp + logni - logn 
+        RTI%logZXp(new_target) = logZXp + logni - logn 
         ! Initialise local evidences at 0
-        RTI%logZp(new_cluster_indices) = logzero
-        RTI%logZp2(new_cluster_indices) = logzero
-        RTI%logZpXp(new_cluster_indices) = logzero
+        RTI%logZp(new_target) = logzero
+        RTI%logZp2(new_target) = logzero
+        RTI%logZpXp(new_target) = logzero
 
 
         ! Initialise the volume cross correlations
         if(num_old_clusters>0) then
-            RTI%logXpXq(new_cluster_indices,old_cluster_indices) &
-                    = spread(logXpXq,1,num_new_clusters) + transpose(spread(logni,1,num_old_clusters))-logn
-
-            RTI%logXpXq(old_cluster_indices,new_cluster_indices)=&
-                    RTI%logXpXq(new_cluster_indices,old_cluster_indices)
+            RTI%logXpXq(new_target,old_target) = spread(logXpXq,1,num_new_clusters) + transpose(spread(logni,1,num_old_clusters)) - logn
+            RTI%logXpXq(old_target,new_target) = transpose(RTI%logXpXq(new_target,old_target))
         end if
 
         ! When they're both new clusters
-        RTI%logXpXq(new_cluster_indices,new_cluster_indices) &
+        RTI%logXpXq(new_target,new_target) &
             = logXp2 + spread(logni,1,num_new_clusters) + transpose(spread(logni,1,num_new_clusters)) -logn-logn1
 
         ! the squared one is slightly different
         do i_cluster=1,num_new_clusters
 
-            RTI%logXpXq(new_cluster_indices(i_cluster),new_cluster_indices(i_cluster)) &
+            RTI%logXpXq(new_target(i_cluster),new_target(i_cluster)) &
                 = logXp2 + logni(i_cluster)+ logni1(i_cluster)-logn-logn1
 
         end do
@@ -393,17 +386,61 @@ module run_time_module
 
     end subroutine add_cluster
 
-    subroutine delete_cluster(settings,RTI,p) 
+    subroutine delete_cluster(settings,RTI) 
         use settings_module, only: program_settings
-        use utils_module, only: logzero,logsumexp,logaddexp
-        use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i,add_point
+        use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i
+        use utils_module, only: heisenbug_fb, stdout_unit
         implicit none
         type(program_settings), intent(in) :: settings  !> Program settings
         !> The variable containing all of the runtime information
         type(run_time_info), intent(inout) :: RTI
 
-        !> The cluster index to be deleted
-        integer,intent(in)              :: p
+        !The cluster index to be deleted
+        integer            :: p(1)
+
+        ! new indices of clusters
+        integer,dimension(RTI%ncluster-1) :: indices
+
+        ! Contstructor iterator
+        integer :: i
+
+
+        if(any(RTI%nlive==0)) then
+            if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Deleting cluster")')
+
+            p=minloc(RTI%nlive,RTI%nlive==0)
+
+            ! Get the positions of the clusters to be saved
+            indices = [(i,i=1,p(1)-1),(i,i=p(1)+1,RTI%ncluster)]
+
+            ! Reduce the number of clusters
+            RTI%ncluster=RTI%ncluster-1
+
+            ! Reallocate the live,phantom and posterior points
+            call reallocate_3_d(RTI%live,      new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate_1_i(RTI%nlive,     new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate_3_d(RTI%phantom,   new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate_1_i(RTI%nphantom,  new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate_3_d(RTI%posterior, new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate_1_i(RTI%nposterior,new_size1=RTI%ncluster, save_indices1=indices)
+
+            ! Reallocate the cholesky matrices
+            call reallocate_3_d(RTI%cholesky, new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate_3_d(RTI%covmat,   new_size3=RTI%ncluster, save_indices3=indices)
+
+            ! Reallocate the evidence arrays 
+            call reallocate_1_d(RTI%logXp,   new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate_1_d(RTI%logZXp,  new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate_1_d(RTI%logZp,   new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate_1_d(RTI%logZp2,  new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate_1_d(RTI%logZpXp, new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate_2_d(RTI%logXpXq, new_size1=RTI%ncluster,new_size2=RTI%ncluster,save_indices1=indices,save_indices2=indices)
+
+            call reallocate_1_d(RTI%logLp,   new_size1=RTI%ncluster,save_indices1=indices) 
+            call reallocate_1_i(RTI%i,       new_size1=RTI%ncluster,save_indices1=indices)
+        end if
+
+
     end subroutine delete_cluster
 
 
@@ -498,11 +535,13 @@ module run_time_module
 
         ! Sum up over all the clusters mean(likelihood) * volume
         do i_cluster = 1,RTI%ncluster
-            call logincexp(live_logZ, &
-                logsumexp(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster)) &
-                - log(RTI%nlive(i_cluster)+0d0) &
-                + RTI%logXp(i_cluster) &
-                )
+            if(RTI%nlive(i_cluster)>0) then
+                call logincexp(live_logZ, &
+                        logsumexp(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster)) &
+                        - log(RTI%nlive(i_cluster)+0d0) &
+                        + RTI%logXp(i_cluster) &
+                        )
+            end if
         end do
 
     end function live_logZ
@@ -513,7 +552,7 @@ module run_time_module
 
 
     function replace_point(settings,RTI,baby_points,cluster_add) result(replaced)
-        use utils_module, only: logsumexp,logincexp,minpos
+        use utils_module, only: logsumexp,logincexp,minpos,heisenbug_fb,stdout_unit
         use settings_module, only: program_settings
         use calculate_module, only: calculate_posterior_point
         use random_module, only: bernoulli_trial
@@ -541,6 +580,7 @@ module run_time_module
         
         integer :: i_phantom ! phantom iterator
 
+        if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Replacing point")')
 
         ! The loglikelihood contour is defined by the cluster it belongs to
         logL = RTI%logLp(cluster_add)
@@ -617,7 +657,7 @@ module run_time_module
 
 
     subroutine find_min_loglikelihoods(settings,RTI)
-        use utils_module, only: minpos
+        use utils_module, only: minpos,loginf
         use settings_module, only: program_settings
 
         implicit none
@@ -631,8 +671,14 @@ module run_time_module
 
             ! Find the position of the lowest point in this cluster
             RTI%i(i_cluster)     = minpos(RTI%live(settings%l0,:RTI%nlive(i_cluster),i_cluster))
-            ! Find the likelihood of the lowest point in this cluster
-            RTI%logLp(i_cluster) = RTI%live(settings%l0,RTI%i(i_cluster),i_cluster) 
+
+            if(RTI%i(i_cluster) == 0) then
+                ! If the cluster is empty, we need to signal to delete all points
+                RTI%logLp(i_cluster) = loginf
+            else
+                ! Find the likelihood of the lowest point in this cluster
+                RTI%logLp(i_cluster) = RTI%live(settings%l0,RTI%i(i_cluster),i_cluster) 
+            end if
 
         end do
 

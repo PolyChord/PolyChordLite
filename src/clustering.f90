@@ -33,6 +33,7 @@ module KNN_clustering
 
         integer, allocatable, dimension(:) :: points
 
+        write(*,*) 'got to start'
 
         ! Get the number of points to be clustered
         nlive=size(similarity_matrix,1)
@@ -80,6 +81,7 @@ module KNN_clustering
                 cluster_list = relabel_clustering(cluster_list,num_clusters)
             end do
         end if
+        write(*,*) 'got to here'
 
     end function NN_clustering
 
@@ -287,6 +289,7 @@ module cluster_module
         use run_time_module,   only: run_time_info,add_cluster
         use calculate_module,  only: calculate_similarity_matrix
         use KNN_clustering,    only: NN_clustering
+        use utils_module,      only: heisenbug_fb, stdout_unit
         implicit none
 
         !> Program settings
@@ -299,37 +302,36 @@ module cluster_module
         integer,dimension(settings%nlive) :: clusters
 
         integer :: num_clusters
+        integer :: num_old_clusters
 
         ! number of live points
         integer :: nlive
 
         integer :: i_cluster
 
+        ! Get the number of old clusters
+        num_old_clusters=RTI%ncluster
 
         i_cluster = 1
-        do while(i_cluster<=RTI%ncluster)
+        do while(i_cluster<=num_old_clusters)
 
             nlive = RTI%nlive(i_cluster) ! Get the number of live points in a temp variable
 
             ! Calculate the similarity matrix for this cluster
             similarity_matrix(:nlive,:nlive) = calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:,i_cluster))
 
+            if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Searching for clusters in cluster ",I0," of ",I0)') i_cluster, RTI%ncluster
             clusters(:nlive) = NN_clustering(similarity_matrix(:nlive,:nlive),num_clusters)
 
             ! Do clustering on this 
             if ( num_clusters>1 ) then
-                !write(*,'(I4)') num_clusters
-                !write(*,'(<nlive>I4)') clusters(:nlive)
                 ! If we find a cluster
 
-                ! ... do re-organising ...
-                ! we split this cluster into n, and move all the other
-                ! clusters and files up by n-1
+                ! we split this cluster into n, and put the others at the end
                 call add_cluster(settings,RTI,i_cluster,clusters(:nlive),num_clusters)
 
-
-                i_cluster=i_cluster+num_clusters-1
             else
+                if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("No clusters found")')
                 i_cluster=i_cluster+1
             end if
 

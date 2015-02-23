@@ -16,13 +16,13 @@ module feedback_module
 
     !> Called before running the program
     subroutine write_opening_statement(settings)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,title_fb,normal_fb
         use settings_module, only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
 
 
-        if(settings%feedback >=0) then
+        if(settings%feedback >=title_fb) then
             write(stdout_unit,'("")')
             write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
             write(stdout_unit,'("copyright: Will Handley, Mike Hobson & Anthony Lasenby")')
@@ -30,7 +30,9 @@ module feedback_module
             write(stdout_unit,'("  release: 8th Feb 2015")')
             write(stdout_unit,'("    email: wh260@cam.ac.uk")')
             write(stdout_unit,'("")')
+        end if
 
+        if(settings%feedback >=normal_fb) then
             write(stdout_unit,'("Run Settings"   )')
             write(stdout_unit,'("nlive    :",I8)')   settings%nlive
             write(stdout_unit,'("nDims    :",I8)')   settings%nDims
@@ -45,11 +47,11 @@ module feedback_module
 
 
     subroutine write_resuming(feedback)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,normal_fb
         implicit none
         integer, intent(in) :: feedback
 
-        if(feedback>=0) then
+        if(feedback>=normal_fb) then
             write(stdout_unit,'("Resuming from previous run")')
         end if
 
@@ -58,13 +60,13 @@ module feedback_module
 
     !> Called before generating the live points
     subroutine write_started_generating(feedback)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,normal_fb
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 
 
-        if (feedback>=1) then
+        if (feedback>=normal_fb) then
             write(stdout_unit,'("generating live points")')
             write(stdout_unit,'("")')
         end if
@@ -75,6 +77,7 @@ module feedback_module
     !!
     !! Prints a neat progress bar to show you how far its got
     subroutine write_generating_live_points(feedback,i_live,nlive)
+        use utils_module,    only: normal_fb
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
@@ -84,7 +87,7 @@ module feedback_module
         !> The number of live points to be generated
         integer, intent(in) :: nlive
 
-        if (feedback>=1) then
+        if (feedback>=normal_fb) then
             call progress(dble(i_live)/dble(nlive),100)
         end if
 
@@ -92,13 +95,14 @@ module feedback_module
 
     !> Called at the end of generating the live points
     subroutine write_finished_generating(feedback)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,normal_fb
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 
 
-        if (feedback>=1) then
+        if (feedback>=normal_fb) then
+            write(stdout_unit,'("")')
             write(stdout_unit,'("all live points generated")')
             write(stdout_unit,'("")')
         end if
@@ -122,7 +126,7 @@ module feedback_module
 
 
         integer :: percent                    ! the percentage completed
-        character(bar_size) :: bar                 ! the bounds on the progress bar
+        character(bar_size+7) :: bar          ! the bounds on the progress bar
         integer :: i                          ! loop variable
 
         character(len=40) :: bar_fmt  ! format string for outputting
@@ -140,12 +144,12 @@ module feedback_module
         !
         ! Start:
         bar="???% |"
-        do i= 1, bar_size
+        do i= 1, bar_size-1
             ! Put in bar_size number of spaces
-            bar = bar//' '
+            bar(6+i:6+i) = ' '
         end do
         ! Finish
-        bar = bar//'|'
+        bar(bar_size+7:bar_size+7) = '|'
 
         ! Write the percentage to the bar variable, so it now reads
         ! e.g.  bar = " 70% |                     |"
@@ -159,27 +163,20 @@ module feedback_module
 
         ! print the progress bar to stdout (unit 6)
         write(stdout_unit,fmt=bar_fmt,advance="no") char(13), bar
+        flush(stdout_unit)
 
-        if (percent/=100) then
-            ! If we're not at the end, then we should flush the command line so
-            ! that we re-start from the beginning next time
-            flush(stdout_unit)
-        else
-            ! Otherwise, we should just write a blank line 
-            write(stdout_unit,fmt=*)
-        endif
         return
     end subroutine progress
 
     !> Called before starting sampling
     subroutine write_started_sampling(feedback)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,normal_fb
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 
 
-        if (feedback>=1) then
+        if (feedback>=normal_fb) then
             write(stdout_unit,'("started sampling")')
             write(stdout_unit,'("")')
         end if
@@ -190,7 +187,7 @@ module feedback_module
     subroutine write_intermediate_results(settings,RTI)
         use run_time_module, only: run_time_info,calculate_logZ_estimate
         use settings_module, only: program_settings
-        use utils_module,    only: stdout_unit,logzero,fmt_len
+        use utils_module,    only: stdout_unit,logzero,fmt_len,normal_fb
         implicit none
         type(program_settings), intent(in) :: settings !> program settings
         type(run_time_info),    intent(in) :: RTI      !> run time info
@@ -212,7 +209,7 @@ module feedback_module
         write(fmt_tail,'("(",I0,"(""‾""))")') 7*RTI%ncluster + 11
 
 
-        if (settings%feedback>=1) then
+        if (settings%feedback>=normal_fb) then
             write(stdout_unit,fmt_head)
             write(stdout_unit,fmt_live)  RTI%nlive
             write(stdout_unit,fmt_phantom)  RTI%nphantom
@@ -252,7 +249,7 @@ module feedback_module
 
     !> Nicely formatted final output statement
     subroutine write_final_results(output_info,feedback,priors)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,title_fb
         use priors_module,   only: prior,prior_log_volume
         implicit none
         !> Output of the program.
@@ -266,7 +263,7 @@ module feedback_module
         !> The prior information
         type(prior), dimension(:), intent(in) :: priors
 
-        if (feedback>=0) then
+        if (feedback>=title_fb) then
             write(stdout_unit,'(A42)')                                        ' ________________________________________ '
             write(stdout_unit,'(A42)')                                        '|                                        |'
             write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') nint(output_info(3))

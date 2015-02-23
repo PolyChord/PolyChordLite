@@ -16,7 +16,7 @@ module nested_sampling_module
         use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero
         use read_write_module
         use feedback_module
-        use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats
+        use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats,delete_cluster
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: do_clustering
@@ -222,15 +222,17 @@ module nested_sampling_module
                         if(settings%write_resume)        call write_resume_file(settings,RTI)
                         if(settings%calculate_posterior) call write_unnormalised_posterior_file(settings,RTI)  
                         if(settings%write_live)          call write_phys_live_points(settings,RTI)
-                        if(settings%feedback>=1)         call write_intermediate_results(settings,RTI)
                         if(settings%write_stats)         call write_stats_file(settings,RTI)
 
                         if(need_more_samples) call calculate_covmats(settings,RTI)
                         if(settings%do_clustering .and. need_more_samples) call do_clustering(settings,RTI)
 
-
+                        !--------------------------------------------!
+                        call write_intermediate_results(settings,RTI)
+                        !--------------------------------------------!
                     end if
 
+                    call delete_cluster(settings,RTI) ! Delete any clusters as necessary
 
                 end if
 
@@ -367,48 +369,6 @@ module nested_sampling_module
 
 
     end function more_samples_needed
-
-
-
-
-
-
-    !> Calculate a posterior point from a live/phantom point, suitable for
-    !! adding to a .txt file
-    function calc_posterior_point(settings,point,logweight,evidence) result(posterior_point)
-        use settings_module,   only: program_settings
-        use utils_module, only: logincexp
-        implicit none
-
-        type(program_settings), intent(in) :: settings
-        double precision, dimension(settings%nTotal),intent(in) :: point
-        double precision,intent(in) :: logweight
-        double precision,intent(in) :: evidence
-        double precision, dimension(settings%nposterior) :: posterior_point
-
-
-        ! Un-normalised weighting (needs to be unnormalised since the evidence is only correct at the end)
-        posterior_point(settings%pos_w)  = point(settings%l0) + logweight
-        ! un-normalise cumulative weighting
-        posterior_point(settings%pos_Z)  = evidence
-        ! Likelihood
-        posterior_point(settings%pos_l)  = point(settings%l0)
-        ! Physical parameters
-        posterior_point(settings%pos_p0:settings%pos_p1) = point(settings%p0:settings%p1)
-        ! Derived parameters
-        posterior_point(settings%pos_d0:settings%pos_d1) = point(settings%d0:settings%d1)
-
-    end function calc_posterior_point
-
-
-
-
-
-
-
-
-
-
 
 
 

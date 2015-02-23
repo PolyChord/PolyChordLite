@@ -130,7 +130,7 @@ ifdef DEBUG
 # backtrace     : produce backtrace of error
 # fpe-trap      : search for floating point exceptions (dividing by zero etc)
 # fbounds-check : check array indices
-FCFLAGS += -g -O0 -Wall -Wextra -pedantic -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow -fbounds-check
+FCFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
 else
 # Optimised mode
 # --------------

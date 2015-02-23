@@ -21,7 +21,7 @@ module generate_module
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info
         use random_module,     only: random_integer,random_integer_P,bernoulli_trial
-        use utils_module,      only: logsumexp
+        use utils_module,      only: logsumexp,heisenbug_fb,stdout_unit
         implicit none
 
         !> Program settings
@@ -38,6 +38,8 @@ module generate_module
         integer :: seed_choice
 
         double precision, dimension(RTI%ncluster) :: probs
+
+        if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Generating seed")')
 
 
         ! 0) Calculate an array proportional to the volumes
@@ -78,7 +80,7 @@ module generate_module
         use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len,minpos
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
-        use feedback_module,  only: write_started_generating,write_finished_generating
+        use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
         use run_time_module,   only: run_time_info,initialise_run_time_info
         use array_module,     only: add_point
         use abort_module
@@ -164,6 +166,10 @@ module generate_module
 
                     call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
+                    !-------------------------------------------------------------------------------!
+                    call write_generating_live_points(settings%feedback,RTI%nlive(1),settings%nlive)
+                    !-------------------------------------------------------------------------------!
+
                     if(settings%write_live) then
                         ! Write the live points to the live_points file
                         write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
@@ -194,6 +200,10 @@ module generate_module
                     if(live_point(settings%l0)>logzero .and. RTI%nlive(1)<settings%nlive) then
 
                         call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
+
+                        !-------------------------------------------------------------------------------!
+                        call write_generating_live_points(settings%feedback,RTI%nlive(1),settings%nlive)
+                        !-------------------------------------------------------------------------------!
 
                         if(settings%write_live) then
                             ! Write the live points to the live_points file

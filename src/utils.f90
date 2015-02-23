@@ -15,11 +15,17 @@ module utils_module
     !> \f$ \log(2\pi) \f$ in double precision
     double precision, parameter :: logTwoPi = log(8d0*atan(1d0))
 
-    !> The default formats
+    !> The default writing formats
     integer, parameter :: fmt_len = 200
     character(7) :: DB_FMT='E17.8E3'
     character(4) :: FLT_FMT='F8.2'
     character(3) :: INT_FMT='I12'
+
+    !> Feedback levels
+    integer, parameter :: title_fb = 0
+    integer, parameter :: normal_fb = 1
+    integer, parameter :: verbose_fb = 2
+    integer, parameter :: heisenbug_fb = 3
 
     !> unit for stdout
     integer, parameter :: stdout_unit = 6
@@ -229,9 +235,10 @@ module utils_module
     end function identity_matrix
 
 
-    function delete_file(file_name) result(deleted)
+    function delete_file(file_name,feedback) result(deleted)
         implicit none
         character(STR_LENGTH),intent(in) :: file_name
+        logical, optional, intent(in) :: feedback
 
         logical :: deleted ! whether or not there was a file to be deleted
 
@@ -239,6 +246,9 @@ module utils_module
         inquire( file=trim(file_name), exist=deleted)
 
         if(deleted) then
+            if(present(feedback)) then
+                if(feedback) write(stdout_unit,'("Deleting file: ", A)') trim(file_name)
+            end if
             ! open the file
             open(delete_unit,file=trim(file_name)) 
             ! Delete it if it exists
@@ -270,8 +280,7 @@ module utils_module
         double precision :: maximumlog
 
         maximumlog = maxval(vector)
-
-        logsumexp =  maximumlog + log(sum(exp(vector - maximumlog)))
+        logsumexp  =  maximumlog + log(sum(exp(vector - maximumlog)))
 
     end function logsumexp
 

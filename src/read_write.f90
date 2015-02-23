@@ -25,7 +25,7 @@ module read_write_module
     !> Remove resume files
     subroutine delete_files(settings)
         use settings_module, only: program_settings
-        use utils_module, only: delete_file
+        use utils_module, only: delete_file,verbose_fb
         implicit none
 
         !> settings variable to get the base_dir and root_name out of
@@ -33,24 +33,28 @@ module read_write_module
 
         integer :: i_cluster ! cluster iterator
 
-        logical :: deleted
+        logical :: deleted ! Whether a file has been deleted
 
-        deleted = delete_file( stats_file(settings) )           ! Delete stats file
-        deleted = delete_file( phys_live_file(settings) )       ! Delete phys_live file
-        deleted = delete_file( resume_file(settings,.false.) )  ! Delete temp resume file
-        deleted = delete_file( resume_file(settings,.true.) )   ! Delete resume file
+        logical :: fb ! Temporary feedback variable
+
+        fb = settings%feedback>=verbose_fb
+
+        deleted = delete_file( stats_file(settings), fb )           ! Delete stats file
+        deleted = delete_file( phys_live_file(settings), fb )       ! Delete phys_live file
+        deleted = delete_file( resume_file(settings,.false.), fb )  ! Delete temp resume file
+        deleted = delete_file( resume_file(settings,.true.), fb )   ! Delete resume file
 
 
         ! Delete normalised .txt files
-        deleted = delete_file( posterior_file(settings) )
-        deleted = delete_file( posterior_file(settings,.true.) )
-        deleted = delete_file( posterior_file(settings,.false.) )
+        deleted = delete_file( posterior_file(settings), fb )
+        deleted = delete_file( posterior_file(settings,.true.), fb )
+        deleted = delete_file( posterior_file(settings,.false.), fb )
 
         i_cluster = 1
         do while ( &
-                delete_file( posterior_file(settings,i=i_cluster) ) .or.  &
-                delete_file( posterior_file(settings,.true.,i_cluster) ) .or.  &
-                delete_file( posterior_file(settings,.false.,i_cluster) )   &
+                delete_file( posterior_file(settings,i=i_cluster), fb ) .or.  &
+                delete_file( posterior_file(settings,.true.,i_cluster), fb ) .or.  &
+                delete_file( posterior_file(settings,.false.,i_cluster), fb )   &
                 )
             i_cluster = i_cluster + 1
         end do

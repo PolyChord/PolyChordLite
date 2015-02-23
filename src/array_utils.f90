@@ -1,270 +1,454 @@
 module array_module
     contains
 
-
-    !> Reallocate a 1D array of doubles
-    subroutine reallocate_1_d(array,u1,p1)
+    !> This subroutine allocates an array with the correct size, and initialises it with values
+    subroutine allocate_and_assign_i(array,values)
         implicit none
-        !> Array to be reallocated
-        double precision, dimension(:),allocatable, intent(inout) :: array
-        !> New upper bound
-        integer, intent(in),optional :: u1
-        !> new array configuration after reallocation
-        integer, dimension(size(array,1)),intent(in),optional :: p1
+        !> Array to be allocated
+        integer, dimension(:),allocatable, intent(inout) :: array
+        !> Values to be assigned
+        integer, dimension(:), intent(in) :: values
 
-        integer :: size1
+        ! Allocate the array
+        allocate(array(size(values)))
 
-        integer, dimension(size(array,1)) :: indices1
-
-        integer :: i
-
-        double precision, dimension(size(array,1)) :: temp_array
-
-        ! Default reallocation size is the size of the original array
-        size1 = size(array,1)
-
-        ! If the argument is present, then reallocate to the new size
-        if( present(u1) ) size1 = u1
-
-        temp_array = array                  ! Save the old array 
-        deallocate(array)                   ! Deallocate it      
-        allocate(array(size1))  ! Re-allocate with new size
-
-        indices1 = [ (i,i=1,size(temp_array,1)) ]
-
-        ! If the argument is present, define the new positions via the array
-        if(present(p1)) indices1=p1
-
-        ! Reassign the old values
-        array(indices1) = temp_array
+        ! Assign the values
+        array = values
 
     end subroutine
 
+
+
+    !> Reallocate a 1D array of doubles
+    !!
+    !! The array is allocated with a new size defined by new_size1 (optional variable)
+    !!
+    !! The indices to be transferred across are defined by save_indices1 (optional variable)
+    !!
+    !! The positions of the data in the reallocated array are defined by target_indices1 (optional variable)
+    subroutine reallocate_1_d(array,new_size1,save_indices1,target_indices1)
+        use abort_module, only: halt_program
+        implicit none
+        double precision, dimension(:),allocatable, intent(inout) :: array !> Array to be reallocated
+        integer, intent(in),optional :: new_size1                          !> New size of the array
+        integer, dimension(:),intent(in),optional :: save_indices1         !> indices of old array to be transferred
+        integer, dimension(:),intent(in),optional :: target_indices1       !> new array indices after reallocation
+
+        ! Temporary versions of the above variables
+        double precision, dimension(size(array,1)) :: a
+        integer :: n1
+        integer, allocatable, dimension(:) :: s1
+        integer, allocatable, dimension(:) :: t1
+
+        ! constructor variable
+        integer :: i
+
+        ! Check to see that it is already allocated
+        if(.not.allocated(array)) call halt_program('reallocate_1_d error: array is not allocated') 
+
+        ! Define the new size of the array
+        if( present(new_size1) ) then
+            n1 = new_size1     ! If the argument is present, then this is the reallocation size
+        else
+            n1 = size(array,1) ! Default reallocation size is the size of the original array
+        end if
+
+        ! Define the positions of where data is coming from and going to
+        if(present(save_indices1) .and. present(target_indices1)) then
+
+            ! If both save and target indices are present, then these should be assigned accordingly
+            call allocate_and_assign_i(s1,save_indices1)
+            call allocate_and_assign_i(t1,target_indices1)
+
+            if(size(s1)/=size(t1)) call halt_program('reallocate_1_d error: save and target indices must be equal in size') 
+
+        else if(present(save_indices1)) then
+
+            ! If just the save indices are present, then we assign these
+            call allocate_and_assign_i(s1,save_indices1)
+
+            ! The target indices are allocated with a default array of size s1
+            call allocate_and_assign_i(t1,[ (i,i=1,size(s1)) ])
+
+        else if(present(target_indices1)) then
+
+            ! If just the target indices are present, then we assign these
+            call allocate_and_assign_i(t1,target_indices1)
+
+            ! The save indices are allocated with a default array of size t1
+            call allocate_and_assign_i(s1,[ (i,i=1,size(t1)) ])
+
+        else
+            ! Default indices to save are all of them
+            call allocate_and_assign_i(s1,[ (i,i=1,size(array,1)) ] )
+            call allocate_and_assign_i(t1,[ (i,i=1,size(array,1)) ] )
+        end if
+
+        a = array                           ! Save the old array 
+        deallocate(array)                   ! Deallocate it      
+        allocate(array(n1))                 ! Re-allocate with new size
+        array(t1) = a(s1)                   ! Reassign the old values
+
+    end subroutine reallocate_1_d
+
+
     !> Reallocate a 2D array of doubles
-    subroutine reallocate_2_d(array,u1,u2,p1,p2)
+    !!
+    !! The array is allocated with a new size defined by new_size1,new_size2 (optional variables)
+    !!
+    !! The indices to be transferred across are defined by save_indices1,save_indices2 (optional variables)
+    !!
+    !! The positions of the data in the reallocated array are defined by target_indices1,target_indices2, (optional variables)
+    subroutine reallocate_2_d(array,new_size1,new_size2,save_indices1,save_indices2,target_indices1,target_indices2)
+        use abort_module, only: halt_program
         implicit none
         !> Array to be reallocated
         double precision, dimension(:,:),allocatable, intent(inout) :: array
-        !> New upper bound
-        integer, intent(in),optional :: u1,u2
-        !> new array configuration after reallocation
-        integer, dimension(size(array,1)),intent(in),optional :: p1
-        integer, dimension(size(array,2)),intent(in),optional :: p2
+        !> New size of the array 
+        integer, intent(in),optional :: new_size1,new_size2
+        !> indices of old array to be transferred
+        integer, dimension(:),intent(in),optional :: save_indices1,save_indices2
+        !> new array indices after reallocation 
+        integer, dimension(:),intent(in),optional :: target_indices1,target_indices2
 
-        integer :: size1,size2
+        ! Temporary versions of the above variables
+        double precision, dimension(size(array,1),size(array,2)) :: a
+        integer :: n1,n2
+        integer, allocatable, dimension(:) :: s1,s2
+        integer, allocatable, dimension(:) :: t1,t2
 
-        integer, dimension(size(array,1)) :: indices1
-        integer, dimension(size(array,2)) :: indices2
-
+        ! constructor variable
         integer :: i
 
-        double precision, dimension(size(array,1),size(array,2)) :: temp_array
+        ! Check to see that it is already allocated
+        if(.not.allocated(array)) call halt_program('reallocate_2_d error: array is not allocated') 
 
-        ! Default reallocation size is the size of the original array
-        size1 = size(array,1)
-        size2 = size(array,2)
+        ! Define the new size of the array
+        if( present(new_size1) ) then
+            n1 = new_size1     ! If the argument is present, then this is the reallocation size
+        else
+            n1 = size(array,1) ! Default reallocation size is the size of the original array
+        end if
+        if( present(new_size2) ) then
+            n2 = new_size2     ! If the argument is present, then this is the reallocation size
+        else
+            n2 = size(array,2) ! Default reallocation size is the size of the original array
+        end if
 
-        ! If the argument is present, then reallocate to the new size
-        if( present(u1) ) size1 = u1
-        if( present(u2) ) size2 = u2
+        ! Define the positions of where data is coming from and going to
+        if(present(save_indices1) .and. present(target_indices1)) then
 
-        temp_array = array                  ! Save the old array 
+            ! If both save and target indices are present, then these should be assigned accordingly
+            call allocate_and_assign_i(s1,save_indices1)
+            call allocate_and_assign_i(t1,target_indices1)
+
+            if(size(s1)/=size(t1)) call halt_program('reallocate_2_d error: save and target indices must be equal in size') 
+
+        else if(present(save_indices1)) then
+
+            ! If just the save indices are present, then we assign these
+            call allocate_and_assign_i(s1,save_indices1)
+
+            ! The target indices are allocated with a default array of size s1
+            call allocate_and_assign_i(t1,[ (i,i=1,size(s1)) ])
+
+        else if(present(target_indices1)) then
+
+            ! If just the target indices are present, then we assign these
+            call allocate_and_assign_i(t1,target_indices1)
+
+            ! The save indices are allocated with a default array of size t1
+            call allocate_and_assign_i(s1,[ (i,i=1,size(t1)) ])
+
+        else
+            ! Default indices to save are all of them
+            call allocate_and_assign_i(s1,[ (i,i=1,size(array,1)) ] )
+            call allocate_and_assign_i(t1,[ (i,i=1,size(array,1)) ] )
+        end if
+
+
+        ! Define the positions of where data is coming from and going to
+        if(present(save_indices2) .and. present(target_indices2)) then
+
+            ! If both save and target indices are present, then these should be assigned accordingly
+            call allocate_and_assign_i(s2,save_indices2)
+            call allocate_and_assign_i(t2,target_indices2)
+
+            if(size(s2)/=size(t2)) call halt_program('reallocate_2_d error: save and target indices must be equal in size') 
+
+        else if(present(save_indices2)) then
+
+            ! If just the save indices are present, then we assign these
+            call allocate_and_assign_i(s2,save_indices2)
+
+            ! The target indices are allocated with a default array of size s2
+            call allocate_and_assign_i(t2,[ (i,i=1,size(s2)) ])
+
+        else if(present(target_indices2)) then
+
+            ! If just the target indices are present, then we assign these
+            call allocate_and_assign_i(t2,target_indices2)
+
+            ! The save indices are allocated with a default array of size t2
+            call allocate_and_assign_i(s2,[ (i,i=1,size(t2)) ])
+
+        else
+            ! Default indices to save are all of them
+            call allocate_and_assign_i(s2,[ (i,i=1,size(array,2)) ] )
+            call allocate_and_assign_i(t2,[ (i,i=1,size(array,2)) ] )
+        end if
+
+        a = array                           ! Save the old array 
         deallocate(array)                   ! Deallocate it      
-        allocate(array(size1,size2))  ! Re-allocate with new size
+        allocate(array(n1,n2))              ! Re-allocate with new size
+        array(t1,t2)= a(s1,s2)              ! Reassign the old values
 
-        indices1 = [ (i,i=1,size(temp_array,1)) ]
-        indices2 = [ (i,i=1,size(temp_array,2)) ]
+    end subroutine reallocate_2_d
 
-        ! If the argument is present, define the new positions via the array
-        if(present(p1)) indices1=p1
-        if(present(p2)) indices2=p2
-
-        ! Reassign the old values
-        array(indices1,indices2) = temp_array
-
-    end subroutine
 
     !> Reallocate a 3D array of doubles
-    subroutine reallocate_3_d(array,u1,u2,u3,p1,p2,p3)
+    !!
+    !! The array is allocated with a new size defined by new_size1,new_size2,new_size3 (optional variables)
+    !!
+    !! The indices to be transferred across are defined by save_indices1,save_indices2,save_indices3 (optional variables)
+    !!
+    !! The positions of the data in the reallocated array are defined by target_indices1,target_indices2,target_indices3 (optional variables)
+    subroutine reallocate_3_d(array,&
+                                new_size1,new_size2,new_size3,&
+                                save_indices1,save_indices2,save_indices3,&
+                                target_indices1,target_indices2,target_indices3)
+        use abort_module, only: halt_program
         implicit none
         !> Array to be reallocated
         double precision, dimension(:,:,:),allocatable, intent(inout) :: array
-        !> New upper bound
-        integer, intent(in),optional :: u1,u2,u3
-        !> new array configuration after reallocation
-        integer, dimension(size(array,1)),intent(in),optional :: p1
-        integer, dimension(size(array,2)),intent(in),optional :: p2
-        integer, dimension(size(array,3)),intent(in),optional :: p3
+        !> New size of the array 
+        integer, intent(in),optional :: new_size1,new_size2,new_size3
+        !> indices of old array to be transferred
+        integer, dimension(:),intent(in),optional :: save_indices1,save_indices2,save_indices3
+        !> new array indices after reallocation 
+        integer, dimension(:),intent(in),optional :: target_indices1,target_indices2,target_indices3
 
-        integer :: size1,size2,size3
+        ! Temporary versions of the above variables
+        double precision, dimension(size(array,1),size(array,2),size(array,3)) :: a
+        integer :: n1,n2,n3
+        integer, allocatable, dimension(:) :: s1,s2,s3
+        integer, allocatable, dimension(:) :: t1,t2,t3
 
-        integer, dimension(size(array,1)) :: indices1
-        integer, dimension(size(array,2)) :: indices2
-        integer, dimension(size(array,3)) :: indices3
-
+        ! constructor variable
         integer :: i
 
-        double precision, dimension(size(array,1),size(array,2),size(array,3)) :: temp_array
+        ! Check to see that it is already allocated
+        if(.not.allocated(array)) call halt_program('reallocate_3_d error: array is not allocated') 
 
-        ! Default reallocation size is the size of the original array
-        size1 = size(array,1)
-        size2 = size(array,2)
-        size3 = size(array,3)
+        ! Define the new size of the array
+        if( present(new_size1) ) then
+            n1 = new_size1     ! If the argument is present, then this is the reallocation size
+        else
+            n1 = size(array,1) ! Default reallocation size is the size of the original array
+        end if
+        if( present(new_size2) ) then
+            n2 = new_size2     ! If the argument is present, then this is the reallocation size
+        else
+            n2 = size(array,2) ! Default reallocation size is the size of the original array
+        end if
+        if( present(new_size3) ) then
+            n3 = new_size3     ! If the argument is present, then this is the reallocation size
+        else
+            n3 = size(array,3) ! Default reallocation size is the size of the original array
+        end if
 
-        ! If the argument is present, then reallocate to the new size
-        if( present(u1) ) size1 = u1
-        if( present(u2) ) size2 = u2
-        if( present(u3) ) size3 = u3
+        ! Define the positions of where data is coming from and going to
+        if(present(save_indices1) .and. present(target_indices1)) then
 
-        temp_array = array                  ! Save the old array 
+            ! If both save and target indices are present, then these should be assigned accordingly
+            call allocate_and_assign_i(s1,save_indices1)
+            call allocate_and_assign_i(t1,target_indices1)
+
+            if(size(s1)/=size(t1)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
+
+        else if(present(save_indices1)) then
+
+            ! If just the save indices are present, then we assign these
+            call allocate_and_assign_i(s1,save_indices1)
+
+            ! The target indices are allocated with a default array of size s1
+            call allocate_and_assign_i(t1,[ (i,i=1,size(s1)) ])
+
+        else if(present(target_indices1)) then
+
+            ! If just the target indices are present, then we assign these
+            call allocate_and_assign_i(t1,target_indices1)
+
+            ! The save indices are allocated with a default array of size t1
+            call allocate_and_assign_i(s1,[ (i,i=1,size(t1)) ])
+
+        else
+            ! Default indices to save are all of them
+            call allocate_and_assign_i(s1,[ (i,i=1,size(array,1)) ] )
+            call allocate_and_assign_i(t1,[ (i,i=1,size(array,1)) ] )
+        end if
+
+
+        ! Define the positions of where data is coming from and going to
+        if(present(save_indices2) .and. present(target_indices2)) then
+
+            ! If both save and target indices are present, then these should be assigned accordingly
+            call allocate_and_assign_i(s2,save_indices2)
+            call allocate_and_assign_i(t2,target_indices2)
+
+            if(size(s2)/=size(t2)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
+
+        else if(present(save_indices2)) then
+
+            ! If just the save indices are present, then we assign these
+            call allocate_and_assign_i(s2,save_indices2)
+
+            ! The target indices are allocated with a default array of size s2
+            call allocate_and_assign_i(t2,[ (i,i=1,size(s2)) ])
+
+        else if(present(target_indices2)) then
+
+            ! If just the target indices are present, then we assign these
+            call allocate_and_assign_i(t2,target_indices2)
+
+            ! The save indices are allocated with a default array of size t2
+            call allocate_and_assign_i(s2,[ (i,i=1,size(t2)) ])
+
+        else
+            ! Default indices to save are all of them
+            call allocate_and_assign_i(s2,[ (i,i=1,size(array,2)) ] )
+            call allocate_and_assign_i(t2,[ (i,i=1,size(array,2)) ] )
+        end if
+
+
+        ! Define the positions of where data is coming from and going to
+        if(present(save_indices3) .and. present(target_indices3)) then
+
+            ! If both save and target indices are present, then these should be assigned accordingly
+            call allocate_and_assign_i(s3,save_indices3)
+            call allocate_and_assign_i(t3,target_indices3)
+
+            if(size(s3)/=size(t3)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
+
+        else if(present(save_indices3)) then
+
+            ! If just the save indices are present, then we assign these
+            call allocate_and_assign_i(s3,save_indices3)
+
+            ! The target indices are allocated with a default array of size s3
+            call allocate_and_assign_i(t3,[ (i,i=1,size(s3)) ])
+
+        else if(present(target_indices3)) then
+
+            ! If just the target indices are present, then we assign these
+            call allocate_and_assign_i(t3,target_indices3)
+
+            ! The save indices are allocated with a default array of size t3
+            call allocate_and_assign_i(s3,[ (i,i=1,size(t3)) ])
+
+        else
+            ! Default indices to save are all of them
+            call allocate_and_assign_i(s3,[ (i,i=1,size(array,3)) ] )
+            call allocate_and_assign_i(t3,[ (i,i=1,size(array,3)) ] )
+        end if
+
+
+        a = array                           ! Save the old array 
         deallocate(array)                   ! Deallocate it      
-        allocate(array(size1,size2,size3))  ! Re-allocate with new size
+        allocate(array(n1,n2,n3))           ! Re-allocate with new size
+        array(t1,t2,t3)= a(s1,s2,s3)        ! Reassign the old values
 
-        indices1 = [ (i,i=1,size(temp_array,1)) ]
-        indices2 = [ (i,i=1,size(temp_array,2)) ]
-        indices3 = [ (i,i=1,size(temp_array,3)) ]
+    end subroutine reallocate_3_d
 
-        ! If the argument is present, define the new positions via the array
-        if(present(p1)) indices1=p1
-        if(present(p2)) indices2=p2
-        if(present(p3)) indices3=p3
 
-        ! Reassign the old values
-        array(indices1,indices2,indices3) = temp_array
 
-    end subroutine
 
     !> Reallocate a 1D array of integers
-    subroutine reallocate_1_i(array,u1,p1)
+    !!
+    !! The array is allocated with a new size defined by new_size1 (optional variable)
+    !!
+    !! The indices to be transferred across are defined by save_indices1 (optional variable)
+    !!
+    !! The positions of the data in the reallocated array are defined by target_indices1 (optional variable)
+    subroutine reallocate_1_i(array,new_size1,save_indices1,target_indices1)
+        use abort_module, only: halt_program
         implicit none
-        !> Array to be reallocated
-        integer, dimension(:),allocatable, intent(inout) :: array
-        !> New upper bound
-        integer, intent(in),optional :: u1
-        !> new array configuration after reallocation
-        integer, dimension(size(array,1)),intent(in),optional :: p1
+        integer,          dimension(:),allocatable, intent(inout) :: array !> Array to be reallocated
+        integer, intent(in),optional :: new_size1                          !> New size of the array
+        integer, dimension(:),intent(in),optional :: save_indices1         !> indices of old array to be transferred
+        integer, dimension(:),intent(in),optional :: target_indices1       !> new array indices after reallocation
 
-        integer :: size1
+        ! Temporary versions of the above variables
+        integer, dimension(size(array,1)) :: a
+        integer :: n1
+        integer, allocatable, dimension(:) :: s1
+        integer, allocatable, dimension(:) :: t1
 
-        integer, dimension(size(array,1)) :: indices1
-
+        ! constructor variable
         integer :: i
 
-        integer, dimension(size(array,1)) :: temp_array
+        ! Check to see that it is already allocated
+        if(.not.allocated(array)) call halt_program('reallocate_1_i error: array is not allocated') 
 
-        ! Default reallocation size is the size of the original array
-        size1 = size(array,1)
+        ! Define the new size of the array
+        if( present(new_size1) ) then
+            n1 = new_size1     ! If the argument is present, then this is the reallocation size
+        else
+            n1 = size(array,1) ! Default reallocation size is the size of the original array
+        end if
 
-        ! If the argument is present, then reallocate to the new size
-        if( present(u1) ) size1 = u1
+        ! Define the positions of where data is coming from and going to
+        if(present(save_indices1) .and. present(target_indices1)) then
 
-        temp_array = array                  ! Save the old array 
+            ! If both save and target indices are present, then these should be assigned accordingly
+            call allocate_and_assign_i(s1,save_indices1)
+            call allocate_and_assign_i(t1,target_indices1)
+
+            if(size(s1)/=size(t1)) call halt_program('reallocate_1_i error: save and target indices must be equal in size') 
+
+        else if(present(save_indices1)) then
+
+            ! If just the save indices are present, then we assign these
+            call allocate_and_assign_i(s1,save_indices1)
+
+            ! The target indices are allocated with a default array of size s1
+            call allocate_and_assign_i(t1,[ (i,i=1,size(s1)) ])
+
+        else if(present(target_indices1)) then
+
+            ! If just the target indices are present, then we assign these
+            call allocate_and_assign_i(t1,target_indices1)
+
+            ! The save indices are allocated with a default array of size t1
+            call allocate_and_assign_i(s1,[ (i,i=1,size(t1)) ])
+
+        else
+            ! Default indices to save are all of them
+            call allocate_and_assign_i(s1,[ (i,i=1,size(array,1)) ] )
+            call allocate_and_assign_i(t1,[ (i,i=1,size(array,1)) ] )
+        end if
+
+        a = array                           ! Save the old array 
         deallocate(array)                   ! Deallocate it      
-        allocate(array(size1))  ! Re-allocate with new size
+        allocate(array(n1))                 ! Re-allocate with new size
+        array(t1) = a(s1)                   ! Reassign the old values
 
-        indices1 = [ (i,i=1,size(temp_array,1)) ]
+    end subroutine reallocate_1_i
 
-        ! If the argument is present, define the new positions via the array
-        if(present(p1)) indices1=p1
 
-        ! Reassign the old values
-        array(indices1) = temp_array
 
-    end subroutine
 
-    !> Reallocate a 2D array of integers
-    subroutine reallocate_2_i(array,u1,u2,p1,p2)
-        implicit none
-        !> Array to be reallocated
-        integer, dimension(:,:),allocatable, intent(inout) :: array
-        !> New upper bound
-        integer, intent(in),optional :: u1,u2
-        !> new array configuration after reallocation
-        integer, dimension(size(array,1)),intent(in),optional :: p1
-        integer, dimension(size(array,2)),intent(in),optional :: p2
 
-        integer :: size1,size2
 
-        integer, dimension(size(array,1)) :: indices1
-        integer, dimension(size(array,2)) :: indices2
 
-        integer :: i
 
-        integer, dimension(size(array,1),size(array,2)) :: temp_array
 
-        ! Default reallocation size is the size of the original array
-        size1 = size(array,1)
-        size2 = size(array,2)
 
-        ! If the argument is present, then reallocate to the new size
-        if( present(u1) ) size1 = u1
-        if( present(u2) ) size2 = u2
 
-        temp_array = array                  ! Save the old array 
-        deallocate(array)                   ! Deallocate it      
-        allocate(array(size1,size2))  ! Re-allocate with new size
 
-        indices1 = [ (i,i=1,size(temp_array,1)) ]
-        indices2 = [ (i,i=1,size(temp_array,2)) ]
 
-        ! If the argument is present, define the new positions via the array
-        if(present(p1)) indices1=p1
-        if(present(p2)) indices2=p2
 
-        ! Reassign the old values
-        array(indices1,indices2) = temp_array
 
-    end subroutine
-
-    !> Reallocate a 3D array of integers
-    subroutine reallocate_3_i(array,u1,u2,u3,p1,p2,p3)
-        implicit none
-        !> Array to be reallocated
-        integer, dimension(:,:,:),allocatable, intent(inout) :: array
-        !> New upper bound
-        integer, intent(in),optional :: u1,u2,u3
-        !> new array configuration after reallocation
-        integer, dimension(size(array,1)),intent(in),optional :: p1
-        integer, dimension(size(array,2)),intent(in),optional :: p2
-        integer, dimension(size(array,3)),intent(in),optional :: p3
-
-        integer :: size1,size2,size3
-
-        integer, dimension(size(array,1)) :: indices1
-        integer, dimension(size(array,2)) :: indices2
-        integer, dimension(size(array,3)) :: indices3
-
-        integer :: i
-
-        integer, dimension(size(array,1),size(array,2),size(array,3)) :: temp_array
-
-        ! Default reallocation size is the size of the original array
-        size1 = size(array,1)
-        size2 = size(array,2)
-        size3 = size(array,3)
-
-        ! If the argument is present, then reallocate to the new size
-        if( present(u1) ) size1 = u1
-        if( present(u2) ) size2 = u2
-        if( present(u3) ) size3 = u3
-
-        temp_array = array                  ! Save the old array 
-        deallocate(array)                   ! Deallocate it      
-        allocate(array(size1,size2,size3))  ! Re-allocate with new size
-
-        indices1 = [ (i,i=1,size(temp_array,1)) ]
-        indices2 = [ (i,i=1,size(temp_array,2)) ]
-        indices3 = [ (i,i=1,size(temp_array,3)) ]
-
-        ! If the argument is present, define the new positions via the array
-        if(present(p1)) indices1=p1
-        if(present(p2)) indices2=p2
-        if(present(p3)) indices3=p3
-
-        ! Reassign the old values
-        array(indices1,indices2,indices3) = temp_array
-
-    end subroutine
 
 
 
@@ -281,7 +465,7 @@ module array_module
         narray(cluster_id) = narray(cluster_id) + 1         ! Increase the number of points in the cluster
 
         ! If this takes us over the size of the array, then double it
-        if(narray(cluster_id) > size(array,2) ) call reallocate_3_d(array, u2=size(array,2)*2 )
+        if(narray(cluster_id) > size(array,2) ) call reallocate_3_d(array, new_size2=size(array,2)*2 )
 
         array(:,narray(cluster_id),cluster_id) = point       ! Add the point to the end position
 

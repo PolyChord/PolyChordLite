@@ -7,7 +7,7 @@ module chordal_module
         use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,random_real
-        use utils_module, only: logzero,FLT_FMT,fmt_len,stdout_unit
+        use utils_module, only: logzero,FLT_FMT,fmt_len,stdout_unit,heisenbug_fb,stdout_unit
 
         implicit none
         interface
@@ -62,6 +62,7 @@ module chordal_module
 
         character(len=fmt_len) :: fmt_1
 
+        if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Slicing")')
 
 
         ! Start the baby point at the seed point
