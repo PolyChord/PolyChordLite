@@ -314,21 +314,25 @@ module cluster_module
 
             nlive = RTI%nlive(i_cluster) ! Get the number of live points in a temp variable
 
-            ! Calculate the similarity matrix for this cluster
-            similarity_matrix(:nlive,:nlive) = calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
+            if(nlive>2) then 
+                ! Calculate the similarity matrix for this cluster
+                similarity_matrix(:nlive,:nlive) = calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
 
-            if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Searching for clusters in cluster ",I0," of ",I0)') i_cluster, RTI%ncluster
-            clusters(:nlive) = NN_clustering(similarity_matrix(:nlive,:nlive),num_clusters)
+                if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("Searching for clusters in cluster ",I0," of ",I0)') i_cluster, RTI%ncluster
+                clusters(:nlive) = NN_clustering(similarity_matrix(:nlive,:nlive),num_clusters)
 
-            ! Do clustering on this 
-            if ( num_clusters>1 ) then
-                ! If we find a cluster
+                ! Do clustering on this 
+                if ( num_clusters>1 ) then
+                    ! If we find a cluster
 
-                ! we split this cluster into n, and put the others at the end
-                call add_cluster(settings,RTI,i_cluster,clusters(:nlive),num_clusters)
+                    ! we split this cluster into n, and put the others at the end
+                    call add_cluster(settings,RTI,i_cluster,clusters(:nlive),num_clusters)
 
+                else
+                    if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("No clusters found")')
+                    i_cluster=i_cluster+1
+                end if
             else
-                if(settings%feedback>=heisenbug_fb) write(stdout_unit,'("No clusters found")')
                 i_cluster=i_cluster+1
             end if
 
