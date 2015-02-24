@@ -45,7 +45,7 @@ program main
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
-    use ini_module,               only: read_priors
+    use ini_module,               only: read_params
     use priors_module
     use settings_module,          only: program_settings,initialise_settings
     use random_module,            only: initialise_random
@@ -119,13 +119,11 @@ program main
     call initialise_random()
 
 
-    call read_priors('rastrigin.ini',priors)
+    call read_params('rastrigin.ini',settings,priors)
 
-    write(*,*) priors(1)%physical_indices
-    write(*,*) priors(1)%parameters
     write(*,*) priors(1)%hypercube_indices
-
-
+    write(*,*) priors(2)%hypercube_indices
+    write(*,*) priors(3)%hypercube_indices
 
     stop
 
@@ -172,7 +170,6 @@ program main
     settings%num_repeats          = 3                        !Number of chords to draw (this is multiplied by nDims)
 
     settings%do_clustering        = .false.                  !whether or not to do clustering
-    settings%update_clustering    = settings%nlive           !how often to do clustering algorithm
 
     settings%feedback             = 1                        !degree of feedback
 

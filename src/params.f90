@@ -58,20 +58,15 @@ module params_module
         integer :: num_params 
 
 
-        if(allocated(params)) then
-            num_params = size(params)
+        num_params = size(params)
 
-            allocate(temp_params(num_params))
-            temp_params = params
+        allocate(temp_params(num_params))
+        temp_params = params
 
-            deallocate(params)
-            allocate(params(num_params+1))
-            params(1:num_params) = temp_params
+        deallocate(params)
+        allocate(params(num_params+1))
 
-        else
-            num_params=0
-            allocate(params(1))
-        end if
+        params(1:num_params) = temp_params
 
 
         call assign_parameter(params(num_params+1),paramname,latex,speed,prior_type,prior_block,prior_params) 

@@ -39,10 +39,11 @@ module read_write_module
 
         fb = settings%feedback>=verbose_fb
 
-        deleted = delete_file( stats_file(settings), fb )           ! Delete stats file
-        deleted = delete_file( phys_live_file(settings), fb )       ! Delete phys_live file
-        deleted = delete_file( resume_file(settings,.false.), fb )  ! Delete temp resume file
-        deleted = delete_file( resume_file(settings,.true.), fb )   ! Delete resume file
+        deleted = delete_file( stats_file(settings), fb )          ! Delete stats file
+        deleted = delete_file( phys_live_file(settings), fb )      ! Delete phys_live file
+        deleted = delete_file( resume_file(settings,.false.), fb ) ! Delete temp resume file
+        deleted = delete_file( resume_file(settings,.true.), fb )  ! Delete resume file
+        deleted = delete_file( paramnames_file(settings), fb )     ! Delete paramnames file
 
 
         ! Delete normalised .txt files
@@ -514,6 +515,34 @@ module read_write_module
     end subroutine write_stats_file
 
 
+    subroutine write_paramnames_file(settings,params,derived_params)
+        use priors_module, only: prior
+        use settings_module,   only: program_settings
+        use utils_module,  only: paramnames_unit
+        use params_module, only: param_type
+        implicit none
+        
+        type(program_settings),intent(in)                    :: settings       !> Program settings
+        type(param_type),dimension(:),allocatable,intent(in) :: params         !> Parameter array
+        type(param_type),dimension(:),allocatable,intent(in) :: derived_params !> Derived parameter array
+
+        integer :: i
+
+        open(unit=paramnames_unit,file=trim(paramnames_file(settings)))
+
+        do i=1,size(params)
+            write(paramnames_unit,'(A,"      ",A)') trim(params(i)%paramname),trim(params(i)%latex) 
+        end do
+
+        do i=1,size(derived_params)
+            write(paramnames_unit,'(A,"      ",A)') trim(derived_params(i)%paramname),trim(derived_params(i)%latex) 
+        end do
+
+
+        close(paramnames_unit)
+ 
+    end subroutine write_paramnames_file
+
 
 
 
@@ -627,5 +656,16 @@ module read_write_module
 
     end function phys_live_file
 
+    function paramnames_file(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '.paramnames'
+
+    end function paramnames_file
 
 end module

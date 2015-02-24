@@ -4,21 +4,195 @@ module ini_module
   implicit none
 
   character(len=2), parameter :: comment='#!'
+  character(len=2), parameter :: equals='=:'
+  character(len=1), parameter :: section_start='['
+  character(len=1), parameter :: section_end=']'
 
 contains
 
-    subroutine read_priors(file_name,priors) 
-        use priors_module, only: prior,prior_type_from_string,unknown_type,create_priors
+    subroutine read_params(file_name,settings,priors)
+        use priors_module, only: create_priors,prior
+        use settings_module,   only: program_settings
+        use utils_module,  only: STR_LENGTH,params_unit
+        use params_module, only: param_type
+        use read_write_module, only: write_paramnames_file
+        implicit none
+        
+        character(len=*)                    :: file_name !> The name of the file
+        type(program_settings)              :: settings  !> Program settings
+        type(prior),dimension(:),allocatable:: priors
+
+        type(param_type),dimension(:),allocatable :: params         ! Parameter array
+        type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
+
+        character(len=STR_LENGTH) :: string  ! string following keyword
+
+        settings%nlive         = get_integer(file_name,'nlive')
+        settings%num_repeats   = get_integer(file_name,'num_repeats')
+        settings%do_clustering = get_logical(file_name,'do_clustering')
+
+        settings%base_dir      = get_string(file_name,'base_directory')
+        settings%file_root     = get_string(file_name,'rootname')
+
+        settings%calculate_posterior = get_logical(file_name,'calculate_posterior')
+        
+        settings%write_resume  = get_logical(file_name,'write_resume')
+        settings%read_resume   = get_logical(file_name,'resume')
+        settings%write_live    = get_logical(file_name,'write_live')
+
+        settings%feedback      = get_integer(file_name,'feedback')
+        settings%update_resume = get_integer(file_name,'update_resume')
+
+        settings%thin_posterior= get_double(file_name,'thin_factor')
+
+
+        call get_params(file_name,params,derived_params)  
+
+        settings%nDims = size(params)
+        settings%nDerived = size(derived_params)
+
+        call write_paramnames_file(settings,params,derived_params)
+
+        call create_priors(priors,params)
+
+    end subroutine read_params
+
+
+
+
+
+    function get_string(file_name,key_word,ith)
+        use utils_module,  only: STR_LENGTH,params_unit
+        character(len=*),intent(in)  :: file_name !> The name of the file to search in
+        character(len=*),intent(in)  :: key_word  !> keyword to search for
+        integer,intent(in), optional :: ith       !> Get the ith instance of this string
+
+        character(len=STR_LENGTH) :: get_string  ! string following keyword
+
+        character(len=STR_LENGTH) :: keyword   !> keyword to search for
+        character(len=STR_LENGTH) :: filename   ! The fortran readable filename
+
+        character(len=STR_LENGTH)                :: line_buffer     ! Line buffer
+
+        integer :: io_stat   ! check to see if we've reached the end of the file
+
+        integer :: i_equals ! placement of equals signs
+        integer :: counter
+
+
+
+        ! Convert filename to something fortran can read
+        write(filename,'(A)') file_name
+        open(unit=params_unit,file=trim(filename),iostat=io_stat)
+        write(keyword,'(A)') key_word
+
+        get_string = ''
+
+        counter=1
+
+        do while(io_stat==0) 
+            ! Read in the next line
+            read(params_unit,'(A)',iostat=io_stat) line_buffer
+
+            ! Skip any comment lines
+            if( scan(line_buffer,comment) /=0 ) cycle
+
+            ! Search for equals signs
+            i_equals = scan(line_buffer,equals)
+            if(i_equals==0) cycle
+
+            ! check to see if this matches our keyword
+            if( trim(adjustl(line_buffer(:i_equals-1))) == trim(adjustl(keyword)) ) then
+
+
+                if(present(ith)) then
+                    
+                    if(counter==ith) then
+                        get_string = adjustl(line_buffer(i_equals+1:))
+                        exit
+                    else
+                        counter=counter+1
+                    end if
+                else
+                    get_string = adjustl(line_buffer(i_equals+1:))
+                    exit
+                end if
+
+            end if
+
+        end do
+
+        ! close the file
+        close(params_unit)
+
+
+    end function get_string
+
+    function get_double(file_name,key_word)
+        use utils_module,  only: STR_LENGTH,params_unit
+        character(len=*),intent(in)  :: file_name !> The name of the file to search in
+        character(len=*),intent(in)  :: key_word  !> keyword to search for
+
+        character(len=STR_LENGTH) :: string  ! string following keyword
+        double precision :: get_double  ! double following keyword
+
+        string = get_string(file_name,key_word)
+        read(string,*) get_double
+
+    end function get_double
+
+    function get_integer(file_name,key_word)
+        use utils_module,  only: STR_LENGTH,params_unit
+        character(len=*),intent(in)  :: file_name !> The name of the file to search in
+        character(len=*),intent(in)  :: key_word  !> keyword to search for
+
+        character(len=STR_LENGTH) :: string  ! string following keyword
+        integer :: get_integer  ! integer following keyword
+
+        string = get_string(file_name,key_word)
+        read(string,*) get_integer
+
+    end function get_integer
+
+    function get_logical(file_name,key_word)
+        use utils_module,  only: STR_LENGTH,params_unit
+        character(len=*),intent(in)  :: file_name !> The name of the file to search in
+        character(len=*),intent(in)  :: key_word  !> keyword to search for
+
+        character(len=STR_LENGTH) :: string  ! string following keyword
+        logical :: get_logical  ! logical following keyword
+
+        string = get_string(file_name,key_word)
+        read(string,*) get_logical
+
+    end function get_logical
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    subroutine get_params(file_name,params,derived_params) 
+        use priors_module, only: prior_type_from_string,unknown_type
         use utils_module,  only: STR_LENGTH,params_unit
         use abort_module,  only: halt_program
         use params_module, only: param_type,add_parameter
         implicit none
         
-        character(len=*)                                   :: file_name !> The name of the file
-        type(prior), dimension(:), allocatable,intent(out) :: priors    !> The array of priors to be returned
+        character(len=*),intent(in)               :: file_name !> The name of the file
+        type(param_type),dimension(:),allocatable,intent(out) :: params         ! Parameter array
+        type(param_type),dimension(:),allocatable,intent(out) :: derived_params ! Derived parameter array
 
         
-        character(len=STR_LENGTH)                :: filename        ! The file name to read priors from
         character(len=STR_LENGTH)                :: line_buffer     ! Line buffer
         character(len=STR_LENGTH)                :: paramname       ! parameter name
         character(len=STR_LENGTH)                :: latex           ! latex name
@@ -28,23 +202,16 @@ contains
         integer                                  :: prior_block     ! prior block
         double precision,allocatable,dimension(:):: prior_params    ! prior parameters
 
-        type(param_type),dimension(:),allocatable :: params         ! Parameter array
 
+        integer :: i_param
 
-        integer :: i_comment=1 ! Comment index
-        integer :: i_break     ! Params index
-        integer :: io_stat=0   ! Error checker
+        allocate(params(0),derived_params(0))
 
-        write(filename,'(A)') file_name
-        open(unit=params_unit,file=trim(filename))
-
-        ! Skip the leading comment lines
-        do while(i_comment/=0.and.io_stat==0)
-            read(params_unit,'(A)',iostat=io_stat) line_buffer
-            i_comment = scan(line_buffer,comment)
-        end do
-
-        do while(io_stat==0) 
+        i_param = 1
+        do 
+            line_buffer = get_string(file_name,'P',i_param)
+            if(trim(line_buffer)=='') exit
+            i_param=i_param+1
 
             !1) Parameter name
             read(line_buffer,*) paramname !read in string
@@ -68,7 +235,7 @@ contains
             prior_type = prior_type_from_string(prior_type_str)    ! convert to integer
 
             ! Halt if we don't know this prior type
-            if(prior_type==unknown_type) call halt_program('read_priors error: Unknown prior type for parameter '//trim(paramname)) 
+            if(prior_type==unknown_type) call halt_program('get_priors error: Unknown prior type for parameter '//trim(paramname)) 
 
             !5) Prior block
             call next_element(line_buffer,'|') ! advance
@@ -80,18 +247,32 @@ contains
 
             ! Add this parameter to the array
             call add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params) 
-
-
-            ! Read the next line
-            read(params_unit,'(A)',iostat=io_stat) line_buffer
         end do
 
-        close(params_unit)
+        i_param = 1
+        do 
+            line_buffer = get_string(file_name,'D',i_param)
+            if(line_buffer=='') exit
+            i_param=i_param+1
 
-        ! Create the priors from these
-        call create_priors(priors,params)
+            !1) Parameter name
+            read(line_buffer,*) paramname !read in string
+            paramname=trim(paramname)     !trim string
 
-    end subroutine read_priors
+
+            !2) Latex name
+            call next_element(line_buffer,'|') ! advance
+            read(line_buffer,*) latex          ! read in string
+            latex=trim(latex)                  ! trim string
+
+            deallocate(prior_params)
+            allocate(prior_params(0))
+
+            ! Add this parameter to the array
+            call add_parameter(derived_params,paramname,latex,0,0,0,prior_params) 
+        end do
+
+    end subroutine get_params
 
 
 

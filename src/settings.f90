@@ -49,7 +49,7 @@ module settings_module
         logical :: write_resume = .false.
 
         !> Whether or not to write stats file
-        logical :: write_stats = .false.
+        logical :: write_stats = .true.
 
         !> How often to update the resume file
         integer :: update_resume = 500
@@ -138,9 +138,6 @@ module settings_module
 
         !> Whether to do clustering or not
         logical :: do_clustering = .false.
-
-        !> How often to update clustering
-        integer :: update_clustering = 500
 
     end type program_settings
 

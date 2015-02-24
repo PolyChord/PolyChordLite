@@ -236,7 +236,7 @@ module nested_sampling_module
 
                     call delete_cluster(settings,RTI) ! Delete any clusters as necessary
 
-                    if( mod(RTI%ndead,settings%update_resume)==0 ) then
+                    if( mod(RTI%ndead,settings%nlive)==0 ) then
                         if(settings%do_clustering) call do_clustering(settings,RTI)
                         call calculate_covmats(settings,RTI)
                     end if
