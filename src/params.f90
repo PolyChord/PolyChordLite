@@ -53,17 +53,21 @@ module params_module
         double precision, dimension(:), allocatable,intent(in) :: prior_params 
 
         ! expand parameter array
-        type(param_type), dimension(size(params)) :: temp_params
+        type(param_type), dimension(:),allocatable :: temp_params
 
         integer :: num_params 
 
 
         if(allocated(params)) then
             num_params = size(params)
+
+            allocate(temp_params(num_params))
             temp_params = params
+
             deallocate(params)
             allocate(params(num_params+1))
             params(1:num_params) = temp_params
+
         else
             num_params=0
             allocate(params(1))

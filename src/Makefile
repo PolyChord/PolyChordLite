@@ -29,9 +29,9 @@ OBJECTS =                    \
 		  mpi_utils.o        \
 		  array_utils.o      \
 		  random_utils.o     \
+		  params.o           \
 		  priors.o           \
           grades.o           \
-		  params.o           \
 		  settings.o         \
 		  calculate.o        \
 		  run_time_info.o    \
@@ -55,9 +55,9 @@ OBJECTS =                    \
 		  abort.o            \
 		  array_utils.o      \
 		  random_utils.o     \
+		  params.o           \
 		  priors.o           \
 		  grades.o           \
-		  params.o           \
 		  settings.o         \
 		  calculate.o        \
 		  run_time_info.o    \

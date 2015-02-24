@@ -121,6 +121,10 @@ program main
 
     call read_priors('rastrigin.ini',priors)
 
+    write(*,*) priors(1)%physical_indices
+    write(*,*) priors(1)%parameters
+    write(*,*) priors(1)%hypercube_indices
+
 
 
     stop

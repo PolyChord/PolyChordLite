@@ -11,7 +11,7 @@ module abort_module
         character(LEN=*), intent(in), optional :: message
 
 #ifdef MPI
-        integer :: errorcode
+        integer :: errorcode=1
         integer :: mpierror
 #endif
 

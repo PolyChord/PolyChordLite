@@ -8,7 +8,7 @@ module ini_module
 contains
 
     subroutine read_priors(file_name,priors) 
-        use priors_module, only: prior,prior_type_from_string,unknown_type
+        use priors_module, only: prior,prior_type_from_string,unknown_type,create_priors
         use utils_module,  only: STR_LENGTH,params_unit
         use abort_module,  only: halt_program
         use params_module, only: param_type,add_parameter
@@ -82,20 +82,18 @@ contains
             call add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params) 
 
 
-
-
             ! Read the next line
             read(params_unit,'(A)',iostat=io_stat) line_buffer
         end do
 
-
-
-
         close(params_unit)
-        stop
 
+        ! Create the priors from these
+        call create_priors(priors,params)
 
     end subroutine read_priors
+
+
 
     subroutine next_element(line_buffer,delimiter) 
         use utils_module,  only: STR_LENGTH
@@ -142,10 +140,6 @@ contains
             i=i+1
 
         end do
-
-        write(*,*) prior_params
-
-
 
     end subroutine get_prior_params
 

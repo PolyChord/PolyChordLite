@@ -540,6 +540,57 @@ module utils_module
 
 
 
+    !> This function relabels an array with more sensible indices
+    !!
+    !! We do this by constructing a mapping of each original label to a new label
+    !!
+    !! mapping :  new labels ---> old labels
+    function relabel(array,num_labels) result(array_relabel)
+        implicit none
+        integer,intent(in),dimension(:)  :: array
+        integer,intent(out)              :: num_labels
+
+        integer,dimension(size(array)) :: array_relabel
+
+        integer,dimension(size(array)) :: mapping
+
+        integer :: npoints
+        integer :: i_point
+        integer :: i_label
+
+        ! Find the number of points
+        npoints = size(array)
+
+        ! We will re-label the array type in array(1) with the integer 1
+        mapping(1) = array(1)
+        num_labels = 1
+
+        do i_point=1,npoints
+            ! If the array type for i_point is not already included in the
+            ! array, then add it
+            if( all(array(i_point)/=mapping(1:num_labels)) ) then
+                num_labels=num_labels+1
+                mapping(num_labels) = array(i_point)
+            end if
+        end do
+
+        ! mapping now contains the random integers that are found in array
+
+        ! We now relabel according to the inverse mapping
+        do i_label=1,num_labels
+            where(array==mapping(i_label)) array_relabel=i_label
+        end do
+
+    end function
+
+
+
+
+
+
+
+
+
     function normal_cdf(x)
         implicit none
         double precision, intent(in),dimension(:) :: x

@@ -12,6 +12,7 @@ module KNN_clustering
     !! The algorithm computes the k nearest neihbor sets from the similarity
     !! matrix, and then tests
     recursive function NN_clustering(similarity_matrix,num_clusters) result(cluster_list)
+        use utils_module, only: relabel
         implicit none
 
         double precision, intent(in), dimension(:,:) :: similarity_matrix
@@ -49,7 +50,7 @@ module KNN_clustering
             cluster_list = do_clustering_k( knn(:n,:) )     ! Get a raw clustering 
 
             ! Re-label the cluster list using integers 1,2,3,....
-            cluster_list = relabel_clustering(cluster_list,num_clusters)
+            cluster_list = relabel(cluster_list,num_clusters)
 
             if( num_clusters == 1 ) then
                 return  ! If we're down to a single cluster, then just return
@@ -76,7 +77,7 @@ module KNN_clustering
                 cluster_list(points) = num_clusters + NN_clustering(similarity_matrix(points,points),num_clusters)
 
                 ! re-label the clusters
-                cluster_list = relabel_clustering(cluster_list,num_clusters)
+                cluster_list = relabel(cluster_list,num_clusters)
             end do
         end if
 
@@ -125,43 +126,6 @@ module KNN_clustering
     end function do_clustering_k
 
 
-    function relabel_clustering(cluster,num_clusters) result(cluster_relabel)
-        implicit none
-        integer,intent(in),dimension(:)  :: cluster
-        integer,intent(out)              :: num_clusters
-
-        integer,dimension(size(cluster)) :: cluster_relabel
-
-        integer,dimension(size(cluster)) :: cluster_map
-
-        integer :: npoints
-        integer :: i_point
-        integer :: i_cluster
-
-        ! Find the number of points
-        npoints = size(cluster)
-
-        ! We will re-label the cluster type in cluster(1) with the integer 1
-        cluster_map(1) = cluster(1)
-        num_clusters = 1
-
-        do i_point=1,npoints
-            ! If the cluster type for i_point is not already included in the
-            ! cluster_map, then add it
-            if( all(cluster(i_point)/=cluster_map(1:num_clusters)) ) then
-                num_clusters=num_clusters+1
-                cluster_map(num_clusters) = cluster(i_point)
-            end if
-        end do
-
-        ! cluster_map now contains the random integers that are found in cluster
-
-        ! We now relabel according to 
-        do i_cluster=1,num_clusters
-            where(cluster==cluster_map(i_cluster)) cluster_relabel=i_cluster
-        end do
-
-    end function
 
     function compute_knn(similarity_matrix,k) result(knn)
         use utils_module, only: loginf
