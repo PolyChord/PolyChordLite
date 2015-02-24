@@ -30,7 +30,7 @@ module example_likelihoods
 
         ! Initialise the mean and standard deviation
         mu    = 5d-1   ! mean in the center
-        sigma = 1d-2  ! all sigma set relatively small
+        sigma = 2d-1  ! all sigma set relatively small
 
         ! Gaussian normalisation
         loglikelihood = - sum( log( sigma ) + logTwoPi/2d0 ) 
@@ -75,7 +75,7 @@ module example_likelihoods
 
 
         ! Initialise the mean and standard deviation
-        sigma = 1d-2  ! all sigma set relatively small
+        sigma = 2d-1  ! all sigma set relatively small
         mu1    = 5d-1 ! mean in the center
         mu1(1) = 5d-1 + 10*sigma(1)
         mu2    = 5d-1 ! mean in the center
@@ -419,7 +419,7 @@ module example_likelihoods
 
         logical,save :: initialised=.false.
 
-        double precision, parameter :: sigma = 0.01 ! width of peak
+        double precision, parameter :: sigma = 0.2  ! width of peak
 
 #ifdef MPI
         integer :: mpierror
@@ -505,7 +505,7 @@ module example_likelihoods
 
         logical,save :: initialised=.false.
 
-        double precision, parameter :: sigma = 0.01 ! width of peak
+        double precision, parameter :: sigma = 0.02 ! width of peak
         integer, parameter :: num_peaks = 3
         integer :: i !iterator
 #ifdef MPI
@@ -709,7 +709,7 @@ module example_likelihoods
         double precision, dimension(size(theta)) :: center    ! Mean
 
         center= 5d-1   ! mean in the center
-        sigma = 1d-3 
+        sigma = 2d-1 
 
         ! normalisation
         loglikelihood =   - log(gamma(1d0+size(theta)/2d0)) -sum(log(2d0*sigma))

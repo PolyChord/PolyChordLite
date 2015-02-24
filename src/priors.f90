@@ -1,6 +1,7 @@
 module priors_module
     implicit none
 
+    integer, parameter :: unknown_type        = 0
     integer, parameter :: uniform_type        = 1
     integer, parameter :: gaussian_type       = 2
     integer, parameter :: log_uniform_type    = 3
@@ -19,6 +20,32 @@ module priors_module
 
 
     contains
+
+    !> This function converts from strings to integer prior types
+    function prior_type_from_string(string) result(prior_type)
+        use utils_module, only: STR_LENGTH
+        implicit none
+        character(len=*),intent(in) :: string
+        integer :: prior_type
+
+        character(len=STR_LENGTH) :: string_buf
+
+        write(string_buf,'(A)') string
+
+        select case(trim(string_buf))
+        case('uniform')
+            prior_type=uniform_type
+        case('gaussian')
+            prior_type=gaussian_type
+        case('log_uniform')
+            prior_type=log_uniform_type
+        case('sorted_uniform')
+            prior_type=sorted_uniform_type
+        case default
+            prior_type=unknown_type
+        end select
+
+    end function prior_type_from_string
 
     ! prior transformations
 

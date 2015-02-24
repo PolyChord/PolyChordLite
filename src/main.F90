@@ -45,6 +45,7 @@ program main
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
 
+    use ini_module,               only: read_priors
     use priors_module
     use settings_module,          only: program_settings,initialise_settings
     use random_module,            only: initialise_random
@@ -64,12 +65,11 @@ program main
     ! 5) log(evidence) + log(prior volume)
     double precision, dimension(5) :: output_info
 
-    type(program_settings)    :: settings  ! The program settings 
-    type(prior), dimension(1) :: priors    ! The details of the priors
+    type(program_settings)                :: settings  ! The program settings 
+    type(prior), dimension(:),allocatable :: priors    ! The details of the priors
 
     !pointer loglikelihood                  ! Pointer to a loglikelihood function
     ! (this just makes assigning them easier, one can just pass your chosen function to the nested sampling algorithm)
-
 
 
     ! Temporary variables for initialising priors
@@ -119,6 +119,13 @@ program main
     call initialise_random()
 
 
+    call read_priors('rastrigin.ini',priors)
+
+
+
+    stop
+
+
     ! ------- (1c) Initialise the model -------
     ! (i) Choose the loglikelihood at the top of this file
 
@@ -158,7 +165,7 @@ program main
 
     ! ------- (1d) Initialise the program settings -------
     settings%nlive                = 500                      !number of live points
-    settings%num_repeats          = 1                        !Number of chords to draw (this is multiplied by nDims)
+    settings%num_repeats          = 3                        !Number of chords to draw (this is multiplied by nDims)
 
     settings%do_clustering        = .false.                  !whether or not to do clustering
     settings%update_clustering    = settings%nlive           !how often to do clustering algorithm

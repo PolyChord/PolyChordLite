@@ -9,7 +9,7 @@ DEBUG=
 # current options are:
 #  * gfortran
 #  * ifort
-COMPILER_TYPE=ifort
+COMPILER_TYPE=gfortran
 
 
 
@@ -31,6 +31,7 @@ OBJECTS =                    \
 		  random_utils.o     \
 		  priors.o           \
           grades.o           \
+		  params.o           \
 		  settings.o         \
 		  calculate.o        \
 		  run_time_info.o    \
@@ -40,7 +41,8 @@ OBJECTS =                    \
 		  likelihoods.o      \
 		  chordal_sampling.o \
 		  generate.o         \
-		  nested_sampling.o
+		  nested_sampling.o  \
+		  ini.o
 else
 
 # No parallelisation
@@ -53,7 +55,9 @@ OBJECTS =                    \
 		  abort.o            \
 		  array_utils.o      \
 		  random_utils.o     \
-		  priors.o grades.o  \
+		  priors.o           \
+		  grades.o           \
+		  params.o           \
 		  settings.o         \
 		  calculate.o        \
 		  run_time_info.o    \
@@ -63,7 +67,8 @@ OBJECTS =                    \
 		  likelihoods.o      \
 		  chordal_sampling.o \
 		  generate.o         \
-		  nested_sampling.o
+		  nested_sampling.o  \
+		  ini.o
 
 endif
 
