@@ -3,7 +3,7 @@ module chordal_module
 
     contains
 
-    function SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike)  result(baby_points)
+    function SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike,num_repeats)  result(baby_points)
         use priors_module, only: prior
         use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,random_real
@@ -35,28 +35,25 @@ module chordal_module
         !> The directions of the chords
         double precision, intent(in), dimension(settings%nDims,settings%nDims) :: cholesky
 
+        !> The number of babies within each grade to produce
+        integer, dimension(:), intent(in) :: num_repeats
+
         ! ------- Outputs -------
         !> The number of likelihood evaluations
         integer, intent(out) :: nlike
 
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(settings%nTotal,settings%num_babies)   :: baby_points
+        double precision,    dimension(settings%nTotal,sum(num_repeats))   :: baby_points
 
 
         ! ------- Local Variables -------
         double precision,    dimension(settings%nDims)   :: nhat
-        double precision,    dimension(settings%nDims,settings%num_babies)   :: nhats
+        double precision,    dimension(settings%nDims,sum(num_repeats))   :: nhats
 
         double precision, dimension(settings%nTotal)   :: previous_point
 
         integer :: i_babies
-
-        double precision,dimension(settings%grades%min_grade:settings%grades%max_grade) :: timers
-        double precision :: time0,time1
-        integer, dimension(settings%num_babies) :: grade_order
-
-        logical do_timing
 
         double precision :: w
 
@@ -69,19 +66,8 @@ module chordal_module
         ! Initialise the likelihood counter at 0
         nlike = 0
 
-        if(settings%do_timing) then
-            do_timing = random_real()<1d0/settings%print_timing
-        else
-            do_timing=.false.
-        end if
-
         ! Generate a choice of nhats in the orthogonalised space
-        if(settings%do_grades) then
-            nhats = generate_nhats(settings,grade_order)
-            if(do_timing) timers=0
-        else
-            nhats = generate_nhats(settings)
-        end if
+        nhats = generate_nhats(settings,num_repeats)
 
         ! Transform to the unit hypercube
         nhats = matmul(cholesky,nhats)
@@ -89,9 +75,6 @@ module chordal_module
 
 
         do i_babies=1,settings%num_babies
-            ! Zero the timer
-            if(do_timing) call cpu_time(time0)
-
             ! Get a new random direction
             nhat = nhats(:,i_babies)
 
@@ -112,36 +95,24 @@ module chordal_module
             previous_point = baby_points(:,i_babies)
 
             ! Note the time for this grade
-            if(do_timing) then
-                call cpu_time(time1)
-                if(settings%do_grades) timers(grade_order(i_babies)) = timers(grade_order(i_babies)) + time1-time0
-            end if
         end do
-
-        if(do_timing.and.settings%do_grades) then 
-            write(fmt_1,'("(",I0,"(",A,",""% ""), ""(Total time:"",",A,",""seconds)"")")') &
-                settings%grades%max_grade-settings%grades%min_grade+1, FLT_FMT,FLT_FMT
-            write(stdout_unit,fmt_1) timers/sum(timers)*100, sum(timers)
-        end if
-
 
     end function SliceSampling
 
-    function generate_nhats(settings,grade_order) result(nhats)
+    function generate_nhats(settings,num_repeats) result(nhats)
         use settings_module, only: program_settings
-        use random_module, only: random_orthonormal_basis,shuffle_deck
+        use random_module, only: random_direction,shuffle_deck
         implicit none
         type(program_settings), intent(in) :: settings
 
-        integer, dimension(settings%num_babies), intent(out),optional :: grade_order
-
-        double precision,    dimension(settings%nDims,settings%num_babies)   :: nhats
+        integer, dimension(:), intent(in) :: num_repeats !> The number of babies within each grade to produce
+        double precision,    dimension(settings%nDims,sum(num_repeats))   :: nhats
 
 
         integer :: i_grade
         integer :: grade_nDims
         integer :: grade_index
-        integer :: num_repeats
+        integer :: grade_repeats
         integer :: i_repeat
 
         integer :: i_babies
@@ -152,40 +123,27 @@ module chordal_module
         nhats=0d0
 
         i_babies=1
-        if(present(grade_order)) then
 
-            ! Generate a sequence of random bases
-            do i_grade=settings%grades%min_grade,settings%grades%max_grade
+        ! Generate a sequence of random bases
+        do i_grade=1,size(settings%grade_dims)
 
-                grade_nDims = settings%grades%grade_nDims(i_grade)
-                grade_index = settings%grades%grade_index(i_grade) 
-                num_repeats = settings%grades%num_repeats(i_grade) 
+            grade_nDims   = settings%grade_dims(i_grade)
+            grade_index   = sum(settings%grade_dims(:i_grade-1))+1
+            grade_repeats = num_repeats(i_grade)
 
-                do i_repeat=1, num_repeats
-                    nhats(grade_index:grade_index+grade_nDims-1,i_babies:i_babies+grade_nDims-1) = &
-                        random_orthonormal_basis(grade_nDims)
-                    grade_order(i_babies:i_babies+grade_nDims-1)=i_grade
-                    i_babies = i_babies + grade_nDims
-                end do
-
+            do i_repeat=1, grade_repeats
+                nhats(grade_index:grade_index+grade_nDims-1,i_babies) = random_direction(grade_nDims)
+                i_babies = i_babies + 1
             end do
-        else
-            ! Generate a sequence of random bases
-            do i_repeat=1, settings%num_repeats
-                nhats(:,i_babies:i_babies+settings%nDims-1) = random_orthonormal_basis(settings%nDims)
-                i_babies = i_babies + settings%nDims
-            end do
-        end if
+
+        end do
 
         ! Create a shuffled deck
-        deck = (/ (i_babies,i_babies=1,settings%num_babies) /)
+        deck = [ (i_babies,i_babies=1,settings%num_babies) ]
         call shuffle_deck(deck(2:settings%num_babies))
 
         ! Shuffle the nhats
         nhats = nhats(:,deck)
-
-        ! Shuffle the grade order
-        if(present(grade_order)) grade_order = grade_order(deck)
 
 
     end function generate_nhats

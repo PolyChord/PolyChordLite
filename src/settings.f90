@@ -1,9 +1,7 @@
 !> This module encodes the type 'program_settings' which contains all of the
 !! details required to perform a nested sampling run.
 module settings_module
-    use priors_module,   only: prior
     use utils_module,   only: STR_LENGTH
-    use grades_module,  only: parameter_grades
     implicit none
 
     integer, parameter :: live_type    = 1
@@ -127,9 +125,8 @@ module settings_module
         !! evaluations (only really important for C likelihoods)
         integer :: context
 
-        !> Grades of parameters
-        logical :: do_grades = .false.
-        type(parameter_grades) :: grades
+        !> The number of parameters in each grade
+        integer, allocatable,dimension(:) :: grade_dims
 
         !> Whether to time likelihood calls for grades
         logical :: do_timing = .false.

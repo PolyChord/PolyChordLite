@@ -12,7 +12,7 @@ contains
 
     subroutine read_params(file_name,settings,priors)
         use priors_module, only: create_priors,prior
-        use settings_module,   only: program_settings
+        use settings_module,   only: program_settings,initialise_settings
         use utils_module,  only: STR_LENGTH,params_unit
         use params_module, only: param_type
         use read_write_module, only: write_paramnames_file
@@ -53,7 +53,11 @@ contains
 
         call write_paramnames_file(settings,params,derived_params)
 
-        call create_priors(priors,params)
+        call create_priors(priors,params,settings)
+
+        ! Calculate all of the rest of the settings
+        call initialise_settings(settings)   
+
 
     end subroutine read_params
 

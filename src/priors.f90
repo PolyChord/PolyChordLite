@@ -377,12 +377,14 @@ module priors_module
 
 
     !> This function converts an array of parameters into a set of prior blocks
-    subroutine create_priors(priors,params)
+    subroutine create_priors(priors,params,settings)
+        use settings_module,   only: program_settings
         use params_module, only: param_type
         use utils_module,  only: relabel
         implicit none 
         type(prior), dimension(:), allocatable,intent(out)   :: priors  !> The array of priors to be returned
         type(param_type),dimension(:),allocatable,intent(in) :: params  !> Parameter array
+        type(program_settings), intent(inout) :: settings !> Program settings
 
         integer, dimension(size(params)) :: prior_blocks
         integer :: num_blocks
@@ -429,6 +431,8 @@ module priors_module
             end where
         end do
 
+        allocate(settings%grade_dims(maxval(speeds)))
+
         ! Now assign hypercube indices
         i_hypercube = 0
         do i_speed=1,maxval(speeds)
@@ -438,6 +442,7 @@ module priors_module
                     hypercube_indices(i_params) = i_hypercube
                 end if
             end do
+            settings%grade_dims = count(speeds==i_speed)
         end do
 
 

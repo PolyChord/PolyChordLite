@@ -82,7 +82,7 @@ module generate_module
         use array_module,     only: add_point
         use abort_module
 #ifdef MPI
-        use mpi_module, only: throw_point,catch_point,more_points_needed,sum_nlike,request_point,no_more_points
+        use mpi_module, only: throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points
 #endif
 
         implicit none
@@ -121,6 +121,9 @@ module generate_module
 
         integer :: nlike ! number of likelihood calls
 
+        double precision :: time0,time1,total_time
+        double precision,dimension(size(settings%grade_dims)) :: speed
+
 #ifndef MPI
         nlike=mpi_communicator ! Stop an annoying unused variable warning -- this does nothing
 #endif
@@ -145,6 +148,7 @@ module generate_module
 
         end if
 
+        total_time=0
 
 
         if(nprocs==1) then
@@ -156,12 +160,15 @@ module generate_module
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
 
                 ! Compute physical coordinates, likelihoods and derived parameters
+                call cpu_time(time0)
                 call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+                call cpu_time(time1)
 
                 ! If its valid, and we need more points, add it to the array
                 if(live_point(settings%l0)>logzero) then
 
                     call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
+                    total_time = total_time + time1-time0
 
                     !-------------------------------------------------------------------------------!
                     call write_generating_live_points(settings%feedback,RTI%nlive(1),settings%nlive)
@@ -229,7 +236,11 @@ module generate_module
                 do while(.true.)
         
                     live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                    call cpu_time(time0)
                     call calculate_point( loglikelihood, priors, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
+                    call cpu_time(time1)
+                    if(live_point(settings%l0)>logzero) total_time=total_time+time1-time0
+
                     call throw_point(live_point,mpi_communicator,root)                       ! Send it to the root node
                     if(.not. more_points_needed(mpi_communicator,root)) exit                 ! If we've recieved a kill signal, then exit this loop
 
@@ -249,8 +260,13 @@ module generate_module
         end if !(nprocs case)
 
 #ifdef MPI
-        nlike = sum_nlike(nlike,mpi_communicator) ! Gather the likelihood calls onto one node
+        nlike = sum_integers(nlike,mpi_communicator) ! Gather the likelihood calls onto one node
+        total_time = sum_doubles(total_time,mpi_communicator) ! Sum up the total time taken
 #endif
+        ! Find the average time taken
+        speed(1) = total_time/settings%nlive
+        call time_speeds(loglikelihood,priors,settings,speed,mpi_communicator,nprocs,myrank,root) 
+
 
 
         if(myrank==root) then
@@ -261,6 +277,10 @@ module generate_module
             ! Set the local and global loglikelihood bounds
             RTI%i(1)  = minpos(RTI%live(settings%l0,:,1)) ! Find the position of the minimum loglikelihood
             RTI%logLp = RTI%live(settings%l0,RTI%i(1),1)  ! Store the value of the minimum loglikelihood 
+
+            !initialise the number of repeats
+            RTI%num_repeats(1) = settings%num_repeats
+            RTI%num_repeats(2:) = int(  speed(2:)/speed(1) *settings%num_repeats * 0.1   )
 
             ! Close the file
             close(write_phys_unit)
@@ -276,6 +296,96 @@ module generate_module
 
 
     end subroutine GenerateLivePoints
+
+
+
+    subroutine time_speeds(loglikelihood,priors,settings,speed,mpi_communicator,nprocs,myrank,root)
+        use priors_module,    only: prior
+        use settings_module,  only: program_settings
+        use random_module,   only: random_reals
+        use utils_module,    only: logzero
+        use calculate_module, only: calculate_point
+        use abort_module
+#ifdef MPI
+        use mpi_module, only: sum_doubles,sum_integers
+#endif
+
+        implicit none
+
+        interface
+            function loglikelihood(theta,phi,context)
+                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(out),  dimension(:) :: phi
+                integer,          intent(in)                 :: context
+                double precision :: loglikelihood
+            end function
+        end interface
+
+        !> The prior information
+        type(prior), dimension(:), intent(in) :: priors
+
+        !> Program settings
+        type(program_settings), intent(in) :: settings
+
+        double precision,dimension(size(settings%grade_dims)) :: speed
+
+        integer, intent(in) :: mpi_communicator !> MPI handle
+        integer, intent(in) :: nprocs           !> The number of processes
+        integer, intent(in) :: myrank           !> The rank of the processor
+        integer, intent(in) :: root             !> The root process
+
+        integer :: i_speed
+        integer :: i_live
+        integer :: nlike
+        integer :: h0,h1
+
+        double precision :: time0,time1,total_time
+
+        double precision, dimension(settings%nTotal) :: live_point ! Temporary live point array
+
+        nlike=0
+
+        ! Calculate a slow likelihood
+        live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
+        call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+
+        do i_speed=2,size(speed)
+
+            h0 = settings%h0+sum(settings%grade_dims(:i_speed-1))
+            h1 = settings%h1
+
+            i_live=0
+            total_time=0
+            do while(total_time<=speed(1)*settings%nlive*0.1)
+                live_point(h0:h1) = random_reals(h1-h0+1)
+
+                call cpu_time(time0)
+                call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+                call cpu_time(time1)
+
+                if(live_point(settings%l0)>logzero) then
+                    total_time = total_time+time1-time0
+                    i_live=i_live+1
+                end if
+
+            end do
+#ifdef MPI
+            total_time=sum_doubles(total_time,mpi_communicator)
+            i_live = sum_integers(i_live,mpi_communicator)
+#endif
+            speed(i_speed) = total_time/i_live
+
+
+        end do
+
+    end subroutine time_speeds
+
+
+
+
+
+
+
 
 
 end module generate_module

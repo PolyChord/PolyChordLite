@@ -61,6 +61,9 @@ module run_time_module
         !> The minimum loglikelihood point within each cluster
         integer,allocatable, dimension(:)           :: i
 
+        !> The number of repeats within each parameter speed to do
+        integer,allocatable, dimension(:)           :: num_repeats
+
     end type run_time_info
 
     contains
@@ -96,7 +99,8 @@ module run_time_module
             RTI%nphantom(1),                                    &
             RTI%nposterior(1),                                  &
             RTI%cholesky(settings%nDims,settings%nDims,1),      &
-            RTI%covmat(settings%nDims,settings%nDims,1)         &
+            RTI%covmat(settings%nDims,settings%nDims,1),        &
+            RTI%num_repeats(size(settings%grade_dims))          &
             )
 
         ! All evidences set to logzero

@@ -30,9 +30,8 @@ OBJECTS =                    \
 		  array_utils.o      \
 		  random_utils.o     \
 		  params.o           \
-		  priors.o           \
-          grades.o           \
 		  settings.o         \
+		  priors.o           \
 		  calculate.o        \
 		  run_time_info.o    \
 		  feedback.o         \
@@ -56,9 +55,8 @@ OBJECTS =                    \
 		  array_utils.o      \
 		  random_utils.o     \
 		  params.o           \
-		  priors.o           \
-		  grades.o           \
 		  settings.o         \
+		  priors.o           \
 		  calculate.o        \
 		  run_time_info.o    \
 		  feedback.o         \

@@ -102,6 +102,15 @@ module read_write_module
         write(write_resume_unit,'("=== Number of clusters ===")')                    
         write(write_resume_unit,fmt_int) RTI%ncluster
 
+        ! Write out the grade information
+        write(write_resume_unit,'("=== Number of grades ===")')                    
+        write(write_resume_unit,fmt_int) size(settings%grade_dims)
+        write(fmt_int,'("(",I0,A,")")') size(settings%grade_dims),INT_FMT   ! define the integer array format
+        write(write_resume_unit,'("=== positions of grades ===")')                    
+        write(write_resume_unit,fmt_int) settings%grade_dims
+        write(write_resume_unit,'("=== number of repeats ===")')                    
+        write(write_resume_unit,fmt_int) RTI%num_repeats
+
 
 
         ! write number of live and phantom points
@@ -244,6 +253,18 @@ module read_write_module
         allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior(RTI%ncluster),RTI%i(RTI%ncluster),nphantom(RTI%ncluster),nlive(RTI%ncluster))
         RTI%nphantom=0
         RTI%nlive=0
+
+
+        ! read in out the grade information
+        read(read_resume_unit,*)                    
+        read(read_resume_unit,fmt_int) i_temp
+        if(size(settings%grade_dims)/=i_temp) call halt_program('resume error: Grades do not match')
+        allocate(RTI%num_repeats(i_temp))
+        write(fmt_int,'("(",I0,A,")")') size(settings%grade_dims),INT_FMT   ! define the integer array format
+        read(read_resume_unit,*)                    
+        read(read_resume_unit,*)
+        read(read_resume_unit,*)                    
+        read(read_resume_unit,fmt_int) RTI%num_repeats
 
         ! Read in number of live and phantom points
         write(fmt_int,'("(",I0,A,")")') RTI%ncluster,INT_FMT  ! define the integer array format

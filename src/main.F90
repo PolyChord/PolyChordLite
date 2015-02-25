@@ -119,84 +119,16 @@ program main
     call initialise_random()
 
 
-    call read_params('rastrigin.ini',settings,priors)
+    call read_params('gaussian.ini',settings,priors)
 
-    write(*,*) priors(1)%hypercube_indices
-    write(*,*) priors(2)%hypercube_indices
-    write(*,*) priors(3)%hypercube_indices
-
-    stop
-
-
-    ! ------- (1c) Initialise the model -------
-    ! (i) Choose the loglikelihood at the top of this file
-
-    ! (ii) Set the dimensionality
-    settings%nDims= 20                ! Dimensionality of the space
-    settings%nDerived = 0             ! Assign the number of derived parameters
-
-    ! (iii) Set up priors
-
-    ! If just using uniform priors, then all you need to alter are the
-    ! 'minimums' and 'maximums' array. If they're more complicated, then these
-    ! are initialised in a very similar way, but using the initialise_<prior choice> 
-    ! function in src/priors.f90
-    !
-    ! Currently have the possibility of
-    ! 1) Separable Uniform priors
-    ! 2) Separable Gaussian priors
-    ! 3) Separable Log-Uniform priors
-    ! 4) Sorted Uniform Priors
-
-    allocate(                                &
-        minimums(settings%nDims),            &
-        maximums(settings%nDims),            &
-        physical_indices(settings%nDims),    &
-        hypercube_indices(settings%nDims)    &
-        )
-
-    minimums=0
-    maximums=1
-    hypercube_indices  = [ (i,i=1,settings%nDims) ]
-    physical_indices  = hypercube_indices
-
-    call initialise_uniform(priors(1),hypercube_indices,physical_indices,minimums,maximums)
-
-
-
-
-    ! ------- (1d) Initialise the program settings -------
-    settings%nlive                = 500                      !number of live points
-    settings%num_repeats          = 3                        !Number of chords to draw (this is multiplied by nDims)
-
-    settings%do_clustering        = .false.                  !whether or not to do clustering
-
-    settings%feedback             = 1                        !degree of feedback
-
-    settings%calculate_posterior  = .true.                   !calculate the posterior (slows things down)
-    settings%thin_posterior       = 1d0                      !Factor by which the posterior file should be thinned
-    ! 0 uses just live points,
-    ! 1 uses all inter-chain points
-
-    ! reading and writing
-    settings%file_root            = 'gaussian'               !file root
-    settings%base_dir             = 'chains'                 !directory to put chains in
-    settings%read_resume          = .false.                  !whether or not to resume from file
-    settings%write_resume         = .true.                   !whether or not to write resume files
-    settings%update_resume        = settings%nlive           !How often to update the resume files
-    settings%write_live           = .true.                   !write out the physical live points?
-
-
-    ! Calculate all of the rest of the settings
-    call initialise_settings(settings)   
 
 
 
     ! ------- (1e) Initialise loglikelihood -----------------
     ! This is only needed for a few things (e.g. generating a random correlated gaussian)
-    allocate(theta(settings%nDims),phi(settings%nDerived))
-    theta   = 0d0
-    loglike = loglikelihood(theta,phi,0)
+    !allocate(theta(settings%nDims),phi(settings%nDerived))
+    !theta   = 0d0
+    !loglike = loglikelihood(theta,phi,0)
 
 
 

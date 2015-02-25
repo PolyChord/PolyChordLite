@@ -65,6 +65,10 @@ module nested_sampling_module
         ! very important, see src/run_time_info.f90
         type(run_time_info) :: RTI
 
+        ! The number of repeats within each parameter speed to do
+        integer, dimension(size(settings%grade_dims)) :: num_repeats
+
+
         ! Temporary variables
         ! -------------------
         ! Seed point to generate babies from
@@ -74,10 +78,12 @@ module nested_sampling_module
         ! Loglikelihood bound to generate babies from
         double precision :: logL
         ! New-born baby points, created by slice sampling routine
-        double precision, dimension(settings%nTotal,settings%num_babies) :: baby_points
+        double precision, allocatable, dimension(:,:) :: baby_points
+
         integer :: cluster_id ! Cluster identifier
         integer :: nlike      ! Temporary storage for number of likelihood calls
         integer :: nlikesum   ! rolling average of number of loglikelihood calls
+
 
         ! Logical Switches
         ! ----------------
@@ -190,7 +196,7 @@ module nested_sampling_module
                     ! -----------
 
                     ! Generate a new set of points within the likelihood bound of the late point
-                    baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike)
+                    baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike,num_repeats)
 #ifdef MPI
                 else
                     ! Parallel mode
@@ -319,7 +325,7 @@ module nested_sampling_module
             do while(catch_seed(seed_point,cholesky,logL,mpi_communicator,root))
 
                 ! 2) Generate a new set of baby points
-                baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike)
+                baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike,num_repeats)
 
                 ! 3) Send the baby points back
                 call throw_babies(baby_points,nlike,mpi_communicator,root)

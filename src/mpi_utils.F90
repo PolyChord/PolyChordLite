@@ -87,15 +87,15 @@ module mpi_module
     !!
     !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Allreduce.html
     !!
-    function sum_nlike(nlike_local,mpi_communicator) result(nlike)
+    function sum_integers(intgr_local,mpi_communicator) result(intgr)
         implicit none
-        integer, intent(in) :: nlike_local
+        integer, intent(in) :: intgr_local
         integer, intent(in) :: mpi_communicator
-        integer :: nlike
+        integer :: intgr
 
         call MPI_ALLREDUCE(    &
-            nlike_local,       &!send buffer 
-            nlike,             &!recieve buffer
+            intgr_local,       &!send buffer 
+            intgr,             &!recieve buffer
             1,                 &!number of elements sent
             MPI_INTEGER,       &!type of element sent
             MPI_SUM,           &!reduce by finding the minimum
@@ -103,7 +103,25 @@ module mpi_module
             mpierror           &!error flag
             )
 
-    end function sum_nlike
+    end function sum_integers
+
+    function sum_doubles(db_local,mpi_communicator) result(db)
+        implicit none
+        double precision, intent(in) :: db_local
+        integer, intent(in) :: mpi_communicator
+        double precision :: db
+
+        call MPI_ALLREDUCE(       &
+            db_local,             &!send buffer 
+            db,                   &!recieve buffer
+            1,                    &!number of elements sent
+            MPI_DOUBLE_PRECISION, &!type of element sent
+            MPI_SUM,              &!reduce by finding the minimum
+            mpi_communicator,     &!handle
+            mpierror              &!error flag
+            )
+
+    end function sum_doubles
 
     !============== Throwing and catching routines ====================
     ! There are four points in the algorithm where arrays need to be transferred 
