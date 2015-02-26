@@ -65,18 +65,6 @@ module grades_module
 
 
 
-    function calc_num_babies(grades) result(num_babies)
-        implicit none
-        type(parameter_grades),intent(in) :: grades
-
-        double precision :: num_babies
-
-        num_babies = sum(grades%num_repeats*grades%grade_nDims)
-
-    end function
-
-
-
 
 
 

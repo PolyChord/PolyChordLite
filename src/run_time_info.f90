@@ -386,11 +386,9 @@ module run_time_module
 
     end subroutine add_cluster
 
-    subroutine delete_cluster(settings,RTI) 
-        use settings_module, only: program_settings
+    subroutine delete_cluster(RTI) 
         use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i
         implicit none
-        type(program_settings), intent(in) :: settings  !> Program settings
         !> The variable containing all of the runtime information
         type(run_time_info), intent(inout) :: RTI
 
@@ -562,7 +560,7 @@ module run_time_module
         type(run_time_info),intent(inout)  :: RTI      !> Run time information
         integer,intent(in) :: cluster_add              !> Cluster to add to
         !> New-born baby points, created by slice sampling routine
-        double precision,intent(in),dimension(settings%nTotal,settings%num_babies) :: baby_points
+        double precision,intent(in),dimension(:,:),allocatable :: baby_points
 
         logical :: replaced ! Have we successfully replaced a point?
 
@@ -587,7 +585,7 @@ module run_time_module
         ! (1) Within the isolikelihood contour of the cluster.
         ! (2) Within the voronoi cell of the cluster.
 
-        do i_baby=1,settings%num_babies-1
+        do i_baby=1,size(baby_points,2)-1
             ! Assign a temporary variable
             point = baby_points(:,i_baby)
 

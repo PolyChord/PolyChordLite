@@ -25,8 +25,6 @@ contains
         type(param_type),dimension(:),allocatable :: params         ! Parameter array
         type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
 
-        character(len=STR_LENGTH) :: string  ! string following keyword
-
         settings%nlive         = get_integer(file_name,'nlive')
         settings%num_repeats   = get_integer(file_name,'num_repeats')
         settings%do_clustering = get_logical(file_name,'do_clustering')

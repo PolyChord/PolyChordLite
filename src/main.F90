@@ -71,13 +71,6 @@ program main
     !pointer loglikelihood                  ! Pointer to a loglikelihood function
     ! (this just makes assigning them easier, one can just pass your chosen function to the nested sampling algorithm)
 
-
-    ! Temporary variables for initialising priors
-    double precision, allocatable, dimension(:) :: minimums 
-    double precision, allocatable, dimension(:) :: maximums
-    integer, allocatable, dimension(:) :: hypercube_indices
-    integer, allocatable, dimension(:) :: physical_indices
-
     ! Iterator
     integer :: i
 

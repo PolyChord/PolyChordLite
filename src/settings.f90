@@ -52,9 +52,6 @@ module settings_module
         !> How often to update the resume file
         integer :: update_resume = 500
 
-        !> How many baby points are generated in each iteration
-        integer :: num_babies
-
         !> The number of chords to draw
         integer :: num_repeats
 
@@ -168,10 +165,6 @@ module settings_module
         ! Total number of parameters
         settings%nTotal = settings%l0
 
-
-
-        ! Number of babies to generate,
-        settings%num_babies           = settings%nDims*settings%num_repeats
 
 
         ! Posterior indices

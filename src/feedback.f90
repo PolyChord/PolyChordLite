@@ -184,14 +184,15 @@ module feedback_module
     end subroutine write_started_sampling
 
     !> Intermediate results
-    subroutine write_intermediate_results(settings,RTI,nlike)
+    subroutine write_intermediate_results(settings,RTI,nlike,num_repeats)
         use run_time_module, only: run_time_info,calculate_logZ_estimate
         use settings_module, only: program_settings
         use utils_module,    only: stdout_unit,logzero,fmt_len,normal_fb
         implicit none
-        type(program_settings), intent(in)    :: settings !> program settings
-        type(run_time_info),    intent(in)    :: RTI      !> run time info
-        integer,                intent(inout) :: nlike    !> number of likelihood calls since last call
+        type(program_settings), intent(in)    :: settings    !> program settings
+        type(run_time_info),    intent(in)    :: RTI         !> run time info
+        integer,                intent(inout) :: nlike       !> number of likelihood calls since last call
+        integer,dimension(:),   intent(in)    :: num_repeats !> number of likelihood calls since last call
 
         integer :: p
 
@@ -219,7 +220,7 @@ module feedback_module
             write(stdout_unit,'("ncluster   =",  I8                   )') RTI%ncluster
             write(stdout_unit,'("ndead      =",  I8                   )') RTI%ndead
             write(stdout_unit,'("nlike      =",  I8                   )') RTI%nlike
-            write(stdout_unit,'("<nlike>    =",  F8.2,"  (",F5.2," per slice)" )') dble(nlike)/dble(settings%update_resume),dble(nlike)/dble(settings%update_resume)/dble(settings%num_babies)
+            write(stdout_unit,'("<nlike>    =",  F8.2,"  (",F5.2," per slice)" )') dble(nlike)/dble(settings%update_resume),dble(nlike)/dble(settings%update_resume)/dble(sum(num_repeats))
 
 
             call calculate_logZ_estimate(RTI,logZ,sigmalogZ,logZp,sigmalogZp)            

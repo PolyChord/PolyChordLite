@@ -156,6 +156,12 @@ module nested_sampling_module
             ! Intialise the run by setting all of the relevant run time info, and generating live points
             call GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_communicator,nprocs,myrank,root)
 
+
+            write(*,*) RTI%num_repeats
+            write(*,*) settings%grade_dims
+            num_repeats = RTI%num_repeats 
+            allocate(baby_points(settings%nTotal,sum(num_repeats)))
+
             ! Write a resume file (as the generation of live points can be intensive)
             if(myrank==root.and.settings%write_resume) call write_resume_file(settings,RTI) 
 
@@ -230,7 +236,7 @@ module nested_sampling_module
                     if( mod(RTI%ndead,settings%update_resume)==0 .or. .not. need_more_samples ) then
 
                         !--------------------------------------------!
-                        call write_intermediate_results(settings,RTI,nlikesum)
+                        call write_intermediate_results(settings,RTI,nlikesum,num_repeats)
                         !--------------------------------------------!
                         nlikesum=0
 

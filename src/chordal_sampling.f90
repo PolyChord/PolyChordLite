@@ -57,9 +57,6 @@ module chordal_module
 
         double precision :: w
 
-        character(len=fmt_len) :: fmt_1
-
-
         ! Start the baby point at the seed point
         previous_point = seed_point
 
@@ -74,7 +71,7 @@ module chordal_module
 
 
 
-        do i_babies=1,settings%num_babies
+        do i_babies=1,size(nhats,2)
             ! Get a new random direction
             nhat = nhats(:,i_babies)
 
@@ -86,15 +83,9 @@ module chordal_module
             ! Generate a new random point along the chord defined by the previous point and nhat
             baby_points(:,i_babies) = slice_sample(loglikelihood,priors,logL, nhat, previous_point, w, settings,nlike)
 
-            if(baby_points(settings%l0,i_babies)<=logzero) then
-                baby_points(settings%l0,settings%num_babies)=logzero
-                return
-            end if
-
             ! Save this for the next loop
             previous_point = baby_points(:,i_babies)
 
-            ! Note the time for this grade
         end do
 
     end function SliceSampling
@@ -112,12 +103,11 @@ module chordal_module
         integer :: i_grade
         integer :: grade_nDims
         integer :: grade_index
-        integer :: grade_repeats
         integer :: i_repeat
 
         integer :: i_babies
 
-        integer, dimension(settings%num_babies) :: deck
+        integer, dimension(size(nhats,2)) :: deck
 
         ! Initialise at 0
         nhats=0d0
@@ -125,22 +115,23 @@ module chordal_module
         i_babies=1
 
         ! Generate a sequence of random bases
-        do i_grade=1,size(settings%grade_dims)
+        do i_grade=1,size(num_repeats)
 
-            grade_nDims   = settings%grade_dims(i_grade)
+            grade_nDims   = sum(settings%grade_dims(i_grade:))
             grade_index   = sum(settings%grade_dims(:i_grade-1))+1
-            grade_repeats = num_repeats(i_grade)
 
-            do i_repeat=1, grade_repeats
-                nhats(grade_index:grade_index+grade_nDims-1,i_babies) = random_direction(grade_nDims)
+            do i_repeat=1,num_repeats(i_grade)
+                nhats(grade_index:,i_babies) = random_direction(grade_nDims)
                 i_babies = i_babies + 1
             end do
 
         end do
 
         ! Create a shuffled deck
-        deck = [ (i_babies,i_babies=1,settings%num_babies) ]
-        call shuffle_deck(deck(2:settings%num_babies))
+        ! N.B. we want the first one to be a slow likelihood evaluation, as this
+        ! will be the first one we're doing this run
+        deck = [ (i_babies,i_babies=1,size(nhats,2)) ]
+        call shuffle_deck(deck(2:))
 
         ! Shuffle the nhats
         nhats = nhats(:,deck)
