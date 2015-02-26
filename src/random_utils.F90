@@ -397,6 +397,40 @@ module random_module
 
     end function random_orthonormal_basis
 
+
+    !> Construct a sequence of nhats composed of several random orthonormal bases
+    !!
+    !! Outputs a matrix where the ith basis vector is stored in basis(:,i)
+    function random_orthonormal_bases(nDims,num_nhats) result(nhats)
+        !> Dimensionality of the basis
+        integer, intent(in) ::  nDims
+        integer, intent(in) ::  num_nhats
+
+        ! Set of vectors, the ith vector is in basis(:,i)
+        double precision, dimension(nDims,num_nhats) :: nhats
+
+        double precision, dimension(nDims,nDims) :: basis
+
+        integer :: lower_index,upper_index
+
+        ! Fill up the first whole sections with nDims
+        lower_index = 1
+        upper_index = nDims
+        do while(upper_index<num_nhats)
+            nhats(:,lower_index:upper_index) = random_orthonormal_basis(nDims)
+            lower_index = lower_index+nDims
+            upper_index = upper_index+nDims
+        end do
+
+        basis = random_orthonormal_basis(nDims)
+
+        nhats(:,lower_index:num_nhats) = basis(:,1:1+num_nhats-lower_index)
+        
+
+
+
+    end function random_orthonormal_bases
+
     ! ===========================================================================================
     !> Generate a set of k distinct random integers between [1,m]
     !! There are two ways of doing this:

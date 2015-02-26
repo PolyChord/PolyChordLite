@@ -91,7 +91,7 @@ module chordal_module
 
     function generate_nhats(settings,num_repeats,speeds) result(nhats)
         use settings_module, only: program_settings
-        use random_module, only: random_direction,shuffle_deck
+        use random_module, only: random_orthonormal_bases,shuffle_deck
         implicit none
         type(program_settings), intent(in) :: settings
 
@@ -103,7 +103,6 @@ module chordal_module
         integer :: i_grade
         integer :: grade_nDims
         integer :: grade_index
-        integer :: i_repeat
 
         integer :: i_babies
 
@@ -120,11 +119,11 @@ module chordal_module
             grade_nDims   = sum(settings%grade_dims(i_grade:))
             grade_index   = sum(settings%grade_dims(:i_grade-1))+1
 
-            do i_repeat=1,num_repeats(i_grade)
-                nhats(grade_index:,i_babies) = random_direction(grade_nDims)
-                speeds(i_babies) = i_grade
-                i_babies = i_babies + 1
-            end do
+            nhats(grade_index:,i_babies:i_babies+num_repeats(i_grade)-1) = random_orthonormal_bases(grade_nDims,num_repeats(i_grade))
+
+            speeds(i_babies:i_babies+num_repeats(i_grade)-1) = i_grade
+
+            i_babies = i_babies + num_repeats(i_grade)
 
         end do
 
