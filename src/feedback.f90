@@ -168,6 +168,27 @@ module feedback_module
         return
     end subroutine progress
 
+
+    subroutine write_num_repeats(num_repeats,feedback)
+        use utils_module,    only: stdout_unit,logzero,fmt_len,INT_FMT,normal_fb
+        implicit none
+        integer, dimension(:) :: num_repeats
+        integer, intent(in) :: feedback 
+
+        integer :: i
+        character(len=fmt_len) fmt
+
+        if(feedback<=normal_fb) then
+            write(fmt,'("( ""number of repeats: "",",I0,A,")")') size(num_repeats),INT_FMT
+
+            do i=1,size(num_repeats)
+                write(stdout_unit,fmt) num_repeats
+            end do
+        end if
+
+    end subroutine write_num_repeats
+
+
     !> Called before starting sampling
     subroutine write_started_sampling(feedback)
         use utils_module,    only: stdout_unit,normal_fb
@@ -184,14 +205,14 @@ module feedback_module
     end subroutine write_started_sampling
 
     !> Intermediate results
-    subroutine write_intermediate_results(settings,RTI,nlike,num_repeats)
+    subroutine write_intermediate_results(settings,RTI,nlikesum,num_repeats)
         use run_time_module, only: run_time_info,calculate_logZ_estimate
         use settings_module, only: program_settings
         use utils_module,    only: stdout_unit,logzero,fmt_len,normal_fb
         implicit none
         type(program_settings), intent(in)    :: settings    !> program settings
         type(run_time_info),    intent(in)    :: RTI         !> run time info
-        integer,                intent(inout) :: nlike       !> number of likelihood calls since last call
+        integer,dimension(:),   intent(in)    :: nlikesum    !> number of likelihood calls since last call
         integer,dimension(:),   intent(in)    :: num_repeats !> number of likelihood calls since last call
 
         integer :: p
@@ -201,7 +222,7 @@ module feedback_module
         double precision, dimension(RTI%ncluster) :: logZp      
         double precision, dimension(RTI%ncluster) :: sigmalogZp 
 
-        character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_tail
+        character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_tail,fmt_nlike
 
         ! Get the number of active clusters
         write(fmt_head,'("(",I0,"(""_""))")') 7*RTI%ncluster + 11
@@ -219,8 +240,12 @@ module feedback_module
             write(stdout_unit,fmt_tail)
             write(stdout_unit,'("ncluster   =",  I8                   )') RTI%ncluster
             write(stdout_unit,'("ndead      =",  I8                   )') RTI%ndead
-            write(stdout_unit,'("nlike      =",  I8                   )') RTI%nlike
-            write(stdout_unit,'("<nlike>    =",  F8.2,"  (",F5.2," per slice)" )') dble(nlike)/dble(settings%update_resume),dble(nlike)/dble(settings%update_resume)/dble(sum(num_repeats))
+
+            write(fmt_nlike,'("(""nlike      ="",",I0,"I8)")') size(nlikesum)
+            write(stdout_unit,fmt_nlike) RTI%nlike
+
+            write(fmt_nlike,'(  "(""<nlike>    ="","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
+            write(stdout_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_resume),dble(nlikesum)/dble(num_repeats*settings%update_resume)
 
 
             call calculate_logZ_estimate(RTI,logZ,sigmalogZ,logZp,sigmalogZp)            

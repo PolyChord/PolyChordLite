@@ -442,7 +442,7 @@ module priors_module
                     hypercube_indices(i_params) = i_hypercube
                 end if
             end do
-            settings%grade_dims = count(speeds==i_speed)
+            settings%grade_dims(i_speed) = count(speeds==i_speed)
         end do
 
 

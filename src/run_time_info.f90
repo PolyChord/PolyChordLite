@@ -12,7 +12,7 @@ module run_time_module
         integer :: ndead
 
         !> Total number of likelihood calls
-        integer :: nlike
+        integer,allocatable,dimension(:) :: nlike
 
         !> The number currently evolving clusters
         integer :: ncluster
@@ -100,7 +100,8 @@ module run_time_module
             RTI%nposterior(1),                                  &
             RTI%cholesky(settings%nDims,settings%nDims,1),      &
             RTI%covmat(settings%nDims,settings%nDims,1),        &
-            RTI%num_repeats(size(settings%grade_dims))          &
+            RTI%num_repeats(size(settings%grade_dims)),         &
+            RTI%nlike(size(settings%grade_dims))                &
             )
 
         ! All evidences set to logzero

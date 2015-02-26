@@ -40,7 +40,7 @@ module chordal_module
 
         ! ------- Outputs -------
         !> The number of likelihood evaluations
-        integer, intent(out) :: nlike
+        integer, dimension(:), intent(out) :: nlike
 
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
@@ -50,6 +50,7 @@ module chordal_module
         ! ------- Local Variables -------
         double precision,    dimension(settings%nDims)   :: nhat
         double precision,    dimension(settings%nDims,sum(num_repeats))   :: nhats
+        integer,   dimension(sum(num_repeats))   :: speeds ! The speed of each nhat
 
         double precision, dimension(settings%nTotal)   :: previous_point
 
@@ -64,12 +65,10 @@ module chordal_module
         nlike = 0
 
         ! Generate a choice of nhats in the orthogonalised space
-        nhats = generate_nhats(settings,num_repeats)
+        nhats = generate_nhats(settings,num_repeats,speeds)
 
         ! Transform to the unit hypercube
         nhats = matmul(cholesky,nhats)
-
-
 
         do i_babies=1,size(nhats,2)
             ! Get a new random direction
@@ -81,7 +80,7 @@ module chordal_module
             w = w * 3d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
 
             ! Generate a new random point along the chord defined by the previous point and nhat
-            baby_points(:,i_babies) = slice_sample(loglikelihood,priors,logL, nhat, previous_point, w, settings,nlike)
+            baby_points(:,i_babies) = slice_sample(loglikelihood,priors,logL, nhat, previous_point, w, settings,nlike(speeds(i_babies)))
 
             ! Save this for the next loop
             previous_point = baby_points(:,i_babies)
@@ -90,13 +89,14 @@ module chordal_module
 
     end function SliceSampling
 
-    function generate_nhats(settings,num_repeats) result(nhats)
+    function generate_nhats(settings,num_repeats,speeds) result(nhats)
         use settings_module, only: program_settings
         use random_module, only: random_direction,shuffle_deck
         implicit none
         type(program_settings), intent(in) :: settings
 
         integer, dimension(:), intent(in) :: num_repeats !> The number of babies within each grade to produce
+        integer,  intent(out), dimension(sum(num_repeats))   :: speeds !> The speed of each nhat
         double precision,    dimension(settings%nDims,sum(num_repeats))   :: nhats
 
 
@@ -122,6 +122,7 @@ module chordal_module
 
             do i_repeat=1,num_repeats(i_grade)
                 nhats(grade_index:,i_babies) = random_direction(grade_nDims)
+                speeds(i_babies) = i_grade
                 i_babies = i_babies + 1
             end do
 
@@ -135,6 +136,9 @@ module chordal_module
 
         ! Shuffle the nhats
         nhats = nhats(:,deck)
+
+        ! Shuffle the speeds
+        speeds = speeds(deck)
 
 
     end function generate_nhats

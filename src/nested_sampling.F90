@@ -1,7 +1,7 @@
 module nested_sampling_module
 
 #ifdef MPI
-    use mpi_module, only: get_rank,get_nprocs,get_root,catch_babies,throw_babies,throw_seed,catch_seed
+    use mpi_module, only: get_rank,get_nprocs,get_root,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers
 #endif
 
     implicit none
@@ -67,6 +67,8 @@ module nested_sampling_module
 
         ! The number of repeats within each parameter speed to do
         integer, dimension(size(settings%grade_dims)) :: num_repeats
+        integer, dimension(size(settings%grade_dims)) :: nlike      ! Temporary storage for number of likelihood calls
+        integer, dimension(size(settings%grade_dims)) :: nlikesum   ! rolling average of number of loglikelihood calls
 
 
         ! Temporary variables
@@ -81,8 +83,6 @@ module nested_sampling_module
         double precision, allocatable, dimension(:,:) :: baby_points
 
         integer :: cluster_id ! Cluster identifier
-        integer :: nlike      ! Temporary storage for number of likelihood calls
-        integer :: nlikesum   ! rolling average of number of loglikelihood calls
 
 
         ! Logical Switches
@@ -156,17 +156,19 @@ module nested_sampling_module
             ! Intialise the run by setting all of the relevant run time info, and generating live points
             call GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_communicator,nprocs,myrank,root)
 
-
-            write(*,*) RTI%num_repeats
-            write(*,*) settings%grade_dims
-            num_repeats = RTI%num_repeats 
-            allocate(baby_points(settings%nTotal,sum(num_repeats)))
-
             ! Write a resume file (as the generation of live points can be intensive)
             if(myrank==root.and.settings%write_resume) call write_resume_file(settings,RTI) 
 
         end if 
 
+        if(myrank==root) then
+            num_repeats = RTI%num_repeats
+            call write_num_repeats(num_repeats,settings%feedback)
+        end if
+#ifdef MPI
+        call broadcast_integers(num_repeats,mpi_communicator,root)
+#endif
+        allocate(baby_points(settings%nTotal,sum(num_repeats)))
 
 
 
@@ -246,7 +248,7 @@ module nested_sampling_module
                         if(settings%write_stats)         call write_stats_file(settings,RTI)
                     end if
 
-                    call delete_cluster(settings,RTI) ! Delete any clusters as necessary
+                    call delete_cluster(RTI) ! Delete any clusters as necessary
 
                     if( mod(RTI%ndead,settings%nlive)==0 ) then
                         if(settings%do_clustering) call do_clustering(settings,RTI)
@@ -263,11 +265,11 @@ module nested_sampling_module
             ! (1) log evidence
             ! (2) Error in the log evidence
             ! (3) Number of dead points
-            ! (4) Number of likelihood calls
+            ! (4) Number of slow likelihood calls
             ! (5) log(evidence * prior volume)
             call calculate_logZ_estimate(RTI,output_info(1),output_info(2))
             output_info(3) = RTI%ndead
-            output_info(4) = RTI%nlike
+            output_info(4) = RTI%nlike(1)
             output_info(5) = output_info(1)+prior_log_volume(priors)
 
             ! ------------------------------------------------------------ !

@@ -25,7 +25,7 @@ module params_module
         type(param_type),intent(out):: param       ! Parameter to be returned
 
         ! Parameters in the prior
-        double precision, dimension(:), allocatable,intent(in) :: prior_params
+        double precision, dimension(:),intent(in) :: prior_params
 
 
         write(param%paramname,'(A)') paramname
@@ -45,12 +45,13 @@ module params_module
 
         character(len=*),intent(in) :: paramname   ! Name of parameter
         character(len=*),intent(in) :: latex       ! LaTeX name
-        integer         ,intent(in) :: speed       ! grade of parameter
-        integer         ,intent(in) :: prior_type  ! type of prior
-        integer         ,intent(in) :: prior_block ! prior block
+        integer         ,intent(in),optional :: speed       ! grade of parameter
+        integer         ,intent(in),optional :: prior_type  ! type of prior
+        integer         ,intent(in),optional :: prior_block ! prior block
 
         ! Parameters in the prior
-        double precision, dimension(:), allocatable,intent(in) :: prior_params 
+        double precision, dimension(:),intent(in),optional :: prior_params 
+        double precision, dimension(0) :: blank_params 
 
         ! expand parameter array
         type(param_type), dimension(:),allocatable :: temp_params
@@ -69,7 +70,11 @@ module params_module
         params(1:num_params) = temp_params
 
 
-        call assign_parameter(params(num_params+1),paramname,latex,speed,prior_type,prior_block,prior_params) 
+        if(present(speed) .and. present(prior_type) .and. present(prior_block) .and. present(prior_params) ) then
+            call assign_parameter(params(num_params+1),paramname,latex,speed,prior_type,prior_block,prior_params) 
+        else
+            call assign_parameter(params(num_params+1),paramname,latex,1,0,0,blank_params) 
+        end if
 
     end subroutine add_parameter
 

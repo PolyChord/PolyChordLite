@@ -9,7 +9,7 @@ DEBUG=
 # current options are:
 #  * gfortran
 #  * ifort
-COMPILER_TYPE=gfortran
+COMPILER_TYPE=ifort
 
 
 

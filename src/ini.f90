@@ -10,41 +10,19 @@ module ini_module
 
 contains
 
-    subroutine read_params(file_name,settings,priors)
+
+    subroutine initialise_program(settings,priors,params,derived_params)
         use priors_module, only: create_priors,prior
         use settings_module,   only: program_settings,initialise_settings
-        use utils_module,  only: STR_LENGTH,params_unit
         use params_module, only: param_type
         use read_write_module, only: write_paramnames_file
         implicit none
         
-        character(len=*)                    :: file_name !> The name of the file
-        type(program_settings)              :: settings  !> Program settings
-        type(prior),dimension(:),allocatable:: priors
+        type(program_settings),intent(inout)            :: settings  !> Program settings
+        type(prior),dimension(:),allocatable,intent(out):: priors
 
-        type(param_type),dimension(:),allocatable :: params         ! Parameter array
-        type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
-
-        settings%nlive         = get_integer(file_name,'nlive')
-        settings%num_repeats   = get_integer(file_name,'num_repeats')
-        settings%do_clustering = get_logical(file_name,'do_clustering')
-
-        settings%base_dir      = get_string(file_name,'base_directory')
-        settings%file_root     = get_string(file_name,'rootname')
-
-        settings%calculate_posterior = get_logical(file_name,'calculate_posterior')
-        
-        settings%write_resume  = get_logical(file_name,'write_resume')
-        settings%read_resume   = get_logical(file_name,'resume')
-        settings%write_live    = get_logical(file_name,'write_live')
-
-        settings%feedback      = get_integer(file_name,'feedback')
-        settings%update_resume = get_integer(file_name,'update_resume')
-
-        settings%thin_posterior= get_double(file_name,'thin_factor')
-
-
-        call get_params(file_name,params,derived_params)  
+        type(param_type),dimension(:),allocatable,intent(in) :: params         ! Parameter array
+        type(param_type),dimension(:),allocatable,intent(in) :: derived_params ! Derived parameter array
 
         settings%nDims = size(params)
         settings%nDerived = size(derived_params)
@@ -56,22 +34,60 @@ contains
         ! Calculate all of the rest of the settings
         call initialise_settings(settings)   
 
+    end subroutine initialise_program
+
+
+
+
+
+    subroutine read_params(file_name,settings,params,derived_params)
+        use settings_module,   only: program_settings
+        use utils_module,  only: STR_LENGTH,params_unit
+        use params_module, only: param_type
+        implicit none
+        
+        character(len=*)                    :: file_name !> The name of the file
+        type(program_settings)              :: settings  !> Program settings
+
+        type(param_type),dimension(:),allocatable,intent(out) :: params         ! Parameter array
+        type(param_type),dimension(:),allocatable,intent(out) :: derived_params ! Derived parameter array
+
+        settings%nlive         = get_integer(file_name,'nlive')
+        settings%num_repeats   = get_integer(file_name,'num_repeats')
+        settings%do_clustering = get_logical(file_name,'do_clustering',.false.)
+
+        settings%base_dir      = get_string(file_name,'base_directory','chains')
+        settings%file_root     = get_string(file_name,'rootname','test')
+
+        settings%calculate_posterior = get_logical(file_name,'calculate_posterior',.false.)
+        
+        settings%write_resume  = get_logical(file_name,'write_resume',.false.)
+        settings%read_resume   = get_logical(file_name,'resume',.false.)
+        settings%write_live    = get_logical(file_name,'write_live',.false.)
+
+        settings%feedback      = get_integer(file_name,'feedback',1)
+        settings%update_resume = get_integer(file_name,'update_resume',settings%nlive)
+
+        settings%thin_posterior= get_double(file_name,'thin_factor',0d0)
+
+        call get_doubles(file_name,'grade_frac',settings%grade_frac)
+
+        call get_params(file_name,params,derived_params)  
 
     end subroutine read_params
 
 
-
-
-
-    function get_string(file_name,key_word,ith)
+    function get_string(file_name,key_word,dflt,ith)
         use utils_module,  only: STR_LENGTH,params_unit
+        use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
+        character(len=*),intent(in),optional  :: dflt  !> keyword to search for
         integer,intent(in), optional :: ith       !> Get the ith instance of this string
 
         character(len=STR_LENGTH) :: get_string  ! string following keyword
 
-        character(len=STR_LENGTH) :: keyword   !> keyword to search for
+        character(len=STR_LENGTH) :: keyword    !> keyword to search for
         character(len=STR_LENGTH) :: filename   ! The fortran readable filename
 
         character(len=STR_LENGTH)                :: line_buffer     ! Line buffer
@@ -86,6 +102,7 @@ contains
         ! Convert filename to something fortran can read
         write(filename,'(A)') file_name
         open(unit=params_unit,file=trim(filename),iostat=io_stat)
+        if(io_stat/=0) call halt_program('ini error: '//trim(file_name)//' does not exist')
         write(keyword,'(A)') key_word
 
         get_string = ''
@@ -124,48 +141,103 @@ contains
 
         end do
 
+        if(trim(get_string)==''.and. present(dflt)) get_string=trim(dflt)
+
         ! close the file
         close(params_unit)
 
 
     end function get_string
 
-    function get_double(file_name,key_word)
+    function get_double(file_name,key_word,dflt)
         use utils_module,  only: STR_LENGTH,params_unit
+        use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
+        double precision,intent(in),optional :: dflt
 
         character(len=STR_LENGTH) :: string  ! string following keyword
         double precision :: get_double  ! double following keyword
 
         string = get_string(file_name,key_word)
-        read(string,*) get_double
+        if(trim(string)/='') then
+            read(string,*) get_double
+        else if(present(dflt)) then
+            get_double = dflt
+        else
+            call halt_program('ini error: no keyword '//trim(key_word))
+        end if
 
     end function get_double
 
-    function get_integer(file_name,key_word)
+    subroutine get_doubles(file_name,key_word,doubles)
         use utils_module,  only: STR_LENGTH,params_unit
+        use array_module,  only: reallocate_1_d
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
+        double precision, intent(out), allocatable, dimension(:) :: doubles
+
+        character(len=STR_LENGTH) :: string  ! string following keyword
+
+        integer :: i
+
+        ! Allocate a zero size array
+        if(allocated(doubles)) deallocate(doubles)
+        allocate(doubles(0))
+
+        ! Get the string
+        string = get_string(file_name,key_word)
+
+        do while( trim(string)/='' )
+            i=size(doubles)+1
+            call reallocate_1_d(doubles,i)
+            read(string,*) doubles(i)
+            call next_element(string,' ')
+        end do
+
+    end subroutine get_doubles
+
+    function get_integer(file_name,key_word,dflt)
+        use utils_module,  only: STR_LENGTH,params_unit
+        use abort_module,  only: halt_program
+        character(len=*),intent(in)  :: file_name !> The name of the file to search in
+        character(len=*),intent(in)  :: key_word  !> keyword to search for
+        integer,intent(in),optional :: dflt
 
         character(len=STR_LENGTH) :: string  ! string following keyword
         integer :: get_integer  ! integer following keyword
 
+        if(present(dflt)) get_integer=dflt
+
         string = get_string(file_name,key_word)
-        read(string,*) get_integer
+        if(trim(string)/='') then
+            read(string,*) get_integer
+        else if(present(dflt)) then
+            get_integer = dflt
+        else
+            call halt_program('ini error: no keyword '//trim(key_word))
+        end if
 
     end function get_integer
 
-    function get_logical(file_name,key_word)
+    function get_logical(file_name,key_word,dflt)
         use utils_module,  only: STR_LENGTH,params_unit
+        use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
+        logical,intent(in),optional :: dflt
 
         character(len=STR_LENGTH) :: string  ! string following keyword
         logical :: get_logical  ! logical following keyword
 
         string = get_string(file_name,key_word)
-        read(string,*) get_logical
+        if(trim(string)/='') then
+            read(string,*) get_logical
+        else if(present(dflt)) then
+            get_logical = dflt
+        else
+            call halt_program('ini error: no keyword '//trim(key_word))
+        end if
 
     end function get_logical
 
@@ -211,7 +283,7 @@ contains
 
         i_param = 1
         do 
-            line_buffer = get_string(file_name,'P',i_param)
+            line_buffer = get_string(file_name,'P',ith=i_param)
             if(trim(line_buffer)=='') exit
             i_param=i_param+1
 
@@ -253,7 +325,7 @@ contains
 
         i_param = 1
         do 
-            line_buffer = get_string(file_name,'D',i_param)
+            line_buffer = get_string(file_name,'D',ith=i_param)
             if(line_buffer=='') exit
             i_param=i_param+1
 

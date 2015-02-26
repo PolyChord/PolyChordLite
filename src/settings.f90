@@ -61,6 +61,9 @@ module settings_module
         !> Whether or not to write phys_live points
         logical :: write_live = .false.
 
+        !> Percentage of time to spend on non-slow steps
+        double precision :: percent = 1d0
+
         !> Dimensionality of the space
         integer :: nDims = 1
         !> Number of derived parameters
@@ -124,6 +127,8 @@ module settings_module
 
         !> The number of parameters in each grade
         integer, allocatable,dimension(:) :: grade_dims
+        !> The fraction of time spent in each grade
+        double precision, allocatable,dimension(:) :: grade_frac
 
         !> Whether to time likelihood calls for grades
         logical :: do_timing = .false.

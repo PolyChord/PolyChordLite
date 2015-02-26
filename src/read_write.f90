@@ -97,8 +97,6 @@ module read_write_module
 
         write(write_resume_unit,'("=== Number of dead points/iterations ===")')                    
         write(write_resume_unit,fmt_int) RTI%ndead
-        write(write_resume_unit,'("=== Total number of likelihood calls ===")')                    
-        write(write_resume_unit,fmt_int) RTI%nlike
         write(write_resume_unit,'("=== Number of clusters ===")')                    
         write(write_resume_unit,fmt_int) RTI%ncluster
 
@@ -106,6 +104,8 @@ module read_write_module
         write(write_resume_unit,'("=== Number of grades ===")')                    
         write(write_resume_unit,fmt_int) size(settings%grade_dims)
         write(fmt_int,'("(",I0,A,")")') size(settings%grade_dims),INT_FMT   ! define the integer array format
+        write(write_resume_unit,'("=== Total number of likelihood calls ===")')                    
+        write(write_resume_unit,fmt_int) RTI%nlike
         write(write_resume_unit,'("=== positions of grades ===")')                    
         write(write_resume_unit,fmt_int) settings%grade_dims
         write(write_resume_unit,'("=== number of repeats ===")')                    
@@ -245,8 +245,6 @@ module read_write_module
         read(read_resume_unit,*)                    ! 
         read(read_resume_unit,fmt_int) RTI%ndead    ! number of dead points
         read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) RTI%nlike    ! number of likelihood calls
-        read(read_resume_unit,*)                    ! 
         read(read_resume_unit,fmt_int) RTI%ncluster ! number of clusters
 
         ! Allocate nlive and nphantom arrays based on these
@@ -261,6 +259,8 @@ module read_write_module
         if(size(settings%grade_dims)/=i_temp) call halt_program('resume error: Grades do not match')
         allocate(RTI%num_repeats(i_temp))
         write(fmt_int,'("(",I0,A,")")') size(settings%grade_dims),INT_FMT   ! define the integer array format
+        read(read_resume_unit,*)                    ! 
+        read(read_resume_unit,fmt_int) RTI%nlike    ! number of likelihood calls
         read(read_resume_unit,*)                    
         read(read_resume_unit,*)
         read(read_resume_unit,*)                    

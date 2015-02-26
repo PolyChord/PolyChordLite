@@ -20,6 +20,21 @@ module mpi_module
 
     contains
 
+    !> Procedure to initialise mpi
+    subroutine initialise_mpi()
+        implicit none
+
+        call MPI_INIT(mpierror)
+
+    end subroutine initialise_mpi
+
+    !> Procedure to finalise mpi
+    subroutine finalise_mpi()
+        implicit none
+
+        call MPI_FINALIZE(mpierror)
+
+    end subroutine finalise_mpi
 
     !> Procedure to get the number of mpi processors
     !!
@@ -123,6 +138,40 @@ module mpi_module
 
     end function sum_doubles
 
+    subroutine broadcast_doubles(doubles,mpi_communicator,root)
+        implicit none
+        double precision, dimension(:), intent(inout) :: doubles
+        integer, intent(in) :: root
+        integer, intent(in) :: mpi_communicator
+
+        call MPI_BCAST(            & 
+            doubles,               &!broadcast buffer
+            size(doubles),         &!size of buffer
+            MPI_DOUBLE_PRECISION,  &!type of element sent
+            root,                  &!root doing the sending
+            mpi_communicator,      &!handle
+            mpierror               &!error flag
+            )
+
+    end subroutine broadcast_doubles
+
+    subroutine broadcast_integers(integers,mpi_communicator,root)
+        implicit none
+        integer, dimension(:), intent(inout) :: integers
+        integer, intent(in) :: root
+        integer, intent(in) :: mpi_communicator
+
+        call MPI_BCAST(            & 
+            integers,              &!broadcast buffer
+            size(integers),        &!size of buffer
+            MPI_INT,               &!type of element sent
+            root,                  &!root doing the sending
+            mpi_communicator,      &!handle
+            mpierror               &!error flag
+            )
+
+    end subroutine broadcast_integers
+
     !============== Throwing and catching routines ====================
     ! There are four points in the algorithm where arrays need to be transferred 
     ! between master and slaves
@@ -203,7 +252,7 @@ module mpi_module
         implicit none
 
         double precision,intent(out),dimension(:,:) :: baby_points !> The babies to be caught
-        integer, intent(out) :: nlike                              !> The number of likelihood evaluations to be caught
+        integer, dimension(:), intent(out) :: nlike                !> The number of likelihood evaluations to be caught
         integer, intent(in) :: mpi_communicator                    !> The mpi communicator
 
         integer :: slave_id ! slave identifier
@@ -226,7 +275,7 @@ module mpi_module
 
         call MPI_RECV(         &! 
             nlike,             &! 
-            1,                 &! 
+            size(nlike),       &! 
             MPI_INT,           &! 
             slave_id,          &! 
             tag_run_nlike,     &! 
@@ -242,7 +291,7 @@ module mpi_module
         implicit none
 
         double precision,intent(in),dimension(:,:) :: baby_points !> The babies to be thrown
-        integer, intent(in) :: nlike                              !> The number of likelihood evaluations to be thrown
+        integer, dimension(:), intent(in) :: nlike                !> The number of likelihood evaluations to be caught
         integer, intent(in) :: mpi_communicator                   !> The mpi communicator
         integer, intent(in) :: root                               !> root node to throw to
 
@@ -257,7 +306,7 @@ module mpi_module
             )                                        
         call MPI_SEND(         &!  
             nlike,             &!  
-            1,                 &!  
+            size(nlike),       &!  
             MPI_INT,           &!  
             root,              &!  
             tag_run_nlike,     &!  
