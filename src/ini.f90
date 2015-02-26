@@ -42,7 +42,6 @@ contains
 
     subroutine read_params(file_name,settings,params,derived_params)
         use settings_module,   only: program_settings
-        use utils_module,  only: STR_LENGTH,params_unit
         use params_module, only: param_type
         implicit none
         
@@ -150,7 +149,7 @@ contains
     end function get_string
 
     function get_double(file_name,key_word,dflt)
-        use utils_module,  only: STR_LENGTH,params_unit
+        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -171,7 +170,7 @@ contains
     end function get_double
 
     subroutine get_doubles(file_name,key_word,doubles)
-        use utils_module,  only: STR_LENGTH,params_unit
+        use utils_module,  only: STR_LENGTH
         use array_module,  only: reallocate_1_d
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -198,7 +197,7 @@ contains
     end subroutine get_doubles
 
     function get_integer(file_name,key_word,dflt)
-        use utils_module,  only: STR_LENGTH,params_unit
+        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -221,7 +220,7 @@ contains
     end function get_integer
 
     function get_logical(file_name,key_word,dflt)
-        use utils_module,  only: STR_LENGTH,params_unit
+        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -257,7 +256,7 @@ contains
 
     subroutine get_params(file_name,params,derived_params) 
         use priors_module, only: prior_type_from_string,unknown_type
-        use utils_module,  only: STR_LENGTH,params_unit
+        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         use params_module, only: param_type,add_parameter
         implicit none

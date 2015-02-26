@@ -151,25 +151,25 @@ program main
         call add_parameter(derived_params,'param9','r')
 
         ! Now initialise the rest of the system settings
-        settings%nlive         = 500
+        settings%nlive         = 50000
         settings%num_repeats   = 8
-        settings%do_clustering = .true.
+        settings%do_clustering = .false.
 
         settings%base_dir      = 'chains'
         settings%file_root     = 'gaussian'
 
-        settings%calculate_posterior = .true.
+        settings%calculate_posterior = .false.
         
-        settings%write_resume  = .true.
+        settings%write_resume  = .false.
         settings%read_resume   = .false.
-        settings%write_live    = .true.
+        settings%write_live    = .false.
 
         settings%feedback      = 1
         settings%update_resume = settings%nlive
 
         settings%thin_posterior= 0d0
-        allocate(settings%grade_frac(2)) 
-        settings%grade_frac=[1d0,1d-1]
+        allocate(settings%grade_frac(1)) 
+        settings%grade_frac=[1d0]
 
     else
         call halt_program('PolyChord should be called with at most one argument, the input file')

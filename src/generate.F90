@@ -286,7 +286,7 @@ module generate_module
         use priors_module,    only: prior
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
-        use utils_module,    only: logzero,normal_fb,stdout_unit
+        use utils_module,    only: logzero,normal_fb,stdout_unit,fancy_fb
         use calculate_module, only: calculate_point
         use abort_module
 #ifdef MPI
@@ -334,7 +334,7 @@ module generate_module
             if (live_point(settings%l0)> logzero) exit
         end do
 
-        if(settings%feedback<=normal_fb.and.myrank==root) write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds")') char(13), 1, speed(1)
+        if(settings%feedback>=fancy_fb.and.myrank==root) write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds")') char(13), 1, speed(1)
         do i_speed=2,size(speed)
 
             h0 = settings%h0+sum(settings%grade_dims(:i_speed-1))
@@ -365,7 +365,11 @@ module generate_module
             i_live = sum_integers(i_live,mpi_communicator)
 #endif
             speed(i_speed) = total_time/i_live
-            if(settings%feedback<=normal_fb.and.myrank==root) write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds     ")') char(13), i_speed, speed(i_speed)
+            if(settings%feedback>=fancy_fb.and.myrank==root) then
+                write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds     ")') char(13), i_speed, speed(i_speed)
+            else if(settings%feedback>=normal_fb.and.myrank==root) then
+                write(stdout_unit,'("Speed ",I2," = ",E10.3, " seconds     ")') i_speed, speed(i_speed)
+            end if
 
 
         end do

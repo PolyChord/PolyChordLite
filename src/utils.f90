@@ -24,7 +24,8 @@ module utils_module
     !> Feedback levels
     integer, parameter :: title_fb = 0
     integer, parameter :: normal_fb = 1
-    integer, parameter :: verbose_fb = 2
+    integer, parameter :: fancy_fb = 2
+    integer, parameter :: verbose_fb = 3
 
     !> unit for stderr
     integer, parameter :: stderr_unit = 0

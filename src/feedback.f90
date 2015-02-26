@@ -77,7 +77,7 @@ module feedback_module
     !!
     !! Prints a neat progress bar to show you how far its got
     subroutine write_generating_live_points(feedback,i_live,nlive)
-        use utils_module,    only: normal_fb
+        use utils_module,    only: fancy_fb
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
@@ -87,7 +87,7 @@ module feedback_module
         !> The number of live points to be generated
         integer, intent(in) :: nlive
 
-        if (feedback>=normal_fb) then
+        if (feedback>=fancy_fb) then
             call progress(dble(i_live)/dble(nlive),100)
         end if
 
@@ -170,7 +170,7 @@ module feedback_module
 
 
     subroutine write_num_repeats(num_repeats,feedback)
-        use utils_module,    only: stdout_unit,logzero,fmt_len,INT_FMT,normal_fb
+        use utils_module,    only: stdout_unit,fmt_len,INT_FMT,normal_fb
         implicit none
         integer, dimension(:) :: num_repeats
         integer, intent(in) :: feedback 
@@ -178,7 +178,7 @@ module feedback_module
         integer :: i
         character(len=fmt_len) fmt
 
-        if(feedback<=normal_fb) then
+        if(feedback>=normal_fb) then
             write(fmt,'("( ""number of repeats: "",",I0,A,")")') size(num_repeats),INT_FMT
 
             do i=1,size(num_repeats)
