@@ -325,6 +325,9 @@ module generate_module
 
         double precision, dimension(settings%nTotal) :: live_point ! Temporary live point array
 
+#ifndef MPI
+        nlike=mpi_communicator
+#endif
         nlike=0
 
         ! Calculate a slow likelihood

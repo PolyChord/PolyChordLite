@@ -1,52 +1,7 @@
-!> This is a log-likelihood wrapper
-!!
-!! we define this, so we can easily switch in and out differing likelihoods
-function loglikelihood(theta,phi,context)
-    use example_likelihoods
-    implicit none
-    double precision, intent(in),  dimension(:) :: theta
-    double precision, intent(out),  dimension(:) :: phi
-    integer,          intent(in)                 :: context
-    double precision :: loglikelihood
-    !       These can be written into src/example_likelihoods.f90, and should
-    !       have the interface:
-    !
-    !interface
-    !    function loglikelihood(theta,phi,context)
-    !        double precision, intent(in),  dimension(:) :: theta
-    !        double precision, intent(out),  dimension(:) :: phi
-    !        integer,          intent(in)                 :: context
-    !        double precision :: loglikelihood
-    !    end function
-    !end interface
-    !
-    ! where theta are the input params, phi are any derived params and 
-    ! context is an integer which can be useful as a C pointer
-    !
-    !
-    ! Possible example likelihoods already written are:
-    !       - gaussian_loglikelihood
-    !       - gaussian_shell
-    !       - rosenbrock_loglikelihood
-    !       - himmelblau_loglikelihood
-    !       - rastrigin_loglikelihood
-    !       - eggbox_loglikelihood
-    !       - gaussian_loglikelihood_corr
-    !       - gaussian_loglikelihood_cluster
-    !       - twin_gaussian_loglikelihood 
-    !
-
-    loglikelihood = gaussian_loglikelihood(theta,phi,context)
-
-end function
-
-
-
 !> This is the main driving routine of the nested sampling algorithm
-program main
+program PolyChord
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
-
     use ini_module,               only: read_params,initialise_program
     use params_module,            only: add_parameter,param_type
     use priors_module
@@ -55,6 +10,7 @@ program main
     use nested_sampling_module,   only: NestedSampling
     use utils_module,             only: STR_LENGTH
     use abort_module,             only: halt_program
+    use loglikelihood_module,     only: loglikelihood
 #ifdef MPI
     use mpi_module
 #endif
@@ -76,17 +32,6 @@ program main
     character(len=STR_LENGTH)                 :: input_file     ! input file
     type(param_type),dimension(:),allocatable :: params         ! Parameter array
     type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
-
-    ! Interface for the loglikelihood function
-    interface
-        function loglikelihood(theta,phi,context)
-            double precision, intent(in),  dimension(:) :: theta
-            double precision, intent(out),  dimension(:) :: phi
-            integer,          intent(in)                 :: context
-            double precision :: loglikelihood
-        end function
-    end interface
-
 
 
     ! ======= (1) Initialisation =======
@@ -209,4 +154,4 @@ program main
 #endif
 
 
-end program main
+end program PolyChord
