@@ -103,7 +103,7 @@ endif
 
 # gfortran settings
 # =================
-ifeq ($(COMPILER_TYPE),gfortran) 
+ifeq ($(COMPILER_TYPE),gnu) 
 # default flags
 # --------------
 # free-line-length-none : turn of line length limitation (why is this not a default??)
