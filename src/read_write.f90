@@ -409,7 +409,7 @@ module read_write_module
 
         do i_cluster=1,RTI%ncluster
             do i_post=1,RTI%nposterior(i_cluster)
-                if(bernoulli_trial( exp( RTI%posterior(settings%pos_w,i_post,i_cluster) + RTI%posterior(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight) )) then
+                if(bernoulli_trial( exp( RTI%posterior(settings%pos_w,i_post,i_cluster) + RTI%posterior(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight) * settings%thin_posterior )) then
                     posterior_point(settings%p_w) = RTI%maxlogweight
                     posterior_point(settings%p_2l) = -2*RTI%posterior(settings%pos_l,i_post,i_cluster)
                     posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
@@ -420,7 +420,6 @@ module read_write_module
         end do
 
         close(write_equals_unit)
-        write(*,*) RTI%maxlogweight
         
 
 

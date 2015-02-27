@@ -40,7 +40,7 @@ module example_likelihoods
 
         ! The radius
         phi(1) = sqrt(sum((theta-mu)**2))
-        phi(2) = phi(1)**size(theta) * Vn(size(theta))
+        phi(2) = log(phi(1)**size(theta) * Vn(size(theta)))
 
 
     end function gaussian_loglikelihood
