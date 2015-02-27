@@ -1,6 +1,5 @@
 # include <math.h>
-# include "likelihood_cpp.hpp"
-
+# include "my_cpp_likelihood.hpp"
 
 double sigma;
 double mu;

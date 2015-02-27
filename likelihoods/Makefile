@@ -1,22 +1,33 @@
 # What to include
 POLYCHORD += -I../src/
 
-libcpp_likelihood.a: cpp_likelihood.o likelihood_cpp.o
+# Where examples are found
+EXAMPLES_DIR = ./examples
 
-# general rule for building the archive
-lib%.a: %.o
+
+# rule for building the default likelihood
+libmy_likelihood.a: my_likelihood.o
 	$(AR) $@ $^ 
 
-# General rules for building prog.o from prog.f90 or prog.F90; $< is
-# used in order to list only the first prerequisite (the source file)
-# and not the additional prerequisites such as module or include files
+# rule for building the c++ wrapper
+libmy_cpp_likelihood.a: my_cpp_likelihood.o fortran_cpp_wrapper.o
+	$(AR) $@ $^ 
+
+# general rule for building each of the examples
+$(EXAMPLE_LIKELIHOODS): lib%.a: $(EXAMPLES_DIR)/%.o
+	$(AR) $@ $^ 
+
+
+
+# General rule for building object file (.o)  from fortran files (.f90)
 %.o: %.f90
-	$(FC) $(FCFLAGS) $(POLYCHORD) -c $< 
+	$(FC) $(FCFLAGS) $(POLYCHORD) -c $< -o $@
 
+# General rule for building object file (.o)  from fortran files (.F90)
 %.o: %.F90
-	$(FC) $(FCFLAGS) $(POLYCHORD) -c $<
+	$(FC) $(FCFLAGS) $(POLYCHORD) -c $< -o $@
 
-# For making cpp files
+# General rule for building object file (.o)  from c++ files (.cpp)
 %.o: %.cpp
 	$(CC) $(CCFLAGS) -c $<
 
@@ -27,6 +38,8 @@ lib%.a: %.o
 
 clean:
 	rm -f *.o *.mod *.MOD
+	cd $(EXAMPLES_DIR) && rm -f *.o *.mod *.MOD
 
 veryclean: clean
 	rm -f *~ *.a
+	cd $(EXAMPLES_DIR) && rm -f *~ *.a 

@@ -1,5 +1,7 @@
-# List of available executables
-PROGRAMS = likelihood cpp_likelihood gaussian rastrigin
+# List of available example likelihoods
+EXAMPLES = gaussian rastrigin
+
+PROGRAMS = my_likelihood my_cpp_likelihood 
 
 
 
@@ -138,17 +140,17 @@ LIBLIKE += -L$(LIKELIHOOD_DIR)
 
 INC += -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR)
 
+# likelihood libraries, this is created by changing X to libX.a
+EXAMPLE_LIKELIHOODS = $(patsubst %,lib%.a,$(EXAMPLES))
+PROGRAM_LIKELIHOODS = $(patsubst %,lib%.a,$(PROGRAMS))
+
 
 # Export all of the necessary variables
-export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS
-
-# likelihood libraries, this is created by changing X from PROGRAMS into libX.a
-LIKELIHOODS = $(patsubst %,lib%.a,$(PROGRAMS))
-
+export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS EXAMPLE_LIKELIHOODS
 
 
 # "make" builds all
-all: $(PROGRAMS)
+all: $(EXAMPLES) $(PROGRAMS)
 
 
 # Rule for building polychord library
@@ -156,11 +158,11 @@ libchord.a:
 	cd $(POLYCHORD_DIR) && make libchord.a
 
 # Rule for building likelihood libraries
-$(LIKELIHOODS): libchord.a
+$(EXAMPLE_LIKELIHOODS) $(PROGRAM_LIKELIHOODS): libchord.a
 	cd $(LIKELIHOOD_DIR) && make $@
 
-# Rule for building each program
-$(PROGRAMS): %: libchord.a lib%.a  polychord.o
+# Rule for example programs
+$(EXAMPLES) $(PROGRAMS): %: libchord.a lib%.a  polychord.o
 	$(FC) $(FCFLAGS) -o $(BIN_DIR)/$@ polychord.o $(LIBCHORD) $(LIBLIKE) -l$@
 
 # Rule for building main file
@@ -178,4 +180,4 @@ veryclean: clean
 	rm -f *~ 
 	cd $(POLYCHORD_DIR) && make veryclean
 	cd $(LIKELIHOOD_DIR) && make veryclean
-	cd $(BIN_DIR) && rm -f $(PROGRAMS)
+	cd $(BIN_DIR) && rm -f $(EXAMPLES) $(PROGRAMS)
