@@ -176,13 +176,13 @@ module feedback_module
         integer, intent(in) :: feedback 
 
         integer :: i
-        character(len=fmt_len) fmt
+        character(len=fmt_len) fmt_int
 
         if(feedback>=normal_fb) then
-            write(fmt,'("( ""number of repeats: "",",I0,A,")")') size(num_repeats),INT_FMT
+            write(fmt_int,'("( ""number of repeats: "",",I0,A,")")') size(num_repeats),INT_FMT
 
             do i=1,size(num_repeats)
-                write(stdout_unit,fmt) num_repeats
+                write(stdout_unit,fmt_int) num_repeats
             end do
         end if
 
@@ -240,6 +240,7 @@ module feedback_module
             write(stdout_unit,fmt_tail)
             write(stdout_unit,'("ncluster   =",  I8                   )') RTI%ncluster
             write(stdout_unit,'("ndead      =",  I8                   )') RTI%ndead
+            write(stdout_unit,'("nequals    =",  I8                   )') RTI%nequals
 
             write(fmt_nlike,'("(""nlike      ="",",I0,"I8)")') size(nlikesum)
             write(stdout_unit,fmt_nlike) RTI%nlike

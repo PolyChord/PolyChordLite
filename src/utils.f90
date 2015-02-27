@@ -57,15 +57,17 @@ module utils_module
     integer, parameter :: write_untxt_unit = 20
     !> unit for writing unnormalised posterior cluster files
     integer, parameter :: write_untxt_cluster_unit = 21
+    !> unit for writing equal weights files
+    integer, parameter :: write_equals_unit = 22
 
     !> unit for deleting generic files
-    integer, parameter :: delete_unit = 22
+    integer, parameter :: delete_unit = 23
 
 
     !> unit for params file
-    integer, parameter :: params_unit = 23
+    integer, parameter :: params_unit = 24
     !> unit for paramnames file
-    integer, parameter :: paramnames_unit = 23
+    integer, parameter :: paramnames_unit = 24
 
     !> Log[1/2 Erfc[j/Sqrt[2]]]
     double precision, parameter,dimension(20) :: logsigma = (/-1.84102, -3.78318, -6.60773, -10.3601, -15.065, -20.7368, -27.3843, -35.0134, -43.6281, -53.2313, -63.8249, -75.4107, -87.9897, -101.563, -116.131, -131.695, -148.256, -165.812, -184.366, -203.917 /)
@@ -588,6 +590,14 @@ module utils_module
 
 
 
+    !> The volume of a unit n-sphere
+    function Vn(nDims)
+        implicit none
+        integer,intent(in) :: nDims
+        double precision :: Vn
+        double precision, parameter :: sqrtpi = sqrt(4d0*atan(1d0))
+        Vn = sqrtpi**nDims /gamma(1d0+nDims/2d0)
+    end function Vn
 
 
 

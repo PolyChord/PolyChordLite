@@ -13,7 +13,7 @@ module example_likelihoods
     !! The mean is set at 0.5 by default, and all sigmas at 0.01
 
     function gaussian_loglikelihood(theta,phi,context) result(loglikelihood)
-        use utils_module, only: logTwoPi
+        use utils_module, only: logTwoPi,Vn
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
@@ -30,7 +30,7 @@ module example_likelihoods
 
         ! Initialise the mean and standard deviation
         mu    = 5d-1   ! mean in the center
-        sigma = 2d-1  ! all sigma set relatively small
+        sigma = 1d-1  ! all sigma set relatively small
 
         ! Gaussian normalisation
         loglikelihood = - sum( log( sigma ) + logTwoPi/2d0 ) 
@@ -38,11 +38,9 @@ module example_likelihoods
         ! theta dependence
         loglikelihood = loglikelihood - sum( ( ( theta - mu ) / sigma ) ** 2d0 ) / 2d0
 
-        ! Use up these parameters to stop irritating warnings
-        if(size(phi)>0) then
-            phi= context
-            phi=0d0
-        end if
+        ! The radius
+        phi(1) = sqrt(sum((theta-mu)**2))
+        phi(2) = phi(1)**size(theta) * Vn(size(theta))
 
 
     end function gaussian_loglikelihood

@@ -373,10 +373,12 @@ module read_write_module
     end subroutine read_resume_file
 
 
-    subroutine write_unnormalised_posterior_file(settings,RTI)
-        use utils_module, only: DB_FMT,fmt_len,write_untxt_unit,write_untxt_cluster_unit
+    subroutine write_posterior_file(settings,RTI)
+        use utils_module, only: DB_FMT,fmt_len,write_untxt_unit,write_untxt_cluster_unit,write_equals_unit
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info 
+        use random_module, only: bernoulli_trial
+        use array_module, only: delete_point,add_point
         implicit none
 
         type(program_settings), intent(in)    :: settings
@@ -387,37 +389,77 @@ module read_write_module
 
         character(len=fmt_len) :: fmt_dbl
 
+        double precision, dimension(settings%np) :: posterior_point
 
-        ! Open the new unormalised .txt file for writing
-        open(write_untxt_unit,file=trim(posterior_file(settings,.true.)), action='write',position='append') 
+        ! ============= Equally weighted posteriors ================
+        open(write_equals_unit,file=trim(equals_file(settings)))
 
-        ! Define the printing format
-        write(fmt_dbl,'("(",I0,A,")")') settings%nposterior, DB_FMT
+        write(fmt_dbl,'("(",I0,A,")")') settings%np,DB_FMT 
+
+        ! strip out old posterior points
+        i_post=1
+        do while(i_post<=RTI%nequals(1)) 
+            if(bernoulli_trial( exp(RTI%equals(settings%p_w,i_post,1)-RTI%maxlogweight) )) then
+                RTI%equals(settings%p_w,i_post,1) = RTI%maxlogweight 
+                write(write_equals_unit,fmt_dbl) 1d0,RTI%equals(settings%p_2l:,i_post,1)
+                i_post=i_post+1
+            else
+                posterior_point = delete_point(i_post,RTI%equals,RTI%nequals,1)
+            end if
+        end do
 
         do i_cluster=1,RTI%ncluster
-
-            if(settings%do_clustering) open(write_untxt_cluster_unit,file=trim(posterior_file(settings,.true.,i_cluster)),action='write',position='append') 
-
             do i_post=1,RTI%nposterior(i_cluster)
+                if(bernoulli_trial( exp( RTI%posterior(settings%pos_w,i_post,i_cluster) + RTI%posterior(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight) )) then
+                    posterior_point(settings%p_w) = RTI%maxlogweight
+                    posterior_point(settings%p_2l) = -2*RTI%posterior(settings%pos_l,i_post,i_cluster)
+                    posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
+                    call add_point(posterior_point,RTI%equals,RTI%nequals,1)
+                    write(write_equals_unit,fmt_dbl) 1d0,posterior_point(settings%p_2l:)
+                end if
+            end do
+        end do
 
-                ! Print each cluster sequentially to the main unnormalised chains file
-                write(write_untxt_unit,fmt_dbl) RTI%posterior(:,i_post,i_cluster)
+        close(write_equals_unit)
+        write(*,*) RTI%maxlogweight
+        
 
-                ! If we're clustering, then print out separate cluster files
-                if(settings%do_clustering) write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior(:,i_post,i_cluster) 
+
+        ! ============= Unnormalised posteriors ====================
+
+        if(settings%write_unnormalised_posterior) then
+
+            ! Open the new unormalised .txt file for writing
+            open(write_untxt_unit,file=trim(posterior_file(settings,.true.)), action='write',position='append') 
+
+            ! Define the printing format
+            write(fmt_dbl,'("(",I0,A,")")') settings%nposterior, DB_FMT
+
+            do i_cluster=1,RTI%ncluster
+
+                if(settings%do_clustering) open(write_untxt_cluster_unit,file=trim(posterior_file(settings,.true.,i_cluster)),action='write',position='append') 
+
+                do i_post=1,RTI%nposterior(i_cluster)
+
+                    ! Print each cluster sequentially to the main unnormalised chains file
+                    write(write_untxt_unit,fmt_dbl) RTI%posterior(:,i_post,i_cluster)
+
+                    ! If we're clustering, then print out separate cluster files
+                    if(settings%do_clustering) write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior(:,i_post,i_cluster) 
+
+                end do
+
+                if(settings%do_clustering) close(write_untxt_cluster_unit)
 
             end do
-
-            if(settings%do_clustering) close(write_untxt_cluster_unit)
-
-        end do
+        end if
 
         ! Delete all of the posterior points
         RTI%nposterior = 0
 
         close(write_untxt_unit)
 
-    end subroutine write_unnormalised_posterior_file
+    end subroutine write_posterior_file
 
 
 
@@ -655,6 +697,18 @@ module read_write_module
         end if
 
     end function posterior_file
+
+    function equals_file(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_eq.txt'
+
+    end function equals_file
 
     function phys_live_file(settings,i) result(file_name)
         use settings_module, only: program_settings

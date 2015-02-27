@@ -30,6 +30,11 @@ module run_time_module
         !> The number of posterior points in each cluster
         integer, allocatable, dimension(:) :: nposterior
 
+        !> Equally weighted posterior points
+        double precision, allocatable, dimension(:,:,:) :: equals
+        !> The number of posterior points in each cluster
+        integer, allocatable, dimension(:) :: nequals
+
 
         !> Covariance Matrices
         double precision, allocatable, dimension(:,:,:) :: covmat
@@ -61,6 +66,9 @@ module run_time_module
         !> The minimum loglikelihood point within each cluster
         integer,allocatable, dimension(:)           :: i
 
+        !> Maximum weight
+        double precision                            :: maxlogweight
+
         !> The number of repeats within each parameter speed to do
         integer,allocatable, dimension(:)           :: num_repeats
 
@@ -87,6 +95,7 @@ module run_time_module
             RTI%live(settings%nTotal,settings%nlive,1),         &
             RTI%phantom(settings%nTotal,settings%nlive,1),      &
             RTI%posterior(settings%nposterior,settings%nlive,1),&
+            RTI%equals(settings%np,settings%nlive,1),           &
             RTI%logZp(1),                                       &
             RTI%logXp(1),                                       &
             RTI%logZXp(1),                                      &
@@ -98,6 +107,7 @@ module run_time_module
             RTI%nlive(1),                                       &
             RTI%nphantom(1),                                    &
             RTI%nposterior(1),                                  &
+            RTI%nequals(1),                                     &
             RTI%cholesky(settings%nDims,settings%nDims,1),      &
             RTI%covmat(settings%nDims,settings%nDims,1),        &
             RTI%num_repeats(size(settings%grade_dims)),         &
@@ -120,6 +130,7 @@ module run_time_module
         RTI%nlive=0
         RTI%nphantom=0
         RTI%nposterior=0
+        RTI%nequals=0
 
         !No likelihood calls
         RTI%nlike=0
@@ -135,6 +146,9 @@ module run_time_module
         RTI%logLp = logzero
         ! First position default lowest
         RTI%i     = 0
+
+        ! maximum logweight
+        RTI%maxlogweight = logzero
 
 
     end subroutine initialise_run_time_info
@@ -574,6 +588,7 @@ module run_time_module
 
         integer                                     :: cluster_del     ! cluster to delete from
         double precision,dimension(settings%nTotal) :: deleted_point   ! point we have just deleted
+        double precision,dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
         double precision                            :: logweight       ! The log weighting of this point
         
         integer :: i_phantom ! phantom iterator
@@ -614,10 +629,9 @@ module run_time_module
 
 
                 ! Calculate the posterior point and add it to the array
-                if(settings%calculate_posterior .and.  bernoulli_trial(settings%thin_posterior)) &
-                    call add_point(&
-                    calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp)),&
-                    RTI%posterior,RTI%nposterior,cluster_del )
+                posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
+                call add_point(posterior_point,RTI%posterior,RTI%nposterior,cluster_del )
+                RTI%maxlogweight = max(RTI%maxlogweight,posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
 
 
                 ! Now we delete the phantoms
@@ -631,10 +645,9 @@ module run_time_module
                         deleted_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom,cluster_del)
 
                         ! Calculate the posterior point and add it to the array
-                        if(settings%calculate_posterior .and. bernoulli_trial(settings%thin_posterior)) &
-                            call add_point(&
-                            calculate_posterior_point(settings,deleted_point,logweight,RTI%logZp(cluster_del),RTI%logXp(cluster_del)),&
-                            RTI%posterior,RTI%nposterior,cluster_del )
+                        posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
+                        call add_point(posterior_point,RTI%posterior,RTI%nposterior,cluster_del )
+                        RTI%maxlogweight = max(RTI%maxlogweight,posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
 
                     else
                         i_phantom = i_phantom+1

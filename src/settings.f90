@@ -43,6 +43,9 @@ module settings_module
         !> Whether or not to calculate the posterior
         logical :: calculate_posterior = .false.
 
+        !> Whether or not to calculate unnormalised posteriors
+        logical :: write_unnormalised_posterior = .false.
+
         !> Whether or not to write resume files
         logical :: write_resume = .false.
 
@@ -119,6 +122,15 @@ module settings_module
         ! Number of posterior parameters
         integer :: nposterior
 
+        ! Final posterior indices
+        integer :: p_w
+        integer :: p_2l
+        integer :: p_p0
+        integer :: p_p1
+        integer :: p_d0
+        integer :: p_d1
+        integer :: np
+
 
 
         !> Pointer to any additional files that need to be stored in between
@@ -192,6 +204,15 @@ module settings_module
         ! Number of posterior parameters
         settings%nposterior = settings%pos_d1
 
+
+        settings%p_w = 1
+        settings%p_2l = settings%p_w+1
+        settings%p_p0 = settings%p_2l+1
+        settings%p_p1 = settings%p_2l+settings%nDims
+        settings%p_d0 = settings%p_p1+1
+        settings%p_d1 = settings%p_p1+settings%nDerived
+
+        settings%np   = settings%p_d1
 
     end subroutine initialise_settings
 

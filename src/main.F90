@@ -147,12 +147,25 @@ program main
         call add_parameter(params,'param6','\theta_6',1,     uniform_type,1,          [ 0d0 , 1d0 ])
         call add_parameter(params,'param7','\theta_7',1,     uniform_type,1,          [ 0d0 , 1d0 ])
         call add_parameter(params,'param8','\theta_8',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param9','\theta_9',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param10','\theta_10',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param11','\theta_11',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param12','\theta_12',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param13','\theta_13',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param14','\theta_14',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param15','\theta_15',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param16','\theta_16',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param17','\theta_17',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param18','\theta_18',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param19','\theta_19',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param20','\theta_20',1,     uniform_type,1,          [ 0d0 , 1d0 ])
 
-        call add_parameter(derived_params,'param9','r')
+        call add_parameter(derived_params,'param21','r')
+        call add_parameter(derived_params,'param22','X')
 
         ! Now initialise the rest of the system settings
-        settings%nlive         = 50000
-        settings%num_repeats   = 8
+        settings%nlive         = 25*8
+        settings%num_repeats   = 20
         settings%do_clustering = .false.
 
         settings%base_dir      = 'chains'
@@ -160,12 +173,13 @@ program main
 
         settings%calculate_posterior = .false.
         
-        settings%write_resume  = .false.
+        settings%write_resume  = .true.
         settings%read_resume   = .false.
         settings%write_live    = .false.
 
         settings%feedback      = 1
         settings%update_resume = settings%nlive
+        settings%write_unnormalised_posterior = .false.
 
         settings%thin_posterior= 0d0
         allocate(settings%grade_frac(1)) 
