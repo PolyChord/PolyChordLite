@@ -1,3 +1,8 @@
+# List of available executables
+PROGRAMS = gaussian rastrigin
+
+
+
 # The compiler type:
 # This sets up the correct compiler flags below 
 # current options are:
@@ -38,7 +43,7 @@ endif
 ifeq ($(COMPILER_TYPE),ifort)
 # default flags
 # --------------
-# fpp  : perform preprocessing
+# fpp  : perform prrprocessing
 FCFLAGS += -fpp 
 
 ifdef DEBUG
@@ -103,11 +108,25 @@ endif
 AR = ar r
 endif
 
-# Export all of the variables
-export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC
+# Where polychord is stored
+POLYCHORD_DIR = ./src
 
-# List of available executables
-PROGRAMS = gaussian rastrigin
+# Where likelihoods are stored
+LIKELIHOOD_DIR = ./likelihoods
+
+# Where binaries are stored
+BIN_DIR = ./bin
+
+# Add these libraries to the program
+LIBCHORD += -L$(POLYCHORD_DIR) -lchord
+LIBLIKE += -L$(LIKELIHOOD_DIR)
+
+
+INCLUDE += -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR)
+
+
+# Export all of the necessary variables
+export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC
 
 # likelihood libraries, this is created by changing X from PROGRAMS into libX.a
 LIKELIHOODS = $(patsubst %,lib%.a,$(PROGRAMS))
@@ -119,29 +138,30 @@ all: $(PROGRAMS)
 
 
 # Rule for building polychord library
-libchord.a: ./src/*90
-	cd ./src && make libchord.a
+libchord.a:
+	cd $(POLYCHORD_DIR) && make libchord.a
 
 # Rule for building likelihood libraries
 $(LIKELIHOODS): libchord.a
-	cd ./likelihoods && make $@
+	cd $(LIKELIHOOD_DIR) && make $@
 
 # Rule for building each program
 $(PROGRAMS): %: libchord.a lib%.a  polychord.o
-	$(FC) $(FCFLAGS) -o bin/$@ polychord.o -L./src/ -L./likelihoods/ -lchord -l$@
+	$(FC) $(FCFLAGS) -o $(BIN_DIR)/$@ polychord.o $(LIBCHORD) $(LIBLIKE) -l$@
 
 # Rule for building main file
 polychord.o: polychord.F90
-	$(FC) $(FCFLAGS) -I./src/ -I./likelihoods/ -c $< 
+	$(FC) $(FCFLAGS) $(INCLUDE) -c $< 
 
 
 
 clean:
 	rm -f *.o *.mod *.MOD
-	cd ./src && make clean && cd - && cd ./likelihoods && make clean
+	cd $(LIKELIHOOD_DIR) && make clean 
+	cd $(POLYCHORD_DIR) && make clean
 	
 veryclean: clean
 	rm -f *~ 
-	cd ./src && make veryclean && cd -
-	cd ./likelihoods && make veryclean && cd -
-	cd ./bin && rm -f $(PROGRAMS)
+	cd $(POLYCHORD_DIR) && make veryclean
+	cd $(LIKELIHOOD_DIR) && make veryclean
+	cd $(BIN_DIR) && rm -f $(PROGRAMS)
