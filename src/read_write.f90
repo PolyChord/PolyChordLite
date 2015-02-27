@@ -43,7 +43,6 @@ module read_write_module
         deleted = delete_file( phys_live_file(settings), fb )      ! Delete phys_live file
         deleted = delete_file( resume_file(settings,.false.), fb ) ! Delete temp resume file
         deleted = delete_file( resume_file(settings,.true.), fb )  ! Delete resume file
-        deleted = delete_file( paramnames_file(settings), fb )     ! Delete paramnames file
 
 
         ! Delete normalised .txt files
