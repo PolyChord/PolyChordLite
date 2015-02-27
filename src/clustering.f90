@@ -36,7 +36,9 @@ module KNN_clustering
 
         ! Get the number of points to be clustered
         nlive=size(similarity_matrix,1)
-        k = ceiling(sqrt(dble(nlive)))
+
+        ! 6 degrees of separation are usually fine, we'll expand this if necessary
+        k = min(nlive,6)
 
         ! compute the k nearest neighbors for each point
         knn(:k,:) = compute_knn(similarity_matrix,k)
