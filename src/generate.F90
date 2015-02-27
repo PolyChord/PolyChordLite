@@ -75,10 +75,9 @@ module generate_module
         implicit none
 
         interface
-            function loglikelihood(theta,phi,context)
+            function loglikelihood(theta,phi)
                 double precision, intent(in),  dimension(:) :: theta
                 double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
                 double precision :: loglikelihood
             end function
         end interface
@@ -296,10 +295,9 @@ module generate_module
         implicit none
 
         interface
-            function loglikelihood(theta,phi,context)
+            function loglikelihood(theta,phi)
                 double precision, intent(in),  dimension(:) :: theta
                 double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
                 double precision :: loglikelihood
             end function
         end interface

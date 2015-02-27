@@ -16,17 +16,15 @@ module loglikelihood_module
     !! fairly difficult problem due to its large search space and its large number
     !! of local minima.
     !!
-    function loglikelihood(theta,phi,context)
-        use utils_module, only: TwoPi
+    function loglikelihood(theta,phi)
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
         double precision, parameter :: A=10d0
+        double precision, parameter :: TwoPi = 4d0*atan(1d0)
 
         ! The return value
         double precision :: loglikelihood
@@ -35,7 +33,6 @@ module loglikelihood_module
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 

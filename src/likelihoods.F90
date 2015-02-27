@@ -12,15 +12,13 @@ module example_likelihoods
     !!
     !! The mean is set at 0.5 by default, and all sigmas at 0.01
 
-    function gaussian_loglikelihood(theta,phi,context) result(loglikelihood)
+    function gaussian_loglikelihood(theta,phi) result(loglikelihood)
         use utils_module, only: logTwoPi,Vn
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
         double precision :: loglikelihood
 
@@ -53,15 +51,13 @@ module example_likelihoods
     !! The mean is set at 0.5 by default, apart from the x directions, where
     !! they are separated by 6 sigma widths and all sigmas at 0.01
 
-    function twin_gaussian_loglikelihood(theta,phi,context) result(loglikelihood)
+    function twin_gaussian_loglikelihood(theta,phi) result(loglikelihood)
         use utils_module, only: logaddexp,logTwoPi
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
         double precision :: loglikelihood 
         double precision :: loglikelihood1
@@ -91,7 +87,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 
@@ -129,14 +124,12 @@ module example_likelihoods
     !! global maximum, but it is unclear analytically how many (if any) local maxima there
     !! are elsewhere in dimensions higher than 7.
     !!
-    function rosenbrock_loglikelihood(theta,phi,context) result(loglikelihood)
+    function rosenbrock_loglikelihood(theta,phi) result(loglikelihood)
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
         ! The return value
         double precision :: loglikelihood
@@ -160,7 +153,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 
@@ -192,14 +184,12 @@ module example_likelihoods
     !! 
     !! Note that this is a 2D function, and should hence only be used for settings%nDims=2
     !!
-    function himmelblau_loglikelihood(theta,phi,context) result(loglikelihood)
+    function himmelblau_loglikelihood(theta,phi) result(loglikelihood)
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
         ! The return value
         double precision :: loglikelihood
@@ -212,7 +202,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 
@@ -234,15 +223,13 @@ module example_likelihoods
     !! fairly difficult problem due to its large search space and its large number
     !! of local minima.
     !!
-    function rastrigin_loglikelihood(theta,phi,context) result(loglikelihood)
+    function rastrigin_loglikelihood(theta,phi) result(loglikelihood)
         use utils_module, only: TwoPi
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
         double precision, parameter :: A=10d0
 
@@ -253,7 +240,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 
@@ -266,14 +252,12 @@ module example_likelihoods
     !!
     !! \f[ -\log L(x, y) = (2+ \prod_i^n \cos(\theta_i/2) )^5 \f]
     !!
-    function eggbox_loglikelihood(theta,phi,context) result(loglikelihood)
+    function eggbox_loglikelihood(theta,phi) result(loglikelihood)
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
         ! The return value
         double precision :: loglikelihood
@@ -286,7 +270,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 
@@ -301,15 +284,13 @@ module example_likelihoods
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function planck_loglikelihood(theta,phi,context)
+    function planck_loglikelihood(theta,phi)
         use random_module, only: random_reals
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
 
         double precision :: planck_loglikelihood
@@ -367,7 +348,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 
@@ -393,7 +373,7 @@ module example_likelihoods
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function gaussian_loglikelihood_corr(theta,phi,context)
+    function gaussian_loglikelihood_corr(theta,phi)
 #ifdef MPI
         use mpi
 #endif
@@ -403,9 +383,6 @@ module example_likelihoods
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
-
 
         double precision :: gaussian_loglikelihood_corr
 
@@ -465,7 +442,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 
@@ -476,7 +452,7 @@ module example_likelihoods
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function gaussian_loglikelihood_cluster(theta,phi,context)
+    function gaussian_loglikelihood_cluster(theta,phi)
         use random_module, only: random_reals
         use utils_module,  only: logsumexp,logzero
 #ifdef MPI
@@ -487,8 +463,6 @@ module example_likelihoods
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
 
         double precision :: gaussian_loglikelihood_cluster
@@ -574,7 +548,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 
@@ -692,14 +665,12 @@ module example_likelihoods
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function pyramidal_loglikelihood(theta,phi,context) result(loglikelihood)
+    function pyramidal_loglikelihood(theta,phi) result(loglikelihood)
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)  :: theta
         !> Output derived parameters
         double precision, intent(out), dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                :: context
 
         double precision :: loglikelihood
 
@@ -717,7 +688,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 
@@ -733,14 +703,12 @@ module example_likelihoods
     !!      - w = width of the guassian shell 
     !!      - R = Radius of the gaussian shell (ie: distance from the center)
     !!      - in progress...
-    function gaussian_shell(theta,phi,context) result(loglikelihood)
+    function gaussian_shell(theta,phi) result(loglikelihood)
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)  :: theta
         !> Output derived parameters
         double precision, intent(out), dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                :: context
 
         !The output of the function 
         double precision :: loglikelihood
@@ -798,7 +766,6 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
-            phi= context
             phi=0d0
         end if
 

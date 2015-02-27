@@ -140,15 +140,18 @@ POLYCHORD_DIR = ./src
 # Where likelihoods are stored
 LIKELIHOOD_DIR = ./likelihoods
 
+# Where likelihood examples are stored
+EXAMPLE_LIKELIHOOD_DIR = $(LIKELIHOOD_DIR)/examples
+
 # Where binaries are stored
 BIN_DIR = ./bin
 
 # Add these libraries to the program
 LIBCHORD += -L$(POLYCHORD_DIR) -lchord
-LIBLIKE += -L$(LIKELIHOOD_DIR)
+LIBLIKE += -L$(LIKELIHOOD_DIR) -L$(EXAMPLE_LIKELIHOOD_DIR)
 
 
-INC += -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR)
+INC += -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR) -I$(EXAMPLE_LIKELIHOOD_DIR)
 
 # likelihood libraries, this is created by changing X to libX.a
 EXAMPLE_LIKELIHOODS = $(patsubst %,lib%.a,$(EXAMPLES))

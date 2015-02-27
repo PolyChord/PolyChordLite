@@ -2,15 +2,13 @@ module loglikelihood_module
 
     contains
 
-    function loglikelihood(theta,phi,context)
+    function loglikelihood(theta,phi)
         use utils_module, only: TwoPi
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
         double precision :: loglikelihood
         

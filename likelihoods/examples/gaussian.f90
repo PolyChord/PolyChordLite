@@ -8,15 +8,13 @@ module loglikelihood_module
     !! effectively infinite priors.
     !!
     !! The mean is set at 0.5 by default, and all sigmas at 0.01
-    function loglikelihood(theta,phi,context)
+    function loglikelihood(theta,phi)
         use utils_module, only: logTwoPi,Vn
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
-        !> Pointer to any additional information
-        integer,          intent(in)                 :: context
 
         double precision :: loglikelihood
 

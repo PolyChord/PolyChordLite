@@ -29,10 +29,9 @@ module nested_sampling_module
 
         !> The loglikelihood function
         interface
-            function loglikelihood(theta,phi,context)
+            function loglikelihood(theta,phi)
                 double precision, intent(in),  dimension(:) :: theta
                 double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
                 double precision :: loglikelihood
             end function
         end interface

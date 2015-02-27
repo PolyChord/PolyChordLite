@@ -5,7 +5,7 @@ double sigma;
 double mu;
 
 
-double cpp_loglikelihood (double theta[], double phi[], int context)
+double cpp_loglikelihood (double theta[], double phi[])
 {
 
     int    nDims = sizeof(theta)/sizeof(*theta) + 1;

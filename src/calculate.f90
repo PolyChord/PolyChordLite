@@ -8,10 +8,9 @@ module calculate_module
         use utils_module, only: logzero
         implicit none
         interface
-            function loglikelihood(theta,phi,context)
+            function loglikelihood(theta,phi)
                 double precision, intent(in),  dimension(:) :: theta
                 double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
                 double precision :: loglikelihood
             end function
         end interface
@@ -29,7 +28,7 @@ module calculate_module
             point(settings%p0:settings%p1) = hypercube_to_physical( point(settings%h0:settings%h1),priors )
 
             ! Calculate the likelihood and store it in the last index
-            point(settings%l0) = loglikelihood( point(settings%p0:settings%p1), point(settings%d0:settings%d1),settings%context)
+            point(settings%l0) = loglikelihood( point(settings%p0:settings%p1), point(settings%d0:settings%d1))
 
             ! accumulate the number of likelihood calls that we've made
             nlike = nlike+1

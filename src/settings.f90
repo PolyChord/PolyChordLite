@@ -131,12 +131,6 @@ module settings_module
         integer :: p_d1
         integer :: np
 
-
-
-        !> Pointer to any additional files that need to be stored in between
-        !! evaluations (only really important for C likelihoods)
-        integer :: context
-
         !> The number of parameters in each grade
         integer, allocatable,dimension(:) :: grade_dims
         !> The fraction of time spent in each grade
