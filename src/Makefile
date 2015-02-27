@@ -1,10 +1,6 @@
 # Object files
 # ============
-ifdef MPI
-# Using MPI
-# ---------
-# Define the files to be used 
-OBJECTS =                    \
+OBJECTS_PAR =                \
 		  utils.o            \
 		  abort.o            \
 		  mpi_utils.o        \
@@ -22,37 +18,20 @@ OBJECTS =                    \
 		  generate.o         \
 		  nested_sampling.o  \
 		  ini.o
+ifdef MPI
+# MPI pararellised
+# -----------------
+OBJECTS = $(OBJECTS_PAR)
+
 else
-
-# No parallelisation
-# ------------------
-# Define the files to be used (note no mpi_utils file)
-OBJECTS =                    \
-		  utils.o            \
-		  abort.o            \
-		  array_utils.o      \
-		  random_utils.o     \
-		  params.o           \
-		  settings.o         \
-		  priors.o           \
-		  calculate.o        \
-		  run_time_info.o    \
-		  feedback.o         \
-		  read_write.o       \
-		  clustering.o       \
-		  chordal_sampling.o \
-		  generate.o         \
-		  nested_sampling.o  \
-		  ini.o
-
+# No parallelisaton
+# -----------------
+#  strip out the mpi_utils file
+OBJECTS = $(patsubst mpi_utils.o,,$(OBJECTS_PAR))
 endif
 
-
-# List of executables to be built within the package
-PROGRAMS = libchord.a
-
 # "make" builds all
-all: $(PROGRAMS)
+all: libchord.a
 
 # The polychord library
 libchord.a: $(OBJECTS)
