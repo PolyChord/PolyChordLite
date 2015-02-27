@@ -41,4 +41,9 @@ module loglikelihood_module
 
     end function loglikelihood
 
+    subroutine setup_loglikelihood
+        implicit none
+
+    end subroutine setup_loglikelihood
+
 end module loglikelihood_module

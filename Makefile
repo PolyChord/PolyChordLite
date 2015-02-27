@@ -1,14 +1,14 @@
 # List of available executables
-PROGRAMS = gaussian rastrigin
+PROGRAMS = likelihood cpp_likelihood gaussian rastrigin
 
 
 
 # The compiler type:
 # This sets up the correct compiler flags below 
 # current options are:
-#  * gfortran
-#  * ifort
-COMPILER_TYPE=ifort
+#  * gnu
+#  * intel
+COMPILER_TYPE=intel
 
 
 # Whether to use MPI or not (leave blank if running without MPI)
@@ -24,27 +24,43 @@ ifdef MPI
 # ---------
 # Set a define flag for MPI
 FCFLAGS = -DMPI
+CCFLAGS = -DMPI
 # Choose the mpi wrapper
 FC = mpif90
+CC = mpicc
 else
 # No parallelisation
 # ------------------
 # Set the compiler to be that defined in COMPILER_TYPE
-FC = $(COMPILER_TYPE)
+ifeq ($(COMPILER_TYPE),intel)
+FC = ifort
+CC = icc
+endif
+
+ifeq ($(COMPILER_TYPE),gnu)
+FC = gfortran
+CC = g++
+endif
+
 endif
 
 
 
+FCFLAGS += -lstdc++
 
 # ============ COMPILER_TYPE settings ================
+ 
+# Archive tool
+AR = ar r
 
 # ifort settings
 # ==============
-ifeq ($(COMPILER_TYPE),ifort)
+ifeq ($(COMPILER_TYPE),intel)
 # default flags
 # --------------
-# fpp  : perform prrprocessing
+# fpp  : perform preprocessing
 FCFLAGS += -fpp 
+CCFLAGS += -fpp 
 
 ifdef DEBUG
 # Debugging mode
@@ -57,6 +73,7 @@ ifdef DEBUG
 # fpe0           : halts program if dividing by zero, etc
 # warn all       : all warnings (whilst running)
 FCFLAGS += -g -O0 -traceback -fp-stack-check -check all,noarg_temp_created -fpe0 -warn all
+CCFLAGS += -g -O0 
 else
 # Optimised mode
 # --------------
@@ -66,10 +83,10 @@ else
 #   static       : link intel libraries statically
 #   xHost        : maximise architecture usage
 FCFLAGS += -ipo -O3 -no-prec-div -xHost
-endif
-
+CCFLAGS += -ipo -O3 -no-prec-div -xHost
 # Archive tool for compiling with ipo.
 AR = xiar r
+endif
 
 endif
 
@@ -103,9 +120,6 @@ else
 # O3 : maximum optimisation
 FCFLAGS += -O3
 endif
- 
-# Archive tool
-AR = ar r
 endif
 
 # Where polychord is stored
@@ -122,11 +136,11 @@ LIBCHORD += -L$(POLYCHORD_DIR) -lchord
 LIBLIKE += -L$(LIKELIHOOD_DIR)
 
 
-INCLUDE += -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR)
+INC += -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR)
 
 
 # Export all of the necessary variables
-export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC
+export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS
 
 # likelihood libraries, this is created by changing X from PROGRAMS into libX.a
 LIKELIHOODS = $(patsubst %,lib%.a,$(PROGRAMS))
@@ -151,7 +165,7 @@ $(PROGRAMS): %: libchord.a lib%.a  polychord.o
 
 # Rule for building main file
 polychord.o: polychord.F90
-	$(FC) $(FCFLAGS) $(INCLUDE) -c $< 
+	$(FC) $(FCFLAGS) $(INC) -c $< 
 
 
 

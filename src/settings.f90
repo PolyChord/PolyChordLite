@@ -38,7 +38,7 @@ module settings_module
 
         !> What to thin the posterior points (i.e. probability of keeping
         !! phantom points)
-        double precision :: thin_posterior = 0
+        double precision :: thin_posterior = 1d0
 
         !> Whether or not to calculate the posterior
         logical :: calculate_posterior = .false.
