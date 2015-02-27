@@ -70,12 +70,16 @@ ifdef DEBUG
 # g              : enable gnu debugger compatibility
 # O0             : no optimisation
 # traceback      : create a backtrace on system failure
-# fp-stack-check : check for floating point errors from stack overflow, etc
 # check all      : all checks (whilst compiling)
-# fpe0           : halts program if dividing by zero, etc
 # warn all       : all warnings (whilst running)
-FCFLAGS += -g -O0 -traceback -fp-stack-check -check all,noarg_temp_created -fpe0 -warn all
-CCFLAGS += -g -O0 
+# ftrapuv        : Traps uninitialized variables by setting them to very large values
+# debug all      : additional debugging information
+# gen-interfaces : generate an interface block for each routine
+# warn-interfaces: warn on these interface blocks
+# fpe0           : halts program if dividing by zero, etc
+FCFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces
+# check-uninit   : check for uninitialised variables
+CCFLAGS += -g -O0 -traceback -check-uninit -ftrapuv -debug all -gen-interfaces -warn-interfaces
 else
 # Optimised mode
 # --------------
@@ -84,8 +88,11 @@ else
 #   no-prec-div  : slightly less precise floating point divides, but speeds up
 #   static       : link intel libraries statically
 #   xHost        : maximise architecture usage
-FCFLAGS += -ipo -O3 -no-prec-div -xHost
-CCFLAGS += -ipo -O3 -no-prec-div -xHost
+#   w            : turn off all warnings
+#   vec-report0  : disables printing of vectorizer diagnostic information
+#   opt-report0  : disables printing of optimization reports
+FCFLAGS += -ipo -O3 -no-prec-div -xHost -w -vec-report0 -opt-report0 
+CCFLAGS += -ipo -O3 -no-prec-div -xHost -w -vec-report0 -opt-report0
 # Archive tool for compiling with ipo.
 AR = xiar r
 endif
@@ -116,11 +123,14 @@ ifdef DEBUG
 # fpe-trap      : search for floating point exceptions (dividing by zero etc)
 # fbounds-check : check array indices
 FCFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
+#
+CCFLAGS += -g -O0 -Wall -Wextra -Wansi -Wshadow -Weffc++
 else
 # Optimised mode
 # --------------
 # O3 : maximum optimisation
 FCFLAGS += -O3
+CCFLAGS += -O3
 endif
 endif
 
