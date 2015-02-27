@@ -1,5 +1,5 @@
 # List of available example likelihoods
-EXAMPLES = gaussian rastrigin
+EXAMPLES = gaussian rastrigin twin_gaussian
 
 PROGRAMS = my_likelihood my_cpp_likelihood 
 
