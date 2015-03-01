@@ -16,6 +16,8 @@ module run_time_module
 
         !> The number currently evolving clusters
         integer :: ncluster
+        !> The number of dead clusters
+        integer :: ncluster_dead
 
         !> Live points
         double precision, allocatable, dimension(:,:,:) :: live
@@ -30,21 +32,21 @@ module run_time_module
         !> The number of posterior points in each cluster in the posterior stack
         integer, allocatable, dimension(:) :: nposterior_stack
 
-        !> Equally weighted posterior points
-        double precision, allocatable, dimension(:,:,:) :: equals_global
+        !> weighted posterior points
+        double precision, allocatable, dimension(:,:,:) :: posterior
+        double precision, allocatable, dimension(:,:,:) :: posterior_dead
         !> The number of posterior points in each cluster
-        integer, allocatable, dimension(:) :: nequals_global
-
+        integer, allocatable, dimension(:) :: nposterior
+        integer, allocatable, dimension(:) :: nposterior_dead
 
         !> Equally weighted posterior points
         double precision, allocatable, dimension(:,:,:) :: equals
+        double precision, allocatable, dimension(:,:,:) :: equals_dead
+        double precision, allocatable, dimension(:,:,:) :: equals_global
         !> The number of posterior points in each cluster
         integer, allocatable, dimension(:) :: nequals
-
-        !> weighted posterior points
-        double precision, allocatable, dimension(:,:,:) :: posterior
-        !> The number of posterior points in each cluster
-        integer, allocatable, dimension(:) :: nposterior
+        integer, allocatable, dimension(:) :: nequals_dead
+        integer, allocatable, dimension(:) :: nequals_global
 
 
         !> Covariance Matrices
@@ -65,8 +67,10 @@ module run_time_module
         double precision, allocatable, dimension(:)   :: logZXp
         !> Local evidence estimate
         double precision, allocatable, dimension(:)   :: logZp
+        double precision, allocatable, dimension(:)   :: logZp_dead
         !> Local evidence^2 estimate 
         double precision, allocatable, dimension(:)   :: logZp2
+        double precision, allocatable, dimension(:)   :: logZp2_dead
         !> local evidence volume cross correlation
         double precision, allocatable, dimension(:)   :: logZpXp
         !> local volume cross correlation
@@ -108,12 +112,16 @@ module run_time_module
             RTI%phantom(settings%nTotal,settings%nlive,1),            &
             RTI%posterior_stack(settings%nposterior,settings%nlive,1),&
             RTI%posterior(settings%nposterior,settings%nlive,1),      &
+            RTI%posterior_dead(settings%nposterior,settings%nlive,0), &
             RTI%equals(settings%np,settings%nlive,1),                 &
+            RTI%equals_dead(settings%np,settings%nlive,0),            &
             RTI%equals_global(settings%np,settings%nlive,1),          &
             RTI%logZp(1),                                             &
+            RTI%logZp_dead(0),                                        &
             RTI%logXp(1),                                             &
             RTI%logZXp(1),                                            &
             RTI%logZp2(1),                                            &
+            RTI%logZp2_dead(0),                                       &
             RTI%logZpXp(1),                                           &
             RTI%logXpXq(1,1),                                         &
             RTI%logLp(1),                                             &
@@ -122,7 +130,9 @@ module run_time_module
             RTI%nphantom(1),                                          &
             RTI%nposterior_stack(1),                                  &
             RTI%nposterior(1),                                        &
+            RTI%nposterior_dead(0),                                   &
             RTI%nequals(1),                                           &
+            RTI%nequals_dead(0),                                      &
             RTI%nequals_global(1),                                    &
             RTI%maxlogweight(1),                                      &
             RTI%cholesky(settings%nDims,settings%nDims,1),            &
@@ -455,14 +465,18 @@ module run_time_module
 
     end subroutine add_cluster
 
-    subroutine delete_cluster(RTI) 
+    subroutine delete_cluster(settings,RTI) 
+        use settings_module, only: program_settings
         use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i
         implicit none
         !> The variable containing all of the runtime information
         type(run_time_info), intent(inout) :: RTI
+        type(program_settings), intent(in) :: settings
 
         !The cluster index to be deleted
         integer            :: p(1)
+
+        integer :: size_n
 
         ! new indices of clusters
         integer,dimension(RTI%ncluster-1) :: indices
@@ -472,6 +486,8 @@ module run_time_module
 
 
         if(any(RTI%nlive==0)) then
+            ! Update the posterior arrays
+            call update_posteriors(settings,RTI) 
 
             p=minloc(RTI%nlive,RTI%nlive==0)
 
@@ -480,6 +496,27 @@ module run_time_module
 
             ! Reduce the number of clusters
             RTI%ncluster=RTI%ncluster-1
+            ! Increase the number of dead clusters
+            RTI%ncluster_dead = RTI%ncluster_dead + 1
+
+            ! Reallocate the dead arrays
+            size_n = max(size(RTI%posterior_dead,2),RTI%nposterior(p(1)))
+            call reallocate_3_d(RTI%posterior_dead, new_size2=size_n,new_size3=RTI%ncluster_dead)
+            call reallocate_1_i(RTI%nposterior_dead,new_size1=RTI%ncluster_dead)
+            size_n = max(size(RTI%equals_dead,2),RTI%nequals(p(1)))
+            call reallocate_3_d(RTI%equals_dead,    new_size2=size_n,new_size3=RTI%ncluster_dead)
+            call reallocate_1_i(RTI%nequals_dead,   new_size1=RTI%ncluster_dead)
+            call reallocate_1_d(RTI%logZp_dead,     new_size1=RTI%ncluster_dead)
+            call reallocate_1_d(RTI%logZp2_dead,    new_size1=RTI%ncluster_dead)
+
+            ! Place the newly dead cluster into this
+            RTI%nposterior_dead(RTI%ncluster_dead) = RTI%nposterior(p(1))
+            RTI%posterior_dead(:,:RTI%nposterior_dead(RTI%ncluster_dead),RTI%ncluster_dead) = RTI%posterior(:,:RTI%nposterior(p(1)),p(1))
+            RTI%nequals_dead(RTI%ncluster_dead) = RTI%nequals(p(1))
+            RTI%equals_dead(:,:RTI%nequals_dead(RTI%ncluster_dead),RTI%ncluster_dead) = RTI%equals(:,:RTI%nequals(p(1)),p(1))
+            RTI%logZp_dead(RTI%ncluster_dead)  = RTI%logZp(p(1))
+            RTI%logZp2_dead(RTI%ncluster_dead) = RTI%logZp2(p(1))
+
 
             ! Reallocate the live,phantom and posterior points
             call reallocate_3_d(RTI%live,            new_size3=RTI%ncluster, save_indices3=indices)
@@ -566,23 +603,31 @@ module run_time_module
     !!
     !! What we accumulate in the routine update_evidence is log(<Z>), and log(<Z^2>).
     !! What we want is <log(Z)>,and 
-    subroutine calculate_logZ_estimate(RTI,logZ,sigmalogZ,logZp,sigmalogZp)
+    subroutine calculate_logZ_estimate(RTI,logZ,varlogZ,logZp,varlogZp,logZp_dead,varlogZp_dead)
         use utils_module, only: logzero
         implicit none
 
         type(run_time_info),intent(in)                                  :: RTI        !> Run time information
         double precision, intent(out)                                   :: logZ       !>
-        double precision, intent(out)                                   :: sigmalogZ  !>
+        double precision, intent(out)                                   :: varlogZ  !>
         double precision, intent(out), dimension(RTI%ncluster),optional :: logZp      !>
-        double precision, intent(out), dimension(RTI%ncluster),optional :: sigmalogZp !>
+        double precision, intent(out), dimension(RTI%ncluster),optional :: varlogZp !>
+        double precision, intent(out), dimension(RTI%ncluster_dead),optional :: logZp_dead      !>
+        double precision, intent(out), dimension(RTI%ncluster_dead),optional :: varlogZp_dead !>
 
         logZ       = max(logzero,2*RTI%logZ - 0.5*RTI%logZ2)
-        sigmalogZ  = sqrt(abs(RTI%logZ2 - 2*RTI%logZ))
+        varlogZ  = sqrt(abs(RTI%logZ2 - 2*RTI%logZ))
 
-        if(present(logZp).and.present(sigmalogZp))then
+        if(present(logZp).and.present(varlogZp))then
             logZp      = max(logzero,2*RTI%logZp - 0.5*RTI%logZp2)
-            sigmalogZp = sqrt(abs(RTI%logZp2 - 2*RTI%logZp))
+            varlogZp = RTI%logZp2 - 2*RTI%logZp
         end if
+
+        if(present(logZp_dead).and.present(varlogZp_dead))then
+            logZp_dead      = max(logzero,2*RTI%logZp_dead - 0.5*RTI%logZp2_dead)
+            varlogZp_dead = RTI%logZp2_dead - 2*RTI%logZp_dead
+        end if
+
 
 
     end subroutine calculate_logZ_estimate

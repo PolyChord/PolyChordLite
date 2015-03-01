@@ -26,8 +26,8 @@ module feedback_module
             write(stdout_unit,'("")')
             write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
             write(stdout_unit,'("copyright: Will Handley, Mike Hobson & Anthony Lasenby")')
-            write(stdout_unit,'("  version: 1.0")')
-            write(stdout_unit,'("  release: 8th Feb 2015")')
+            write(stdout_unit,'("  version: 1.1")')
+            write(stdout_unit,'("  release: 1st Mar 2015")')
             write(stdout_unit,'("    email: wh260@cam.ac.uk")')
             write(stdout_unit,'("")')
         end if
@@ -218,9 +218,11 @@ module feedback_module
         integer :: p
 
         double precision                          :: logZ       
-        double precision                          :: sigmalogZ  
+        double precision                          :: varlogZ  
         double precision, dimension(RTI%ncluster) :: logZp      
-        double precision, dimension(RTI%ncluster) :: sigmalogZp 
+        double precision, dimension(RTI%ncluster) :: varlogZp 
+        double precision, dimension(RTI%ncluster_dead) :: logZp_dead      
+        double precision, dimension(RTI%ncluster_dead) :: varlogZp_dead 
 
         character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_equals,fmt_tail,fmt_nlike
 
@@ -255,18 +257,25 @@ module feedback_module
             write(stdout_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_resume),dble(nlikesum)/dble(num_repeats*settings%update_resume)
 
 
-            call calculate_logZ_estimate(RTI,logZ,sigmalogZ,logZp,sigmalogZp)            
+            call calculate_logZ_estimate(RTI,logZ,varlogZ,logZp,varlogZp,logZp_dead,varlogZp_dead)            
 
             if(RTI%logZ>logzero) then
-                write(stdout_unit,'("log(Z)     = ", F15.2, " +/- ", F5.2)') logZ,sigmalogZ
+                write(stdout_unit,'("log(Z)     = ", F8.2, " +/- ", F5.2)') logZ,sqrt(varlogZ)
             end if
 
-            if(RTI%ncluster>1) then
-                do p=1,RTI%ncluster
-                    if(RTI%logZp(p)>logzero) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F15.2, " +/- ", F5.2)') p, logZp(p),sigmalogZp(p)
+            do p=1,RTI%ncluster
+                if(RTI%logZp(p)>logzero) then
+                    write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2, " (still evaluating)")') p, logZp(p),sqrt(varlogZp(p))
+                else
+                    write(stdout_unit,'("log(Z_",I2,")  = ? (still evaluating)")') p
+                end if
+            end do
+            if(RTI%ncluster_dead>0) then
+                do p=1,RTI%ncluster_dead
+                    if(RTI%logZp_dead(p)>logzero) then
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2)') p+RTI%ncluster, logZp_dead(p),sqrt(varlogZp_dead(p))
                     else
-                        write(stdout_unit,'("log(Z_",I2,")  = ?")') p
+                        write(stdout_unit,'("log(Z_",I2,")  = ?")') p+RTI%ncluster
                     end if
                 end do
             end if

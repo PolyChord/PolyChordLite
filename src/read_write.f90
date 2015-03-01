@@ -495,9 +495,11 @@ module read_write_module
         type(run_time_info),    intent(in) :: RTI
 
         double precision                          :: logZ       
-        double precision                          :: sigmalogZ  
+        double precision                          :: varlogZ  
         double precision, dimension(RTI%ncluster) :: logZp      
-        double precision, dimension(RTI%ncluster) :: sigmalogZp 
+        double precision, dimension(RTI%ncluster) :: varlogZp 
+        double precision, dimension(RTI%ncluster_dead) :: logZp_dead      
+        double precision, dimension(RTI%ncluster_dead) :: varlogZp_dead 
 
         integer :: p
 
@@ -505,7 +507,7 @@ module read_write_module
 
         open(write_stats_unit,file=trim(stats_file(settings)), action='write') 
 
-        call calculate_logZ_estimate(RTI,logZ,sigmalogZ,logZp,sigmalogZp)            
+        call calculate_logZ_estimate(RTI,logZ,varlogZ,logZp,varlogZp,logZp_dead,varlogZp_dead)            
 
 
         write(fmt_Z,'("(""log(Z)       = "",", A, ","" +/- "",", A, ")")') DB_FMT,DB_FMT
@@ -519,22 +521,23 @@ module read_write_module
         write(write_stats_unit, '("Global evidence:")')
         write(write_stats_unit, '("----------------")')
         write(write_stats_unit,'("")')
-        write(write_stats_unit,fmt_Z) logZ,sigmalogZ
+        write(write_stats_unit,fmt_Z) logZ,sqrt(varlogZ)
         write(write_stats_unit,'("")')
         write(write_stats_unit,'("")')
         write(write_stats_unit, '("Local evidences:")')
         write(write_stats_unit, '("----------------")')
-        write(write_stats_unit, '(" ", I2, " cluster still active")') RTI%ncluster
         write(write_stats_unit,'("")')
-
 
         write(fmt_Z,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, ")")') 'I2',DB_FMT,DB_FMT
 
         if(RTI%ncluster>1) then
             do p=1,RTI%ncluster
-                write(write_stats_unit,fmt_Z) p, logZp(p), sigmalogZp(p)
+                write(write_stats_unit,fmt_Z) p, logZp(p), sqrt(varlogZp(p))
             end do
         end if
+        do p=1,RTI%ncluster_dead
+            write(write_stats_unit,fmt_Z) p+RTI%ncluster, logZp_dead(p), sqrt(varlogZp_dead(p))
+        end do
 
         write(write_stats_unit,'("")')
         write(write_stats_unit,'("")')
@@ -544,6 +547,7 @@ module read_write_module
         write(write_stats_unit,'(" ndead:    ", I8)') RTI%ndead
         write(write_stats_unit,'(" nlive:    ", I8)') settings%nlive
         write(write_stats_unit,'(" active clusters: ", I8)') RTI%ncluster
+        write(write_stats_unit,'(" dead clusters: ", I8)') RTI%ncluster_dead
 
 
 
