@@ -79,7 +79,7 @@ ifdef DEBUG
 # fpe0           : halts program if dividing by zero, etc
 FCFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces
 # check-uninit   : check for uninitialised variables
-CCFLAGS += -g -O0 -traceback -check-uninit -ftrapuv -debug all -gen-interfaces -warn-interfaces
+CCFLAGS += -g -O0 -traceback -ftrapuv -debug all 
 else
 # Optimised mode
 # --------------
