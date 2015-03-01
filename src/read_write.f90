@@ -376,8 +376,6 @@ module read_write_module
         use utils_module, only: DB_FMT,fmt_len,write_untxt_unit,write_untxt_cluster_unit,write_equals_unit
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info 
-        use random_module, only: bernoulli_trial
-        use array_module, only: delete_point,add_point
         implicit none
 
         type(program_settings), intent(in)    :: settings
@@ -388,35 +386,13 @@ module read_write_module
 
         character(len=fmt_len) :: fmt_dbl
 
-        double precision, dimension(settings%np) :: posterior_point
-
         ! ============= Equally weighted posteriors ================
         open(write_equals_unit,file=trim(equals_file(settings)))
 
         write(fmt_dbl,'("(",I0,A,")")') settings%np,DB_FMT 
 
-        ! strip out old posterior points
-        i_post=1
-        do while(i_post<=RTI%nequals(1)) 
-            if(bernoulli_trial( exp(RTI%equals(settings%p_w,i_post,1)-RTI%maxlogweight) )) then
-                RTI%equals(settings%p_w,i_post,1) = RTI%maxlogweight 
-                write(write_equals_unit,fmt_dbl) 1d0,RTI%equals(settings%p_2l:,i_post,1)
-                i_post=i_post+1
-            else
-                posterior_point = delete_point(i_post,RTI%equals,RTI%nequals,1)
-            end if
-        end do
-
-        do i_cluster=1,RTI%ncluster
-            do i_post=1,RTI%nposterior_stack(i_cluster)
-                if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight) * settings%thin_posterior )) then
-                    posterior_point(settings%p_w) = RTI%maxlogweight
-                    posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post,i_cluster)
-                    posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
-                    call add_point(posterior_point,RTI%equals,RTI%nequals,1)
-                    write(write_equals_unit,fmt_dbl) 1d0,posterior_point(settings%p_2l:)
-                end if
-            end do
+        do i_post=1,RTI%nequals(1)
+            write(write_equals_unit,fmt_dbl) 1d0,RTI%equals(settings%p_2l:,i_post,1)
         end do
 
         close(write_equals_unit)

@@ -16,7 +16,7 @@ module nested_sampling_module
         use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero
         use read_write_module
         use feedback_module
-        use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats,delete_cluster
+        use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats,delete_cluster,update_posteriors
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: do_clustering
@@ -236,20 +236,23 @@ module nested_sampling_module
                     ! or at the end of the run
                     if( mod(RTI%ndead,settings%update_resume)==0 .or. .not. need_more_samples ) then
 
-                        !--------------------------------------------!
-                        call write_intermediate_results(settings,RTI,nlikesum,num_repeats)
-                        !--------------------------------------------!
-                        nlikesum=0
+                        call update_posteriors(settings,RTI) 
+
 
                         if(settings%write_resume)        call write_resume_file(settings,RTI)
-                        call write_posterior_file(settings,RTI)  
+                        !call write_posterior_file(settings,RTI)  
                         if(settings%write_live)          call write_phys_live_points(settings,RTI)
                         if(settings%write_stats)         call write_stats_file(settings,RTI)
                     end if
 
+
                     call delete_cluster(RTI) ! Delete any clusters as necessary
 
                     if( mod(RTI%ndead,settings%nlive)==0 ) then
+                        !--------------------------------------------!
+                        call write_intermediate_results(settings,RTI,nlikesum,num_repeats)
+                        !--------------------------------------------!
+                        nlikesum=0
                         if(settings%do_clustering) call do_clustering(settings,RTI)
                         call calculate_covmats(settings,RTI)
                     end if
