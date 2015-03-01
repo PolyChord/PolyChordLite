@@ -1,14 +1,14 @@
 # include <math.h>
+# include <iostream>
 # include "my_cpp_likelihood.hpp"
 
 double sigma;
 double mu;
 
 
-double cpp_loglikelihood (double theta[], double phi[])
+double cpp_loglikelihood (double theta[], int& nDims, double phi[], int& nDerived)
 {
 
-    int    nDims = sizeof(theta)/sizeof(*theta) + 1;
     double value = - nDims * ( log(8*atan(1.0))/2 + log(sigma) );
 
     int i;
@@ -16,6 +16,14 @@ double cpp_loglikelihood (double theta[], double phi[])
     {
         value = value - (theta[i]-mu) * (theta[i]-mu) / sigma / sigma / 2 ;
     }
+
+
+    for (i=0;i<nDerived;i++)
+    {
+        phi[i] = i;
+    }
+
+
     return value;
 
 }

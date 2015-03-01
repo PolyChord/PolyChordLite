@@ -1,12 +1,14 @@
 module loglikelihood_module
 
     interface 
-        function cpp_loglikelihood(theta,phi) bind(c)
+        function cpp_loglikelihood(theta,nDims,phi,nDerived) bind(c)
             use iso_c_binding
             implicit none
-            real (c_double),dimension(*),intent(in)  :: theta
-            real (c_double),dimension(*),intent(out) :: phi
-            real (c_double)                          :: cpp_loglikelihood
+            real (c_double),dimension(nDims),intent(in)     :: theta
+            integer (c_int),intent(in)                      :: nDims
+            real (c_double),dimension(nDerived),intent(out) :: phi
+            integer (c_int),intent(in)                      :: nDerived
+            real (c_double)                                 :: cpp_loglikelihood
         end function cpp_loglikelihood
     end interface
 
@@ -30,15 +32,21 @@ module loglikelihood_module
         double precision :: loglikelihood
 
         real (c_double),dimension(size(theta)) :: c_theta
+        integer (c_int)                        :: nDims
         real (c_double),dimension(size(phi))   :: c_phi
+        integer (c_int)                        :: nDerived
 
         real (c_double) :: c_loglike
 
         ! convert inputs to c
         c_theta   = theta
 
+        ! Get the sizes of the arrays
+        nDims     = size(theta)
+        nDerived  = size(phi)
+
         ! Call the c loglikelihood function
-        c_loglike = cpp_loglikelihood(c_theta,c_phi)
+        c_loglike = cpp_loglikelihood(c_theta,nDims,c_phi,nDerived)
 
         ! Convert outputs to fortran
         loglikelihood = c_loglike
