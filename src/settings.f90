@@ -30,18 +30,8 @@ module settings_module
         !! Set equal to -1 for no maximum number
         integer :: max_ndead = -1
 
-        !> The maximum number of posterior points
-        !!
-        !! This is for memory allocation purposes, it won't necessarily have
-        !! this many points if they're not 'good enough'
-        integer :: sigma_posterior = 5
-
-        !> What to thin the posterior points (i.e. probability of keeping
-        !! phantom points)
+        !> What to thin the posterior points (i.e. probability of keeping a given point)
         double precision :: thin_posterior = 1d0
-
-        !> Whether or not to calculate the posterior
-        logical :: calculate_posterior = .false.
 
         !> Whether or not to calculate unnormalised posteriors
         logical :: write_unnormalised_posterior = .false.

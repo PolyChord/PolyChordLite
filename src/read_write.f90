@@ -247,7 +247,7 @@ module read_write_module
         read(read_resume_unit,fmt_int) RTI%ncluster ! number of clusters
 
         ! Allocate nlive and nphantom arrays based on these
-        allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior(RTI%ncluster),RTI%i(RTI%ncluster),nphantom(RTI%ncluster),nlive(RTI%ncluster))
+        allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior_stack(RTI%ncluster),RTI%i(RTI%ncluster),nphantom(RTI%ncluster),nlive(RTI%ncluster))
         RTI%nphantom=0
         RTI%nlive=0
 
@@ -365,9 +365,9 @@ module read_write_module
         close(read_resume_unit)
 
 
-        ! Allocate the posterior array if we're calculating this
-        if(settings%calculate_posterior) allocate(RTI%posterior(settings%nposterior,settings%nlive,RTI%ncluster))
-        RTI%nposterior = 0 ! Initialise number of posterior points at 0
+        ! Allocate the posterior stack if we're calculating this
+        allocate(RTI%posterior_stack(settings%nposterior,settings%nlive,RTI%ncluster))
+        RTI%nposterior_stack = 0 ! Initialise number of posterior points at 0
 
     end subroutine read_resume_file
 
@@ -408,11 +408,11 @@ module read_write_module
         end do
 
         do i_cluster=1,RTI%ncluster
-            do i_post=1,RTI%nposterior(i_cluster)
-                if(bernoulli_trial( exp( RTI%posterior(settings%pos_w,i_post,i_cluster) + RTI%posterior(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight) * settings%thin_posterior )) then
+            do i_post=1,RTI%nposterior_stack(i_cluster)
+                if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight) * settings%thin_posterior )) then
                     posterior_point(settings%p_w) = RTI%maxlogweight
-                    posterior_point(settings%p_2l) = -2*RTI%posterior(settings%pos_l,i_post,i_cluster)
-                    posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
+                    posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post,i_cluster)
+                    posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
                     call add_point(posterior_point,RTI%equals,RTI%nequals,1)
                     write(write_equals_unit,fmt_dbl) 1d0,posterior_point(settings%p_2l:)
                 end if
@@ -437,13 +437,13 @@ module read_write_module
 
                 if(settings%do_clustering) open(write_untxt_cluster_unit,file=trim(posterior_file(settings,.true.,i_cluster)),action='write',position='append') 
 
-                do i_post=1,RTI%nposterior(i_cluster)
+                do i_post=1,RTI%nposterior_stack(i_cluster)
 
                     ! Print each cluster sequentially to the main unnormalised chains file
-                    write(write_untxt_unit,fmt_dbl) RTI%posterior(:,i_post,i_cluster)
+                    write(write_untxt_unit,fmt_dbl) RTI%posterior_stack(:,i_post,i_cluster)
 
                     ! If we're clustering, then print out separate cluster files
-                    if(settings%do_clustering) write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior(:,i_post,i_cluster) 
+                    if(settings%do_clustering) write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior_stack(:,i_post,i_cluster) 
 
                 end do
 
@@ -452,8 +452,8 @@ module read_write_module
             end do
         end if
 
-        ! Delete all of the posterior points
-        RTI%nposterior = 0
+        ! Delete all of the posterior stack
+        RTI%nposterior_stack = 0
 
         close(write_untxt_unit)
 

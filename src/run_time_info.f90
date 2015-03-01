@@ -25,10 +25,10 @@ module run_time_module
         double precision, allocatable, dimension(:,:,:) :: phantom
         !> The number of phantom points in each cluster
         integer, allocatable, dimension(:) :: nphantom
-        !> Posterior points
-        double precision, allocatable, dimension(:,:,:) :: posterior
-        !> The number of posterior points in each cluster
-        integer, allocatable, dimension(:) :: nposterior
+        !> Posterior stack
+        double precision, allocatable, dimension(:,:,:) :: posterior_stack
+        !> The number of posterior points in each cluster in the posterior stack
+        integer, allocatable, dimension(:) :: nposterior_stack
 
         !> Equally weighted posterior points
         double precision, allocatable, dimension(:,:,:) :: equals
@@ -91,27 +91,27 @@ module run_time_module
 
         ! Allocate all of the arrays with one cluster
         RTI%ncluster = 1
-        allocate(                                               &
-            RTI%live(settings%nTotal,settings%nlive,1),         &
-            RTI%phantom(settings%nTotal,settings%nlive,1),      &
-            RTI%posterior(settings%nposterior,settings%nlive,1),&
-            RTI%equals(settings%np,settings%nlive,1),           &
-            RTI%logZp(1),                                       &
-            RTI%logXp(1),                                       &
-            RTI%logZXp(1),                                      &
-            RTI%logZp2(1),                                      &
-            RTI%logZpXp(1),                                     &
-            RTI%logXpXq(1,1),                                   &
-            RTI%logLp(1),                                       &
-            RTI%i(1),                                           &
-            RTI%nlive(1),                                       &
-            RTI%nphantom(1),                                    &
-            RTI%nposterior(1),                                  &
-            RTI%nequals(1),                                     &
-            RTI%cholesky(settings%nDims,settings%nDims,1),      &
-            RTI%covmat(settings%nDims,settings%nDims,1),        &
-            RTI%num_repeats(size(settings%grade_dims)),         &
-            RTI%nlike(size(settings%grade_dims))                &
+        allocate(                                                     &
+            RTI%live(settings%nTotal,settings%nlive,1),               &
+            RTI%phantom(settings%nTotal,settings%nlive,1),            &
+            RTI%posterior_stack(settings%nposterior,settings%nlive,1),&
+            RTI%equals(settings%np,settings%nlive,1),                 &
+            RTI%logZp(1),                                             &
+            RTI%logXp(1),                                             &
+            RTI%logZXp(1),                                            &
+            RTI%logZp2(1),                                            &
+            RTI%logZpXp(1),                                           &
+            RTI%logXpXq(1,1),                                         &
+            RTI%logLp(1),                                             &
+            RTI%i(1),                                                 &
+            RTI%nlive(1),                                             &
+            RTI%nphantom(1),                                          &
+            RTI%nposterior_stack(1),                                  &
+            RTI%nequals(1),                                           &
+            RTI%cholesky(settings%nDims,settings%nDims,1),            &
+            RTI%covmat(settings%nDims,settings%nDims,1),              &
+            RTI%num_repeats(size(settings%grade_dims)),               &
+            RTI%nlike(size(settings%grade_dims))                      &
             )
 
         ! All evidences set to logzero
@@ -129,7 +129,7 @@ module run_time_module
         !Initially no live points at all
         RTI%nlive=0
         RTI%nphantom=0
-        RTI%nposterior=0
+        RTI%nposterior_stack=0
         RTI%nequals=0
 
         !No likelihood calls
@@ -314,12 +314,12 @@ module run_time_module
         ! 2) Reallocate the arrays
 
         ! Reallocate the live,phantom and posterior points
-        call reallocate_3_d(RTI%live,      new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
-        call reallocate_1_i(RTI%nlive,     new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
-        call reallocate_3_d(RTI%phantom,   new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
-        call reallocate_1_i(RTI%nphantom,  new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
-        call reallocate_3_d(RTI%posterior, new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
-        call reallocate_1_i(RTI%nposterior,new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate_3_d(RTI%live,            new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate_1_i(RTI%nlive,           new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate_3_d(RTI%phantom,         new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate_1_i(RTI%nphantom,        new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate_3_d(RTI%posterior_stack, new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate_1_i(RTI%nposterior_stack,new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
 
         ! Reallocate the cholesky matrices
         call reallocate_3_d(RTI%cholesky, new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
@@ -351,7 +351,7 @@ module run_time_module
 
         ! 4) Reassign all the phantom points 
         RTI%nphantom = 0
-        RTI%nposterior = 0
+        RTI%nposterior_stack = 0
         do i_cluster=1,size(old_nphantom)
             do i_phantom=1,old_nphantom(i_cluster)
                 ! Reallocate all of the phantom points
@@ -428,12 +428,12 @@ module run_time_module
             RTI%ncluster=RTI%ncluster-1
 
             ! Reallocate the live,phantom and posterior points
-            call reallocate_3_d(RTI%live,      new_size3=RTI%ncluster, save_indices3=indices)
-            call reallocate_1_i(RTI%nlive,     new_size1=RTI%ncluster, save_indices1=indices)
-            call reallocate_3_d(RTI%phantom,   new_size3=RTI%ncluster, save_indices3=indices)
-            call reallocate_1_i(RTI%nphantom,  new_size1=RTI%ncluster, save_indices1=indices)
-            call reallocate_3_d(RTI%posterior, new_size3=RTI%ncluster, save_indices3=indices)
-            call reallocate_1_i(RTI%nposterior,new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate_3_d(RTI%live,            new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate_1_i(RTI%nlive,           new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate_3_d(RTI%phantom,         new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate_1_i(RTI%nphantom,        new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate_3_d(RTI%posterior_stack, new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate_1_i(RTI%nposterior_stack,new_size1=RTI%ncluster, save_indices1=indices)
 
             ! Reallocate the cholesky matrices
             call reallocate_3_d(RTI%cholesky, new_size3=RTI%ncluster, save_indices3=indices)
@@ -630,7 +630,7 @@ module run_time_module
 
                 ! Calculate the posterior point and add it to the array
                 posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
-                call add_point(posterior_point,RTI%posterior,RTI%nposterior,cluster_del )
+                call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
                 RTI%maxlogweight = max(RTI%maxlogweight,posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
 
 
@@ -646,7 +646,7 @@ module run_time_module
 
                         ! Calculate the posterior point and add it to the array
                         posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
-                        call add_point(posterior_point,RTI%posterior,RTI%nposterior,cluster_del )
+                        call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
                         RTI%maxlogweight = max(RTI%maxlogweight,posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
 
                     else

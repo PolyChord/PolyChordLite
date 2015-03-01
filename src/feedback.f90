@@ -222,21 +222,21 @@ module feedback_module
         double precision, dimension(RTI%ncluster) :: logZp      
         double precision, dimension(RTI%ncluster) :: sigmalogZp 
 
-        character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_tail,fmt_nlike
+        character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior_stack,fmt_tail,fmt_nlike
 
         ! Get the number of active clusters
-        write(fmt_head,'("(",I0,"(""_""))")') 7*RTI%ncluster + 11
-        write(fmt_live,'("(""lives      |"",",I0,"(I5,"" |""))")') RTI%ncluster
-        write(fmt_phantom,'("(""phantoms   |"",",I0,"(I5,"" |""))")') RTI%ncluster
-        write(fmt_posterior,'("(""posteriors |"",",I0,"(I5,"" |""))")') RTI%ncluster
-        write(fmt_tail,'("(",I0,"(""‾""))")') 7*RTI%ncluster + 11
+        write(fmt_head,'("(",I0,"(""_""))")') 7*RTI%ncluster + 16
+        write(fmt_live,'("(""lives           |"",",I0,"(I5,"" |""))")') RTI%ncluster
+        write(fmt_phantom,'("(""phantoms        |"",",I0,"(I5,"" |""))")') RTI%ncluster
+        write(fmt_posterior_stack,'("(""posterior stack |"",",I0,"(I5,"" |""))")') RTI%ncluster
+        write(fmt_tail,'("(",I0,"(""‾""))")') 7*RTI%ncluster + 16
 
 
         if (settings%feedback>=normal_fb) then
             write(stdout_unit,fmt_head)
             write(stdout_unit,fmt_live)  RTI%nlive
             write(stdout_unit,fmt_phantom)  RTI%nphantom
-            if(settings%calculate_posterior) write(stdout_unit,fmt_posterior)  RTI%nposterior
+            write(stdout_unit,fmt_posterior_stack)  RTI%nposterior_stack
             write(stdout_unit,fmt_tail)
             write(stdout_unit,'("ncluster   =",  I8                   )') RTI%ncluster
             write(stdout_unit,'("ndead      =",  I8                   )') RTI%ndead

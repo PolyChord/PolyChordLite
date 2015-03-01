@@ -84,10 +84,19 @@ program PolyChord
         ! 6) prior_block:       what other parameters are associated with it
         ! 7) prior_parameters:  parameters of the prior
         !                  array   name     latex     speed  prior_type   prior_block prior_parameters
-        call add_parameter(params,'param1','\theta_1',1,     uniform_type,1,          [ 0d0 , 1d0 ])
-        call add_parameter(params,'param2','\theta_2',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param1','\theta_{1}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param2','\theta_{2}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param3','\theta_{3}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param4','\theta_{4}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param5','\theta_{5}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param6','\theta_{6}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param7','\theta_{7}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param8','\theta_{8}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param9','\theta_{9}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
+        call add_parameter(params,'param10','\theta_{10}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
 
-        call add_parameter(derived_params,'param3','r')
+        call add_parameter(derived_params,'radius','r')
+        call add_parameter(derived_params,'logVolume','\log X')
 
         ! Now initialise the rest of the system settings
         settings%nlive         = 500
@@ -97,8 +106,6 @@ program PolyChord
         settings%base_dir      = 'chains'
         settings%file_root     = 'test'
 
-        settings%calculate_posterior = .false.
-        
         settings%write_resume  = .true.
         settings%read_resume   = .false.
         settings%write_live    = .false.

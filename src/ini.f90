@@ -58,8 +58,6 @@ contains
         settings%base_dir      = get_string(file_name,'base_directory','chains')
         settings%file_root     = get_string(file_name,'rootname','test')
 
-        settings%calculate_posterior = get_logical(file_name,'calculate_posterior',.false.)
-        
         settings%write_resume  = get_logical(file_name,'write_resume',.false.)
         settings%read_resume   = get_logical(file_name,'resume',.false.)
         settings%write_live    = get_logical(file_name,'write_live',.false.)
