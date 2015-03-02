@@ -6,53 +6,6 @@ module example_likelihoods
 
 
 
-    !> Upside down [Himmelblau function](http://en.wikipedia.org/wiki/Himmelblaus_function).
-    !!
-    !! \f[ -\log L(x, y) = (x^2+y-11)^2 + (x+y^2-7)^2 \f]
-    !!
-    !! Himmelblau's function is a multi-modal function, used to test the performance of 
-    !! optimization  algorithms. 
-    !! It has one local maximum at <math>x = -0.270845 \,</math> and <math>y =
-    !! -0.923039 \,</math> where <math>f(x,y) = 181.617 \,</math>, and four
-    !! identical local minima:
-    !! * \f$ f(3.0, 2.0) = 0.0,            \f$
-    !! * \f$ f(-2.805118, 3.131312) = 0.0, \f$
-    !! * \f$ f(-3.779310, -3.283186) = 0.0,\f$
-    !! * \f$ f(3.584428, -1.848126) = 0.0. \f$
-    !!
-    !! The locations of all the Maxima and minima can be found
-    !! analytically. However, because they are roots of cubic polynomials, when
-    !! written in terms of radicals, the expressions are somewhat
-    !! complicated.
-    !!
-    !! The function is named after David Mautner Himmelblau (1924-2011), who
-    !! introduced it. 
-    !! 
-    !! Note that this is a 2D function, and should hence only be used for settings%nDims=2
-    !!
-    function himmelblau_loglikelihood(theta,phi) result(loglikelihood)
-        implicit none
-        !> Input parameters
-        double precision, intent(in), dimension(:)   :: theta
-        !> Output derived parameters
-        double precision, intent(out),  dimension(:) :: phi
-
-        ! The return value
-        double precision :: loglikelihood
-
-        ! Normalisation
-        loglikelihood = -log(0.4071069421432255d0) 
-
-        ! Evaluate
-        loglikelihood =  loglikelihood  -  (theta(1)**2 + theta(2)- 11d0)**2    -   (theta(1)+theta(2)**2-7d0)**2 
-
-        ! Use up these parameters to stop irritating warnings
-        if(size(phi)>0) then
-            phi=0d0
-        end if
-
-    end function himmelblau_loglikelihood
-
 
 
 
@@ -60,12 +13,14 @@ module example_likelihoods
     !!
     !! \f[ -\log L(x, y) = (2+ \prod_i^n \cos(\theta_i/2) )^5 \f]
     !!
-    function eggbox_loglikelihood(theta,phi) result(loglikelihood)
+    function eggbox_loglikelihood(theta,phi,context) result(loglikelihood)
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
         ! The return value
         double precision :: loglikelihood
@@ -78,6 +33,7 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
+            phi= context
             phi=0d0
         end if
 
@@ -92,13 +48,15 @@ module example_likelihoods
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function planck_loglikelihood(theta,phi)
+    function planck_loglikelihood(theta,phi,context)
         use random_module, only: random_reals
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
 
         double precision :: planck_loglikelihood
@@ -156,6 +114,7 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
+            phi= context
             phi=0d0
         end if
 
@@ -181,7 +140,7 @@ module example_likelihoods
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function gaussian_loglikelihood_corr(theta,phi)
+    function gaussian_loglikelihood_corr(theta,phi,context)
 #ifdef MPI
         use mpi
 #endif
@@ -191,6 +150,9 @@ module example_likelihoods
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
+
 
         double precision :: gaussian_loglikelihood_corr
 
@@ -250,6 +212,7 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
+            phi= context
             phi=0d0
         end if
 
@@ -260,7 +223,7 @@ module example_likelihoods
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function gaussian_loglikelihood_cluster(theta,phi)
+    function gaussian_loglikelihood_cluster(theta,phi,context)
         use random_module, only: random_reals
         use utils_module,  only: logsumexp,logzero
 #ifdef MPI
@@ -271,6 +234,8 @@ module example_likelihoods
         double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                 :: context
 
 
         double precision :: gaussian_loglikelihood_cluster
@@ -356,10 +321,51 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
+            phi= context
             phi=0d0
         end if
 
     end function gaussian_loglikelihood_cluster
+
+
+
+
+
+    subroutine generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
+        use random_module, only: random_reals, random_orthonormal_basis
+        implicit none
+        integer,          intent(in)                         :: nDims
+        double precision, intent(out),dimension(nDims,nDims) :: invcovmat
+        double precision, intent(out)                        :: logdetcovmat
+        double precision, intent(in)                         :: sigma
+
+        double precision, dimension(nDims)       :: eigenvalues
+        double precision, dimension(nDims,nDims) :: eigenvectors
+        integer :: j
+        double precision, parameter :: rng=1e-2
+
+        ! Generate a random basis for the eigenvectors
+        eigenvectors = random_orthonormal_basis(nDims)
+        ! Generate the eigenvalues logarithmically in [rng,1] * sigma
+        do j=1,nDims
+            eigenvalues(j)  = sigma * rng**((j-1d0)/(nDims-1d0))
+        end do
+        ! Sort them lowest to highest for consistency
+        !call dlasrt('D',nDims,eigenvalues,info)
+
+        ! Create the inverse covariance matrix in the eigenbasis
+        invcovmat = 0d0
+        do j=1,nDims
+            invcovmat(j,j) = 1d0/eigenvalues(j)**2
+        end do
+
+        ! Rotate the matrix into the coordinate basis
+        invcovmat = matmul(eigenvectors,matmul(invcovmat,transpose(eigenvectors)))
+
+        ! sum up the logs of the eigenvalues to get the log of the determinant
+        logdetcovmat = 2 * sum(log(eigenvalues))
+
+    end subroutine generate_covariance
 
 
     subroutine read_covariance(invcovmat,logdetcovmat,nDims)
@@ -404,18 +410,43 @@ module example_likelihoods
 
 
 
+    !> Compute the loglikelihood of a multivariate gaussian
+    function log_gauss(theta,mean,invcovmat,logdetcovmat)
+        use utils_module, only: logTwoPi
+        implicit none
+        !> The input vector
+        double precision, intent(in), dimension(:) :: theta
+        !> The mean
+        double precision, intent(in), dimension(:) :: mean
+        !> The precomputed inverse covariance matrix
+        double precision, intent(in), dimension(:,:) :: invcovmat
+        !> The precomputed logarithm of the determinant
+        double precision, intent(in) :: logdetcovmat
+
+
+        ! The output
+        double precision :: log_gauss
+
+        ! Gaussian normalisation
+        log_gauss = - ( size(theta) * logTwoPi + logdetcovmat )/2d0 
+
+        log_gauss = log_gauss - dot_product(theta-mean,matmul(invcovmat,theta-mean))/2d0
+
+    end function log_gauss
 
     !> Pyramidal likelihood centered on 0.5.
     !! 
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
 
-    function pyramidal_loglikelihood(theta,phi) result(loglikelihood)
+    function pyramidal_loglikelihood(theta,phi,context) result(loglikelihood)
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)  :: theta
         !> Output derived parameters
         double precision, intent(out), dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                :: context
 
         double precision :: loglikelihood
 
@@ -433,6 +464,7 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
+            phi= context
             phi=0d0
         end if
 
@@ -448,12 +480,14 @@ module example_likelihoods
     !!      - w = width of the guassian shell 
     !!      - R = Radius of the gaussian shell (ie: distance from the center)
     !!      - in progress...
-    function gaussian_shell(theta,phi) result(loglikelihood)
+    function gaussian_shell(theta,phi,context) result(loglikelihood)
         implicit none
         !> Input parameters
         double precision, intent(in), dimension(:)  :: theta
         !> Output derived parameters
         double precision, intent(out), dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                :: context
 
         !The output of the function 
         double precision :: loglikelihood
@@ -511,6 +545,7 @@ module example_likelihoods
 
         ! Use up these parameters to stop irritating warnings
         if(size(phi)>0) then
+            phi= context
             phi=0d0
         end if
 
