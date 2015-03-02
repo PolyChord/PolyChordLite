@@ -628,7 +628,7 @@ module read_write_module
             ! Print out the posteriors
             do i_post=1,RTI%nposterior_global(1)
                 weight = exp(RTI%posterior_global(settings%pos_w,i_post,1) + RTI%posterior_global(settings%pos_l,i_post,1) - RTI%maxlogweight_global) 
-                if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior_global(settings%pos_l,i_post,1),-2*RTI%posterior_global(settings%pos_p0:,i_post,1) 
+                if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior_global(settings%pos_l,i_post,1),RTI%posterior_global(settings%pos_p0:,i_post,1) 
             end do
 
             ! Close the weighted global posterior file
@@ -644,7 +644,7 @@ module read_write_module
                     ! Print out the posterior for the active clusters
                     do i_post = 1,RTI%nposterior(i_cluster)
                         weight = exp(RTI%posterior(settings%pos_w,i_post,i_cluster) + RTI%posterior(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster)) 
-                        if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior(settings%pos_l,i_post,i_cluster),-2*RTI%posterior(settings%pos_p0:,i_post,i_cluster) 
+                        if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior(settings%pos_l,i_post,i_cluster),RTI%posterior(settings%pos_p0:,i_post,i_cluster) 
                     end do
 
                     ! Close the weighted cluster posterior file
@@ -660,7 +660,7 @@ module read_write_module
                     ! Print out the posterior for the dead clusters
                     do i_post = 1,RTI%nposterior_dead(i_cluster)
                         weight = exp(RTI%posterior_dead(settings%pos_w,i_post,i_cluster) + RTI%posterior_dead(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster)) 
-                        if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior_dead(settings%pos_l,i_post,i_cluster),-2*RTI%posterior_dead(settings%pos_p0:,i_post,i_cluster) 
+                        if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior_dead(settings%pos_l,i_post,i_cluster),RTI%posterior_dead(settings%pos_p0:,i_post,i_cluster) 
                     end do
 
                     ! Close the weighted cluster posterior file

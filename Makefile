@@ -1,5 +1,5 @@
 # List of available example likelihoods
-EXAMPLES = gaussian rastrigin twin_gaussian random_gaussian
+EXAMPLES = gaussian rastrigin twin_gaussian random_gaussian himmelblau
 
 # Your likelihood programs
 PROGRAMS = my_likelihood my_cpp_likelihood 
