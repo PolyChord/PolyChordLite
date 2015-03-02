@@ -101,6 +101,11 @@ module read_write_module
         write(write_resume_unit,'("=== Number of dead clusters ===")')
         write(write_resume_unit,fmt_int) RTI%ncluster_dead
 
+        write(write_resume_unit,'("=== number of global weighted posterior points ===")')
+        write(write_resume_unit,fmt_int) RTI%nposterior_global(1)
+        write(write_resume_unit,'("=== number of global equally weighted posterior points ===")')
+        write(write_resume_unit,fmt_int) RTI%nequals_global(1)
+
         ! Write out the grade information
         write(write_resume_unit,'("=== Number of grades ===")')
         write(write_resume_unit,fmt_int) size(settings%grade_dims)
@@ -111,7 +116,6 @@ module read_write_module
         write(write_resume_unit,fmt_int) RTI%num_repeats
         write(write_resume_unit,'("=== Number of likelihood calls ===")')                    
         write(write_resume_unit,fmt_int) RTI%nlike
-
 
 
         ! write number of live and phantom points
@@ -228,6 +232,11 @@ module read_write_module
             end do
         end do
 
+        write(write_resume_unit,'("=== global weighted posterior points ===")')                    
+        do i_point=1,RTI%nposterior_global(1)
+            write(write_resume_unit,fmt_dbl) RTI%posterior_global(:,i_point,1)
+        end do
+
         write(write_resume_unit,'("=== equally weighted posterior points ===")')                    
         write(fmt_dbl,'("(",I0,A,")")') settings%np, DB_FMT   ! Initialise the double array format for weighted posterior points
         do i_cluster=1,RTI%ncluster
@@ -245,6 +254,10 @@ module read_write_module
             end do
         end do
 
+        write(write_resume_unit,'("=== global equally weighted posterior points ===")')                    
+        do i_point=1,RTI%nequals_global(1)
+            write(write_resume_unit,fmt_dbl) RTI%equals_global(:,i_point,1)
+        end do
         ! Close the writing file
         close(write_resume_unit)
 
@@ -283,8 +296,10 @@ module read_write_module
         integer, allocatable,dimension(:) :: nphantom
         integer, allocatable,dimension(:) :: nposterior
         integer, allocatable,dimension(:) :: nposterior_dead
+        integer, allocatable,dimension(:) :: nposterior_global
         integer, allocatable,dimension(:) :: nequals
         integer, allocatable,dimension(:) :: nequals_dead
+        integer, allocatable,dimension(:) :: nequals_global
 
         ! -------------------------------------------- !
         call write_resuming(settings%feedback)
@@ -315,13 +330,19 @@ module read_write_module
         read(read_resume_unit,fmt_int) RTI%ncluster_dead ! number of dead clusters
 
         ! Allocate nlive and nphantom arrays based on these
-        allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior(RTI%ncluster),RTI%nequals(RTI%ncluster),RTI%i(RTI%ncluster),nlive(RTI%ncluster),nphantom(RTI%ncluster),nposterior(RTI%ncluster),nequals(RTI%ncluster),RTI%nposterior_dead(RTI%ncluster_dead),RTI%nequals_dead(RTI%ncluster_dead),nposterior_dead(RTI%ncluster_dead),nequals_dead(RTI%ncluster_dead),RTI%nposterior_stack(RTI%ncluster),RTI%num_repeats(size(settings%grade_dims)))
+        allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior(RTI%ncluster),RTI%nequals(RTI%ncluster),RTI%i(RTI%ncluster),nlive(RTI%ncluster),nphantom(RTI%ncluster),nposterior(RTI%ncluster),nequals(RTI%ncluster),RTI%nposterior_dead(RTI%ncluster_dead),RTI%nequals_dead(RTI%ncluster_dead),nposterior_dead(RTI%ncluster_dead),nequals_dead(RTI%ncluster_dead),RTI%nposterior_stack(RTI%ncluster),RTI%num_repeats(size(settings%grade_dims)),RTI%nequals_global(1),nequals_global(1),RTI%nposterior_global(1),nposterior_global(1))
         RTI%nphantom=0
         RTI%nlive=0
         RTI%nposterior=0
+        RTI%posterior_global=0
         RTI%nequals=0
+        RTI%nequals_global=0
         RTI%nposterior_stack=0
 
+        read(read_resume_unit,*)                         ! 
+        read(read_resume_unit,fmt_int) nposterior_global ! number of weighted posteriors
+        read(read_resume_unit,*)                         ! 
+        read(read_resume_unit,fmt_int) nequals_global    ! number of equally weighted posteriors
 
         ! read in out the grade information
         read(read_resume_unit,*)                    
@@ -472,7 +493,7 @@ module read_write_module
             end do
         end do
 
-        ! read in weighted posterior points
+        ! read in dead weighted posterior points
         read(read_resume_unit,*)                               
         do i_cluster=1,RTI%ncluster_dead
             read(read_resume_unit,*)                               
@@ -481,6 +502,14 @@ module read_write_module
                 call add_point(temp_posterior,RTI%posterior_dead,RTI%nposterior_dead,i_cluster)
             end do
         end do
+
+        ! Read in global weighted posterior points
+        read(read_resume_unit,*)                               
+        do i_point=1,nposterior_global(1)
+            read(read_resume_unit,fmt_dbl) temp_posterior
+            call add_point(temp_equal,RTI%posterior_global,RTI%nposterior_global,1)
+        end do
+
 
 
         write(fmt_dbl,'("(",I0,A,")")') settings%np, DB_FMT   ! Initialise the double array format for equally weighted posterior points
@@ -503,6 +532,13 @@ module read_write_module
                 read(read_resume_unit,fmt_dbl) temp_equal
                 call add_point(temp_equal,RTI%equals_dead,RTI%nequals_dead,i_cluster)
             end do
+        end do
+
+        ! Read in global equally weighted posterior points
+        read(read_resume_unit,*)                               
+        do i_point=1,nequals_global(1)
+            read(read_resume_unit,fmt_dbl) temp_equal
+            call add_point(temp_equal,RTI%equals_global,RTI%nequals_global,1)
         end do
 
         ! Close the reading unit

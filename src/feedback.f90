@@ -248,6 +248,8 @@ module feedback_module
             write(stdout_unit,fmt_tail)
             write(stdout_unit,'("ncluster   =",  I8," /",I8           )') RTI%ncluster, RTI%ncluster+RTI%ncluster_dead
             write(stdout_unit,'("ndead      =",  I8                   )') RTI%ndead
+            write(stdout_unit,'("nposterior =",  I8                   )') RTI%nposterior_global(1)
+            write(stdout_unit,'("nequals    =",  I8                   )') RTI%nequals_global(1)
 
             write(fmt_nlike,'("(""nlike      ="",",I0,"I8)")') size(nlikesum)
             write(stdout_unit,fmt_nlike) RTI%nlike
