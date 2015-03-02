@@ -1,0 +1,103 @@
+settings.o :  \
+	utils.o
+
+read_write.o :  \
+	params.o \
+	settings.o \
+	utils.o \
+	priors.o \
+	abort.o \
+	run_time_info.o \
+	array_utils.o \
+	feedback.o
+
+run_time_info.o :  \
+	settings.o \
+	utils.o \
+	calculate.o \
+	array_utils.o \
+	random_utils.o
+
+params.o :  \
+	utils.o
+
+abort.o :  \
+	utils.o
+
+utils.o : 
+
+priors.o :  \
+	params.o \
+	settings.o \
+	utils.o \
+	array_utils.o \
+	abort.o
+
+ini.o :  \
+	params.o \
+	settings.o \
+	utils.o \
+	priors.o \
+	abort.o \
+	read_write.o \
+	array_utils.o
+
+calculate.o :  \
+	settings.o \
+	utils.o \
+	priors.o
+
+clustering.o :  \
+	settings.o \
+	utils.o \
+	calculate.o \
+	run_time_info.o
+
+chordal_sampling.o :  \
+	settings.o \
+	utils.o \
+	priors.o \
+	random_utils.o \
+	calculate.o
+
+array_utils.o :  \
+	abort.o
+
+generate.o :  \
+	calculate.o \
+	settings.o \
+	utils.o \
+	priors.o \
+	abort.o \
+	read_write.o \
+	run_time_info.o \
+	mpi_utils.o \
+	array_utils.o \
+	random_utils.o \
+	feedback.o
+
+feedback.o :  \
+	settings.o \
+	utils.o \
+	priors.o \
+	run_time_info.o
+
+mpi_utils.o :  \
+	abort.o
+
+random_utils.o :  \
+	mpi_utils.o \
+	utils.o
+
+nested_sampling.o :  \
+	chordal_sampling.o \
+	generate.o \
+	settings.o \
+	utils.o \
+	priors.o \
+	read_write.o \
+	run_time_info.o \
+	mpi_utils.o \
+	clustering.o \
+	random_utils.o \
+	feedback.o

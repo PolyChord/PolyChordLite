@@ -22,11 +22,13 @@ ifdef MPI
 # MPI pararellised
 # -----------------
 OBJECTS = $(OBJECTS_PAR)
+include makefile_mpi.dep
 else
 # No parallelisaton
 # -----------------
 #  strip out the mpi_utils file
 OBJECTS = $(patsubst mpi_utils.o,,$(OBJECTS_PAR))
+include makefile.dep
 endif
 
 # "make" builds all
