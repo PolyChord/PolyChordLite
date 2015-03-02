@@ -45,14 +45,12 @@ module read_write_module
         deleted = delete_file( resume_file(settings,.true.), fb )  ! Delete resume file
 
 
-        ! Delete normalised .txt files
-        deleted = delete_file( posterior_file(settings), fb )
+        ! Delete posterior files
         deleted = delete_file( posterior_file(settings,.true.), fb )
         deleted = delete_file( posterior_file(settings,.false.), fb )
 
         i_cluster = 1
         do while ( &
-                delete_file( posterior_file(settings,i=i_cluster), fb ) .or.  &
                 delete_file( posterior_file(settings,.true.,i_cluster), fb ) .or.  &
                 delete_file( posterior_file(settings,.false.,i_cluster), fb )   &
                 )
@@ -567,15 +565,39 @@ module read_write_module
         character(len=fmt_len) :: fmt_dbl
 
         ! ============= Equally weighted posteriors ================
-        open(write_equals_unit,file=trim(equals_file(settings)))
 
         write(fmt_dbl,'("(",I0,A,")")') settings%np,DB_FMT 
 
-        do i_post=1,RTI%nequals(1)
-            write(write_equals_unit,fmt_dbl) 1d0,RTI%equals(settings%p_2l:,i_post,1)
-        end do
+        if(settings%equals) then
+            open(write_equals_unit,file=trim(posterior_file(settings,.false.)))
+            do i_post=1,RTI%nequals_global(1)
+                write(write_equals_unit,fmt_dbl) 1d0,RTI%equals_global(settings%p_2l:,i_post,1)
+            end do
+            close(write_equals_unit)
 
-        close(write_equals_unit)
+            if(settings%cluster_posteriors) then
+                do i_cluster = 1,RTI%ncluster
+
+                    open(write_equals_unit,file=trim(posterior_file(settings,.false.,i_cluster)))
+                    do i_post = 1,RTI%nequals(i_cluster)
+                        write(write_equals_unit,fmt_dbl) 1d0,RTI%equals(settings%p_2l:,i_post,i_cluster)
+                    end do
+                    close(write_equals_unit)
+
+                end do
+
+                do i_cluster = 1,RTI%ncluster_dead
+
+                    open(write_equals_unit,file=trim(posterior_file(settings,.false.,i_cluster+RTI%ncluster)))
+                    do i_post = 1,RTI%nequals_dead(i_cluster)
+                        write(write_equals_unit,fmt_dbl) 1d0,RTI%equals_dead(settings%p_2l:,i_post,i_cluster)
+                    end do
+                    close(write_equals_unit)
+
+                end do
+            end if
+        end if
+
         
 
 
@@ -813,12 +835,12 @@ module read_write_module
 
     end function cluster_dir
 
-    function posterior_file(settings,unnormalised,i) result(file_name)
+    function posterior_file(settings,weighted,i) result(file_name)
         use settings_module, only: program_settings
         use utils_module,    only: STR_LENGTH
         implicit none
         type(program_settings), intent(in) :: settings
-        logical,intent(in),optional :: unnormalised
+        logical,intent(in) :: weighted
         integer,intent(in),optional :: i
 
         character(STR_LENGTH) :: file_name
@@ -826,47 +848,25 @@ module read_write_module
         character(STR_LENGTH) :: cluster_num
 
         if(present(i)) then
-
             write(cluster_num,'(I5)') i
-            file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) // '_'
-
-            if(present(unnormalised)) then
-                if(unnormalised) then
-                    file_name = trim(file_name) // 'unnormalised_'
-                else
-                    file_name = trim(file_name) // 'unnormalised_temp_'
-                endif
-            end if
-
-            file_name = trim(file_name) // trim(adjustl(cluster_num)) //'.txt'
+            file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) // '_' // trim(adjustl(cluster_num)) 
         else 
-
             file_name = trim(settings%base_dir) // '/' // trim(settings%file_root)
+        end if
 
-            if(present(unnormalised)) then
-                if(unnormalised) then
-                    file_name = trim(file_name) // '_unnormalised'
-                else
-                    file_name = trim(file_name) // '_unnormalised_temp' 
-                endif
-            end if
-
+        if(weighted) then
             file_name = trim(file_name) // '.txt'
+        else
+            file_name = trim(file_name) // '_equal_weights.txt'
         end if
 
     end function posterior_file
 
-    function equals_file(settings) result(file_name)
-        use settings_module, only: program_settings
-        use utils_module,    only: STR_LENGTH
-        implicit none
-        type(program_settings), intent(in) :: settings
 
-        character(STR_LENGTH) :: file_name
 
-        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_eq.txt'
 
-    end function equals_file
+
+
 
     function phys_live_file(settings,i) result(file_name)
         use settings_module, only: program_settings

@@ -64,7 +64,7 @@ contains
 
         settings%equals        = get_logical(file_name,'equally_weighted_posteriors',.false.)
         settings%posteriors    = get_logical(file_name,'weighted_posteriors',.false.)
-        settings%cluster_posteriors = get_logical(file_name,'posterior_clusters',.false.)
+        settings%cluster_posteriors = get_logical(file_name,'posterior_clustering',.false.)
 
         settings%feedback      = get_integer(file_name,'feedback',1)
         settings%update_resume = get_integer(file_name,'update_resume',settings%nlive)

@@ -239,7 +239,7 @@ module nested_sampling_module
                         call update_posteriors(settings,RTI) 
 
                         if(settings%write_resume)        call write_resume_file(settings,RTI)
-                        !if(settings%write_posteriors)    call write_posterior_file(settings,RTI)  
+                        call write_posterior_file(settings,RTI)  
                         if(settings%write_live)          call write_phys_live_points(settings,RTI)
                         if(settings%write_stats)         call write_stats_file(settings,RTI)
                     end if
