@@ -131,7 +131,7 @@ program PolyChord
     call initialise_program(settings,priors,params,derived_params)
 
     ! Set up the loglikelihood
-    call setup_loglikelihood
+    call setup_loglikelihood(settings)
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors

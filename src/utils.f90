@@ -858,6 +858,28 @@ module utils_module
         return
     end function r8poly_value
 
+    !> Compute the loglikelihood of a multivariate gaussian
+    function log_gauss(theta,mean,invcovmat,logdetcovmat)
+        implicit none
+        !> The input vector
+        double precision, intent(in), dimension(:) :: theta
+        !> The mean
+        double precision, intent(in), dimension(:) :: mean
+        !> The precomputed inverse covariance matrix
+        double precision, intent(in), dimension(:,:) :: invcovmat
+        !> The precomputed logarithm of the determinant
+        double precision, intent(in) :: logdetcovmat
+
+
+        ! The output
+        double precision :: log_gauss
+
+        ! Gaussian normalisation
+        log_gauss = - ( size(theta) * logTwoPi + logdetcovmat )/2d0 
+
+        log_gauss = log_gauss - dot_product(theta-mean,matmul(invcovmat,theta-mean))/2d0
+
+    end function log_gauss
 
 
 end module utils_module

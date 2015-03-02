@@ -571,4 +571,41 @@ module random_module
     end function random_integer_P
 
 
+    !> Generate a random inverse covariance matrix with unit determinant
+    !! 
+    subroutine random_inverse_covmat(invcovmat,logdetcovmat,sigma,nDims)
+        implicit none
+        integer,          intent(in)                         :: nDims
+        double precision, intent(out),dimension(nDims,nDims) :: invcovmat
+        double precision, intent(out)                        :: logdetcovmat
+        double precision, intent(in)                         :: sigma
+
+        double precision, dimension(nDims)       :: eigenvalues
+        double precision, dimension(nDims,nDims) :: eigenvectors
+        integer :: j
+        double precision, parameter :: rng=1e-2
+
+        ! Generate a random basis for the eigenvectors
+        eigenvectors = random_orthonormal_basis(nDims)
+        ! Generate the eigenvalues logarithmically in [rng,1] * sigma
+        do j=1,nDims
+            eigenvalues(j)  = sigma * rng**((j-1d0)/(nDims-1d0))
+        end do
+        ! Sort them lowest to highest for consistency
+        !call dlasrt('D',nDims,eigenvalues,info)
+
+        ! Create the inverse covariance matrix in the eigenbasis
+        invcovmat = 0d0
+        do j=1,nDims
+            invcovmat(j,j) = 1d0/eigenvalues(j)**2
+        end do
+
+        ! Rotate the matrix into the coordinate basis
+        invcovmat = matmul(eigenvectors,matmul(invcovmat,transpose(eigenvectors)))
+
+        ! sum up the logs of the eigenvalues to get the log of the determinant
+        logdetcovmat = 2 * sum(log(eigenvalues))
+
+    end subroutine random_inverse_covmat
+
 end module random_module

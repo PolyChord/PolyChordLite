@@ -119,44 +119,6 @@ module example_likelihoods
     end function himmelblau_loglikelihood
 
 
-    !> Upside down [Rastrigin function](http://en.wikipedia.org/wiki/Rastrigin_function).
-    !!
-    !! \f[ -\log L(\theta) = f(\mathbf{x}) = A n + \sum_{i=1}^n \left[\theta_i^2 - A\cos(2 \pi \theta_i)\right] \f]
-    !!
-    !! where  \f$ A=10\f$  and \f$ \theta_i\in[-5.12,5.12] \f$ . It has a global minimum 
-    !! at \f$ \theta = \mathbf{0}\f$  where \f$ f(\theta)=0\f$ .
-    !!
-    !! In mathematical optimization, the Rastrigin function is a
-    !! non-convex function used as a performance test problem for optimization
-    !! algorithms. It is a typical example of non-linear multimodal function. It
-    !! was first proposed by Rastrigin as a 2-dimensional function and has been generalized
-    !! by Mühlenbein et al. Finding the minimum of this function is a
-    !! fairly difficult problem due to its large search space and its large number
-    !! of local minima.
-    !!
-    function rastrigin_loglikelihood(theta,phi) result(loglikelihood)
-        use utils_module, only: TwoPi
-        implicit none
-        !> Input parameters
-        double precision, intent(in), dimension(:)   :: theta
-        !> Output derived parameters
-        double precision, intent(out),  dimension(:) :: phi
-
-        double precision, parameter :: A=10d0
-
-        ! The return value
-        double precision :: loglikelihood
-
-        loglikelihood =  - sum( log(4991.21750d0) + theta**2 - A*cos(TwoPi*theta) )
-
-        ! Use up these parameters to stop irritating warnings
-        if(size(phi)>0) then
-            phi=0d0
-        end if
-
-    end function rastrigin_loglikelihood
-
-
 
 
     !> Eggbox likelihood
@@ -465,46 +427,6 @@ module example_likelihoods
     end function gaussian_loglikelihood_cluster
 
 
-
-
-
-    subroutine generate_covariance(invcovmat,logdetcovmat,sigma,nDims)
-        use random_module, only: random_reals, random_orthonormal_basis
-        implicit none
-        integer,          intent(in)                         :: nDims
-        double precision, intent(out),dimension(nDims,nDims) :: invcovmat
-        double precision, intent(out)                        :: logdetcovmat
-        double precision, intent(in)                         :: sigma
-
-        double precision, dimension(nDims)       :: eigenvalues
-        double precision, dimension(nDims,nDims) :: eigenvectors
-        integer :: j
-        double precision, parameter :: rng=1e-2
-
-        ! Generate a random basis for the eigenvectors
-        eigenvectors = random_orthonormal_basis(nDims)
-        ! Generate the eigenvalues logarithmically in [rng,1] * sigma
-        do j=1,nDims
-            eigenvalues(j)  = sigma * rng**((j-1d0)/(nDims-1d0))
-        end do
-        ! Sort them lowest to highest for consistency
-        !call dlasrt('D',nDims,eigenvalues,info)
-
-        ! Create the inverse covariance matrix in the eigenbasis
-        invcovmat = 0d0
-        do j=1,nDims
-            invcovmat(j,j) = 1d0/eigenvalues(j)**2
-        end do
-
-        ! Rotate the matrix into the coordinate basis
-        invcovmat = matmul(eigenvectors,matmul(invcovmat,transpose(eigenvectors)))
-
-        ! sum up the logs of the eigenvalues to get the log of the determinant
-        logdetcovmat = 2 * sum(log(eigenvalues))
-
-    end subroutine generate_covariance
-
-
     subroutine read_covariance(invcovmat,logdetcovmat,nDims)
         use random_module, only: random_reals, random_orthonormal_basis
         use utils_module, only: read_covmat_unit
@@ -547,29 +469,6 @@ module example_likelihoods
 
 
 
-    !> Compute the loglikelihood of a multivariate gaussian
-    function log_gauss(theta,mean,invcovmat,logdetcovmat)
-        use utils_module, only: logTwoPi
-        implicit none
-        !> The input vector
-        double precision, intent(in), dimension(:) :: theta
-        !> The mean
-        double precision, intent(in), dimension(:) :: mean
-        !> The precomputed inverse covariance matrix
-        double precision, intent(in), dimension(:,:) :: invcovmat
-        !> The precomputed logarithm of the determinant
-        double precision, intent(in) :: logdetcovmat
-
-
-        ! The output
-        double precision :: log_gauss
-
-        ! Gaussian normalisation
-        log_gauss = - ( size(theta) * logTwoPi + logdetcovmat )/2d0 
-
-        log_gauss = log_gauss - dot_product(theta-mean,matmul(invcovmat,theta-mean))/2d0
-
-    end function log_gauss
 
     !> Pyramidal likelihood centered on 0.5.
     !! 
