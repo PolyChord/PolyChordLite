@@ -106,13 +106,16 @@ program PolyChord
         settings%base_dir      = 'chains'
         settings%file_root     = 'test'
 
-        settings%write_resume  = .true.
+        settings%write_resume  = .false.
         settings%read_resume   = .false.
         settings%write_live    = .false.
 
+        settings%equals        = .false.
+        settings%posteriors    = .false.
+        settings%cluster_posteriors = .false.
+
         settings%feedback      = 1
         settings%update_resume = settings%nlive
-        settings%write_unnormalised_posterior = .false.
 
         settings%thin_posterior= 1d0
         allocate(settings%grade_frac(1)) 

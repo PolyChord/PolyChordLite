@@ -11,19 +11,13 @@ module settings_module
     !> Type to contain all of the parameters involved in a nested sampling run
     Type :: program_settings
 
-        !> The directory to put outputs in
-        character(STR_LENGTH) :: base_dir='chains'
-        !> The file root for outputs
-        character(STR_LENGTH) :: file_root='test'
+        integer :: nlive =500 !> The number of live points
+        integer :: num_repeats !> The number of slow chords to draw
+        logical :: do_clustering = .false.  !> Whether to do clustering or not
 
-        !> The number of live points
-        integer :: nlive =500
+        integer :: feedback = 1 !> The degree of feedback to provide
 
-        !> The degree of feedback to provide
-        integer :: feedback = 1
-
-        !> The degree of precision in the final answer
-        double precision :: precision_criterion = 1d-3
+        double precision :: precision_criterion = 1d-3 !> The stopping criterion
 
         !> The maximum number of dead points/samples
         !!
@@ -33,29 +27,28 @@ module settings_module
         !> What to thin the posterior points (i.e. probability of keeping a given point)
         double precision :: thin_posterior = 1d0
 
-        !> Whether or not to calculate unnormalised posteriors
-        logical :: write_unnormalised_posterior = .false.
+        logical :: posteriors = .false.        !> Whether to calculate weighted posteriors
+        logical :: equals     = .true.         !> Whether to calculate equally weighted posteriors
+        logical :: cluster_posteriors = .false.!> Whether to calculate clustered posteriors
 
-        !> Whether or not to write resume files
-        logical :: write_resume = .false.
 
-        !> Whether or not to write stats file
-        logical :: write_stats = .true.
+        
+        logical :: write_resume = .false. !> Whether or not to write resume files
+        logical :: read_resume = .false.  !> Whether or not to resume from file
+        logical :: write_stats = .true.   !> Whether or not to write stats file
+        logical :: write_live = .false.   !> Whether or not to write phys_live points
 
-        !> How often to update the resume file
-        integer :: update_resume = 500
+        integer :: update_resume = 500 !> How often to update the resume file
 
-        !> The number of chords to draw
-        integer :: num_repeats
+        integer, allocatable,dimension(:) :: grade_dims          !> The number of parameters in each grade
+        double precision, allocatable,dimension(:) :: grade_frac !> The fraction of time spent in each grade
 
-        !> Whether or not to resume from file
-        logical :: read_resume = .false.
 
-        !> Whether or not to write phys_live points
-        logical :: write_live = .false.
 
-        !> Percentage of time to spend on non-slow steps
-        double precision :: percent = 1d0
+
+        character(STR_LENGTH) :: base_dir='chains' !> The directory to put outputs in
+        character(STR_LENGTH) :: file_root='test'  !> The file root for outputs
+
 
         !> Dimensionality of the space
         integer :: nDims = 1
@@ -120,19 +113,6 @@ module settings_module
         integer :: p_d0
         integer :: p_d1
         integer :: np
-
-        !> The number of parameters in each grade
-        integer, allocatable,dimension(:) :: grade_dims
-        !> The fraction of time spent in each grade
-        double precision, allocatable,dimension(:) :: grade_frac
-
-        !> Whether to time likelihood calls for grades
-        logical :: do_timing = .false.
-        !> How long to wait in between the printing of times
-        integer :: print_timing = 100
-
-        !> Whether to do clustering or not
-        logical :: do_clustering = .false.
 
     end type program_settings
 

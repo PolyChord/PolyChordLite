@@ -1,6 +1,7 @@
 # List of available example likelihoods
 EXAMPLES = gaussian rastrigin twin_gaussian
 
+# Your likelihood programs
 PROGRAMS = my_likelihood my_cpp_likelihood 
 
 
@@ -18,6 +19,14 @@ MPI=1
 
 # Whether to run in debugging mode
 DEBUG=
+
+# Whether to perform inter-procedural optimisation
+# -- this results in a faster program, but much slower compilation
+IPO = -ipo
+
+# Host architecture (for intel)
+HOST = -xAVX
+#HOST = -xHOST
 
 
 # ============ MPI settings ================
@@ -91,10 +100,12 @@ else
 #   w            : turn off all warnings
 #   vec-report0  : disables printing of vectorizer diagnostic information
 #   opt-report0  : disables printing of optimization reports
-FCFLAGS += -ipo -O3 -no-prec-div -xHost -w -vec-report0 -opt-report0 
-CCFLAGS += -ipo -O3 -no-prec-div -xHost -w -vec-report0 -opt-report0
+FCFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0 
+CCFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0
+ifdef IPO
 # Archive tool for compiling with ipo.
 AR = xiar r
+endif
 endif
 
 endif
@@ -159,7 +170,7 @@ PROGRAM_LIKELIHOODS = $(patsubst %,lib%.a,$(PROGRAMS))
 
 
 # Export all of the necessary variables
-export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS EXAMPLE_LIKELIHOODS
+export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS EXAMPLE_LIKELIHOODS IPO
 
 
 # "make" builds all

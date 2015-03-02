@@ -743,10 +743,14 @@ module run_time_module
 
 
                 ! Calculate the posterior point and add it to the array
-                posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
-                call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
-                RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
-                RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
+                if(settings%equals .or. settings%posteriors ) then
+                    posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
+                    call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
+                    RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
+                    RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
+                end if
+
+
                 ! Now we delete the phantoms
                 i_phantom = 1
                 do while(i_phantom<=RTI%nphantom(cluster_del))
@@ -758,10 +762,12 @@ module run_time_module
                         deleted_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom,cluster_del)
 
                         ! Calculate the posterior point and add it to the array
-                        posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
-                        call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
-                        RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
-                        RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
+                        if(settings%equals .or. settings%posteriors ) then
+                            posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
+                            call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
+                            RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
+                            RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
+                        end if
 
                     else
                         i_phantom = i_phantom+1
@@ -848,6 +854,10 @@ module run_time_module
 
     end function identify_cluster
 
+
+
+
+
     subroutine update_posteriors(settings,RTI)
         use settings_module, only: program_settings
         use random_module, only: bernoulli_trial
@@ -865,75 +875,92 @@ module run_time_module
         integer :: i_cluster
 
 
-        i_post=1
-        do while(i_post<=RTI%nequals_global(1)) 
-            ! We don't need to bother with points that have a weight equal to
-            ! the max weight, these are automatically accepted
-            if(RTI%equals_global(settings%p_w,i_post,1)<RTI%maxlogweight_global) then
-
-                ! accept with probability p = weight/maxweight
-                if(bernoulli_trial( exp(RTI%equals_global(settings%p_w,i_post,1)-RTI%maxlogweight(1)) )) then
-                    ! If accepted, then their new probability is maxlogweight (for
-                    ! the next round of stripping)
-                    RTI%equals_global(settings%p_w,i_post,1) = RTI%maxlogweight_global
-                    ! move on to the next point
-                    i_post=i_post+1
-                else
-                    ! delete this point if not accepted
-                    posterior_point = delete_point(i_post,RTI%equals_global,RTI%nequals_global,1)
-                end if
-            else
-                i_post=i_post+1 ! move on to the next point if automatically accepted
-            end if
-        end do
-
-        ! strip out old posterior points from equals
-        do i_cluster=1,RTI%ncluster
+        if(settings%equals) then
+            ! Clean the global equally weighted posteriors
             i_post=1
-            do while(i_post<=RTI%nequals(i_cluster)) 
+            do while(i_post<=RTI%nequals_global(1)) 
                 ! We don't need to bother with points that have a weight equal to
                 ! the max weight, these are automatically accepted
-                if(RTI%equals(settings%p_w,i_post,i_cluster)<RTI%maxlogweight(i_cluster)) then
+                if(RTI%equals_global(settings%p_w,i_post,1)<RTI%maxlogweight_global) then
 
                     ! accept with probability p = weight/maxweight
-                    if(bernoulli_trial( exp(RTI%equals(settings%p_w,i_post,i_cluster)-RTI%maxlogweight(i_cluster)) )) then
+                    if(bernoulli_trial( exp(RTI%equals_global(settings%p_w,i_post,1)-RTI%maxlogweight(1)) )) then
                         ! If accepted, then their new probability is maxlogweight (for
                         ! the next round of stripping)
-                        RTI%equals(settings%p_w,i_post,i_cluster) = RTI%maxlogweight(i_cluster) 
+                        RTI%equals_global(settings%p_w,i_post,1) = RTI%maxlogweight_global
                         ! move on to the next point
                         i_post=i_post+1
                     else
                         ! delete this point if not accepted
-                        posterior_point = delete_point(i_post,RTI%equals,RTI%nequals,i_cluster)
+                        posterior_point = delete_point(i_post,RTI%equals_global,RTI%nequals_global,1)
                     end if
                 else
                     i_post=i_post+1 ! move on to the next point if automatically accepted
                 end if
             end do
-        end do
+
+            ! Clean the local equally weighted posteriors
+            if(settings%cluster_posteriors) then
+                ! strip out old posterior points from equals
+                do i_cluster=1,RTI%ncluster
+                    i_post=1
+                    do while(i_post<=RTI%nequals(i_cluster)) 
+                        ! We don't need to bother with points that have a weight equal to
+                        ! the max weight, these are automatically accepted
+                        if(RTI%equals(settings%p_w,i_post,i_cluster)<RTI%maxlogweight(i_cluster)) then
+
+                            ! accept with probability p = weight/maxweight
+                            if(bernoulli_trial( exp(RTI%equals(settings%p_w,i_post,i_cluster)-RTI%maxlogweight(i_cluster)) )) then
+                                ! If accepted, then their new probability is maxlogweight (for
+                                ! the next round of stripping)
+                                RTI%equals(settings%p_w,i_post,i_cluster) = RTI%maxlogweight(i_cluster) 
+                                ! move on to the next point
+                                i_post=i_post+1
+                            else
+                                ! delete this point if not accepted
+                                posterior_point = delete_point(i_post,RTI%equals,RTI%nequals,i_cluster)
+                            end if
+                        else
+                            i_post=i_post+1 ! move on to the next point if automatically accepted
+                        end if
+                    end do
+                end do
+            end if
+        end if
 
         ! Add new posterior points from the stack
         do i_cluster=1,RTI%ncluster
             do i_post=1,RTI%nposterior_stack(i_cluster)
 
-                ! Test for acceptance of equally weighted posteriors
-                if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster)) * settings%thin_posterior )) then
-                    posterior_point(settings%p_w) = RTI%maxlogweight(i_cluster)
-                    posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post,i_cluster)
-                    posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
-                    call add_point(posterior_point,RTI%equals,RTI%nequals,i_cluster)
+                if(settings%equals) then
+
+                    ! Add the global equally weighted posteriors
+                    if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight_global) * settings%thin_posterior )) then
+                        posterior_point(settings%p_w) = RTI%maxlogweight_global
+                        posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post,i_cluster)
+                        posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
+                        call add_point(posterior_point,RTI%equals_global,RTI%nequals_global,1)
+                    end if
+
+                    ! Add the clustered equally weighted posteriors
+                    if(settings%cluster_posteriors) then
+                        ! Test for acceptance of equally weighted posteriors
+                        if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster)) * settings%thin_posterior )) then
+                            posterior_point(settings%p_w) = RTI%maxlogweight(i_cluster)
+                            posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post,i_cluster)
+                            posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
+                            call add_point(posterior_point,RTI%equals,RTI%nequals,i_cluster)
+                        end if
+                    end if
+
                 end if
 
-                if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight_global) * settings%thin_posterior )) then
-                    posterior_point(settings%p_w) = RTI%maxlogweight_global
-                    posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post,i_cluster)
-                    posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
-                    call add_point(posterior_point,RTI%equals_global,RTI%nequals_global,1)
+                if(settings%posteriors) then
+                    ! Add point to global weighted posterior array
+                    call add_point(RTI%posterior_stack(:,i_post,i_cluster),RTI%posterior_global,RTI%nposterior_global,1)
+                    ! Add point to cluster weighted posterior array
+                    if(settings%cluster_posteriors) call add_point(RTI%posterior_stack(:,i_post,i_cluster),RTI%posterior,RTI%nposterior,i_cluster)
                 end if
-
-                ! Add point to posterior array
-                call add_point(RTI%posterior_stack(:,i_post,i_cluster),RTI%posterior,RTI%nposterior,i_cluster)
-                call add_point(RTI%posterior_stack(:,i_post,i_cluster),RTI%posterior_global,RTI%nposterior_global,1)
             end do
         end do
 

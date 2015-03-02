@@ -62,6 +62,10 @@ contains
         settings%read_resume   = get_logical(file_name,'resume',.false.)
         settings%write_live    = get_logical(file_name,'write_live',.false.)
 
+        settings%equals        = get_logical(file_name,'equally_weighted_posteriors',.false.)
+        settings%posteriors    = get_logical(file_name,'weighted_posteriors',.false.)
+        settings%cluster_posteriors = get_logical(file_name,'posterior_clusters',.false.)
+
         settings%feedback      = get_integer(file_name,'feedback',1)
         settings%update_resume = get_integer(file_name,'update_resume',settings%nlive)
 

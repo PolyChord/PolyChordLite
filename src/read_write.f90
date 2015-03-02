@@ -581,32 +581,32 @@ module read_write_module
 
         ! ============= Unnormalised posteriors ====================
 
-        if(settings%write_unnormalised_posterior) then
+        !if(settings%write_unnormalised_posterior) then
 
-            ! Open the new unormalised .txt file for writing
-            open(write_untxt_unit,file=trim(posterior_file(settings,.true.)), action='write',position='append') 
+        !    ! Open the new unormalised .txt file for writing
+        !    open(write_untxt_unit,file=trim(posterior_file(settings,.true.)), action='write',position='append') 
 
-            ! Define the printing format
-            write(fmt_dbl,'("(",I0,A,")")') settings%nposterior, DB_FMT
+        !    ! Define the printing format
+        !    write(fmt_dbl,'("(",I0,A,")")') settings%nposterior, DB_FMT
 
-            do i_cluster=1,RTI%ncluster
+        !    do i_cluster=1,RTI%ncluster
 
-                if(settings%do_clustering) open(write_untxt_cluster_unit,file=trim(posterior_file(settings,.true.,i_cluster)),action='write',position='append') 
+        !        if(settings%do_clustering) open(write_untxt_cluster_unit,file=trim(posterior_file(settings,.true.,i_cluster)),action='write',position='append') 
 
-                do i_post=1,RTI%nposterior_stack(i_cluster)
+        !        do i_post=1,RTI%nposterior_stack(i_cluster)
 
-                    ! Print each cluster sequentially to the main unnormalised chains file
-                    write(write_untxt_unit,fmt_dbl) RTI%posterior_stack(:,i_post,i_cluster)
+        !            ! Print each cluster sequentially to the main unnormalised chains file
+        !            write(write_untxt_unit,fmt_dbl) RTI%posterior_stack(:,i_post,i_cluster)
 
-                    ! If we're clustering, then print out separate cluster files
-                    if(settings%do_clustering) write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior_stack(:,i_post,i_cluster) 
+        !            ! If we're clustering, then print out separate cluster files
+        !            if(settings%do_clustering) write(write_untxt_cluster_unit,fmt_dbl) RTI%posterior_stack(:,i_post,i_cluster) 
 
-                end do
+        !        end do
 
-                if(settings%do_clustering) close(write_untxt_cluster_unit)
+        !        if(settings%do_clustering) close(write_untxt_cluster_unit)
 
-            end do
-        end if
+        !    end do
+        !end if
 
         ! Delete all of the posterior stack
         RTI%nposterior_stack = 0

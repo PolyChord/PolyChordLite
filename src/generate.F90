@@ -351,7 +351,7 @@ module generate_module
 
             call cpu_time(time0)
             time1=time0
-            do while( time1-time0< speed(1)*settings%nlive * settings%percent/(100-settings%percent)/(size(speed)-1d0) )
+            do while( (time1-time0)/settings%grade_frac(i_speed)< speed(1)/settings%grade_frac(1) )
                 live_point(h0:h1) = random_reals(h1-h0+1)
 
                 call calculate_point( loglikelihood, priors, live_point, settings, nlike)
