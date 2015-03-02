@@ -39,6 +39,7 @@ module settings_module
         logical :: write_live = .false.   !> Whether or not to write phys_live points
 
         integer :: update_resume = 500 !> How often to update the resume file
+        integer :: update_posterior = 500 !> How often to update the posterior files
 
         integer, allocatable,dimension(:) :: grade_dims          !> The number of parameters in each grade
         double precision, allocatable,dimension(:) :: grade_frac !> The fraction of time spent in each grade

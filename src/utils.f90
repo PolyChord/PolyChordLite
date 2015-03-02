@@ -51,23 +51,19 @@ module utils_module
     integer, parameter :: write_ev_unit = 17
     !> unit for writing evidence distribution
     integer, parameter :: write_stats_unit = 18
-    !> unit for reading unnormalised posterior files
-    integer, parameter :: read_untxt_unit = 19
-    !> unit for writing unnormalised posterior files
-    integer, parameter :: write_untxt_unit = 20
-    !> unit for writing unnormalised posterior cluster files
-    integer, parameter :: write_untxt_cluster_unit = 21
     !> unit for writing equal weights files
-    integer, parameter :: write_equals_unit = 22
+    integer, parameter :: write_equals_unit = 19
+    !> unit for writing weights files
+    integer, parameter :: write_posterior_unit = 19
 
     !> unit for deleting generic files
-    integer, parameter :: delete_unit = 23
+    integer, parameter :: delete_unit = 20
 
 
     !> unit for params file
-    integer, parameter :: params_unit = 24
+    integer, parameter :: params_unit = 21
     !> unit for paramnames file
-    integer, parameter :: paramnames_unit = 24
+    integer, parameter :: paramnames_unit = 22
 
     !> Log[1/2 Erfc[j/Sqrt[2]]]
     double precision, parameter,dimension(20) :: logsigma = (/-1.84102, -3.78318, -6.60773, -10.3601, -15.065, -20.7368, -27.3843, -35.0134, -43.6281, -53.2313, -63.8249, -75.4107, -87.9897, -101.563, -116.131, -131.695, -148.256, -165.812, -184.366, -203.917 /)
@@ -113,6 +109,19 @@ module utils_module
 
 
 
+    function cyc(iterator,cycle_size)
+        implicit none
+        integer, intent(in) :: iterator
+        integer, intent(in) :: cycle_size
+        logical :: cyc
+
+        if(cycle_size<=0) then
+            cyc = .true.
+        else
+            cyc = mod(iterator,cycle_size)==0
+        end if
+
+    end function cyc
 
 
 

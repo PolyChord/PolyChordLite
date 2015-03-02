@@ -19,8 +19,8 @@ program PolyChord
     implicit none
 
     ! Output of the program
-    ! 1) log(evidence)
-    ! 2) error(log(evidence))
+    ! 1) mean(log(evidence))
+    ! 2) var(log(evidence))
     ! 3) ndead
     ! 4) number of likelihood calls
     ! 5) log(evidence) + log(prior volume)

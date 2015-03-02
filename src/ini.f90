@@ -68,6 +68,7 @@ contains
 
         settings%feedback      = get_integer(file_name,'feedback',1)
         settings%update_resume = get_integer(file_name,'update_resume',settings%nlive)
+        settings%update_resume = get_integer(file_name,'update_posteriors',settings%nlive)
 
         settings%thin_posterior= get_double(file_name,'thin_factor',0d0)
 

@@ -13,7 +13,7 @@ module nested_sampling_module
     function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
         use settings_module,   only: program_settings
-        use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero
+        use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero,cyc
         use read_write_module
         use feedback_module
         use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats,delete_cluster,update_posteriors
@@ -228,29 +228,32 @@ module nested_sampling_module
                 nlikesum  = nlikesum  + nlike
 
 
+                ! See if this point is suitable to be added to the arrays
                 if( replace_point(settings,RTI,baby_points,cluster_id) ) then
 
+                    ! Check to see if we need more samples
                     need_more_samples = more_samples_needed(settings,RTI) 
+
+                    ! Update the posterior array every nlive iterations
+                    if( cyc(RTI%ndead,settings%nlive) .or. .not. need_more_samples ) call update_posteriors(settings,RTI) 
 
                     ! Update the resume files every settings%update_resume iterations,
                     ! or at the end of the run
-                    if( mod(RTI%ndead,settings%update_resume)==0 .or. .not. need_more_samples ) then
-
-                        call update_posteriors(settings,RTI) 
-
+                    if( cyc(RTI%ndead,settings%update_resume) .or. .not. need_more_samples ) then
                         if(settings%write_resume)        call write_resume_file(settings,RTI)
-                        call write_posterior_file(settings,RTI)  
                         if(settings%write_live)          call write_phys_live_points(settings,RTI)
                         if(settings%write_stats)         call write_stats_file(settings,RTI)
                     end if
 
+                    if( cyc(RTI%ndead,settings%update_posterior) .or. .not.need_more_samples ) call write_posterior_file(settings,RTI)  
+
                     call delete_cluster(settings,RTI) ! Delete any clusters as necessary
 
-                    if( mod(RTI%ndead,settings%nlive)==0 ) then
+                    ! update the clustering and covariance matrices every nlive iterations
+                    if( cyc(RTI%ndead,settings%nlive) ) then
                         !--------------------------------------------!
                         call write_intermediate_results(settings,RTI,nlikesum,num_repeats)
                         !--------------------------------------------!
-                        nlikesum=0
                         if(settings%do_clustering) call do_clustering(settings,RTI)
                         call calculate_covmats(settings,RTI)
                     end if
@@ -263,7 +266,7 @@ module nested_sampling_module
 
             ! Create the output array
             ! (1) log evidence
-            ! (2) Error in the log evidence
+            ! (2) variance in the log evidence
             ! (3) Number of dead points
             ! (4) Number of slow likelihood calls
             ! (5) log(evidence * prior volume)

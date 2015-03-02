@@ -219,15 +219,15 @@ module run_time_module
 
         logL  = RTI%logLp(p)
 
-        lognp = log( RTI%nlive(p) +0d0 )
-        lognp1= log( RTI%nlive(p) +1d0 )
-        lognp2= log( RTI%nlive(p) +2d0 )
+        lognp = log( RTI%nlive(p) + 0d0 )
+        lognp1= log( RTI%nlive(p) + 1d0 )
+        lognp2= log( RTI%nlive(p) + 2d0 )
 
         ! Output the logweight
         logweight =  RTI%logXp(p) - lognp1
 
         ! Global evidence
-        call logincexp( RTI%logZ, RTI%logXp(p)+logL-lognp1  )
+        call logincexp( RTI%logZ,      RTI%logXp(p)+logL-lognp1  )
         ! Local evidence
         call logincexp( RTI%logZp(p) , RTI%logXp(p)+logL-lognp1  )
         ! Local volume
@@ -235,14 +235,14 @@ module run_time_module
 
 
         ! Global evidence error
-        call logincexp( RTI%logZ2 ,                                 &
-            log2 + RTI%logZXp(p)  + logL - lognp1,              &
+        call logincexp( RTI%logZ2 ,                             &
+            log2 + RTI%logZXp(p)     +   logL - lognp1,         &
             log2 + RTI%logXpXq(p,p)  + 2*logL - lognp1 - lognp2 &
             )
 
         ! global evidence volume cross correlation p=p
         RTI%logZXp(p) = RTI%logZXp(p) + lognp - lognp1
-        call logincexp( RTI%logZXp(p), &
+        call logincexp( RTI%logZXp(p),                       &
             RTI%logXpXq(p,p)+ logL + lognp - lognp1 - lognp2 &
             )
 
@@ -253,15 +253,17 @@ module run_time_module
 
 
         ! Local evidence error
-        call logincexp( RTI%logZp2(p),                             &
-            log2 + RTI%logZpXp(p)  + logL - lognp1,            &
+        call logincexp( RTI%logZp2(p),                          &
+            log2 + RTI%logZpXp(p)    +   logL - lognp1,         &
             log2 + RTI%logXpXq(p,p)  + 2*logL - lognp1 - lognp2 &
             )
 
 
         ! Local evidence volume cross correlation
         RTI%logZpXp(p) = RTI%logZpXp(p) + lognp - lognp1
-        call logincexp( RTI%logZpXp(p) , RTI%logXpXq(p,p)+ logL + lognp - lognp1 - lognp2 )
+        call logincexp( RTI%logZpXp(p) ,                     &
+            RTI%logXpXq(p,p)+ logL + lognp - lognp1 - lognp2 &
+            )
 
 
         ! Local volume cross correlation (p=p)
@@ -625,7 +627,7 @@ module run_time_module
         double precision, intent(out), dimension(RTI%ncluster_dead),optional :: varlogZp_dead !>
 
         logZ       = max(logzero,2*RTI%logZ - 0.5*RTI%logZ2)
-        varlogZ  = sqrt(abs(RTI%logZ2 - 2*RTI%logZ))
+        varlogZ    = RTI%logZ2 - 2*RTI%logZ
 
         if(present(logZp).and.present(varlogZp))then
             logZp      = max(logzero,2*RTI%logZp - 0.5*RTI%logZp2)
@@ -763,10 +765,12 @@ module run_time_module
 
                         ! Calculate the posterior point and add it to the array
                         if(settings%equals .or. settings%posteriors ) then
-                            posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
-                            call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
-                            RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
-                            RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
+                            if(bernoulli_trial(settings%thin_posterior)) then
+                                posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
+                                call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
+                                RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
+                                RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
+                            end if
                         end if
 
                     else
@@ -935,7 +939,7 @@ module run_time_module
                 if(settings%equals) then
 
                     ! Add the global equally weighted posteriors
-                    if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight_global) * settings%thin_posterior )) then
+                    if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight_global) )) then
                         posterior_point(settings%p_w) = RTI%maxlogweight_global
                         posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post,i_cluster)
                         posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
@@ -945,7 +949,7 @@ module run_time_module
                     ! Add the clustered equally weighted posteriors
                     if(settings%cluster_posteriors) then
                         ! Test for acceptance of equally weighted posteriors
-                        if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster)) * settings%thin_posterior )) then
+                        if(bernoulli_trial( exp( RTI%posterior_stack(settings%pos_w,i_post,i_cluster) + RTI%posterior_stack(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster)) )) then
                             posterior_point(settings%p_w) = RTI%maxlogweight(i_cluster)
                             posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post,i_cluster)
                             posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post,i_cluster)

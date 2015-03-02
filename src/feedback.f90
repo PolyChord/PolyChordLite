@@ -212,7 +212,7 @@ module feedback_module
         implicit none
         type(program_settings), intent(in)    :: settings    !> program settings
         type(run_time_info),    intent(in)    :: RTI         !> run time info
-        integer,dimension(:),   intent(in)    :: nlikesum    !> number of likelihood calls since last call
+        integer,dimension(:),   intent(inout) :: nlikesum    !> number of likelihood calls since last call
         integer,dimension(:),   intent(in)    :: num_repeats !> number of likelihood calls since last call
 
         integer :: p
@@ -286,6 +286,8 @@ module feedback_module
             write(stdout_unit,'("")')
         end if
 
+        nlikesum=0
+
 
     end subroutine write_intermediate_results
 
@@ -311,8 +313,8 @@ module feedback_module
             write(stdout_unit,'(A42)')                                        ' ________________________________________ '
             write(stdout_unit,'(A42)')                                        '|                                        |'
             write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') nint(output_info(3))
-            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1:2)
-            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') output_info(1)+prior_log_volume(priors),output_info(2)
+            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1),sqrt(output_info(2))
+            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') output_info(1)+prior_log_volume(priors),sqrt(output_info(2))
             write(stdout_unit,'(A42)')                                        '|________________________________________|'
         endif
     end subroutine write_final_results

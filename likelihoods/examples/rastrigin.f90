@@ -24,7 +24,7 @@ module loglikelihood_module
         double precision, intent(out),  dimension(:) :: phi
 
         double precision, parameter :: A=10d0
-        double precision, parameter :: TwoPi = 4d0*atan(1d0)
+        double precision, parameter :: TwoPi = 8d0*atan(1d0)
 
         ! The return value
         double precision :: loglikelihood
