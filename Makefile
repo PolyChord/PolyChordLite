@@ -11,8 +11,15 @@ PROGRAMS = my_likelihood my_cpp_likelihood
 # current options are:
 #  * gnu
 #  * intel
-COMPILER_TYPE=intel
+COMPILER_TYPE=
 
+ifeq "$(shell which gfortran >/dev/null; echo $$?)" "0"
+COMPILER_TYPE=gnu
+endif
+
+ifeq "$(shell which ifort >/dev/null; echo $$?)" "0"
+COMPILER_TYPE=intel
+endif
 
 # Whether to use MPI or not (leave blank if running without MPI)
 MPI=1
@@ -137,9 +144,9 @@ CCFLAGS += -g -O0 -Wall -Wextra -Wansi -Wshadow -Weffc++
 else
 # Optimised mode
 # --------------
-# O3 : maximum optimisation
-FCFLAGS += -O3
-CCFLAGS += -O3
+# Ofast : maximum optimisation
+FCFLAGS += -Ofast
+CCFLAGS += -Ofast
 endif
 endif
 

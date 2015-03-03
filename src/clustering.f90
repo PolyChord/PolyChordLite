@@ -13,6 +13,7 @@ module KNN_clustering
     !! matrix, and then tests
     recursive function NN_clustering(similarity_matrix,num_clusters) result(cluster_list)
         use utils_module, only: relabel
+        use abort_module, only: halt_program
         implicit none
 
         double precision, intent(in), dimension(:,:) :: similarity_matrix
@@ -20,6 +21,7 @@ module KNN_clustering
         integer, dimension(size(similarity_matrix,1)) :: cluster_list
         integer, intent(out):: num_clusters
 
+        integer :: num_clusters_new
 
         integer, dimension(size(similarity_matrix,1)) :: cluster_list_old
         integer :: num_clusters_old
@@ -54,15 +56,19 @@ module KNN_clustering
             ! Re-label the cluster list using integers 1,2,3,....
             cluster_list = relabel(cluster_list,num_clusters)
 
-            if( num_clusters == 1 ) then
+            if(num_clusters<=0) then
+                call halt_program("Cluster error: cannot have fewer than 1 clusters")
+            else if( num_clusters == 1 ) then
                 return  ! If we're down to a single cluster, then just return
             else if( all( cluster_list == cluster_list_old ) ) then
                 exit ! check that the clustering hasn't changed since the last pass
             else if(n==k) then
+                ! If we need to cluster further, then expand the knn list
                 k=min(k*2,nlive)
                 knn(:k,:) = compute_knn(similarity_matrix,k)
             end if
 
+            ! Save the old cluster list for later.
             cluster_list_old = cluster_list
             num_clusters_old = num_clusters
 
@@ -71,12 +77,16 @@ module KNN_clustering
 
         ! If we've found clusters, then search within these clusters
         if(num_clusters>1) then
-            do i_cluster=1,num_clusters
+            i_cluster=1
+            do while(i_cluster<=num_clusters)
                 ! Get the indices of cluster i_cluster
                 call get_indices_of_cluster(cluster_list,points,i_cluster)
 
                 ! Call this function again on the similarity sub matrix, adding an offset
-                cluster_list(points) = num_clusters + NN_clustering(similarity_matrix(points,points),num_clusters)
+                cluster_list(points) = num_clusters + NN_clustering(similarity_matrix(points,points),num_clusters_new)
+
+                ! If we didn't find any new clusters, then move on to the next one
+                if(num_clusters_new==1) i_cluster=i_cluster+1
 
                 ! re-label the clusters
                 cluster_list = relabel(cluster_list,num_clusters)
@@ -86,38 +96,29 @@ module KNN_clustering
     end function NN_clustering
 
 
-    function do_clustering_k(knn) result(cluster)
+    function do_clustering_k(knn) result(c)
         implicit none
 
         integer, dimension(:,:) :: knn
-        integer, dimension(size(knn,2)) :: cluster
+        integer, dimension(size(knn,2)) :: c
 
-        integer :: nlive
-
-        integer :: cluster_i,cluster_j
-        integer :: i_point,j_point
-
-        nlive = size(knn,2)
+        integer :: i,j
 
         ! Set up the cluster list
-        cluster = [( i_point,i_point=1,nlive )]
+        c = [( i,i=1,size(knn,2)  )]
 
-        do i_point=1,nlive
-            do j_point=i_point+1,nlive
-
-                cluster_i = cluster(i_point)
-                cluster_j = cluster(j_point)
+        do i=1,size(knn,2)
+            do j=i+1,size(knn,2)
 
                 ! If they're not in the same cluster already...
-                if(cluster_i/=cluster_j) then
+                if(c(i)/=c(j)) then
                     ! ... check to see if they are within each others k nearest neihbors...
-                    if( neighbors( knn(:,i_point),knn(:,j_point) ) ) then
+                    if( neighbors( knn(:,i),knn(:,j) ) ) then
 
-                        if(cluster_i>cluster_j) then
-                            where(cluster==cluster_i) cluster=cluster_j
-                        else
-                            where(cluster==cluster_j) cluster=cluster_i
-                        end if
+                        ! If they are then relabel cluster_i and cluster_j to the smaller of the two
+                        where(c==c(i).or.c==c(j)) 
+                            c=min(c(i),c(j))
+                        end where
 
                     end if
                 end if
@@ -146,7 +147,7 @@ module KNN_clustering
 
         integer :: insert_index(1)
 
-        double precision, dimension(size(similarity_matrix,1)) :: distance2s
+        double precision, dimension(k) :: distance2s
 
         nPoints = size(similarity_matrix,1)
 
@@ -167,7 +168,6 @@ module KNN_clustering
                     knn(insert_index(1):,i) =  eoshift( knn(insert_index(1):,i) ,-1 ,dim=1, boundary=j)
                 end if
             end do
-            if(knn(1,i)/=i) write(*,*) 'Catastrophic error'
 
         end do
 
@@ -204,6 +204,8 @@ module KNN_clustering
     end function matches
 
 
+    !> This subroutine returns points: an allocated array of indices of the points in cluster_list
+    !! which belong to i_cluster
     subroutine get_indices_of_cluster(cluster_list,points,i_cluster)
         implicit none
         integer, dimension(:), intent(in)                 :: cluster_list

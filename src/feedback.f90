@@ -37,6 +37,8 @@ module feedback_module
             write(stdout_unit,'("nlive    :",I8)')   settings%nlive
             write(stdout_unit,'("nDims    :",I8)')   settings%nDims
             write(stdout_unit,'("nDerived :",I8)')   settings%nDerived
+            if(settings%do_clustering) write(stdout_unit,'("Doing Clustering")')
+
             write(stdout_unit,'("")')
         end if
 

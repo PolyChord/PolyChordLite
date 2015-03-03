@@ -2,12 +2,13 @@ module loglikelihood_module
 
     contains
 
-    !> Basic Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
+    !> Half Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! 
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
     !!
-    !! The mean is set at 0.5 by default, and all sigmas at 0.01
+    !! The mean is set at 0.5 by default, but in the first coordinate the mean is at 0.0, at the edge of the prior
+    !! all sigmas are 0.01
     function loglikelihood(theta,phi)
         use utils_module, only: logTwoPi,Vn
         implicit none
@@ -37,7 +38,7 @@ module loglikelihood_module
 
         ! The radius
         phi(1) = sqrt(sum((theta-mu)**2))
-        phi(2) = log(phi(1)**size(theta) * Vn(size(theta)))
+        phi(2) = log(phi(1)**size(theta) * Vn(size(theta))/2d0)
 
 
     end function loglikelihood

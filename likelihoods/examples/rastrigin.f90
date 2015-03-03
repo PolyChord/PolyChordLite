@@ -31,11 +31,6 @@ module loglikelihood_module
 
         loglikelihood =  - sum( log(4991.21750d0) + theta**2 - A*cos(TwoPi*theta) )
 
-        ! Use up these parameters to stop irritating warnings
-        if(size(phi)>0) then
-            phi=0d0
-        end if
-
     end function loglikelihood
 
     subroutine setup_loglikelihood(settings)
