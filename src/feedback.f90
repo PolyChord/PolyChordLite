@@ -207,15 +207,14 @@ module feedback_module
     end subroutine write_started_sampling
 
     !> Intermediate results
-    subroutine write_intermediate_results(settings,RTI,nlikesum,num_repeats)
+    subroutine write_intermediate_results(settings,RTI,nlikesum)
         use run_time_module, only: run_time_info,calculate_logZ_estimate
         use settings_module, only: program_settings
         use utils_module,    only: stdout_unit,logzero,fmt_len,normal_fb
         implicit none
         type(program_settings), intent(in)    :: settings    !> program settings
         type(run_time_info),    intent(in)    :: RTI         !> run time info
-        integer,dimension(:),   intent(inout) :: nlikesum    !> number of likelihood calls since last call
-        integer,dimension(:),   intent(in)    :: num_repeats !> number of likelihood calls since last call
+        integer,dimension(:),   intent(in)    :: nlikesum    !> number of likelihood calls since last call
 
         integer :: p
 
@@ -257,7 +256,7 @@ module feedback_module
             write(stdout_unit,fmt_nlike) RTI%nlike
 
             write(fmt_nlike,'(  "(""<nlike>    ="","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
-            write(stdout_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_resume),dble(nlikesum)/dble(num_repeats*settings%update_resume)
+            write(stdout_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_resume),dble(nlikesum)/dble(RTI%num_repeats*settings%update_resume)
 
 
             call calculate_logZ_estimate(RTI,logZ,varlogZ,logZp,varlogZp,logZp_dead,varlogZp_dead)            
@@ -287,9 +286,6 @@ module feedback_module
             write(stdout_unit,'("")')
             write(stdout_unit,'("")')
         end if
-
-        nlikesum=0
-
 
     end subroutine write_intermediate_results
 

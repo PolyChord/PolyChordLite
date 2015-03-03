@@ -726,7 +726,7 @@ module read_write_module
     end subroutine write_phys_live_points
 
 
-    subroutine write_stats_file(settings,RTI)
+    subroutine write_stats_file(settings,RTI,nlikesum)
         use utils_module, only: DB_FMT,fmt_len,write_stats_unit,logsubexp
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info,calculate_logZ_estimate
@@ -734,6 +734,7 @@ module read_write_module
 
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(in) :: RTI
+        integer,dimension(:),   intent(in) :: nlikesum    !> number of likelihood calls since last call
 
         double precision                           :: logZ       
         double precision                           :: varlogZ  
@@ -744,7 +745,7 @@ module read_write_module
 
         integer :: p
 
-        character(len=fmt_len) :: fmt_Z
+        character(len=fmt_len) :: fmt_Z,fmt_nlike
 
         open(write_stats_unit,file=trim(stats_file(settings)), action='write') 
 
@@ -785,11 +786,17 @@ module read_write_module
         write(write_stats_unit, '("Run-time information:")')
         write(write_stats_unit, '("---------------------")')
         write(write_stats_unit,'("")')
-        write(write_stats_unit,'(" ndead:    ", I8)') RTI%ndead
-        write(write_stats_unit,'(" nlive:    ", I8)') settings%nlive
-        write(write_stats_unit,'(" active clusters: ", I8)') RTI%ncluster
-        write(write_stats_unit,'(" dead clusters: ", I8)') RTI%ncluster_dead
+        write(write_stats_unit,'(" ncluster:   ", I8," /",I8           )') RTI%ncluster, RTI%ncluster+RTI%ncluster_dead
+        write(write_stats_unit,'(" nposterior: ", I8                   )') RTI%nposterior_global(1)
+        write(write_stats_unit,'(" nequals:    ", I8                   )') RTI%nequals_global(1)
+        write(write_stats_unit,'(" ndead:      ", I8)') RTI%ndead
+        write(write_stats_unit,'(" nlive:      ", I8)') settings%nlive
 
+        write(fmt_nlike,'("("" nlike:      "",",I0,"I8)")') size(nlikesum)
+        write(write_stats_unit,fmt_nlike) RTI%nlike
+
+        write(fmt_nlike,'(  "("" <nlike>:    "","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
+        write(write_stats_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_resume),dble(nlikesum)/dble(RTI%num_repeats*settings%update_resume)
 
 
         close(write_stats_unit)

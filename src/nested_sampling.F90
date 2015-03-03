@@ -242,7 +242,7 @@ module nested_sampling_module
                     if( cyc(RTI%ndead,settings%update_resume) .or. .not. need_more_samples ) then
                         if(settings%write_resume)        call write_resume_file(settings,RTI)
                         if(settings%write_live)          call write_phys_live_points(settings,RTI)
-                        if(settings%write_stats)         call write_stats_file(settings,RTI)
+                        if(settings%write_stats)         call write_stats_file(settings,RTI,nlikesum)
                     end if
 
                     if( cyc(RTI%ndead,settings%update_posterior) .or. .not.need_more_samples ) call write_posterior_file(settings,RTI)  
@@ -252,7 +252,8 @@ module nested_sampling_module
                     ! update the clustering and covariance matrices every nlive iterations
                     if( cyc(RTI%ndead,settings%nlive) ) then
                         !--------------------------------------------!
-                        call write_intermediate_results(settings,RTI,nlikesum,num_repeats)
+                        call write_intermediate_results(settings,RTI,nlikesum)
+                        nlikesum=0
                         !--------------------------------------------!
                         if(settings%do_clustering) call do_clustering(settings,RTI)
                         call calculate_covmats(settings,RTI)

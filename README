@@ -133,7 +133,9 @@ Run time statistics
 
 [root].resume
 --------------------------------------
-Files for resuming a stopped run. This is produced if settings%write_resume=.true. 
+Files for resuming a stopped run. Semi-human readable.
+This is produced if settings%write_resume=.true.
+This is used if settings%read_resume=.true.
 
 [root].txt
 ----------
@@ -161,9 +163,6 @@ settings%write_phys_live=.true.
 This file contains npars+ndims+1 columns, indicating the physical parameters,
 derived parameters and the log-likelihood. This is useful for monitoring a run
 as it progresses. 
-
-If settings%do_clustering=.true. there are additional cluster
-files in clusters/[root]_phys_live_<integer>.txt
 
 [root].paramnames
 ------------
@@ -195,6 +194,7 @@ leaks).
 
 These files only become populated as the algorithm approaches the peak(s) of the
 posterior. Wait for the run to be closer to finishing.
+
 
 3. MPI doesn't help
 
