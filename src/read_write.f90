@@ -332,8 +332,10 @@ module read_write_module
         RTI%nphantom=0
         RTI%nlive=0
         RTI%nposterior=0
-        RTI%posterior_global=0
+        RTI%nposterior_dead=0
+        RTI%nposterior_global=0
         RTI%nequals=0
+        RTI%nequals_dead=0
         RTI%nequals_global=0
         RTI%nposterior_stack=0
 
@@ -386,8 +388,10 @@ module read_write_module
             RTI%phantom(settings%nTotal,settings%nlive,RTI%ncluster),                 &
             RTI%posterior(settings%nposterior,settings%nlive,RTI%ncluster),           &
             RTI%posterior_dead(settings%nposterior,settings%nlive,RTI%ncluster_dead), &
+            RTI%posterior_global(settings%nposterior,settings%nlive,1),               &
             RTI%equals(settings%np,settings%nlive,RTI%ncluster),                      &
             RTI%equals_dead(settings%np,settings%nlive,RTI%ncluster_dead),            &
+            RTI%equals_global(settings%np,settings%nlive,1),                          &
             RTI%logLp(RTI%ncluster),                                                  &
             RTI%logXp(RTI%ncluster),                                                  &
             RTI%logZp(RTI%ncluster),                                                  &

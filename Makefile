@@ -13,6 +13,10 @@ PROGRAMS = my_likelihood my_cpp_likelihood
 #  * intel
 COMPILER_TYPE=
 
+# We can autodetect the compiler type on unix systems via the shell.
+# if you want to override this then just run make with
+# make COMPILER_TYPE=<your type>
+# where <your time> is gnu or intel
 ifeq "$(shell which gfortran >/dev/null; echo $$?)" "0"
 COMPILER_TYPE=gnu
 endif
