@@ -8,6 +8,85 @@ module example_likelihoods
 
     contains
 
+    !> Gaussian shell defined as,
+    !!
+    !!  \f$ latex here \f$
+    !!
+    !! where the parameters used are,
+    !!      - w = width of the guassian shell 
+    !!      - R = Radius of the gaussian shell (ie: distance from the center)
+    !!      - in progress...
+    function gaussian_shell(theta,phi,context) result(loglikelihood)
+        implicit none
+        !> Input parameters
+        double precision, intent(in), dimension(:)  :: theta
+        !> Output derived parameters
+        double precision, intent(out), dimension(:) :: phi
+        !> Pointer to any additional information
+        integer,          intent(in)                :: context
+
+        !The output of the function 
+        double precision :: loglikelihood
+
+        !Additional parameters that are needed
+        double precision, parameter :: pi       = 4d0*atan(1d0) ! \pi in double precision
+        double precision, parameter :: width    = 0.1           ! width of shell peak
+        double precision, parameter :: radius   = 1d0           ! radius to the shell
+        double precision            :: distance                 ! storing distance to center of theta
+        double precision, dimension(size(theta))    :: center   ! center of the gaussian shell
+        integer                     :: dim                      ! dimensions of theta/the space
+
+        !For reducing the computational load by storing the normalisation:
+        logical, save               :: stored   = .false.
+        double precision, save      :: normalisation
+        
+        !Getting the dimension and storing in dim
+        dim      = size(theta)
+        !Define where the center of the gaussian shell is
+        center = 0d0
+        !Calculate the distance between the parameter space points theta and center
+        distance = sqrt( sum( (center-theta)**2 ) )
+
+        !Computing the normalisation upon first call to this function:
+        if(.NOT. stored) then
+            !For the first call to this function, we calculate the normalisation
+            !and change the flag to say this is completed:
+            !   choose from the options below 
+            !   (Mathematic normalisation is most exact)
+
+            !No normalisation:
+            !normalisation = 0
+
+            !Mathematica normalisation:
+            !normalisation = - (width**dim)*( ((2*pi)**(dim/2d0)) * Hypergeometric1F1( (1d0-dim)/2d0,1d0/2d0,-(radius*radius)/(2d0*width*width) ) + ( (2**((1d0+dim)/2d0)) * (pi**(dim/2d0)) * radius * GAMMA( (1d0+dim)/2d0 ) * Hypergeometric1F1( 1d0-(dim/2d0),3d0/2d0,-(radius*radius)/(2d0*width*width) ))/(width * GAMMA( dim/2d0 )) )
+
+            !Temporary normalisation (when you know the numerical value):
+            !normalisation = -0.45
+
+            !Will's approximate normalisation based on assumptions,
+            !   1. width*dimension << radius 
+            !Basically, over the region of interest the integral in polar coords (a gaussian and the nD volume element) 
+            !simplify nicely and allow the limits of the integral to go to -inf. 
+            normalisation = log_gamma(1d0+(dim/2d0)) - (1d0/2d0)*log(2d0) - log(dim+0d0) - ((1d0+dim)/2d0)*log(pi) - (dim-1d0)*log(radius) - log(width)
+
+            !Change the flag:
+            stored = .true.
+        end if
+
+        !Use the stored value as the normalisation:
+        loglikelihood = normalisation
+
+        !Calculating the loglikelihood dependant on theta here:
+        loglikelihood = loglikelihood - ( (distance-radius)**2d0 /(2d0*width*width) )
+
+        ! Use up these parameters to stop irritating warnings
+        if(size(phi)>0) then
+            phi= context
+            phi=0d0
+        end if
+
+
+    end function gaussian_shell
 
     !> Basic Gaussian likelihood with mean mu(:) and an uncorrelated covariance sigma(:).
     !! 
@@ -381,7 +460,6 @@ module example_likelihoods
 
 
 
-    !> Gaussian Needle loglikelihood
 
 
 
@@ -392,8 +470,7 @@ module example_likelihoods
 
 
 
-
-    !> Random Correlated gaussian loglikelihood
+    !> Correlated gaussian loglikelihood
     !! 
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
@@ -723,84 +800,172 @@ module example_likelihoods
     end function pyramidal_loglikelihood
 
 
-    !> Gaussian shell defined as,
-    !!
-    !!  \f$ latex here \f$
-    !!
-    !! where the parameters used are,
-    !!      - w = width of the guassian shell 
-    !!      - R = Radius of the gaussian shell (ie: distance from the center)
-    !!      - in progress...
-    function gaussian_shell(theta,phi,context) result(loglikelihood)
+
+
+    !> Likelihood for data point with y errorbars
+
+    function fitting_loglikelihood(theta,phi,context)
+        use utils_module, only: logzero, logincexp
+        use interpolate_utils, only: linear_interpolate
         implicit none
         !> Input parameters
-        double precision, intent(in), dimension(:)  :: theta
+        double precision, intent(in), dimension(:)   :: theta
         !> Output derived parameters
-        double precision, intent(out), dimension(:) :: phi
+        double precision, intent(out),  dimension(:) :: phi
         !> Pointer to any additional information
-        integer,          intent(in)                :: context
+        integer,          intent(in)                 :: context
 
-        !The output of the function 
+
+        double precision :: fitting_loglikelihood
         double precision :: loglikelihood
 
-        !Additional parameters that are needed
-        double precision, parameter :: pi       = 4d0*atan(1d0) ! \pi in double precision
-        double precision, parameter :: width    = 0.1           ! width of shell peak
-        double precision, parameter :: radius   = 1d0           ! radius to the shell
-        double precision            :: distance                 ! storing distance to center of theta
-        double precision, dimension(size(theta))    :: center   ! center of the gaussian shell
-        integer                     :: dim                      ! dimensions of theta/the space
+        integer :: nDims
+        integer :: n_knots
+        integer,save :: nStats
+        integer :: i_stats
 
-        !For reducing the computational load by storing the normalisation:
-        logical, save               :: stored   = .false.
-        double precision, save      :: normalisation
-        
-        !Getting the dimension and storing in dim
-        dim      = size(theta)
-        !Define where the center of the gaussian shell is
-        center = 0d0
-        !Calculate the distance between the parameter space points theta and center
-        distance = sqrt( sum( (center-theta)**2 ) )
+        double precision, save, allocatable, dimension(:)   :: theta_saved
+        double precision, save, allocatable, dimension(:,:) :: spline_data
 
-        !Computing the normalisation upon first call to this function:
-        if(.NOT. stored) then
-            !For the first call to this function, we calculate the normalisation
-            !and change the flag to say this is completed:
-            !   choose from the options below 
-            !   (Mathematic normalisation is most exact)
+        double precision, save, allocatable, dimension(:)   :: x0
+        double precision, save, allocatable, dimension(:)   :: y0
+        double precision, save, allocatable, dimension(:)   :: sigmax
+        double precision, save, allocatable, dimension(:)   :: sigmay
 
-            !No normalisation:
-            !normalisation = 0
+        integer :: ioerror
+        integer,parameter :: stats_unit = 150
 
-            !Mathematica normalisation:
-            !normalisation = - (width**dim)*( ((2*pi)**(dim/2d0)) * Hypergeometric1F1( (1d0-dim)/2d0,1d0/2d0,-(radius*radius)/(2d0*width*width) ) + ( (2**((1d0+dim)/2d0)) * (pi**(dim/2d0)) * radius * GAMMA( (1d0+dim)/2d0 ) * Hypergeometric1F1( 1d0-(dim/2d0),3d0/2d0,-(radius*radius)/(2d0*width*width) ))/(width * GAMMA( dim/2d0 )) )
+        integer :: i_int
+        integer,parameter :: n_int = 100
 
-            !Temporary normalisation (when you know the numerical value):
-            !normalisation = -0.45
+        double precision,save :: x_min_int, x_max_int
+        double precision,save :: x_min, x_max
+        double precision :: x,y
 
-            !Will's approximate normalisation based on assumptions,
-            !   1. width*dimension << radius 
-            !Basically, over the region of interest the integral in polar coords (a gaussian and the nD volume element) 
-            !simplify nicely and allow the limits of the integral to go to -inf. 
-            normalisation = log_gamma(1d0+(dim/2d0)) - (1d0/2d0)*log(2d0) - log(dim+0d0) - ((1d0+dim)/2d0)*log(pi) - (dim-1d0)*log(radius) - log(width)
 
-            !Change the flag:
-            stored = .true.
+        ! Save the current theta for use next call
+        nDims = size(theta)
+        n_knots = (nDims + 2)/2
+
+        ! Allocate any arrays that need to be allocated
+        if( .not. allocated(theta_saved) ) then
+
+            allocate(theta_saved(nDims),spline_data(n_knots,2))
+
+        else if(size(theta_saved) /= nDims) then
+
+            deallocate(theta_saved,spline_data)
+            allocate(theta_saved(nDims),spline_data(n_knots,2))
+
         end if
 
-        !Use the stored value as the normalisation:
-        loglikelihood = normalisation
+        if( .not. allocated(x0) ) then
 
-        !Calculating the loglikelihood dependant on theta here:
-        loglikelihood = loglikelihood - ( (distance-radius)**2d0 /(2d0*width*width) )
+            ! Find out the number of points
+            open(stats_unit,file='data/data.dat')
 
-        ! Use up these parameters to stop irritating warnings
-        if(size(phi)>0) then
-            phi= context
-            phi=0d0
+            nStats = 0
+            do 
+                read(stats_unit,*,iostat=ioerror)
+                if( ioerror==0 ) then
+                    nStats = nStats+1
+                else
+                    exit
+                end if
+            end do
+
+            close(stats_unit)
+
+            if (nStats == 0) then
+                write(*,*) 'Error reading stats unit'
+                stop
+            end if
+
+            ! Allocate the data arrays
+            allocate(x0(nStats),y0(nStats),sigmax(nStats),sigmay(nStats))
+
+            ! Read in the data array
+            open(stats_unit,file='data/data.dat')
+            do i_stats=1,nStats
+                read(stats_unit,*) x0(i_stats), y0(i_stats), sigmax(i_stats), sigmay(i_stats) 
+            end do
+            close(stats_unit)
+
+
+            ! Find the minimum and maximum x positions
+            open(stats_unit,file='data/priors.dat')
+            read(stats_unit,*)
+            read(stats_unit,*) x_min,x_max
+            close(stats_unit)
+
         end if
 
 
-    end function gaussian_shell
+        ! Read in the spline array if necessary
+        if(any(theta_saved /= theta ) ) then
+
+            ! Calculate the spline array
+            spline_data(:,1) = [ x_min, theta(1:n_knots-2), x_max ]
+            spline_data(:,2) = theta(n_knots-1:nDims)
+
+            ! Save the current theta
+            theta_saved = theta
+
+        end if
+
+
+        ! Calculate the likelihood
+        loglikelihood = logzero
+        fitting_loglikelihood = 0d0
+
+        ! Iterate over all points in the file
+        do i_stats = 1,nStats
+
+
+            ! If there's no error in the x variable then this is a lot simpler
+            if(sigmax(i_stats) <=0d0) then
+
+                ! calculate the likelihood
+                x = x0(i_stats)
+                y = linear_interpolate(x,spline_data,0)
+                loglikelihood = - log( sigmay(i_stats) ) - log( TwoPi )/2d0 - ((y-y0(i_stats))/sigmay(i_stats))**2/2d0 
+
+            else
+                ! Calculate the minimum and maximum x's so that we can integrate
+                x_min_int = x0(i_stats)-5d0*sigmax(i_stats)
+                x_max_int = x0(i_stats)+5d0*sigmax(i_stats)
+
+                ! loglikelihood denotes the likelihood associated with the point
+                loglikelihood = logzero
+
+                ! do a simple integral by summing on equal intervals 
+                do i_int = 1,n_int
+                    x = x_min_int + (i_int-1d0)/(n_int-1d0) * (x_max_int-x_min_int)
+                    y = linear_interpolate(x,spline_data,0)
+                    call logincexp(loglikelihood, - ((y-y0(i_stats))/sigmay(i_stats))**2/2d0 - ((x-x0(i_stats))/sigmax(i_stats))**2/2d0 )
+                end do
+
+                ! Normalise via the normalising constants, and the width of the
+                ! integral
+                loglikelihood = loglikelihood   &
+                    - log( sigmay(i_stats) ) - log( sigmax(i_stats) ) - log( TwoPi ) &
+                    + log( (x_max_int-x_min_int) / (n_int-1d0)  )
+
+            end if
+
+
+            ! Add the likelihood from this point to the total likelihood (note
+            ! that this is in fact multiplication)
+            fitting_loglikelihood = fitting_loglikelihood + loglikelihood
+
+        end do
+
+
+
+
+        ! Set a default set of derived parameters
+        phi = dble(context)
+
+    end function fitting_loglikelihood
 
 end module example_likelihoods

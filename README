@@ -1,8 +1,8 @@
-PolyChord v 1.0
+PolyChord v 1.1
 Will Handley, Mike Hobson & Anthony Lasenby
 wh260@mrao.cam.ac.uk
-arXiv:
-Released Feb 2015
+arXiv:1502.01856
+Released Mar 2015
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PolyChord Licence
@@ -10,7 +10,7 @@ PolyChord Licence
 
 Users are required to accept to the licence agreement given in LICENCE file.
 
-Users are also required to cite the PolyChord paper (arXiv: ) in their
+Users are also required to cite the PolyChord paper (arXiv:1502.01856) in their
 publications.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -18,7 +18,7 @@ MPI Support
 ===========
 
 The code is MPI compatible. To disable the MPI parallelization, 
-set MPI=0 in src/Makefile
+set MPI=0 in ./Makefile
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,11 +37,11 @@ PolyChord compiles with both gfortran and intel compilers.
 
 Compiler type is chosen in the Makefile with the COMPILER_TYPE flag;
 set
-COMPILER_TYPE = gfortran
+COMPILER_TYPE = gnu
 for gfortran compilers (free)
 
 set
-COMPILER_TYPE = ifort
+COMPILER_TYPE = intel
 for intel compilers (proprietary, much faster)
 
 
@@ -49,197 +49,78 @@ for intel compilers (proprietary, much faster)
 Running PolyChord
 =================
 
-The function to run Polychord is:
-
-output_info = NestedSampling(loglikelihood,priors,settings,mpi_communicator) 
-
-This function is found in src/nested_sampling.F90
-
-An example of calling it can be found in src/main.F90
-
-Details of the arguments in the above can be found below:
-
-output_info
------------
-double precision array of length 5. This details 
-
-1) log(evidence)
-    Estimate of the natural log of the marginalised likelihood/evidence 
-        P(data|model) = int P(data|params,model)P(params|model) dparams
-        evidence_M    = int likelihood_M(theta) x prior_M(theta) dtheta
-2) error(log(evidence))
-    The error in the estimate of the natural log of the evidence above
-3) ndead
-    The number of iterations of the sampling procedure
-4) nlike
-    The number of calls to the loglikelihood function
-5) log(evidence) + log(prior volume)
-    The log of the evidence x prior volume. This is a prior-independent
-    quantity, and is useful for checking PolyChord is running correctly when one
-    knows the value of the evidence analytically. This should read zero to
-    within the evidence error if the prior entirely encloses the peak of the
-    likelihood
-
-loglikelihood
--------------
-double precision function detailing the natural log of the likelihood function
-P(data|params,model) = likelihood_M(theta)
-
-This should have the interface:
-    interface
-        function loglikelihood(theta,phi,context)
-            double precision, intent(in),  dimension(:) :: theta
-            double precision, intent(out),  dimension(:) :: phi
-            integer,          intent(in)                 :: context
-            double precision :: loglikelihood
-        end function
-    end interface
-where 
-* theta are the model parameters
-* phi are the derived parameters
-* context is an integer which can be used as a pointer in c wrappers 
-  (coming soon) 
-
-Example loglikelihoods can be found in src/likelihoods.F90
-
-
-priors
-------
-array of derived types found in src/priors.f90
-
-The derived type 'prior' encodes the prior information for a subset of the
-parameters. 
-
-The type prior encodes:
-    hypercube_indices
-        integer array indicating indices in the unit hypercube of the parameter
-        subset
-    physical_indices  
-        integer array indicating indices in the physical space of the parameter
-        subset
-    parameters
-        double precision array indicating the parameters of the prior
-
-'prior' types come in one of two forms: 'separable' or 'non-separable'
-
-Examples of separable priors currently supported are:
-* uniform
-* log_uniform
-* gaussian
-
-Examples of non-separable priors currently suported aro:
-* sorted_uniform
-
-In general, the prior will be a mixture of prior types, e.g.
-gaussian separable & uniform separable . This would be encoded in the priors
-array by defining an array of two priors, and initialising each of the sections
-of the array with 'gaussian separable' and 'uniform separable' priors
-
-Each section of the array priors is initialised by calling initialise_<prior-type> 
-from src/priors.f90. To initialise the first component of the priors array with
-uniform priors, one would call:
-
-call initialise_<prior-type>(prior(1),hypercube_indices,physical_indices,minimums,maxmiums)
-
-where minimums and maximums are arrays indicating the minimum and maximum of the
-each of the components of the sorted uniform prior.
-
-
-
-settings
+Examples
 --------
-derived type from src/settings.f90 indicating the run-time settings of a nested
-sampling run.  In general, the settings you may be interested in are detailed
-below.
+First, try a couple of quick examples:
 
-After choosing the settings, you should configure the rest by calling
-call initialise_settings(settings)   
-from src/settings.f90
+1) 20 dimensional Gaussian
 
-The actual parameters of a given run are:
-settings%nlive          -- resolution parameter
-settings%num_repeats    -- reliability parameter
+run the commands:
+$  make gaussian
+$  ./bin/gaussian ini/gaussian.ini
 
-In general, nlive should be increased to get more accurate evidences.
-num_repeats should be increased if more mixing is required.
+2) Rastrigin
 
-The remainder of the parameters set names for files and turn off various aspects
-of functionality.
+run the commands:
+$ make rastrigin
+$ ./bin/rastrigin ini/rastrigin.ini
 
-settings%nDims                  number of parameters 
-(integer)
+This runs the rastrigin 'bunch of grapes' loglikelihood.
 
-settings%nDerived               number of derived parameters 
-(integer)
+Examples currently provided are:
+gaussian twin_gaussian random_gaussian half_gaussian rastrigin himmelblau rosenbrock eggbox
 
-settings%nlive                  number of live points 
-(integer)
-default: 500
-
-settings%num_repeats            number of times to repeat nDims slice sampling
-(integer)                       steps at each iteration 
-default: 1
-
-settings%do_clustering          whether or not to do clustering
-(logical)
-default: .false.
-
-settings%ncluster               maximum number of clusters to detect --memory
-(integer)                       allocation purposes 
-default: 30
-
-settings%feedback               amount of feedback to give (0 --minimal,
-(integer)                       1 --normal, 2 --verbose)
-default: 1
-
-settings%calculate_posterior    whether or not to produce posterior samples
-(logical)
-default: .false.
-
-settings%sigma_posterior        how much of the posterior to keep, measured 
-(integer)                       in sigma around the peak. Reduce this if the 
-default: 5                      posterior files are too large
-
-settings%thin_posterior         what factor posterior samples should be thinned
-(double precision)              by. 0 -- only dead live points, 1 -- all dead
-default: 0                      points, including phantom points
-
-settings%base_dir               where to put chains
-(character string)
-default: 'chains'
-
-settings%file_root              root name of files to be produced
-(character string)
-default: 'test'
-
-settings%read_resume            whether to resume from a checkpoint file
-(logical)
-default: .false.
-
-settings%write_resume           whether to produce a checkpoint file
-(logical)
-default: .false.
-
-settings%update_resume          how often to update a resume file (we recommend
-(integer)                       settings%nlive)
-default: 500
-
-settings%write_live             whether to produce a live_points file for
-(logical)                       inspection mid-run
-default: .false.
+In general, binary executables are stored in the directory ./bin, and ini files are
+stored in the directory ./ini.
 
 
-mpi_communicator
-----------------
-
-This is an integer detailing the mpi communicator. For most parallel
-applications, this should be MPI_COMM_WORLD. For linear applications, this can
-be set to any integer. 
-This parameter is mostly useful if one wants to run multiple MPI instances of
-PolyChord in parallel.
 
 
-      
+To run your own likelihood, it should either be written in fortran, C++, or be callable
+from C++ or fortran.
+
+Fortran likelihoods
+-------------------
+You should place your likelihood code in the function loglikelihood,
+contained in ./likelihoods/my_likelihood.f90. Any setup required (such as reading 
+in input files) should be conducted in the function loglikelihood_setup,
+found in ./likelihoods/my_likelihood.f90.
+In most cases, this will likely just be a call to your own pre-written library.
+
+Your code can be compiled and run with the commands:
+$  make my_likelihood
+$  ./bin/my_likelihood ini/my_likelihood.ini
+where the input file ini/my_likelihood should be modified accordingly
+
+Examples can be found in ./likelihoods/examples
+
+C++ likelihoods
+---------------
+You should place your likelihood code in the function cpp_loglikelihood,
+contained in ./likelihoods/my_cpp_likelihood.cpp. Any setup required (such as reading 
+in input files) should be conducted in the function cpp_loglikelihood_setup,
+found in ./likelihoods/my_cpp_likelihood.f90.
+In most cases, this will likely just be a call to your own pre-written library.
+
+Your code can be compiled and run with the commands:
+$  make my_cpp_likelihood
+$  ./bin/my_cpp_likelihood ini/my_cpp_likelihood.ini
+where the input file ini/my_likelihood should be modified accordingly
+
+If you have an additional suggestions to make the c++ wrapper more easy to use, 
+please email Will (wh260@mrao.cam.ac.uk).
+
+
+
+Manual Setup
+------------
+In some cases, it is desirable to have a more automated setup than that
+provided by the input files. The general process for this can be found in 
+./polychord.F90 in section (1cii)
+
+
+
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Output files 
 =============
@@ -250,43 +131,51 @@ PolyChord produces several output files depending on which settings are chosen
 ------------
 Run time statistics
 
-[root].resume, [root]_unnormalised.txt  
+[root].resume
 --------------------------------------
-Files for resuming a stopped run. These are produced if
-settings%write_resume=.true. 
-The second is produced if
-settings%write_posterior=.true. 
+Files for resuming a stopped run. Semi-human readable.
+This is produced if settings%write_resume=.true.
+This is used if settings%read_resume=.true.
 
 [root].txt
 ----------
-File containing posterior samples. Compatable with the format required by
-getdist package which is part of the CosmoMC package. Refer to the following
-website in order to download or get more information about getdist:
+File containing weighted posterior samples. Compatable with the format required by
+getdist package which is part of the CosmoMC package. Contains npars+ndims+2 columns:
+
+weight -2*loglike <params> <derived params>
+
+Refer to the following website in order to download or get more information about getdist:
 http://cosmologist.info/cosmomc/readme.html#Analysing
-If settings%do_clustering=.true. there are additional cluster files in
-clusters/[root]_phys_live_<integer>.txt 
+
+If settings%cluster_posteriors=.true. there are additional cluster files in
+clusters/[root]_<integer>.txt 
+
+[root]_equal_weights.txt
+------------------------
+As above, but the posterior points are equally weighted. This is better for 'eyeballing'
+the posterior, and provides a natural ~4 fold compression of the .txt file. 
+
 
 [root]_phys_live.txt
 --------------------
-Live points in the physical space. This is produce if
+Live points in the physical space. This is produced if
 settings%write_phys_live=.true.
 This file contains npars+ndims+1 columns, indicating the physical parameters,
 derived parameters and the log-likelihood. This is useful for monitoring a run
-as it progresses. If settings%do_clustering=.true. there are additional cluster
-files in clusters/[root]_phys_live_<integer>.txt
+as it progresses. 
 
+[root].paramnames
+------------
+Parameter names file for compatibility with getdist
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Visualization of PolyChord Output:
 
-[root].txt file created by MultiNest is compatable with the format required by
+[root].txt file created by PolyChord is compatable with the format required by
 getdist package which is part of the CosmoMC package. Refer to the following
 website in order to download or get more information about getdist:
 http://cosmologist.info/cosmomc/readme.html#Analysing
-
-
-
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -296,9 +185,19 @@ Common Problems & FAQs:
 1. PolyChord crashes after segmentation fault.
 
 Try increasing the stack size (ulimit -s unlimited on Linux) & resume your job.
+The slice sampling & clustering steps use a recursive procedure. The default memory
+allocated to recursive procedures is embarassingly small (to guard against memory
+leaks).
 
 
-2. Output files (.txt & post_equal_weights.dat) files have very few (of order tens) points.
+2. Output files ([root].txt & [root]_equal_weights.dat) files have very few (of order tens) points.
 
 These files only become populated as the algorithm approaches the peak(s) of the
 posterior. Wait for the run to be closer to finishing.
+
+
+3. MPI doesn't help
+
+Currently, the MPI parallelisation will only increase speed for 'slow' likelihoods, 
+i.e. likelihoods where the slice sampling step is the dominant computational cost 
+(compared to the organisation of live points and clustering steps). 
