@@ -731,8 +731,8 @@ module read_write_module
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(in) :: RTI
 
-        double precision                          :: logZ       
-        double precision                          :: varlogZ  
+        double precision                           :: logZ       
+        double precision                           :: varlogZ  
         double precision, dimension(RTI%ncluster) :: logZp      
         double precision, dimension(RTI%ncluster) :: varlogZp 
         double precision, dimension(RTI%ncluster_dead) :: logZp_dead      

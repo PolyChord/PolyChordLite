@@ -57,8 +57,6 @@ endif
 
 
 
-FCFLAGS += -lstdc++
-
 # ============ COMPILER_TYPE settings ================
  
 # Archive tool
@@ -160,6 +158,7 @@ BIN_DIR = ./bin
 # Add these libraries to the program
 LIBCHORD += -L$(POLYCHORD_DIR) -lchord
 LIBLIKE += -L$(LIKELIHOOD_DIR) -L$(EXAMPLE_LIKELIHOOD_DIR)
+LIBSTDCPP = -lstdc++
 
 
 INC += -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR) -I$(EXAMPLE_LIKELIHOOD_DIR)
@@ -187,7 +186,7 @@ $(EXAMPLE_LIKELIHOODS) $(PROGRAM_LIKELIHOODS): libchord.a
 
 # Rule for example programs
 $(EXAMPLES) $(PROGRAMS): %: libchord.a lib%.a  polychord.o
-	$(FC) $(FCFLAGS) -o $(BIN_DIR)/$@ polychord.o $(LIBCHORD) $(LIBLIKE) -l$@
+	$(FC) $(FCFLAGS) -o $(BIN_DIR)/$@ polychord.o $(LIBCHORD) $(LIBLIKE) -l$@ $(LIBSTDCPP) 
 
 # Rule for building main file
 polychord.o: polychord.F90
