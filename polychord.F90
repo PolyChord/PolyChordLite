@@ -38,9 +38,8 @@ program PolyChord
     ! We need to initialise:
     ! a) mpi threads
     ! b) random number generator
-    ! c) model
-    ! d) program settings
-    ! e) likelihoods
+    ! c) priors & settings
+    ! d) loglikelihood
 
 
     ! ------- (1a) Initialise MPI threads -------------------
@@ -62,17 +61,19 @@ program PolyChord
     ! line argument to PolyChord
     !
     ! Failing this, you can manually set up the parameters as detailed below
+    !
     if(iargc()==1) then
 
         ! ------ (1ci) read from .ini file ------
-        call getarg(1,input_file) ! get the input filename from the command line
+        ! Put the command line provided file name into input_file
+        call getarg(1,input_file) 
 
         ! Call this subroutine to read the input file and set up the settings and priors
         call read_params(trim(input_file),settings,params,derived_params)
 
     else if (iargc()==0) then
 
-        ! ------ (1ci) manual setup ------
+        ! ------ (1cii) manual setup ------
         ! Here we initialise the array params with all of the details we need
         allocate(params(0),derived_params(0))
         ! The argument to add_parameter are:
@@ -92,15 +93,13 @@ program PolyChord
         call add_parameter(params,'param6','\theta_{6}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
         call add_parameter(params,'param7','\theta_{7}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
         call add_parameter(params,'param8','\theta_{8}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
-        call add_parameter(params,'param9','\theta_{9}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
-        call add_parameter(params,'param10','\theta_{10}',1,     uniform_type,1,          [ 0d0 , 1d0 ])
 
         call add_parameter(derived_params,'radius','r')
         call add_parameter(derived_params,'logVolume','\log X')
 
         ! Now initialise the rest of the system settings
         settings%nlive         = 500
-        settings%num_repeats   = 6
+        settings%num_repeats   = 16
         settings%do_clustering = .false.
 
         settings%base_dir      = 'chains'
@@ -116,6 +115,7 @@ program PolyChord
 
         settings%feedback      = 1
         settings%update_resume = settings%nlive
+        settings%update_posterior = -1
 
         settings%thin_posterior= 1d0
         allocate(settings%grade_frac(1)) 
@@ -125,13 +125,17 @@ program PolyChord
         call halt_program('PolyChord should be called with at most one argument, the input file')
     end if
 
-
-
     ! Initialise the program
     call initialise_program(settings,priors,params,derived_params)
 
-    ! Set up the loglikelihood
+
+
+
+    ! ------- (1d) Define the parameters of the loglikelihood and the system settings -------
     call setup_loglikelihood(settings)
+
+
+
 
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors

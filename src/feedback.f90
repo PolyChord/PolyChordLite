@@ -27,7 +27,7 @@ module feedback_module
             write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
             write(stdout_unit,'("copyright: Will Handley, Mike Hobson & Anthony Lasenby")')
             write(stdout_unit,'("  version: 1.1")')
-            write(stdout_unit,'("  release: 1st Mar 2015")')
+            write(stdout_unit,'("  release: 3rd Mar 2015")')
             write(stdout_unit,'("    email: wh260@cam.ac.uk")')
             write(stdout_unit,'("")')
         end if

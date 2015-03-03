@@ -51,24 +51,24 @@ contains
         type(param_type),dimension(:),allocatable,intent(out) :: params         ! Parameter array
         type(param_type),dimension(:),allocatable,intent(out) :: derived_params ! Derived parameter array
 
-        settings%nlive         = get_integer(file_name,'nlive')
-        settings%num_repeats   = get_integer(file_name,'num_repeats')
-        settings%do_clustering = get_logical(file_name,'do_clustering',.false.)
+        settings%nlive              = get_integer(file_name,'nlive')
+        settings%num_repeats        = get_integer(file_name,'num_repeats')
+        settings%do_clustering      = get_logical(file_name,'do_clustering',.false.)
 
-        settings%base_dir      = get_string(file_name,'base_directory','chains')
-        settings%file_root     = get_string(file_name,'rootname','test')
+        settings%base_dir           = get_string(file_name,'base_directory','chains')
+        settings%file_root          = get_string(file_name,'rootname','test')
 
-        settings%write_resume  = get_logical(file_name,'write_resume',.false.)
-        settings%read_resume   = get_logical(file_name,'resume',.false.)
-        settings%write_live    = get_logical(file_name,'write_live',.false.)
+        settings%write_resume       = get_logical(file_name,'write_resume',.false.)
+        settings%read_resume        = get_logical(file_name,'resume',.false.)
+        settings%write_live         = get_logical(file_name,'write_live',.false.)
 
-        settings%equals        = get_logical(file_name,'equally_weighted_posteriors',.false.)
-        settings%posteriors    = get_logical(file_name,'weighted_posteriors',.false.)
+        settings%equals             = get_logical(file_name,'equally_weighted_posteriors',.false.)
+        settings%posteriors         = get_logical(file_name,'weighted_posteriors',.false.)
         settings%cluster_posteriors = get_logical(file_name,'posterior_clustering',.false.)
 
-        settings%feedback      = get_integer(file_name,'feedback',1)
-        settings%update_resume = get_integer(file_name,'update_resume',settings%nlive)
-        settings%update_resume = get_integer(file_name,'update_posteriors',settings%nlive)
+        settings%feedback           = get_integer(file_name,'feedback',1)
+        settings%update_resume      = get_integer(file_name,'update_resume',settings%nlive)
+        settings%update_posterior   = get_integer(file_name,'update_posteriors',settings%nlive)
 
         settings%thin_posterior= get_double(file_name,'thin_factor',0d0)
 
