@@ -2,16 +2,15 @@ module calculate_module
     implicit none
     contains
 
-    subroutine calculate_point(loglikelihood,priors,point,settings)
+    subroutine calculate_point(loglikelihood,priors,point,settings,nlike)
         use priors_module, only: prior, hypercube_to_physical
         use settings_module, only: program_settings
         use utils_module, only: logzero
         implicit none
         interface
-            function loglikelihood(theta,phi,context)
+            function loglikelihood(theta,phi)
                 double precision, intent(in),  dimension(:) :: theta
                 double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
                 double precision :: loglikelihood
             end function
         end interface
@@ -19,6 +18,7 @@ module calculate_module
         type(prior), dimension(:), intent(in) :: priors
         type(program_settings), intent(in) :: settings
         double precision, intent(inout) , dimension(:) :: point
+        integer, intent(inout) :: nlike
 
         if ( any(point(settings%h0:settings%h1)<0d0) .or. any(point(settings%h0:settings%h1)>1d0) )  then
             point(settings%p0:settings%p1) = 0
@@ -28,101 +28,78 @@ module calculate_module
             point(settings%p0:settings%p1) = hypercube_to_physical( point(settings%h0:settings%h1),priors )
 
             ! Calculate the likelihood and store it in the last index
-            point(settings%l0) = loglikelihood( point(settings%p0:settings%p1), point(settings%d0:settings%d1),settings%context)
+            point(settings%l0) = loglikelihood( point(settings%p0:settings%p1), point(settings%d0:settings%d1))
 
             ! accumulate the number of likelihood calls that we've made
-            point(settings%nlike) = point(settings%nlike)+1
+            nlike = nlike+1
         end if
 
     end subroutine calculate_point
 
-    function calculate_gradloglike(loglikelihood,priors,point,settings,delta) result(gradloglike)
-        use priors_module, only: prior, hypercube_to_physical
-        use settings_module, only: program_settings
-        use utils_module, only: logzero
+    !> Calculate a posterior point from a live/phantom point
+    function calculate_posterior_point(settings,point,logweight,evidence,volume) result(posterior_point)
+        use settings_module,   only: program_settings
+        use utils_module,      only: logincexp
         implicit none
-        interface
-            function loglikelihood(theta,phi,context)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
-                double precision :: loglikelihood
-            end function
-        end interface
 
-        type(prior), dimension(:), intent(in) :: priors
         type(program_settings), intent(in) :: settings
-        double precision, intent(in) , dimension(:) :: point
-        double precision, intent(in)                     :: delta
-        double precision, dimension(settings%nDims)             :: gradloglike
+        double precision, dimension(settings%nTotal),intent(in) :: point
+        double precision,intent(in) :: logweight
+        double precision,intent(in) :: evidence
+        double precision,intent(in) :: volume
+        double precision, dimension(settings%nposterior) :: posterior_point
 
-        double precision , dimension(settings%nTotal) :: center_point
-        double precision , dimension(settings%nTotal) :: outer_point
+
+        ! Volume
+        posterior_point(settings%pos_X)  = volume
+        ! Likelihood
+        posterior_point(settings%pos_l)  = point(settings%l0)
+        ! Un-normalised weighting 
+        posterior_point(settings%pos_w)  = logweight
+        ! un-normalise cumulative weighting
+        posterior_point(settings%pos_Z)  = evidence
+        ! Physical parameters
+        posterior_point(settings%pos_p0:settings%pos_p1) = point(settings%p0:settings%p1)
+        ! Derived parameters
+        posterior_point(settings%pos_d0:settings%pos_d1) = point(settings%d0:settings%d1)
+
+    end function calculate_posterior_point
+
+
+    !> This function computes the similarity matrix of an array of data.
+    !!
+    !! Assume that the data_array can be considered an indexed array of vectors
+    !! V = ( v_i : i=1,n )
+    !!
+    !! The similarity matrix can be expressed very neatly as
+    !! d_ij = (v_i-v_j) . (v_i-v_j)
+    !!      = v_i.v_i + v_j.v_j - 2 v_i.v_j
+    !!
+    !! The final term can be written as a data_array^T data_array, and the first
+    !! two are easy to write. We can therefore calculate this in two lines with
+    !! instrisic functions
+    function calculate_similarity_matrix(data_array) result(similarity_matrix)
+
+        double precision, intent(in), dimension(:,:) :: data_array
+
+        double precision, dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
 
         integer :: i
 
-        ! Calculate the base point
-        center_point=point
-        call calculate_point(loglikelihood,priors,center_point,settings)
-        if (center_point(settings%l0) <= logzero ) then
-            gradloglike=0
-            return
-        end if
 
-        do i=1,settings%nDims
-            ! intialise the outer point at center_point
-            outer_point=point
-            ! shift it in the ith coordinate by delta
-            outer_point(settings%h0+i) = outer_point(settings%h0+i) + delta
-            ! calculate the loglikelihood
-            call calculate_point(loglikelihood,priors,outer_point,settings)
-            if(outer_point(settings%l0)<=logzero) then
-                gradloglike=0
-                gradloglike(i)=-1d0
-                return
-            else
-                ! grad loglike is the difference between outer and center divided by delta
-                gradloglike(i) = (outer_point(settings%l0)-center_point(settings%l0))/delta
-            end if
-        end do
+        similarity_matrix = spread( &
+            [ ( dot_product(data_array(:,i),data_array(:,i)), i=1,size(data_array,2) ) ], &
+            dim=2,ncopies=size(data_array,2) )
 
-    end function calculate_gradloglike
+        similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(data_array),data_array )
+
+    end function calculate_similarity_matrix
 
 
 
-    function gradloglike(loglikelihood,settings,theta,loglike,delta)
-        use settings_module, only: program_settings
-        implicit none
-        interface
-            function loglikelihood(theta,phi,context)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
-                double precision :: loglikelihood
-            end function
-        end interface
-        type(program_settings), intent(in) :: settings
-        double precision, intent(in), dimension(settings%nDims) :: theta
-        double precision, intent(in)                     :: loglike
-        double precision, intent(in)                     :: delta
-
-        double precision, dimension(settings%nDims)             :: gradloglike
 
 
-        double precision, dimension(settings%nDerived)               :: derived
-        integer :: context
 
-        double precision, dimension(settings%nDims) :: delta_vec
-
-        integer i
-
-        do i=1,settings%nDims
-            delta_vec = 0
-            delta_vec(i) = delta
-            gradloglike(i) = ( loglikelihood(theta+delta_vec,derived,context) - loglike )/ delta
-        end do
-
-    end function gradloglike
 
 
 end module calculate_module

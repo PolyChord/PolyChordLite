@@ -16,44 +16,59 @@ module feedback_module
 
     !> Called before running the program
     subroutine write_opening_statement(settings)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,title_fb,normal_fb
         use settings_module, only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
 
 
-        if(settings%feedback >=0) then
+        if(settings%feedback >=title_fb) then
             write(stdout_unit,'("")')
             write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
             write(stdout_unit,'("copyright: Will Handley, Mike Hobson & Anthony Lasenby")')
-            write(stdout_unit,'("  version: 1.0")')
-            write(stdout_unit,'("  release: 8th Feb 2015")')
+            write(stdout_unit,'("  version: 1.1")')
+            write(stdout_unit,'("  release: 3rd Mar 2015")')
             write(stdout_unit,'("    email: wh260@cam.ac.uk")')
             write(stdout_unit,'("")')
+        end if
 
+        if(settings%feedback >=normal_fb) then
             write(stdout_unit,'("Run Settings"   )')
             write(stdout_unit,'("nlive    :",I8)')   settings%nlive
             write(stdout_unit,'("nDims    :",I8)')   settings%nDims
             write(stdout_unit,'("nDerived :",I8)')   settings%nDerived
+            if(settings%do_clustering) write(stdout_unit,'("Doing Clustering")')
+
             write(stdout_unit,'("")')
         end if
-       
+
 
 
 
     end subroutine write_opening_statement
 
 
+    subroutine write_resuming(feedback)
+        use utils_module,    only: stdout_unit,normal_fb
+        implicit none
+        integer, intent(in) :: feedback
+
+        if(feedback>=normal_fb) then
+            write(stdout_unit,'("Resuming from previous run")')
+        end if
+
+    end subroutine write_resuming
+
 
     !> Called before generating the live points
     subroutine write_started_generating(feedback)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,normal_fb
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 
 
-        if (feedback>=1) then
+        if (feedback>=normal_fb) then
             write(stdout_unit,'("generating live points")')
             write(stdout_unit,'("")')
         end if
@@ -64,6 +79,7 @@ module feedback_module
     !!
     !! Prints a neat progress bar to show you how far its got
     subroutine write_generating_live_points(feedback,i_live,nlive)
+        use utils_module,    only: fancy_fb
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
@@ -73,21 +89,22 @@ module feedback_module
         !> The number of live points to be generated
         integer, intent(in) :: nlive
 
-        if (feedback>=1) then
-            call progress(dble(i_live)/dble(nlive))
+        if (feedback>=fancy_fb) then
+            call progress(dble(i_live)/dble(nlive),100)
         end if
 
     end subroutine write_generating_live_points
 
     !> Called at the end of generating the live points
     subroutine write_finished_generating(feedback)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,normal_fb
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 
 
-        if (feedback>=1) then
+        if (feedback>=normal_fb) then
+            write(stdout_unit,'("")')
             write(stdout_unit,'("all live points generated")')
             write(stdout_unit,'("")')
         end if
@@ -100,31 +117,22 @@ module feedback_module
     !!
     !! Note that you shouldn't put any write statements in between using this
     !! subroutine.
-    subroutine progress(frac,brsz)
+    subroutine progress(frac,bar_size)
         use utils_module,    only: stdout_unit
         implicit none
 
         !> fraction completed
         double precision,intent(in) :: frac
         !> The size of the progress bar
-        integer,intent(in),optional :: brsz
+        integer,intent(in) :: bar_size
 
-        
+
         integer :: percent                    ! the percentage completed
-        character(100) :: bar                 ! the bounds on the progress bar
-        integer :: bar_size                   ! bar size
+        character(bar_size+7) :: bar          ! the bounds on the progress bar
         integer :: i                          ! loop variable
 
         character(len=40) :: bar_fmt  ! format string for outputting
 
-
-        if(present(brsz))then
-            ! If a specific bar size is requested set bar_size to brsz
-            bar_size=brsz
-        else
-            ! Otherwise default to 100
-            bar_size=100
-        endif
 
         write(bar_fmt,'("(a1,a",i0,")")') bar_size+7
 
@@ -138,12 +146,12 @@ module feedback_module
         !
         ! Start:
         bar="???% |"
-        do i= 1, bar_size
+        do i= 1, bar_size-1
             ! Put in bar_size number of spaces
-            bar = bar//' '
+            bar(6+i:6+i) = ' '
         end do
         ! Finish
-        bar = bar//'|'
+        bar(bar_size+7:bar_size+7) = '|'
 
         ! Write the percentage to the bar variable, so it now reads
         ! e.g.  bar = " 70% |                     |"
@@ -157,27 +165,41 @@ module feedback_module
 
         ! print the progress bar to stdout (unit 6)
         write(stdout_unit,fmt=bar_fmt,advance="no") char(13), bar
+        flush(stdout_unit)
 
-        if (percent/=100) then
-            ! If we're not at the end, then we should flush the command line so
-            ! that we re-start from the beginning next time
-            flush(stdout_unit)
-        else
-            ! Otherwise, we should just write a blank line 
-            write(stdout_unit,fmt=*)
-        endif
         return
     end subroutine progress
 
+
+    subroutine write_num_repeats(num_repeats,feedback)
+        use utils_module,    only: stdout_unit,fmt_len,INT_FMT,normal_fb
+        implicit none
+        integer, dimension(:) :: num_repeats
+        integer, intent(in) :: feedback 
+
+        integer :: i
+        character(len=fmt_len) fmt_int
+
+        if(feedback>=normal_fb) then
+            write(fmt_int,'("( ""number of repeats: "",",I0,A,")")') size(num_repeats),INT_FMT
+
+            do i=1,size(num_repeats)
+                write(stdout_unit,fmt_int) num_repeats
+            end do
+        end if
+
+    end subroutine write_num_repeats
+
+
     !> Called before starting sampling
     subroutine write_started_sampling(feedback)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,normal_fb
         implicit none
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 
 
-        if (feedback>=1) then
+        if (feedback>=normal_fb) then
             write(stdout_unit,'("started sampling")')
             write(stdout_unit,'("")')
         end if
@@ -185,76 +207,85 @@ module feedback_module
     end subroutine write_started_sampling
 
     !> Intermediate results
-    subroutine write_intermediate_results(settings,info,ndead,nphantom,nposterior,mean_likelihood_calls)
-        use evidence_module, only: run_time_info
+    subroutine write_intermediate_results(settings,RTI,nlikesum)
+        use run_time_module, only: run_time_info,calculate_logZ_estimate
         use settings_module, only: program_settings
-        use utils_module,    only: stdout_unit,logzero,fmt_len
+        use utils_module,    only: stdout_unit,logzero,fmt_len,normal_fb
         implicit none
-        type(program_settings), intent(in) :: settings
-        type(run_time_info),intent(in)     :: info
-        integer,intent(in)                 :: ndead
-        integer,intent(in),dimension(settings%ncluster)    :: nphantom
-        integer,intent(in),dimension(0:settings%ncluster)    :: nposterior
-        double precision,intent(in)        :: mean_likelihood_calls
+        type(program_settings), intent(in)    :: settings    !> program settings
+        type(run_time_info),    intent(in)    :: RTI         !> run time info
+        integer,dimension(:),   intent(in)    :: nlikesum    !> number of likelihood calls since last call
 
-        integer :: i
+        integer :: p
 
-        double precision, dimension(info%ncluster_A) :: mu
-        double precision, dimension(info%ncluster_A) :: sigma
+        double precision                          :: logZ       
+        double precision                          :: varlogZ  
+        double precision, dimension(RTI%ncluster) :: logZp      
+        double precision, dimension(RTI%ncluster) :: varlogZp 
+        double precision, dimension(RTI%ncluster_dead) :: logZp_dead      
+        double precision, dimension(RTI%ncluster_dead) :: varlogZp_dead 
 
-        integer :: n_A
-        character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_tail
+        character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_equals,fmt_tail,fmt_nlike
+
+        integer :: int_width
+
+        int_width = ceiling(log10(dble(maxval([RTI%nlive(:RTI%ncluster),RTI%nphantom(:RTI%ncluster),RTI%nposterior(:RTI%ncluster),RTI%nequals(:RTI%ncluster)]))))
 
         ! Get the number of active clusters
-        n_A = info%ncluster_A
-        write(fmt_head,'("(",I0,"(""_""))")') 7*n_A + 11
-        write(fmt_live,'("(""lives      |"",",I0,"(I5,"" |""))")') n_A
-        write(fmt_phantom,'("(""phantoms   |"",",I0,"(I5,"" |""))")') n_A
-        write(fmt_posterior,'("(""posteriors |"",",I0,"(I5,"" |""))")') n_A
-        write(fmt_tail,'("(",I0,"(""‾""))")') 7*n_A + 11
+        write(fmt_head,'("(",I0,"(""_""))")') (int_width+2)*RTI%ncluster + 11
+        write(fmt_live,'("(""lives      |"",",I0,"(I",I0,","" |""))")') RTI%ncluster,int_width
+        write(fmt_phantom,'("(""phantoms   |"",",I0,"(I",I0,","" |""))")') RTI%ncluster,int_width
+        write(fmt_posterior,'("(""posteriors |"",",I0,"(I",I0,","" |""))")') RTI%ncluster,int_width
+        write(fmt_equals,'("(""equals     |"",",I0,"(I",I0,","" |""))")') RTI%ncluster,int_width
+        write(fmt_tail,'("(",I0,"(""‾""))")') (int_width+2)*RTI%ncluster + 11
 
 
-        if (settings%feedback>=1) then
-            write(stdout_unit,'("nposterior =",  I8                   )') nposterior(0)
-            write(stdout_unit,'("ncluster   = ", I7                   )') n_A
-            write(stdout_unit,'("nclustertot= ", I7                   )') n_A+info%ncluster_P
+        if (settings%feedback>=normal_fb) then
             write(stdout_unit,fmt_head)
-            write(stdout_unit,fmt_live)  info%n(:n_A)
-            write(stdout_unit,fmt_phantom)  nphantom(:n_A)
-            if(settings%calculate_posterior) write(stdout_unit,fmt_posterior)  nposterior(1:n_A)
+            write(stdout_unit,fmt_live)  RTI%nlive
+            write(stdout_unit,fmt_phantom)  RTI%nphantom
+            write(stdout_unit,fmt_posterior)  RTI%nposterior
+            write(stdout_unit,fmt_equals)  RTI%nequals
             write(stdout_unit,fmt_tail)
-            write(stdout_unit,'("ndead      =",  I8                   )') ndead
-            if(settings%calculate_posterior) &
-            write(stdout_unit,'("efficiency = ", F7.2, "    (",F5.2," per slice)")') mean_likelihood_calls, mean_likelihood_calls/settings%num_babies
-            
+            write(stdout_unit,'("ncluster   =",  I8," /",I8           )') RTI%ncluster, RTI%ncluster+RTI%ncluster_dead
+            write(stdout_unit,'("ndead      =",  I8                   )') RTI%ndead
+            write(stdout_unit,'("nposterior =",  I8                   )') RTI%nposterior_global(1)
+            write(stdout_unit,'("nequals    =",  I8                   )') RTI%nequals_global(1)
 
-            mu(1)    = 2*info%logevidence - 0.5*info%logevidence2              
-            sigma(1) = sqrt(abs(info%logevidence2 - 2*info%logevidence))
+            write(fmt_nlike,'("(""nlike      ="",",I0,"I8)")') size(nlikesum)
+            write(stdout_unit,fmt_nlike) RTI%nlike
 
-            if(info%logevidence>logzero) then
-                write(stdout_unit,'("log(Z)     = ", F15.2, " +/- ", F5.2)') mu(1),sigma(1)
+            write(fmt_nlike,'(  "(""<nlike>    ="","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
+            write(stdout_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_resume),dble(nlikesum)/dble(RTI%num_repeats*settings%update_resume)
+
+
+            call calculate_logZ_estimate(RTI,logZ,varlogZ,logZp,varlogZp,logZp_dead,varlogZp_dead)            
+
+            if(RTI%logZ>logzero) then
+                write(stdout_unit,'("log(Z)     = ", F8.2, " +/- ", F5.2)') logZ,sqrt(varlogZ)
             end if
 
-            mu    = 2*info%logZ(:info%ncluster_A) - 0.5*info%logZ2(:info%ncluster_A)              
-            sigma = sqrt(info%logZ2(:info%ncluster_A) - 2*info%logZ(:info%ncluster_A))
-
-            if(info%ncluster_A>1) then
-                do i=1,info%ncluster_A  
-                    if(info%logZ(i)>logzero) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F15.2, " +/- ", F5.2)') i, mu(i),sigma(i)
+            do p=1,RTI%ncluster
+                if(RTI%logZp(p)>logzero) then
+                    write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2, " (still evaluating)")') p, logZp(p),sqrt(varlogZp(p))
+                else
+                    write(stdout_unit,'("log(Z_",I2,")  = ? (still evaluating)")') p
+                end if
+            end do
+            if(RTI%ncluster_dead>0) then
+                do p=1,RTI%ncluster_dead
+                    if(RTI%logZp_dead(p)>logzero) then
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2)') p+RTI%ncluster, logZp_dead(p),sqrt(varlogZp_dead(p))
                     else
-                        write(stdout_unit,'("log(Z_",I2,")  = ?")') i
+                        write(stdout_unit,'("log(Z_",I2,")  = ?")') p+RTI%ncluster
                     end if
                 end do
             end if
-
-
 
             write(stdout_unit,'("")')
             write(stdout_unit,'("")')
             write(stdout_unit,'("")')
         end if
-
 
     end subroutine write_intermediate_results
 
@@ -262,7 +293,7 @@ module feedback_module
 
     !> Nicely formatted final output statement
     subroutine write_final_results(output_info,feedback,priors)
-        use utils_module,    only: stdout_unit
+        use utils_module,    only: stdout_unit,title_fb
         use priors_module,   only: prior,prior_log_volume
         implicit none
         !> Output of the program.
@@ -276,12 +307,12 @@ module feedback_module
         !> The prior information
         type(prior), dimension(:), intent(in) :: priors
 
-        if (feedback>=0) then
+        if (feedback>=title_fb) then
             write(stdout_unit,'(A42)')                                        ' ________________________________________ '
             write(stdout_unit,'(A42)')                                        '|                                        |'
             write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') nint(output_info(3))
-            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1:2)
-            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') output_info(1)+prior_log_volume(priors),output_info(2)
+            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1),sqrt(output_info(2))
+            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') output_info(1)+prior_log_volume(priors),sqrt(output_info(2))
             write(stdout_unit,'(A42)')                                        '|________________________________________|'
         endif
     end subroutine write_final_results

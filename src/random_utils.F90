@@ -13,7 +13,7 @@ module random_module
 
 
     ! ===========================================================================================
-    
+
 
     !> Initialise the random number generators
     !! 
@@ -62,13 +62,13 @@ module random_module
             if (t == 0) then
                 call date_and_time(values=dt)
                 t = &
-                        (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 &
-                        + dt(2) * 31 * 24 * 60 * 60 * 1000 &
-                        + dt(3) * 24 * 60 * 60 * 1000 &
-                        + dt(5) * 60 * 60 * 1000 &
-                        + dt(6) * 60 * 1000 &
-                        + dt(7) * 1000 &
-                        + dt(8)
+                    (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 &
+                    + dt(2) * 31 * 24 * 60 * 60 * 1000 &
+                    + dt(3) * 24 * 60 * 60 * 1000 &
+                    + dt(5) * 60 * 60 * 1000 &
+                    + dt(6) * 60 * 1000 &
+                    + dt(7) * 1000 &
+                    + dt(8)
             end if
 
         end if
@@ -161,6 +161,62 @@ module random_module
         random_real = random_real_vec(1)
 
     end function random_real
+
+    ! ===========================================================================================
+
+
+    !>  Bernoulli trials, probability p, or odds ratio p:q for
+    !!
+    !! http://en.wikipedia.org/wiki/Bernoulli_trial
+    !! 
+    !! http://en.wikipedia.org/wiki/Odds#Gambling_odds_versus_probabilities
+    !!
+    !! Returns true with probability p
+    !! Returns true with probability p/(p+q)
+
+    function bernoulli_trials(nDims,p,q)
+        implicit none
+
+        ! The output nDims coordinate
+        integer, intent(in) :: nDims
+        double precision,intent(in) :: p
+        double precision,intent(in),optional :: q
+
+        logical, dimension(nDims) :: bernoulli_trials
+
+        if(present(q)) then
+            bernoulli_trials = random_reals(nDims) < p/(p+q)
+        else
+            bernoulli_trials = random_reals(nDims) < p
+        end if
+
+
+    end function bernoulli_trials
+
+    ! ===========================================================================================
+
+
+    !>  Bernoulli trial (see above)
+
+    function bernoulli_trial(p,q)
+        implicit none
+
+        ! The output nDims coordinate
+        double precision,intent(in) :: p
+        double precision,intent(in),optional :: q
+
+        logical :: bernoulli_trial
+        logical :: bernoulli_trial_vec(1)
+
+        if(present(q)) then
+            bernoulli_trial_vec = bernoulli_trials(1,p,q)
+        else
+            bernoulli_trial_vec = bernoulli_trials(1,p)
+        end if
+
+        bernoulli_trial = bernoulli_trial_vec(1)
+
+    end function bernoulli_trial
 
     ! ===========================================================================================
 
@@ -271,8 +327,8 @@ module random_module
             random_subdirection2 = dot_product(random_subdirection,random_subdirection)
 
         end do
-            ! normalise the vector
-            random_subdirection = random_subdirection / sqrt(random_subdirection2)
+        ! normalise the vector
+        random_subdirection = random_subdirection / sqrt(random_subdirection2)
 
     end function random_subdirection
 
@@ -340,6 +396,40 @@ module random_module
         end do
 
     end function random_orthonormal_basis
+
+
+    !> Construct a sequence of nhats composed of several random orthonormal bases
+    !!
+    !! Outputs a matrix where the ith basis vector is stored in basis(:,i)
+    function random_orthonormal_bases(nDims,num_nhats) result(nhats)
+        !> Dimensionality of the basis
+        integer, intent(in) ::  nDims
+        integer, intent(in) ::  num_nhats
+
+        ! Set of vectors, the ith vector is in basis(:,i)
+        double precision, dimension(nDims,num_nhats) :: nhats
+
+        double precision, dimension(nDims,nDims) :: basis
+
+        integer :: lower_index,upper_index
+
+        ! Fill up the first whole sections with nDims
+        lower_index = 1
+        upper_index = nDims
+        do while(upper_index<num_nhats)
+            nhats(:,lower_index:upper_index) = random_orthonormal_basis(nDims)
+            lower_index = lower_index+nDims
+            upper_index = upper_index+nDims
+        end do
+
+        basis = random_orthonormal_basis(nDims)
+
+        nhats(:,lower_index:num_nhats) = basis(:,1:1+num_nhats-lower_index)
+        
+
+
+
+    end function random_orthonormal_bases
 
     ! ===========================================================================================
     !> Generate a set of k distinct random integers between [1,m]
@@ -480,5 +570,42 @@ module random_module
 
     end function random_integer_P
 
+
+    !> Generate a random inverse covariance matrix with unit determinant
+    !! 
+    subroutine random_inverse_covmat(invcovmat,logdetcovmat,sigma,nDims)
+        implicit none
+        integer,          intent(in)                         :: nDims
+        double precision, intent(out),dimension(nDims,nDims) :: invcovmat
+        double precision, intent(out)                        :: logdetcovmat
+        double precision, intent(in)                         :: sigma
+
+        double precision, dimension(nDims)       :: eigenvalues
+        double precision, dimension(nDims,nDims) :: eigenvectors
+        integer :: j
+        double precision, parameter :: rng=1e-2
+
+        ! Generate a random basis for the eigenvectors
+        eigenvectors = random_orthonormal_basis(nDims)
+        ! Generate the eigenvalues logarithmically in [rng,1] * sigma
+        do j=1,nDims
+            eigenvalues(j)  = sigma * rng**((j-1d0)/(nDims-1d0))
+        end do
+        ! Sort them lowest to highest for consistency
+        !call dlasrt('D',nDims,eigenvalues,info)
+
+        ! Create the inverse covariance matrix in the eigenbasis
+        invcovmat = 0d0
+        do j=1,nDims
+            invcovmat(j,j) = 1d0/eigenvalues(j)**2
+        end do
+
+        ! Rotate the matrix into the coordinate basis
+        invcovmat = matmul(eigenvectors,matmul(invcovmat,transpose(eigenvectors)))
+
+        ! sum up the logs of the eigenvalues to get the log of the determinant
+        logdetcovmat = 2 * sum(log(eigenvalues))
+
+    end subroutine random_inverse_covmat
 
 end module random_module

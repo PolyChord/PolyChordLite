@@ -8,17 +8,29 @@ module utils_module
     double precision, parameter :: loginf = +sqrt(huge(0d0))
 
     !> The maximum character length
-    integer, parameter :: STR_LENGTH = 100
+    integer, parameter :: STR_LENGTH = 300
 
     !> \f$ 2\pi \f$ in double precision
     double precision, parameter :: TwoPi = 8d0*atan(1d0)
+    !> \f$ \log(2\pi) \f$ in double precision
+    double precision, parameter :: logTwoPi = log(8d0*atan(1d0))
 
-    !> The default formats
+    !> The default writing formats
     integer, parameter :: fmt_len = 200
     character(7) :: DB_FMT='E17.8E3'
     character(4) :: FLT_FMT='F8.2'
-    character(3) :: INT_FMT='I20'
+    character(3) :: INT_FMT='I12'
 
+    !> Feedback levels
+    integer, parameter :: title_fb = 0
+    integer, parameter :: normal_fb = 1
+    integer, parameter :: fancy_fb = 2
+    integer, parameter :: verbose_fb = 3
+
+    !> unit for stderr
+    integer, parameter :: stderr_unit = 0
+    !> unit for stdin
+    integer, parameter :: stdin_unit = 5
     !> unit for stdout
     integer, parameter :: stdout_unit = 6
     !> unit for reading from resume file
@@ -39,11 +51,19 @@ module utils_module
     integer, parameter :: write_ev_unit = 17
     !> unit for writing evidence distribution
     integer, parameter :: write_stats_unit = 18
-    !> unit for reading unnormalised posterior files
-    integer, parameter :: read_untxt_unit = 19
-    !> unit for writing unnormalised posterior files
-    integer, parameter :: write_untxt_unit = 20
+    !> unit for writing equal weights files
+    integer, parameter :: write_equals_unit = 19
+    !> unit for writing weights files
+    integer, parameter :: write_posterior_unit = 19
 
+    !> unit for deleting generic files
+    integer, parameter :: delete_unit = 20
+
+
+    !> unit for params file
+    integer, parameter :: params_unit = 21
+    !> unit for paramnames file
+    integer, parameter :: paramnames_unit = 22
 
     !> Log[1/2 Erfc[j/Sqrt[2]]]
     double precision, parameter,dimension(20) :: logsigma = (/-1.84102, -3.78318, -6.60773, -10.3601, -15.065, -20.7368, -27.3843, -35.0134, -43.6281, -53.2313, -63.8249, -75.4107, -87.9897, -101.563, -116.131, -131.695, -148.256, -165.812, -184.366, -203.917 /)
@@ -62,6 +82,47 @@ module utils_module
 
 
     contains
+
+    !> Swaps two integers via a temporary variable
+    subroutine swap_integers(a,b)
+        implicit none
+        integer,intent(inout) :: a,b
+        integer :: temp
+        temp=a
+        a=b
+        b=temp
+    end subroutine swap_integers
+
+    !> location of minimum in an array of doubles
+    !!
+    !! This is just a wrapper around minloc, but gets around the annoying ideosyncracy
+    !! of fortran that minloc must return a length 1 array
+    function minpos(a)
+        implicit none
+        double precision, intent(in), dimension(:) :: a
+        integer :: minpos
+        integer :: minpos_vec(1)
+
+        minpos_vec = minloc(a)
+        minpos = minpos_vec(1)
+    end function minpos
+
+
+
+    function cyc(iterator,cycle_size)
+        implicit none
+        integer, intent(in) :: iterator
+        integer, intent(in) :: cycle_size
+        logical :: cyc
+
+        if(cycle_size<=0) then
+            cyc = .true.
+        else
+            cyc = mod(iterator,cycle_size)==0
+        end if
+
+    end function cyc
+
 
 
     !> Euclidean distance of two coordinates
@@ -175,6 +236,63 @@ module utils_module
 
 
 
+    !> Identity matrix ( nDims x nDims )
+    function identity_matrix(nDims)
+        implicit none
+        !> dimensionality of the identity matrix
+        integer,intent(in) :: nDims
+        !> The identity matrix to be returned
+        double precision, dimension(nDims,nDims) :: identity_matrix
+
+        integer :: i_dims ! iterator over dimensions
+
+        identity_matrix=0d0
+        do i_dims=1,nDims
+            identity_matrix(i_dims,i_dims) = 1d0
+        end do
+
+
+    end function identity_matrix
+
+    !> Trace of a matrix
+    function trace(a)
+        implicit none
+        !> The identity matrix to be returned
+        double precision, dimension(:,:),intent(in) :: a
+
+        double precision :: trace
+
+        integer :: i ! iterator over dimensions
+
+        trace= sum ( [( a(i,i), i=1,min(size(a,1),size(a,2)) )] ) 
+
+    end function trace
+
+
+    function delete_file(file_name,feedback) result(deleted)
+        implicit none
+        character(STR_LENGTH),intent(in) :: file_name
+        logical, optional, intent(in) :: feedback
+
+        logical :: deleted ! whether or not there was a file to be deleted
+
+        ! Check that file exists:
+        inquire( file=trim(file_name), exist=deleted)
+
+        if(deleted) then
+            if(present(feedback)) then
+                if(feedback) write(stdout_unit,'("Deleting file: ", A)') trim(file_name)
+            end if
+            ! open the file
+            open(delete_unit,file=trim(file_name)) 
+            ! Delete it if it exists
+            close(delete_unit,status='delete')
+        end if
+
+
+    end function delete_file
+
+
 
 
 
@@ -196,8 +314,7 @@ module utils_module
         double precision :: maximumlog
 
         maximumlog = maxval(vector)
-
-        logsumexp =  maximumlog + log(sum(exp(vector - maximumlog)))
+        logsumexp  =  maximumlog + log(sum(exp(vector - maximumlog)))
 
     end function logsumexp
 
@@ -275,10 +392,10 @@ module utils_module
         n=0
 
         do while( abovetol(change,Hypergeometric1F1) )
-           change = Pochhammer(a,n) * Pochhammer(b,n) * z**n / gamma(1d0+n)
+            change = Pochhammer(a,n) * Pochhammer(b,n) * z**n / gamma(1d0+n)
 
-           Hypergeometric1F1 = Hypergeometric1F1 + change
-           n=n+1
+            Hypergeometric1F1 = Hypergeometric1F1 + change
+            n=n+1
         enddo
 
     end function Hypergeometric1F1
@@ -304,10 +421,10 @@ module utils_module
         n=0
 
         do while( abovetol(change,Hypergeometric2F1) )
-           change = Pochhammer(a,n) * Pochhammer(b,n) / Pochhammer(c,n) * z**n / gamma(1d0+n)
+            change = Pochhammer(a,n) * Pochhammer(b,n) / Pochhammer(c,n) * z**n / gamma(1d0+n)
 
-           Hypergeometric2F1 = Hypergeometric2F1 + change
-           n=n+1
+            Hypergeometric2F1 = Hypergeometric2F1 + change
+            n=n+1
         enddo
 
     end function Hypergeometric2F1
@@ -316,21 +433,21 @@ module utils_module
 
 
     recursive function Pochhammer (x,n) result (xn)
-        ! This function computes the rising factorial x^(n):
-        ! for a non-negative integer n and real x
-        !
-        ! http://en.wikipedia.org/wiki/Pochhammer_symbol
+    ! This function computes the rising factorial x^(n):
+    ! for a non-negative integer n and real x
+    !
+    ! http://en.wikipedia.org/wiki/Pochhammer_symbol
 
-        implicit none
-        double precision, intent(in)  :: x
-        integer,          intent(in)  :: n
-        double precision              :: xn
+    implicit none
+    double precision, intent(in)  :: x
+    integer,          intent(in)  :: n
+    double precision              :: xn
 
-        if (n<=0) then
-            xn = 1
-        else
-            xn = Pochhammer(x,n-1)*(x+n-1)
-        endif
+    if (n<=0) then
+        xn = 1
+    else
+        xn = Pochhammer(x,n-1)*(x+n-1)
+    endif
 
     end function Pochhammer
 
@@ -362,7 +479,15 @@ module utils_module
         ! Zero out the upper half
         do i=1,size(a,1)
 
-            L(i,i)= sqrt( a(i,i) - sum(L(i,:i-1)**2) )
+            L(i,i)= a(i,i) - sum(L(i,:i-1)**2) 
+            if (L(i,i).le.0d0) then
+                ! If the cholesky decomposition does not exist, then set it to
+                ! be a re-scaled identity matrix
+                L = identity_matrix(size(a,1)) * sqrt(trace(a))
+                return
+            else
+                L(i,i)=sqrt(L(i,i))
+            end if
 
             do j=i+1,size(a,1)
                 L(j,i) = (a(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)
@@ -425,6 +550,65 @@ module utils_module
         similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(data_array),data_array )
 
     end function calc_similarity_matrix
+
+
+
+
+    !> This function relabels an array with more sensible indices
+    !!
+    !! We do this by constructing a mapping of each original label to a new label
+    !!
+    !! mapping :  new labels ---> old labels
+    function relabel(array,num_labels) result(array_relabel)
+        implicit none
+        integer,intent(in),dimension(:)  :: array
+        integer,intent(out)              :: num_labels
+
+        integer,dimension(size(array)) :: array_relabel
+
+        integer,dimension(size(array)) :: mapping
+
+        integer :: npoints
+        integer :: i_point
+        integer :: i_label
+
+        ! Find the number of points
+        npoints = size(array)
+
+        ! We will re-label the array type in array(1) with the integer 1
+        mapping(1) = array(1)
+        num_labels = 1
+
+        do i_point=1,npoints
+            ! If the array type for i_point is not already included in the
+            ! array, then add it
+            if( all(array(i_point)/=mapping(1:num_labels)) ) then
+                num_labels=num_labels+1
+                mapping(num_labels) = array(i_point)
+            end if
+        end do
+
+        ! mapping now contains the random integers that are found in array
+
+        ! We now relabel according to the inverse mapping
+        do i_label=1,num_labels
+            where(array==mapping(i_label)) array_relabel=i_label
+        end do
+
+    end function
+
+
+
+    !> The volume of a unit n-sphere
+    function Vn(nDims)
+        implicit none
+        integer,intent(in) :: nDims
+        double precision :: Vn
+        double precision, parameter :: sqrtpi = sqrt(4d0*atan(1d0))
+        Vn = sqrtpi**nDims /gamma(1d0+nDims/2d0)
+    end function Vn
+
+
 
 
 
@@ -674,6 +858,28 @@ module utils_module
         return
     end function r8poly_value
 
+    !> Compute the loglikelihood of a multivariate gaussian
+    function log_gauss(theta,mean,invcovmat,logdetcovmat)
+        implicit none
+        !> The input vector
+        double precision, intent(in), dimension(:) :: theta
+        !> The mean
+        double precision, intent(in), dimension(:) :: mean
+        !> The precomputed inverse covariance matrix
+        double precision, intent(in), dimension(:,:) :: invcovmat
+        !> The precomputed logarithm of the determinant
+        double precision, intent(in) :: logdetcovmat
+
+
+        ! The output
+        double precision :: log_gauss
+
+        ! Gaussian normalisation
+        log_gauss = - ( size(theta) * logTwoPi + logdetcovmat )/2d0 
+
+        log_gauss = log_gauss - dot_product(theta-mean,matmul(invcovmat,theta-mean))/2d0
+
+    end function log_gauss
 
 
 end module utils_module

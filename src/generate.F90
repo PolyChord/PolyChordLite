@@ -1,14 +1,9 @@
 !> This module contains 'generating tools', namely:
 !!
 !! * GenerateSeed
-!! ** Generates a seed point
-!! * GenerateLivePointsP
-!! * GenerateLivePointsL
+!! * GenerateLivePoints
 module generate_module
 
-#ifdef MPI
-    use mpi_module
-#endif
 
     implicit none
 
@@ -20,21 +15,19 @@ module generate_module
     !! It uses the existing set of live points and the details of the clustering
     !! in order to select a seed point to generate from in proportion to the
     !! estimates of the prior volume of each cluster.
-    function GenerateSeed(settings,info,live_points,cluster_choice) result(seed_point)
+    function GenerateSeed(settings,RTI,seed_cluster) result(seed_point)
         use settings_module,   only: program_settings
-        use evidence_module,   only: run_time_info
-        use random_module,     only: random_integer,random_integer_P
+        use run_time_module,   only: run_time_info
+        use random_module,     only: random_integer,random_integer_P,bernoulli_trial
         use utils_module,      only: logsumexp
         implicit none
 
         !> Program settings
         type(program_settings), intent(in) :: settings
         !> The evidence storage
-        type(run_time_info), intent(in) :: info
-        !> The live points
-        double precision, dimension(settings%nTotal,settings%nlive,settings%ncluster),intent(in) :: live_points
+        type(run_time_info), intent(in) :: RTI
         !> The cluster number chosen
-        integer,intent(out) :: cluster_choice
+        integer,intent(out) :: seed_cluster
 
 
         ! The seed point to be produced
@@ -42,217 +35,49 @@ module generate_module
 
         integer :: seed_choice
 
-        double precision, dimension(info%ncluster_A) :: probs
-
+        double precision, dimension(RTI%ncluster) :: probs
 
         ! 0) Calculate an array proportional to the volumes
-        probs = info%logX(:info%ncluster_A) ! prob_i = log( X_i )
-        probs = probs - logsumexp(probs)    ! prob_i = log( X_i/(sum_j X_j) )
-        probs = exp(probs)                  ! prob_i = X_i/(sum_j X_j)
+        probs = RTI%logXp                 ! prob_p = log( X_p )
+        probs = probs - logsumexp(probs)  ! prob_p = log( X_p/(sum_q X_q) )
+        probs = exp(probs)                ! prob_p = X_p/(sum_q X_q)
 
         ! 1) Pick cluster in proportion to the set of volume estimates of the active clusters
-        cluster_choice = random_integer_P(probs)
+        seed_cluster = random_integer_P(probs)
 
-        ! 2) Pick a random integer in between 1 and the number of live points in the chosen cluster
-        seed_choice = random_integer(info%n(cluster_choice))
+        ! 3) Pick a random integer in between 1 and the number of live points in the cluster 'p'
+        seed_choice = random_integer(RTI%nlive(seed_cluster))
 
-        ! 3) Select the live point at index 'seed_choice' in cluster 'cluster_choice' for the seed point
-        seed_point = live_points(:,seed_choice,cluster_choice)
-        
-        ! 4) Give the seed point the likelihood contour of cluster ! 'cluster_choice'
-        seed_point(settings%l1) = info%logL(cluster_choice)
+        ! 4) Select the live point at index 'seed_choice' in cluster 'p' for the seed point
+        seed_point = RTI%live(:,seed_choice,seed_cluster)
 
     end function GenerateSeed
 
 
 
 
-
-
-
-#ifdef MPI
-
-    function GenerateLivePointsFromSeedP(loglikelihood,priors,settings,mpi_communicator,root) result(live_points) 
-        use priors_module,    only: prior
-        use settings_module,  only: program_settings
-        use random_module,   only: random_reals,random_distinct_integers
-        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len
-        use calculate_module, only: calculate_point
-        use read_write_module, only: phys_live_file
-        use feedback_module,  only: write_started_generating,write_finished_generating
-        use utils_module, only: calc_cholesky,calc_covmat
-
-        implicit none
-        
-        interface
-            function loglikelihood(theta,phi,context)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
-                double precision :: loglikelihood
-            end function
-        end interface
-
-        !> The prior information
-        type(prior), dimension(:), intent(in) :: priors
-
-        !> Program settings
-        type(program_settings), intent(in) :: settings
-
-
-        integer, intent(in) :: mpi_communicator
-        integer, intent(in) :: root
-
-        !> The rank of the processor
-        integer :: myrank
-        integer :: nprocs
-        integer :: mpierror
-
-        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
-        double precision, dimension(settings%nTotal,settings%ngenerate) :: live_stack
-        double precision, dimension(settings%nTotal,settings%num_babies)   :: baby_points
-        double precision,    dimension(settings%nTotal)   :: seed_point
-
-
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
-
-        integer :: ngenerate
-
-        integer :: i_dims
-        integer :: i_baby
-        integer :: i_slave
-        logical :: slave_sending
-
-        integer, dimension(:), allocatable :: burn_in
-
-        double precision, dimension(settings%nTotal,0) :: blank_stack
-        double precision, dimension(settings%nDims,settings%nDims) :: cholesky
-        double precision, dimension(settings%nDims,settings%nDims) :: covmat
-
-        character(len=fmt_len) :: fmt_dbl_nphys
-
-        ! Initialise the formats
-        write(fmt_dbl_nphys,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
-
-        ! Get the number of MPI procedures
-        call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
-        ! Get the MPI label of the current processor
-        call MPI_COMM_RANK(mpi_communicator, myrank, mpierror)
-
-        ! initialise live points at zero
-        live_points = 0d0
-
-        ngenerate = 0
-
-        if(myrank==root) then
-
-
-            allocate(burn_in(nprocs-1))
-            burn_in = 0
-
-            ! Initialise the covmats at the identity
-            covmat = 0d0
-            cholesky=0d0
-            do i_dims=1,settings%nDims
-                covmat(i_dims,i_dims) = 1d0
-                cholesky(i_dims,i_dims) = 1d0
-            end do
-
-            !======= 2) Main loop body =====================================
-
-            ! -------------------------------------------- !
-            call write_started_generating(settings%feedback)
-            ! -------------------------------------------- !
-            open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
-
-            do while ( ngenerate<=settings%ngenerate )
-
-                    ! Recieve any new baby points from any slave currently sending
-
-                    ! Loop through all the slaves
-                    do i_slave=1,nprocs-1
-                        ! Use MPI_IPROBE to see if the slave at i_slave is sending
-                        ! If it is, the logical variable 'slave_sending' is true
-                        call MPI_IPROBE(i_slave,MPI_ANY_TAG,mpi_communicator,slave_sending,mpi_status,mpierror)
-
-                        if(slave_sending) then
-                            ! If this slave is sending, then recieve the newly generated baby points
-                            call MPI_RECV(baby_points,settings%nTotal*settings%num_babies,&
-                                MPI_DOUBLE_PRECISION,i_slave,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
-
-                            ! If these baby points aren't nonsense (i.e. the first send) ...
-                            if(mpi_status(MPI_TAG)/=tag_run_no_points) then
-
-                                burn_in(i_slave) = burn_in(i_slave)+1
-
-                                if(burn_in(i_slave)>settings%generate_burn_in) then
-
-                                    live_stack(:,ngenerate+1:min(settings%ngenerate,ngenerate+settings%num_babies))= baby_points
-                                    ngenerate = ngenerate+settings%num_babies
-
-                                    do i_baby=1,settings%num_babies
-                                        write(write_phys_unit,fmt_dbl_nphys) baby_points(settings%p0:settings%d1,i_baby), baby_points(settings%l0,i_baby)
-                                    end do
-                                    call flush(write_phys_unit)
-                                end if
-
-                                ! choose the seed point as the last baby point
-                                seed_point = baby_points(:,settings%num_babies)
-                            else
-                                ! Otherwise initialise at the start seed
-                                seed_point = settings%seed_point
-                            end if
-
-                            ! Send the seed point back to this slave
-                            call MPI_SEND(seed_point,settings%nTotal,MPI_DOUBLE_PRECISION,i_slave,tag_run_new_seed,mpi_communicator,mpierror)
-
-                            ! Send the cholesky decomposition
-                            call MPI_SEND(cholesky,settings%nDims*settings%nDims,MPI_DOUBLE_PRECISION,i_slave,tag_run_new_cholesky,mpi_communicator,mpierror)
-                        end if !(slave_sending)
-
-                    end do !(i_slave=1,nprocs-1)
-
-                    if(ngenerate>settings%nlive) then
-                        covmat   = calc_covmat(live_stack(settings%h0:settings%h1,:ngenerate),blank_stack)
-                        cholesky = calc_cholesky(covmat)
-                    end if
-
-            end do ! End main loop
-            close(write_phys_unit)
-
-            ! Now thin the stack
-            live_points = live_stack(:,random_distinct_integers(settings%nstack,settings%nlive))
-        end if
-
-
-    end function GenerateLivePointsFromSeedP
-
-
-
-
-
-
-
-
-
-
     !> Generate an initial set of live points distributed uniformly in the unit hypercube in parallel
-    function GenerateLivePointsP(loglikelihood,priors,settings,mpi_communicator,root) result(live_points)
+    subroutine GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_communicator,nprocs,myrank,root)
         use priors_module,    only: prior
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
-        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len
+        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len,minpos
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
-        use feedback_module,  only: write_started_generating,write_finished_generating
+        use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
+        use run_time_module,   only: run_time_info,initialise_run_time_info
+        use array_module,     only: add_point
+        use abort_module
+#ifdef MPI
+        use mpi_module, only: throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points
+#endif
 
         implicit none
-        
+
         interface
-            function loglikelihood(theta,phi,context)
+            function loglikelihood(theta,phi)
                 double precision, intent(in),  dimension(:) :: theta
                 double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
                 double precision :: loglikelihood
             end function
         end interface
@@ -263,163 +88,216 @@ module generate_module
         !> Program settings
         type(program_settings), intent(in) :: settings
 
+        ! The run time info (very important, see src/run_time_info.f90)
+        type(run_time_info) :: RTI
 
-        integer, intent(in) :: mpi_communicator
-        integer, intent(in) :: root
+        integer, intent(in) :: mpi_communicator !> MPI handle
+        integer, intent(in) :: nprocs           !> The number of processes
+        integer, intent(in) :: myrank           !> The rank of the processor
+        integer, intent(in) :: root             !> The root process
+#ifdef MPI
+        integer             :: active_slaves    !  Number of currently working slaves
+        integer             :: slave_id         !  Slave identifier to signal who to throw back to
+#endif
 
-        !> The rank of the processor
-        integer :: myrank
-        integer :: nprocs
-        integer :: active_slaves
-        integer :: mpierror
+        double precision, dimension(settings%nTotal) :: live_point ! Temporary live point array
 
-        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
 
-        !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
-        ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal) :: live_point
+        character(len=fmt_len) :: fmt_dbl ! writing format variable
 
-        ! Loop variable
-        integer i_live
+        integer :: nlike ! number of likelihood calls
 
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status
+        double precision :: time0,time1,total_time
+        double precision,dimension(size(settings%grade_dims)) :: speed
 
-        integer :: empty_buffer(0)
+#ifndef MPI
+        nlike=mpi_communicator ! Stop an annoying unused variable warning -- this does nothing
+#endif
 
-        integer :: nlike
-        character(len=fmt_len) :: fmt_dbl_nphys
+        ! Initialise number of likelihood calls to zero here
+        nlike = 0
 
-        ! Initialise the formats
-        write(fmt_dbl_nphys,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
-
-        ! Get the number of MPI procedures
-        call MPI_COMM_SIZE(mpi_communicator, nprocs, mpierror)
-        ! Get the MPI label of the current processor
-        call MPI_COMM_RANK(mpi_communicator, myrank, mpierror)
-
-        ! initialise live points at zero
-        live_points = 0d0
 
         if(myrank==root) then
-            ! The root node just recieves data from all other processors
-
             ! ---------------------------------------------- !
             call write_started_generating(settings%feedback)
             ! ---------------------------------------------- !
 
-            
-            active_slaves=nprocs-1 ! Set the number of active processors to the number of slaves
-            i_live=0               ! No live points initially
-            nlike=0                ! No wasted likelihood calls initially
+            ! Initialise the format
+            write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
 
             ! Open the live points file to sequentially add live points
             open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
 
-            do while(active_slaves>0) 
+            ! Allocate the run time arrays, and set the default values for the variables
+            call initialise_run_time_info(settings,RTI)
 
-                ! Recieve a point from any slave
-                call MPI_RECV(live_point,settings%nTotal, &
-                    MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE,tag_gen_new_point,mpi_communicator,mpi_status,mpierror)
+        end if
+
+
+        if(nprocs==1) then
+            !===================== LINEAR MODE =========================
+
+            call cpu_time(time0)
+            do while(RTI%nlive(1)<settings%nlive)
+
+                ! Generate a random coordinate
+                live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
+
+                ! Compute physical coordinates, likelihoods and derived parameters
+                call calculate_point( loglikelihood, priors, live_point, settings, nlike)
 
                 ! If its valid, and we need more points, add it to the array
-                if(live_point(settings%l0)>logzero .and. i_live<settings%nlive) then
+                if(live_point(settings%l0)>logzero) then
 
-                    ! Increase the live point counter
-                    i_live=i_live+1
-                    ! Add the new live point to the live point array
-                    live_points(:,i_live) = live_point
-                    ! Write the live points to the live_points file
-                    write(write_phys_unit,fmt_dbl_nphys) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                    call flush(write_phys_unit)
+                    call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
-                else
-                    ! If it failed for whatever reason, then record that we've
-                    ! had a 'lost' likelihood evaluation
-                    nlike = nlike+1
-                end if
+                    !-------------------------------------------------------------------------------!
+                    call write_generating_live_points(settings%feedback,RTI%nlive(1),settings%nlive)
+                    !-------------------------------------------------------------------------------!
 
+                    if(settings%write_live) then
+                        ! Write the live points to the live_points file
+                        write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
+                        flush(write_phys_unit) ! flush the unit to force write
+                    end if
 
-                if(i_live<settings%nlive) then
-                    ! If we still need more points, send a signal to have another go
-                    call MPI_SEND(empty_buffer,0,MPI_INT,mpi_status(MPI_SOURCE),tag_gen_continue,mpi_communicator,mpierror)
-                else
-                    ! Otherwise, send a signal to stop
-                    call MPI_SEND(empty_buffer,0,MPI_INT,mpi_status(MPI_SOURCE),tag_gen_stop,mpi_communicator,mpierror)
-                    ! and decrease the counter for the number of active slaves
-                    active_slaves=active_slaves-1
                 end if
 
             end do
+            call cpu_time(time1)
+            total_time = time1-time0
 
 
-            ! Set the initial trial values of the chords as 1
-            live_points(settings%last_chord,:) = 1
+        else if(nprocs>1) then
+#ifdef MPI
+            !===================== PARALLEL MODE =======================
 
-            ! Set the likelihood contours to logzero for now
-            live_points(settings%l1,:) = logzero
+            if(myrank==root) then
+                ! The root node just recieves data from all other processors
 
-            ! Add the the number of 'wasted' likelihood calls to the first live
-            ! point
-            live_points(settings%nlike,1) = nlike
+
+                active_slaves=nprocs-1 ! Set the number of active processors to the number of slaves
+
+                do while(active_slaves>0) 
+
+                    ! Recieve a point from any slave
+                    slave_id = catch_point(live_point,mpi_communicator)
+
+                    ! If its valid, and we need more points, add it to the array
+                    if(live_point(settings%l0)>logzero .and. RTI%nlive(1)<settings%nlive) then
+
+                        call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
+
+                        !-------------------------------------------------------------------------------!
+                        call write_generating_live_points(settings%feedback,RTI%nlive(1),settings%nlive)
+                        !-------------------------------------------------------------------------------!
+
+                        if(settings%write_live) then
+                            ! Write the live points to the live_points file
+                            write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
+                            flush(write_phys_unit) ! flush the unit to force write
+                        end if
+
+                    end if
+
+
+                    if(RTI%nlive(1)<settings%nlive) then
+                        call request_point(mpi_communicator,slave_id)  ! If we still need more points, send a signal to have another go
+                    else
+                        call no_more_points(mpi_communicator,slave_id) ! Otherwise, send a signal to stop
+                        active_slaves=active_slaves-1                  ! decrease the active slave counter
+                    end if
+
+                end do
+
+
+
+
+            else
+
+                ! The slaves simply generate and send points until they're told to stop by the master
+                call cpu_time(time0)
+                do while(.true.)
+        
+                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                    call calculate_point( loglikelihood, priors, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
+                    call throw_point(live_point,mpi_communicator,root)                       ! Send it to the root node
+                    if(.not. more_points_needed(mpi_communicator,root)) exit                 ! If we've recieved a kill signal, then exit this loop
+
+                end do
+                call cpu_time(time1)
+                total_time=time1-time0
+            end if
+
+
+
+
+#else
+            ! If we don't have MPI configured, we can't generate in parallel
+            call halt_program('generate error: cannot have nprocs>1 without MPI')
+#endif
+        else !(nprocs<0)
+            call halt_program('generate error: nprocs<0')
+        end if !(nprocs case)
+
+#ifdef MPI
+        nlike = sum_integers(nlike,mpi_communicator) ! Gather the likelihood calls onto one node
+        total_time = sum_doubles(total_time,mpi_communicator) ! Sum up the total time taken
+#endif
+
+
+        ! ----------------------------------------------- !
+        if(myrank==root) call write_finished_generating(settings%feedback)  
+        ! ----------------------------------------------- !
+        ! Find the average time taken
+        speed(1) = total_time/settings%nlive
+        call time_speeds(loglikelihood,priors,settings,speed,mpi_communicator,myrank,root) 
+
+
+
+        if(myrank==root) then
+
+            ! Pass over the number of likelihood calls
+            RTI%nlike(1) = nlike
+
+            ! Set the local and global loglikelihood bounds
+            RTI%i(1)  = minpos(RTI%live(settings%l0,:,1)) ! Find the position of the minimum loglikelihood
+            RTI%logLp = RTI%live(settings%l0,RTI%i(1),1)  ! Store the value of the minimum loglikelihood 
 
             ! Close the file
             close(write_phys_unit)
 
-            ! ----------------------------------------------- !
-            call write_finished_generating(settings%feedback)  
-            ! ----------------------------------------------- !
-
-
-        else
-
-            ! The slaves simply generate and send points until they're told to stop by
-            ! the master
-
-            do while(.true.)
-
-                ! Zero the likelihood calls 
-                live_point(settings%nlike) = 0
-
-                ! Generate a random hypercube coordinate
-                live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
-
-                ! Compute physical coordinates, likelihoods and derived parameters
-                call calculate_point( loglikelihood, priors, live_point, settings )
-
-                ! Send it to the root node
-                call MPI_SEND(live_point,settings%nTotal, &
-                    MPI_DOUBLE_PRECISION,root,tag_gen_new_point,mpi_communicator,mpierror)
-
-                ! Recieve signal as to whether we should keep generating
-                call MPI_RECV(empty_buffer,0,MPI_INT,root,MPI_ANY_TAG,mpi_communicator,mpi_status,mpierror)
-
-                ! If we've recieved a kill signal, then exit this loop
-                if(mpi_status(MPI_TAG) == tag_gen_stop ) exit
-
-            end do
-
+            if(.not. allocated(RTI%num_repeats) ) allocate(RTI%num_repeats(size(settings%grade_dims)))
+            RTI%num_repeats(1) = settings%num_repeats
+            RTI%num_repeats(2:) = nint(settings%grade_frac(2:)/(settings%grade_frac(1)+0d0)*RTI%num_repeats(1)*speed(1)/speed(2:))
         end if
 
-    end function GenerateLivePointsP
-#endif
 
 
-    !> Generate an initial set of live points distributed uniformly in the unit hypercube
-    function GenerateLivePointsL(loglikelihood,priors,settings) result(live_points)
+
+
+    end subroutine GenerateLivePoints
+
+
+
+    subroutine time_speeds(loglikelihood,priors,settings,speed,mpi_communicator,myrank,root)
         use priors_module,    only: prior
         use settings_module,  only: program_settings
-        use random_module,    only: random_reals
-        use utils_module,     only: logzero
+        use random_module,   only: random_reals
+        use utils_module,    only: logzero,normal_fb,stdout_unit,fancy_fb
         use calculate_module, only: calculate_point
-        use feedback_module,  only: write_started_generating,write_finished_generating
+        use abort_module
+#ifdef MPI
+        use mpi_module, only: sum_doubles,sum_integers
+#endif
 
         implicit none
 
         interface
-            function loglikelihood(theta,phi,context)
+            function loglikelihood(theta,phi)
                 double precision, intent(in),  dimension(:) :: theta
                 double precision, intent(out),  dimension(:) :: phi
-                integer,          intent(in)                 :: context
                 double precision :: loglikelihood
             end function
         end interface
@@ -430,43 +308,81 @@ module generate_module
         !> Program settings
         type(program_settings), intent(in) :: settings
 
-        !live_points(:,i) constitutes the information in the ith live point in the unit hypercube: 
-        ! ( <-hypercube coordinates->, <-derived parameters->, likelihood)
-        double precision, dimension(settings%nTotal,settings%nlive) :: live_points
+        double precision,dimension(size(settings%grade_dims)) :: speed
 
-        ! Loop variable
-        integer i_live
+        integer, intent(in) :: mpi_communicator !> MPI handle
+        integer, intent(in) :: myrank           !> The rank of the processor
+        integer, intent(in) :: root             !> The root process
 
-        ! ---------------------------------------------- !
-        call write_started_generating(settings%feedback)
-        ! ---------------------------------------------- !
+        integer :: i_speed
+        integer :: i_live
+        integer :: nlike
+        integer :: h0,h1
 
-        ! initialise live points at zero
-        live_points = 0d0
+        double precision :: time0,time1,total_time
 
-        do i_live=1,settings%nlive
+        double precision, dimension(settings%nTotal) :: live_point ! Temporary live point array
 
-            ! Generate a random coordinate
-            live_points(settings%h0:settings%h1,i_live) = random_reals(settings%nDims)
+#ifndef MPI
+        nlike=mpi_communicator
+#endif
+        nlike=0
 
-            ! Compute physical coordinates, likelihoods and derived parameters
-            call calculate_point( loglikelihood, priors, live_points(:,i_live), settings )
+        ! Calculate a slow likelihood
+        do 
+            live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
+            call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+            if (live_point(settings%l0)> logzero) exit
+        end do
+
+        if(settings%feedback>=fancy_fb.and.myrank==root) write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds")') char(13), 1, speed(1)
+        do i_speed=2,size(speed)
+
+            h0 = settings%h0+sum(settings%grade_dims(:i_speed-1))
+            h1 = settings%h1
+
+            i_live=0
+            total_time=0
+            
+            if(settings%feedback<=normal_fb.and.myrank==root) then
+                write(stdout_unit,'(A1,"Speed ",I2, " = ? (calculating)")',advance='no') char(13), i_speed
+                flush(stdout_unit)
+            end if
+
+            call cpu_time(time0)
+            time1=time0
+            do while( (time1-time0)/settings%grade_frac(i_speed)< speed(1)/settings%grade_frac(1) )
+                live_point(h0:h1) = random_reals(h1-h0+1)
+
+                call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+
+                if(live_point(settings%l0)>logzero) i_live=i_live+1
+
+                call cpu_time(time1)
+            end do
+            total_time=time1-time0
+#ifdef MPI
+            total_time=sum_doubles(total_time,mpi_communicator)
+            i_live = sum_integers(i_live,mpi_communicator)
+#endif
+            speed(i_speed) = total_time/i_live
+            if(settings%feedback>=fancy_fb.and.myrank==root) then
+                write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds     ")') char(13), i_speed, speed(i_speed)
+            else if(settings%feedback>=normal_fb.and.myrank==root) then
+                write(stdout_unit,'("Speed ",I2," = ",E10.3, " seconds     ")') i_speed, speed(i_speed)
+            end if
+
 
         end do
 
-        ! Set the number of likelihood calls for each point to 1
-        live_points(settings%nlike,:) = 1
+    end subroutine time_speeds
 
-        ! Set the initial trial values of the chords as the diagonal of the hypercube
-        live_points(settings%last_chord,:) = sqrt(settings%nDims+0d0)
 
-        ! Set the likelihood contours to logzero for now
-        live_points(settings%l1,:) = logzero
 
-        ! ----------------------------------------------- !
-        call write_finished_generating(settings%feedback)  
-        ! ----------------------------------------------- !
-    end function GenerateLivePointsL
+
+
+
+
 
 
 end module generate_module
