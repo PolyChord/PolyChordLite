@@ -113,6 +113,7 @@ module run_time_module
 
         ! Allocate all of the arrays with one cluster
         RTI%ncluster = 1
+        RTI%ncluster_dead = 0
         allocate(                                                       &
             RTI%live(settings%nTotal,settings%nlive,1),                 &
             RTI%phantom(settings%nTotal,settings%nlive,1),              &
@@ -636,7 +637,7 @@ module run_time_module
 
         if(present(logZp_dead).and.present(varlogZp_dead))then
             logZp_dead      = max(logzero,2*RTI%logZp_dead - 0.5*RTI%logZp2_dead)
-            varlogZp_dead = RTI%logZp2_dead - 2*RTI%logZp_dead
+            varlogZp_dead   = RTI%logZp2_dead - 2*RTI%logZp_dead
         end if
 
 
