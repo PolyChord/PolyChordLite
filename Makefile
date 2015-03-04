@@ -36,8 +36,7 @@ DEBUG=
 IPO = -ipo
 
 # Host architecture (for intel)
-HOST = -xAVX
-#HOST = -xHOST
+HOST = -xHOST
 
 
 # ============ MPI settings ================
