@@ -108,6 +108,7 @@ program PolyChord
         settings%write_resume  = .false.
         settings%read_resume   = .false.
         settings%write_live    = .false.
+        settings%write_stats   = .false.
 
         settings%equals        = .false.
         settings%posteriors    = .false.

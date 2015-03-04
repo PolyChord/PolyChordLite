@@ -1,7 +1,7 @@
 module nested_sampling_module
 
 #ifdef MPI
-    use mpi_module, only: get_rank,get_nprocs,get_root,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers
+    use mpi_module, only: get_rank,get_nprocs,get_root,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers,mpi_time
 #endif
 
     implicit none
@@ -13,7 +13,7 @@ module nested_sampling_module
     function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
         use settings_module,   only: program_settings
-        use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero,cyc
+        use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero,cyc,normal_fb,stdout_unit
         use read_write_module
         use feedback_module
         use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats,delete_cluster,update_posteriors
@@ -101,6 +101,7 @@ module nested_sampling_module
         integer                            :: i_slave       ! Slave iterator
         integer                            :: slave_id      ! Slave identifier
         integer, dimension(:), allocatable :: slave_cluster ! The cluster the slave is currently working on
+        double precision :: time0,time1,slice_time,wait_time
 #endif
 
 
@@ -335,20 +336,36 @@ module nested_sampling_module
             baby_points(settings%l0,:) = logzero  ! zero contour to ensure these are all thrown away
             nlike = 0                             ! no likelihood calls in this round
             call throw_babies(baby_points,nlike,mpi_communicator,root)
+            wait_time = 0
+            slice_time = 0
+            time1 = mpi_time()
+
 
 
 
             ! 1) Listen for a seed point being sent by the master
             !    Note that this also tests for a kill signal sent by the master
             do while(catch_seed(seed_point,cholesky,logL,mpi_communicator,root))
-
+                time0 = mpi_time()
                 ! 2) Generate a new set of baby points
                 baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike,num_repeats)
+
+
+                wait_time = wait_time + time0-time1
+                time1 = mpi_time()
+                slice_time = slice_time + time1-time0
+
 
                 ! 3) Send the baby points back
                 call throw_babies(baby_points,nlike,mpi_communicator,root)
 
             end do
+
+            if(slice_time<wait_time) then
+                if(settings%feedback<=normal_fb) write(stdout_unit,'("Slave",I3,": Inefficient MPI parallisation, I spend more time waiting than slicing ", E17.8, ">", E17.8 )') myrank, wait_time,slice_time
+            else
+                if(settings%feedback<=normal_fb) write(stdout_unit,'("Slave",I3,": efficient MPI parallisation; wait_time/slice_time= ", E17.8 )') myrank , wait_time/slice_time 
+            end if
 
 #endif
         end if !(myrank==root / myrank/=root) 
