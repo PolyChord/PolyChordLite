@@ -144,7 +144,7 @@ ifdef DEBUG
 # fbounds-check : check array indices
 FCFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
 #
-CCFLAGS += -g -O0 -Wall -Wextra -Wansi -Wshadow -Weffc++
+CCFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
 else
 # Optimised mode
 # --------------
