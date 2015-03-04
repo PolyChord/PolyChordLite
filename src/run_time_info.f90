@@ -745,40 +745,12 @@ module run_time_module
                 call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
 
 
-                ! Calculate the posterior point and add it to the array
-                if(settings%equals .or. settings%posteriors ) then
-                    posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
-                    call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
-                    RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
-                    RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
-                end if
+                ! Calculate the posterior point and add it to the posterior stack
+                posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
+                call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
+                RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
+                RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
 
-
-                ! Now we delete the phantoms
-                i_phantom = 1
-                do while(i_phantom<=RTI%nphantom(cluster_del))
-
-                    ! Delete points lower than the new loglikelihood bound
-                    if ( RTI%phantom(settings%l0,i_phantom,cluster_del) < RTI%logLp(cluster_del) ) then
-
-                        ! Delete this point
-                        deleted_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom,cluster_del)
-
-                        ! Calculate the posterior point and add it to the array
-                        if(settings%equals .or. settings%posteriors ) then
-                            if(bernoulli_trial(settings%thin_posterior)) then
-                                posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
-                                call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
-                                RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
-                                RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
-                            end if
-                        end if
-
-                    else
-                        i_phantom = i_phantom+1
-                    end if
-
-                end do
             else
                 replaced = .false.                                  ! We haven't killed of any points
             end if
@@ -787,6 +759,66 @@ module run_time_module
         end if
 
     end function replace_point
+
+    subroutine clean_phantoms(settings,RTI)
+        use utils_module, only: logsumexp,logincexp,minpos
+        use settings_module, only: program_settings
+        use calculate_module, only: calculate_posterior_point
+        use random_module, only: bernoulli_trial
+        use array_module, only: add_point,delete_point
+
+        implicit none
+        type(program_settings), intent(in) :: settings !> Program settings
+        type(run_time_info),intent(inout)  :: RTI      !> Run time information
+
+        double precision,dimension(settings%nTotal) :: deleted_point   ! point we have just deleted
+        double precision,dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
+        
+        integer :: i_cluster  ! cluster iterator
+        integer :: i_phantom  ! phantom iterator
+        integer :: i_stack(1) ! phantom iterator
+        integer,dimension(size(RTI%nposterior_stack)) :: nposterior_stack ! original size of array (just live posteriors)
+
+        nposterior_stack = RTI%nposterior_stack
+
+        ! Now we delete the phantoms
+        do i_cluster=1,RTI%ncluster
+            i_phantom=1
+            do while(i_phantom<=RTI%nphantom(i_cluster))
+
+                ! Find the location of the live point which this point belongs to
+                i_stack = minloc( RTI%posterior_stack(settings%pos_l,:nposterior_stack(i_cluster),i_cluster), &
+                        RTI%posterior_stack(settings%pos_l,:nposterior_stack(i_cluster),i_cluster) &
+                        > RTI%phantom(settings%l0,i_phantom,i_cluster)  )
+
+                if(i_stack(1)<=0) then
+                    i_phantom=i_phantom+1
+                else
+
+                    ! Delete this point
+                    deleted_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom,i_cluster)
+
+                    ! Calculate the posterior point and add it to the array
+                    if(settings%equals .or. settings%posteriors ) then
+                        if(bernoulli_trial(settings%thin_posterior)) then
+                            posterior_point = calculate_posterior_point(settings,deleted_point,&
+                                    RTI%posterior_stack(settings%pos_w,i_stack(1),i_cluster), &!logweight
+                                    RTI%posterior_stack(settings%pos_Z,i_stack(1),i_cluster), &!RTI%logZ
+                                    RTI%posterior_stack(settings%pos_X,i_stack(1),i_cluster)  &!logsumexp(RTI%logXp))
+                                    )
+
+                            call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,i_cluster )
+                            RTI%maxlogweight(i_cluster) = max(RTI%maxlogweight(i_cluster),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
+                            RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(i_cluster))
+                        end if
+                    end if
+                end if
+
+            end do
+        end do
+
+    end subroutine clean_phantoms
+
 
 
 
@@ -879,6 +911,9 @@ module run_time_module
         integer :: i_post
         integer :: i_cluster
 
+
+        ! Add in the phantoms from the stack (used to do this at every iteration, but this was the computational bottleneck)
+        call clean_phantoms(settings,RTI) 
 
         if(settings%equals) then
             ! Clean the global equally weighted posteriors
