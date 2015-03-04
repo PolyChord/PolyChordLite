@@ -269,7 +269,6 @@ module read_write_module
         use utils_module, only: DB_FMT,INT_FMT,fmt_len,read_resume_unit
         use run_time_module, only: run_time_info
         use settings_module, only: program_settings
-        use feedback_module, only: write_resuming
         use abort_module, only: halt_program
         use array_module, only: add_point
         implicit none
@@ -298,10 +297,6 @@ module read_write_module
         integer, allocatable,dimension(:) :: nequals
         integer, allocatable,dimension(:) :: nequals_dead
         integer, allocatable,dimension(:) :: nequals_global
-
-        ! -------------------------------------------- !
-        call write_resuming(settings%feedback)
-        ! -------------------------------------------- !
 
 
         ! Open the .resume file

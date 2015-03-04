@@ -17,6 +17,7 @@ module feedback_module
     !> Called before running the program
     subroutine write_opening_statement(settings)
         use utils_module,    only: stdout_unit,title_fb,normal_fb
+        use read_write_module, only: resume_file
         use settings_module, only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings  ! The program settings 
@@ -38,6 +39,11 @@ module feedback_module
             write(stdout_unit,'("nDims    :",I8)')   settings%nDims
             write(stdout_unit,'("nDerived :",I8)')   settings%nDerived
             if(settings%do_clustering) write(stdout_unit,'("Doing Clustering")')
+            if(settings%equals) write(stdout_unit,'("Generating equally weighted posteriors")')
+            if(settings%posteriors) write(stdout_unit,'("Generating weighted posteriors")')
+            if((settings%equals.or.settings%posteriors).and.settings%cluster_posteriors.and.settings%do_clustering) write(stdout_unit,'("Clustering on posteriors")')
+            if(settings%equals.or.settings%posteriors) write(stdout_unit,'("Thinning phantoms to a factor", E17.8, " of their original numbers")') settings%thin_posterior
+            if(settings%write_resume) write(stdout_unit,'("Writing a resume file to",A)') trim(resume_file(settings,.false.))
 
             write(stdout_unit,'("")')
         end if
