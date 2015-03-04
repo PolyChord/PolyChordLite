@@ -96,6 +96,16 @@ module mpi_module
     end function get_root
 
 
+    !> This gets the wallclock timer from the mpi library
+    function mpi_time() 
+        implicit none
+        double precision :: mpi_time
+
+        mpi_time = MPI_Wtime()
+    end function
+
+
+
     !> This sums a whole set of integers across all processes
     !!
     !! All processes call this simultaneously
