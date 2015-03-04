@@ -8,8 +8,7 @@ read_write.o :  \
 	priors.o \
 	abort.o \
 	run_time_info.o \
-	array_utils.o \
-	feedback.o
+	array_utils.o
 
 run_time_info.o :  \
 	settings.o \
@@ -79,7 +78,9 @@ feedback.o :  \
 	settings.o \
 	utils.o \
 	priors.o \
-	run_time_info.o
+	run_time_info.o \
+	read_write.o
+
 
 random_utils.o :  \
 	utils.o

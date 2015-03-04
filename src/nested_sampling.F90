@@ -145,7 +145,13 @@ module nested_sampling_module
         if ( settings%read_resume .and. resume_file_exists(settings) ) then 
 
             ! Read the resume file on root
-            if(myrank==root) call read_resume_file(settings,RTI) 
+            if(myrank==root) then
+                call read_resume_file(settings,RTI) 
+                ! -------------------------------------------- !
+                call write_resuming(settings%feedback)
+                ! -------------------------------------------- !
+            end if
+
 
         else 
             
