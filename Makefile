@@ -36,8 +36,7 @@ DEBUG=
 IPO = -ipo
 
 # Host architecture (for intel)
-HOST = -xAVX
-#HOST = -xHOST
+HOST = -xHOST
 
 
 # ============ MPI settings ================
@@ -169,7 +168,7 @@ BIN_DIR = ./bin
 # Add these libraries to the program
 LIBCHORD += -L$(POLYCHORD_DIR) -lchord
 LIBLIKE += -L$(LIKELIHOOD_DIR) -L$(EXAMPLE_LIKELIHOOD_DIR)
-LIBSTDCPP = -lstdc++
+EXT_LIBS += -lstdc++
 
 
 INC += -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR) -I$(EXAMPLE_LIKELIHOOD_DIR)
@@ -180,7 +179,7 @@ PROGRAM_LIKELIHOODS = $(patsubst %,lib%.a,$(PROGRAMS))
 
 
 # Export all of the necessary variables
-export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS EXAMPLE_LIKELIHOODS IPO
+export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS EXAMPLE_LIKELIHOODS IPO EXT_LIBS
 
 
 # "make" builds all
@@ -197,11 +196,11 @@ $(EXAMPLE_LIKELIHOODS) $(PROGRAM_LIKELIHOODS): libchord.a
 
 # Rule for example programs
 $(EXAMPLES) $(PROGRAMS): %: libchord.a lib%.a  polychord.o
-	$(FC) $(FCFLAGS) -o $(BIN_DIR)/$@ polychord.o $(LIBCHORD) $(LIBLIKE) -l$@ $(LIBSTDCPP) 
+	$(FC) $(FCFLAGS) -o $(BIN_DIR)/$@ polychord.o $(LIBCHORD) $(LIBLIKE) -l$@ $(EXT_LIBS) 
 
 # Rule for building main file
 polychord.o: polychord.F90
-	$(FC) $(FCFLAGS) $(INC) -c $< 
+	$(FC) $(FCFLAGS) $(INC) -c $< $(EXT_LIBS)  
 
 
 

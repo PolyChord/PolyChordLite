@@ -30,7 +30,7 @@ module loglikelihood_module
 
 
 
-    subroutine setup_loglikelihood(settings)
+    subroutine setup_loglikelihood(settings,mpi_communicator)
 #ifdef MPI
         use mpi
 #endif
@@ -38,6 +38,7 @@ module loglikelihood_module
         use random_module,     only: random_inverse_covmat
         implicit none
         type(program_settings), intent(in) :: settings
+        integer,intent(in) :: mpi_communicator
 
         integer :: nDims
         integer :: mpierror

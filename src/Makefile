@@ -40,11 +40,11 @@ libchord.a: $(OBJECTS)
 
 # General rule for building object file (.o)  from fortran files (.f90)
 %.o: %.f90
-	$(FC) $(FCFLAGS) -c $< 
+	$(FC) $(FCFLAGS) -c $< $(EXT_LIBS)  
 
 # General rule for building object file (.o)  from fortran files (.F90)
 %.o: %.F90
-	$(FC) $(FCFLAGS) -c $<
+	$(FC) $(FCFLAGS) -c $< $(EXT_LIBS)  
 
 # Utility targets
 .PHONY: clean veryclean

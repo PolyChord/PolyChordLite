@@ -708,8 +708,6 @@ module run_time_module
         double precision,dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
         double precision                            :: logweight       ! The log weighting of this point
         
-        integer :: i_phantom ! phantom iterator
-
 
         ! The loglikelihood contour is defined by the cluster it belongs to
         logL = RTI%logLp(cluster_add)
