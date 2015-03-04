@@ -94,11 +94,12 @@ module loglikelihood_module
 
 
 
-    subroutine setup_loglikelihood(settings)
+    subroutine setup_loglikelihood(settings,mpi_communicator)
         use settings_module,   only: program_settings
         use abort_module,      only: halt_program
         implicit none
         type(program_settings), intent(in) :: settings
+        integer,intent(in) :: mpi_communicator
 
         integer, parameter :: stats_unit = 1000
 

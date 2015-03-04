@@ -132,7 +132,12 @@ program PolyChord
 
 
     ! ------- (1d) Define the parameters of the loglikelihood and the system settings -------
-    call setup_loglikelihood(settings)
+#ifdef MPI
+    call setup_loglikelihood(settings,MPI_COMM_WORLD)
+#else
+    call setup_loglikelihood(settings,0)
+#endif
+
 
 
 

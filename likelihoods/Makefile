@@ -21,15 +21,15 @@ $(EXAMPLE_LIKELIHOODS): lib%.a: $(EXAMPLES_DIR)/%.o
 
 # General rule for building object file (.o)  from fortran files (.f90)
 %.o: %.f90
-	$(FC) $(FCFLAGS) $(POLYCHORD) -c $< -o $@
+	$(FC) $(FCFLAGS) $(POLYCHORD) -c $< -o $@ $(EXT_LIBS)
 
 # General rule for building object file (.o)  from fortran files (.F90)
 %.o: %.F90
-	$(FC) $(FCFLAGS) $(POLYCHORD) -c $< -o $@
+	$(FC) $(FCFLAGS) $(POLYCHORD) -c $< -o $@ $(EXT_LIBS)
 
 # General rule for building object file (.o)  from c++ files (.cpp)
 %.o: %.cpp
-	$(CC) $(CCFLAGS) -c $<
+	$(CC) $(CCFLAGS) -c $< $(EXT_LIBS)
 
 
 
