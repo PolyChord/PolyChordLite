@@ -1,6 +1,8 @@
 module mpi_module
 
+#ifdef MPI
     use mpi
+#endif
     implicit none
 
     integer :: mpierror
@@ -16,10 +18,134 @@ module mpi_module
     integer, parameter :: tag_run_nlike=8
     integer, parameter :: tag_run_stop=9
 
+    type mpi_type
+        integer :: rank
+        integer :: nprocs
+        integer :: root
+        integer :: colour
+        integer :: communicator
+
+    end type mpi_type
+
 
 
     contains
 
+    !> Subroutine to get all mpi information
+    function get_mpi_info(mpi_communicator,colour) result(mpi_info)
+        implicit none
+        integer, intent(in)           :: mpi_communicator
+        integer, intent(in), optional :: colour
+        type(mpi_type)                :: mpi_info
+
+        mpi_info%rank         = get_rank(mpi_communicator)
+        mpi_info%nprocs       = get_nprocs(mpi_communicator)
+        mpi_info%root         = get_root(mpi_communicator)
+        mpi_info%communicator = mpi_communicator
+
+        if(present(colour)) then
+            mpi_info%colour = colour
+        else
+            mpi_info%colour = 0
+        end if
+
+    end function
+
+    !> Returns whether this is the root node
+    function is_root(mpi_info) 
+        implicit none
+        type(mpi_type),intent(in) :: mpi_info
+        logical :: is_root
+
+        is_root = mpi_info%rank==mpi_info%root
+
+    end function is_root
+
+    !> Returns whether there is a single processor
+    function linear_mode(mpi_info) 
+        implicit none
+        type(mpi_type),intent(in) :: mpi_info
+        logical :: linear_mode
+
+        linear_mode = mpi_info%nprocs==1
+
+    end function linear_mode
+
+    !> Procedure to get the number of mpi processors
+    !!
+    !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Comm_size.html
+    function get_nprocs(mpi_communicator) result(nprocs)
+        implicit none
+        integer, intent(in) :: mpi_communicator
+        integer :: nprocs
+
+#ifdef MPI
+        call MPI_COMM_SIZE(   & 
+            mpi_communicator, &!handle
+            nprocs,           &!return number of processors
+            mpierror          &!error flag
+            )
+#else
+        nprocs = 1
+#endif
+
+    end function get_nprocs
+
+    !> Procedure to get the number of mpi processors
+    !!
+    !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Comm_rank.html
+    function get_rank(mpi_communicator) result(myrank)
+        implicit none
+        integer, intent(in) :: mpi_communicator
+        integer :: myrank
+
+#ifdef MPI
+        call MPI_COMM_RANK(   & 
+            mpi_communicator, &!handle
+            myrank,           &!return rank of calling processor 
+            mpierror          &!error flag
+            )
+#else
+        myrank = 0
+#endif
+
+    end function get_rank
+
+
+    !> This defines the root node for this mpi communicator
+    !!
+    !! All processes call this simultaneously, and the root is defined
+    !! as the process with the lowest rank. This value is returned
+    !!
+    !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Allreduce.html
+    !!
+    function get_root(mpi_communicator) result(root)
+        implicit none
+        integer, intent(in) :: mpi_communicator
+        integer :: root
+        integer :: myrank
+
+        ! Get the rank of the process
+        myrank = get_rank(mpi_communicator)
+
+#ifdef MPI
+        call MPI_ALLREDUCE(    &
+            myrank,            &!send buffer 
+            root,              &!recieve buffer
+            1,                 &!number of elements sent
+            MPI_INTEGER,       &!type of element sent
+            MPI_MIN,           &!reduce by finding the minimum
+            mpi_communicator,  &!handle
+            mpierror           &!error flag
+            )
+#else
+        root = myrank
+#endif
+
+    end function get_root
+
+
+#ifdef MPI
     !> Procedure to initialise mpi
     subroutine initialise_mpi()
         implicit none
@@ -36,64 +162,7 @@ module mpi_module
 
     end subroutine finalise_mpi
 
-    !> Procedure to get the number of mpi processors
-    !!
-    !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Comm_size.html
-    function get_nprocs(mpi_communicator) result(nprocs)
-        implicit none
-        integer, intent(in) :: mpi_communicator
-        integer :: nprocs
 
-        call MPI_COMM_SIZE(   & 
-            mpi_communicator, &!handle
-            nprocs,           &!return number of processors
-            mpierror          &!error flag
-            )
-
-    end function get_nprocs
-
-    !> Procedure to get the number of mpi processors
-    !!
-    !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Comm_rank.html
-    function get_rank(mpi_communicator) result(myrank)
-        implicit none
-        integer, intent(in) :: mpi_communicator
-        integer :: myrank
-
-        call MPI_COMM_RANK(   & 
-            mpi_communicator, &!handle
-            myrank,           &!return rank of calling processor 
-            mpierror          &!error flag
-            )
-
-    end function get_rank
-
-
-    !> This defines the root node for this mpi communicator
-    !!
-    !! All processes call this simultaneously, and the root is defined
-    !! as the process with the lowest rank. This value is returned
-    !!
-    !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Allreduce.html
-    !!
-    function get_root(myrank,mpi_communicator) result(root)
-        implicit none
-        integer, intent(in) :: myrank
-        integer, intent(in) :: mpi_communicator
-        integer :: root
-
-
-        call MPI_ALLREDUCE(    &
-            myrank,            &!send buffer 
-            root,              &!recieve buffer
-            1,                 &!number of elements sent
-            MPI_INTEGER,       &!type of element sent
-            MPI_MIN,           &!reduce by finding the minimum
-            mpi_communicator,  &!handle
-            mpierror           &!error flag
-            )
-
-    end function get_root
 
 
     !> This gets the wallclock timer from the mpi library
@@ -104,6 +173,38 @@ module mpi_module
         mpi_time = MPI_Wtime()
     end function
 
+    !> Split a communicator into n even groups
+    function mpi_split(n,mpi_communicator) result(mpi_info)
+        implicit none
+        integer,intent(in)  :: n
+        integer,intent(in)  :: mpi_communicator
+        type(mpi_type)      :: mpi_info
+
+        integer :: new_mpi_communicator
+        integer :: numprocs
+        integer :: colour
+        integer :: key
+
+        ! Get the original mpi info
+        mpi_info = get_mpi_info(mpi_communicator)
+
+        ! Define the new number of processors
+        numprocs= ceiling(dble(mpi_info%nprocs)/dble(n))
+
+        ! Define the 'colour' of this process by dividing it into n adjacent processes
+        colour = mpi_info%rank / numprocs
+
+        ! The new rank is just modulo this
+        key  = mod(mpi_info%rank, numprocs)
+
+        ! Split up the communicator
+        call MPI_COMM_SPLIT(mpi_communicator,colour,key,new_mpi_communicator,mpierror)
+
+        ! Assign the new mpi info
+        mpi_info = get_mpi_info(new_mpi_communicator,colour)
+
+    end function mpi_split
+
 
 
     !> This sums a whole set of integers across all processes
@@ -112,10 +213,10 @@ module mpi_module
     !!
     !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Allreduce.html
     !!
-    function sum_integers(intgr_local,mpi_communicator) result(intgr)
+    function sum_integers(intgr_local,mpi_info) result(intgr)
         implicit none
         integer, intent(in) :: intgr_local
-        integer, intent(in) :: mpi_communicator
+        type(mpi_type), intent(in) :: mpi_info
         integer :: intgr
 
         call MPI_ALLREDUCE(    &
@@ -124,16 +225,16 @@ module mpi_module
             1,                 &!number of elements sent
             MPI_INTEGER,       &!type of element sent
             MPI_SUM,           &!reduce by finding the minimum
-            mpi_communicator,  &!handle
+            mpi_info%communicator,  &!handle
             mpierror           &!error flag
             )
 
     end function sum_integers
 
-    function sum_doubles(db_local,mpi_communicator) result(db)
+    function sum_doubles(db_local,mpi_info) result(db)
         implicit none
         double precision, intent(in) :: db_local
-        integer, intent(in) :: mpi_communicator
+        type(mpi_type), intent(in) :: mpi_info
         double precision :: db
 
         call MPI_ALLREDUCE(       &
@@ -142,41 +243,39 @@ module mpi_module
             1,                    &!number of elements sent
             MPI_DOUBLE_PRECISION, &!type of element sent
             MPI_SUM,              &!reduce by finding the minimum
-            mpi_communicator,     &!handle
+            mpi_info%communicator,     &!handle
             mpierror              &!error flag
             )
 
     end function sum_doubles
 
-    subroutine broadcast_doubles(doubles,mpi_communicator,root)
+    subroutine broadcast_doubles(doubles,mpi_info)
         implicit none
         double precision, dimension(:), intent(inout) :: doubles
-        integer, intent(in) :: root
-        integer, intent(in) :: mpi_communicator
+        type(mpi_type), intent(in) :: mpi_info
 
         call MPI_BCAST(            & 
             doubles,               &!broadcast buffer
             size(doubles),         &!size of buffer
             MPI_DOUBLE_PRECISION,  &!type of element sent
-            root,                  &!root doing the sending
-            mpi_communicator,      &!handle
+            mpi_info%root,         &!root doing the sending
+            mpi_info%communicator, &!handle
             mpierror               &!error flag
             )
 
     end subroutine broadcast_doubles
 
-    subroutine broadcast_integers(integers,mpi_communicator,root)
+    subroutine broadcast_integers(integers,mpi_info)
         implicit none
         integer, dimension(:), intent(inout) :: integers
-        integer, intent(in) :: root
-        integer, intent(in) :: mpi_communicator
+        type(mpi_type), intent(in) :: mpi_info
 
         call MPI_BCAST(            & 
             integers,              &!broadcast buffer
             size(integers),        &!size of buffer
             MPI_INT,               &!type of element sent
-            root,                  &!root doing the sending
-            mpi_communicator,      &!handle
+            mpi_info%root,         &!root doing the sending
+            mpi_info%communicator, &!handle
             mpierror               &!error flag
             )
 
@@ -203,11 +302,11 @@ module mpi_module
     !!
     !! This a process by which the root node 'catches' a thrown point from 
     !! any slave, and returns the slave identifier for use to throw back
-    function catch_point(live_point,mpi_communicator) result(slave_id)
+    function catch_point(live_point,mpi_info) result(slave_id)
         implicit none
 
         double precision,intent(out),dimension(:) :: live_point !> The caught live point
-        integer, intent(in) :: mpi_communicator                 !> The mpi communicator
+        type(mpi_type), intent(in) :: mpi_info
 
         integer :: slave_id ! slave identifier
 
@@ -219,7 +318,7 @@ module mpi_module
             MPI_DOUBLE_PRECISION,  &!
             MPI_ANY_SOURCE,        &!
             tag_gen_point,         &!
-            mpi_communicator,      &!
+            mpi_info%communicator,      &!
             mpi_status,            &!
             mpierror               &!
             )
@@ -232,20 +331,19 @@ module mpi_module
     !> Slave throws a point to the master
     !!
     !! This a process by which a slave node 'throws' a point to the root
-    subroutine throw_point(live_point,mpi_communicator,root)
+    subroutine throw_point(live_point,mpi_info)
         implicit none
 
         double precision,intent(in),dimension(:) :: live_point !> live point to throw
-        integer, intent(in) :: mpi_communicator                !> mpi communicator
-        integer, intent(in) :: root                            !> 
+        type(mpi_type), intent(in) :: mpi_info
 
         call MPI_SEND(             &!
             live_point,            &!
             size(live_point),      &!
             MPI_DOUBLE_PRECISION,  &!
-            root,                  &!
+            mpi_info%root,                  &!
             tag_gen_point,         &!
-            mpi_communicator,      &!
+            mpi_info%communicator,      &!
             mpierror               &!
             )
 
@@ -258,12 +356,12 @@ module mpi_module
 
 
     !> Master catches babies thrown by any slave, and returns the slave identity that did the throwing
-    function catch_babies(baby_points,nlike,mpi_communicator) result(slave_id)
+    function catch_babies(baby_points,nlike,mpi_info) result(slave_id)
         implicit none
 
         double precision,intent(out),dimension(:,:) :: baby_points !> The babies to be caught
-        integer, dimension(:), intent(out) :: nlike                !> The number of likelihood evaluations to be caught
-        integer, intent(in) :: mpi_communicator                    !> The mpi communicator
+        integer, dimension(:), intent(out)          :: nlike       !> The number of likelihood evaluations to be caught
+        type(mpi_type), intent(in)                  :: mpi_info    !> The mpi communicator
 
         integer :: slave_id ! slave identifier
 
@@ -275,7 +373,7 @@ module mpi_module
             MPI_DOUBLE_PRECISION,                    &!
             MPI_ANY_SOURCE,                          &!
             tag_run_baby,                            &!
-            mpi_communicator,                        &!
+            mpi_info%communicator,                   &!
             mpi_status,                              &!
             mpierror                                 &!
             )
@@ -283,44 +381,43 @@ module mpi_module
         ! Pass on the slave id
         slave_id = mpi_status(MPI_SOURCE)
 
-        call MPI_RECV(         &! 
-            nlike,             &! 
-            size(nlike),       &! 
-            MPI_INT,           &! 
-            slave_id,          &! 
-            tag_run_nlike,     &! 
-            mpi_communicator,  &! 
-            mpi_status,        &! 
-            mpierror           &! 
+        call MPI_RECV(            &! 
+            nlike,                &! 
+            size(nlike),          &! 
+            MPI_INT,              &! 
+            slave_id,             &! 
+            tag_run_nlike,        &! 
+            mpi_info%communicator,&! 
+            mpi_status,           &! 
+            mpierror              &! 
             )
 
     end function catch_babies
 
     !> Slave throws babies to the master
-    subroutine throw_babies(baby_points,nlike,mpi_communicator,root)
+    subroutine throw_babies(baby_points,nlike,mpi_info)
         implicit none
 
         double precision,intent(in),dimension(:,:) :: baby_points !> The babies to be thrown
         integer, dimension(:), intent(in) :: nlike                !> The number of likelihood evaluations to be caught
-        integer, intent(in) :: mpi_communicator                   !> The mpi communicator
-        integer, intent(in) :: root                               !> root node to throw to
+        type(mpi_type), intent(in) :: mpi_info
 
         call MPI_SEND(                               &! 
             baby_points,                             &! 
             size(baby_points,1)*size(baby_points,2), &! 
             MPI_DOUBLE_PRECISION,                    &! 
-            root,                                    &! 
+            mpi_info%root,                                    &! 
             tag_run_baby,                            &! 
-            mpi_communicator,                        &! 
+            mpi_info%communicator,                        &! 
             mpierror                                 &! 
             )                                        
         call MPI_SEND(         &!  
             nlike,             &!  
             size(nlike),       &!  
             MPI_INT,           &!  
-            root,              &!  
+            mpi_info%root,              &!  
             tag_run_nlike,     &!  
-            mpi_communicator,  &!  
+            mpi_info%communicator,  &!  
             mpierror           &!  
             )
 
@@ -332,7 +429,7 @@ module mpi_module
 
 
     !> slave catches seed thrown by master
-    function catch_seed(seed_point,cholesky,logL,mpi_communicator,root) result(more_points_needed)
+    function catch_seed(seed_point,cholesky,logL,mpi_info) result(more_points_needed)
         use abort_module, only: halt_program
         implicit none
 
@@ -340,8 +437,7 @@ module mpi_module
         double precision,intent(out),dimension(:) :: seed_point  !> The seed point to be caught
         double precision,intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
         double precision,intent(in)                :: logL       !> loglikelihood contour to be caught
-        integer, intent(in) :: mpi_communicator                  !> The mpi communicator
-        integer, intent(in) :: root                              !> The root node
+        type(mpi_type), intent(in) :: mpi_info
 
         logical :: more_points_needed ! whether or not we need more points
 
@@ -352,9 +448,9 @@ module mpi_module
             seed_point,                     &!
             size(seed_point),               &!
             MPI_DOUBLE_PRECISION,           &!
-            root,                           &!
+            mpi_info%root,                           &!
             MPI_ANY_TAG,                    &!
-            mpi_communicator,               &!
+            mpi_info%communicator,               &!
             mpi_status,                     &!
             mpierror                        &!
             )
@@ -371,9 +467,9 @@ module mpi_module
             cholesky,                         &!
             size(cholesky,1)*size(cholesky,1),&!
             MPI_DOUBLE_PRECISION,             &!
-            root,                             &!
+            mpi_info%root,                             &!
             tag_run_cholesky,                 &!
-            mpi_communicator,                 &!
+            mpi_info%communicator,                 &!
             mpi_status,                       &!
             mpierror                          &!
             )
@@ -381,9 +477,9 @@ module mpi_module
             logL,                      &!
             1,                         &!
             MPI_DOUBLE_PRECISION,      &!
-            root,                      &!
+            mpi_info%root,                      &!
             tag_run_logL,              &!
-            mpi_communicator,          &!
+            mpi_info%communicator,          &!
             mpi_status,                &!
             mpierror                   &!
             )
@@ -393,13 +489,13 @@ module mpi_module
 
 
     !> root throws seed to slave
-    subroutine throw_seed(seed_point,cholesky,logL,mpi_communicator,slave_id,keep_going)
+    subroutine throw_seed(seed_point,cholesky,logL,mpi_info,slave_id,keep_going)
         implicit none
 
         double precision,intent(in),dimension(:) :: seed_point   !> seed to be thrown
         double precision,intent(in),dimension(:,:) :: cholesky   !> cholesky to be thrown
         double precision,intent(in)                :: logL       !> loglikelihood contour to be thrown
-        integer, intent(in) :: mpi_communicator                  !> mpi handle
+        type(mpi_type),intent(in) :: mpi_info                    !> mpi handle
         integer, intent(in) :: slave_id                          !> identity of target slave
         logical, intent(in) :: keep_going                        !> Further signal whether to keep going 
 
@@ -415,7 +511,7 @@ module mpi_module
             MPI_DOUBLE_PRECISION,  &!  
             slave_id,              &!  
             tag,                   &!  
-            mpi_communicator,      &!  
+            mpi_info%communicator,      &!  
             mpierror               &!  
             )
 
@@ -427,7 +523,7 @@ module mpi_module
             MPI_DOUBLE_PRECISION,               &!  
             slave_id,                           &!  
             tag_run_cholesky,                   &!  
-            mpi_communicator,                   &!  
+            mpi_info%communicator,                   &!  
             mpierror                            &!  
             )
         call MPI_SEND(              &!  
@@ -436,7 +532,7 @@ module mpi_module
             MPI_DOUBLE_PRECISION,   &!  
             slave_id,               &!  
             tag_run_logL,           &!  
-            mpi_communicator,       &!  
+            mpi_info%communicator,       &!  
             mpierror                &!  
             )
 
@@ -458,9 +554,9 @@ module mpi_module
     !> Request point
     !!
     !! This subroutine is used by the root node to request a new live point
-    subroutine request_point(mpi_communicator,slave_id)
+    subroutine request_point(mpi_info,slave_id)
         implicit none
-        integer, intent(in) :: mpi_communicator !> mpi handle
+        type(mpi_type), intent(in) :: mpi_info
         integer, intent(in) :: slave_id         !> Slave to request a new point from
 
 
@@ -472,7 +568,7 @@ module mpi_module
             MPI_INT,           &! sending no integers
             slave_id,          &! process id to send to
             tag_gen_request,   &! continuation tag
-            mpi_communicator,  &! mpi handle
+            mpi_info%communicator,  &! mpi handle
             mpierror           &! error flag
             )
 
@@ -482,9 +578,9 @@ module mpi_module
     !> No more points please
     !!
     !! This subroutine is used by the root node to signal that no more points are required
-    subroutine no_more_points(mpi_communicator,slave_id)
+    subroutine no_more_points(mpi_info,slave_id)
         implicit none
-        integer, intent(in) :: mpi_communicator !> mpi handle
+        type(mpi_type), intent(in) :: mpi_info
         integer, intent(in) :: slave_id         !> Slave to request a new point from
 
 
@@ -496,7 +592,7 @@ module mpi_module
             MPI_INT,           &! sending no integers
             slave_id,          &! process id to send to
             tag_gen_stop,      &! continuation tag
-            mpi_communicator,  &! mpi handle
+            mpi_info%communicator,  &! mpi handle
             mpierror           &! error flag
             )
 
@@ -505,11 +601,10 @@ module mpi_module
     !> See if more points are needed
     !!
     !! This subroutine is used by the root node to request a new live point
-    function more_points_needed(mpi_communicator,root)
+    function more_points_needed(mpi_info)
         use abort_module
         implicit none
-        integer, intent(in) :: mpi_communicator !> mpi handle
-        integer, intent(in) :: root             !> root to recieve request
+        type(mpi_type), intent(in) :: mpi_info
 
         integer :: empty_buffer(0) ! empty buffer to send
         integer, dimension(MPI_STATUS_SIZE) :: mpi_status  ! status identifier
@@ -520,9 +615,9 @@ module mpi_module
             empty_buffer,    &!
             0,               &!
             MPI_INT,         &!
-            root,            &!
+            mpi_info%root,            &!
             MPI_ANY_TAG,     &!
-            mpi_communicator,&!
+            mpi_info%communicator,&!
             mpi_status,      &!
             mpierror         &!
             )
@@ -537,6 +632,8 @@ module mpi_module
         end if
 
     end function more_points_needed
+
+#endif
 
 
 

@@ -12,7 +12,8 @@ program PolyChord
     use abort_module,             only: halt_program
     use loglikelihood_module,     only: loglikelihood, setup_loglikelihood
 #ifdef MPI
-    use mpi_module
+    use mpi_module,               only: initialise_mpi, finalise_mpi
+    use mpi,                      only: MPI_COMM_WORLD
 #endif
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
