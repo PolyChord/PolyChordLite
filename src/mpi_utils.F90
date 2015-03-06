@@ -205,6 +205,15 @@ module mpi_module
 
     end function mpi_split
 
+    subroutine mpi_synchronise(mpi_info)
+        implicit none
+        type(mpi_type), intent(in) :: mpi_info
+
+#ifdef MPI
+        call MPI_BARRIER(mpi_info%communicator,mpierror)
+#endif 
+
+    end subroutine mpi_synchronise
 
 
     !> This sums a whole set of integers across all processes
