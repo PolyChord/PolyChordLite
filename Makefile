@@ -66,11 +66,6 @@ endif
 endif
 
 
-# There are some gnu-specific flags we need to put in
-ifeq ($(COMPILER_TYPE),gnu)
-FCFLAGS= -DGNU
-endif
-
 # ============ COMPILER_TYPE settings ================
  
 # Archive tool

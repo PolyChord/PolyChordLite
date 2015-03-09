@@ -21,7 +21,8 @@ module loglikelihood_module
         !> Output derived parameters
         double precision, intent(out),  dimension(:) :: phi
 
-        integer :: nDims
+        integer,save :: nDims=0
+        double precision, save :: factor=1d0
 
         double precision :: loglikelihood
 
@@ -30,20 +31,21 @@ module loglikelihood_module
 
         double precision, parameter :: logSqrtTwoPi = log(sqrt(8d0*atan(1d0)))
         double precision, parameter :: PiOverTwo = 2d0*atan(1d0)
-        integer :: i
 
 
 
         mu= 5d-1   ! mean in the center
         sigma = 1d-1 
-        nDims = size(theta)
+        if(size(theta)/=nDims) then
+            nDims = size(theta)
+            factor = exp(-2d0/nDims * loggamma(1d0 + nDims/2d0)) * PiOverTwo
+        end if
 
         ! normalisation
         loglikelihood =   - sum(logSqrtTwoPi+log(sigma))
 
         ! theta dependence
-        loglikelihood = loglikelihood - maxval(abs(theta-mu)/sigma)**2   &
-                /( exp(-2d0/nDims * loggamma(1d0 + nDims/2d0)) * PiOverTwo  )
+        loglikelihood = loglikelihood - maxval(abs(theta-mu)/sigma)**2  / factor
 
 
     end function loglikelihood
