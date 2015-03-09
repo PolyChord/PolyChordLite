@@ -44,8 +44,8 @@ ifdef MPI
 # Using MPI
 # ---------
 # Set a define flag for MPI
-FCFLAGS = -DMPI
-CCFLAGS = -DMPI
+FCFLAGS += -DMPI
+CCFLAGS += -DMPI
 # Choose the mpi wrapper
 FC = mpif90
 CC = mpicc
@@ -66,6 +66,10 @@ endif
 endif
 
 
+# There are some gnu-specific flags we need to put in
+ifeq ($(COMPILER_TYPE),gnu)
+FCFLAGS= -DGNU
+endif
 
 # ============ COMPILER_TYPE settings ================
  

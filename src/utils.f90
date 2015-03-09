@@ -157,6 +157,36 @@ module utils_module
 
     end function distance2
 
+    function loggamma(n)
+#ifndef GNU
+        use iso_c_binding
+#endif
+        implicit none
+        double precision            :: loggamma
+        double precision,intent(in) :: n
+#ifndef GNU
+        real(c_double) :: c_n
+        interface 
+            function lgamma (y) bind(c)
+                use iso_c_binding
+                implicit none
+                real(c_double) :: lgamma
+                real(c_double) :: y
+            end function
+        end interface
+
+
+        c_n = n
+
+        loggamma = lgamma(c_n)
+#else
+        loggamma = lgamma(n)
+#endif
+
+
+
+    end function loggamma
+
 
     !> Mutual proximity 
     !!
