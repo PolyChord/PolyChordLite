@@ -431,6 +431,7 @@ module priors_module
             end where
         end do
 
+        if(allocated(settings%grade_dims)) deallocate(settings%grade_dims)
         allocate(settings%grade_dims(maxval(speeds)))
 
         ! Now assign hypercube indices
