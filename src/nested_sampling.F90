@@ -1,7 +1,7 @@
 module nested_sampling_module
 
 #ifdef MPI
-    use mpi_module, only: get_mpi_info,mpi_type,is_root,linear_mode,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers,mpi_time
+    use mpi_module, only: get_mpi_info,mpi_type,is_root,linear_mode,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers,mpi_time,mpi_synchronise
 #else
     use mpi_module, only: get_mpi_info,mpi_type,is_root,linear_mode
 #endif
@@ -352,6 +352,10 @@ module nested_sampling_module
 
 #endif
         end if !(myrank==root / myrank/=root) 
+
+#ifdef MPI
+        call mpi_synchronise(mpi_info)
+#endif
 
 
 
