@@ -77,9 +77,11 @@ module loglikelihood_module
 
                 ! Normalise via the normalising constants, and the width of the
                 ! integral
+                ! note that the factor of (x_max_int-x_min_int) that should be here cancels out
+                ! with the prior
                 loglikelihood_temp = loglikelihood_temp   &
                     - log( sigmay(i_stats) ) - log( sigmax(i_stats) ) - logTwoPi &
-                    + log( (x_max_int-x_min_int) / (n_int-1d0)  )
+                    - log( n_int-1d0 )
 
             end if
 
