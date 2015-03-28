@@ -338,9 +338,12 @@ module run_time_module
         double precision :: logn
         double precision :: logn1
         double precision :: logXp
+        double precision :: logZp
+        double precision :: logZp2
         double precision, dimension(RTI%ncluster-1) :: logXpXq
         double precision :: logXp2
         double precision :: logZXp
+        double precision :: logZpXp
 
         ! 1) Save the old points as necessary
         old_live  = RTI%live(:,:RTI%nlive(p),p)                 ! Save the old live points
@@ -363,7 +366,10 @@ module run_time_module
         ! Define some useful variables
         logXp  = RTI%logXp(p)
         logXp2 = RTI%logXpXq(p,p)
+        logZp  = RTI%logZp(p)
+        logZp2 = RTI%logZp2(p)
         logZXp = RTI%logZXp(p)
+        logZpXp= RTI%logZpXp(p)
         logXpXq= [ RTI%logXpXq(p,:p-1) , RTI%logXpXq(p,p+1:) ]
 
 
@@ -451,10 +457,10 @@ module run_time_module
         RTI%logXp(new_target) = logXp + logni - logn
         ! Initialise the new global evidence -local volume cross correlation
         RTI%logZXp(new_target) = logZXp + logni - logn 
-        ! Initialise local evidences at 0
-        RTI%logZp(new_target) = logzero
-        RTI%logZp2(new_target) = logzero
-        RTI%logZpXp(new_target) = logzero
+        ! Initialise local evidences 
+        RTI%logZp(new_target) = logZp + logni - logn 
+        RTI%logZp2(new_target) = logZp2 + logni + logni1 - logn - logn1
+        RTI%logZpXp(new_target) = logZpXp + logni + logni1 - logn - logn1 
 
 
         ! Initialise the volume cross correlations
