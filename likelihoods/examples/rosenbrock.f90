@@ -1,5 +1,15 @@
 module loglikelihood_module
 
+    double precision :: normalisation
+
+    ! Parameters of the rosenbrock function
+    double precision, parameter :: a = 1d0
+    double precision, parameter :: b = 1d2
+    double precision, parameter :: pi = 4d0*atan(1d0) ! \pi in double precision
+
+    ! number of dimensions
+    integer :: nDims
+
     contains
 
     !> Upside down [Rosenbrock function](http://en.wikipedia.org/wiki/Rosenbrock_function).
@@ -37,19 +47,9 @@ module loglikelihood_module
         double precision, intent(out), dimension(:) :: phi           !> Output derived parameters
         double precision                            :: loglikelihood ! loglikelihood value to output
 
-        ! Parameters of the rosenbrock function
-        double precision, parameter :: a = 1d0
-        double precision, parameter :: b = 1d2
-        double precision, parameter :: pi = 4d0*atan(1d0) ! \pi in double precision
-
-        ! number of dimensions
-        integer :: nDims
-
-        ! Get the number of dimensions
-        nDims = size(theta)
 
         ! Normalisation for 2D
-        loglikelihood = -log(pi/sqrt(b))
+        loglikelihood = normalisation
 
         ! Sum expressed with fortran intrinsics
         loglikelihood =  loglikelihood  - sum( (a-theta(1:nDims-1))**2 + b*(theta(2:nDims) - theta(1:nDims-1)**2)**2 )
@@ -62,6 +62,36 @@ module loglikelihood_module
         type(program_settings), intent(in) :: settings
         integer,intent(in) :: mpi_communicator
 
+        ! Get the number of dimensions from the settings variable
+        nDims = settings%nDims
+
+        ! 
+        normalisation = -0.5d0 * log( pi**nDims / det(nDims) )
+
     end subroutine setup_loglikelihood
+
+    function det(n)
+        integer,intent(in) :: n
+        double precision   :: det
+
+        det = abs(-2d0*b*recur(n-1) - 16*b*b*recur(n-2))
+
+    end function
+
+    recursive function recur(n) result(ans)
+        integer,intent(in) :: n
+        double precision   :: ans
+
+        if(n<=0) then
+            ans = 0d0
+            return
+        else if(n==1) then
+            ans = 1d0
+            return
+        else
+            ans = (-2d0-10d0*b) * recur(n-1) - 16d0*b*b * recur(n-2)
+        end if
+
+    end function recur
 
 end module loglikelihood_module
