@@ -85,8 +85,11 @@
     subroutine IO_OutputChainRow(F, mult, like, values)
     class(TFileStream) :: F
     real(mcp) mult, like, values(:)
-
-    call F%Write( [mult, like, values])
+    real(mcp), allocatable :: tmp(:)
+    
+    allocate(tmp(1:size(values)+2), source= [mult, like, values])
+    call F%Write(tmp)
+  !    call F%Write( [mult, like, values]) !gfortran bug
 
     if (flush_write) call F%Flush()
 
@@ -216,13 +219,14 @@
     end subroutine IO_ReadParamNames
 
     function IO_ReadChainRows(in_root, chain_ix,chain_num, ignorerows, nrows, &
-    ncols,max_rows,coldata,samples_are_chains) result(OK)
+        ncols,max_rows,coldata,samples_are_chains) result(OK)
     !OK = false if chain not found or not enough samples
     character(LEN=*), intent(in) :: in_root
     integer,intent(in) :: chain_ix, chain_num
     integer, intent(in) :: max_rows, ignorerows
     integer, intent(in) :: ncols
-    real(KIND(1.d0)), intent(inout) :: coldata(ncols,0:max_rows) !(col_index, row_index)
+    real(KIND(1.d0)), intent(inout), allocatable :: coldata(:,:) !(col_index, row_index)
+    real(KIND(1.d0)), allocatable :: tmp(:,:) !(col_index, row_index)
     logical, intent(in) :: samples_are_chains
     integer, intent(inout) :: nrows
     logical OK, ChainOK
@@ -262,12 +266,12 @@
     OK = .true.
     do
         if (.not. IO_ReadChainRow(F, invars(1), invars(2), &
-        invars,indices,chainOK,samples_are_chains)) then
-            if (.not. chainOK) then
-                write (*,*) 'error reading line ', nrows -row_start + ignorerows ,' - skipping to next row'
-                cycle
-            endif
-            return
+            invars,indices,chainOK,samples_are_chains)) then
+        if (.not. chainOK) then
+            write (*,*) 'error reading line ', nrows -row_start + ignorerows ,' - skipping to next row'
+            cycle
+        endif
+        return
         else
             if (.not. chainOK) then
                 write (*,*) 'WARNING: skipping line with probable NaN'
@@ -277,20 +281,25 @@
 
         coldata(1:ncols, nrows) = invars(1:ncols)
         nrows = nrows + 1
-        if (nrows > max_rows) stop 'need to increase max_rows'
+        if (nrows > ubound(coldata,2)) then
+            print *, 'expanding array - you have a lot of chain rows!'
+            allocate(tmp(ncols,0:ubound(coldata,2)+max_rows))
+            tmp(:,0:ubound(coldata,2)) = coldata
+            call move_alloc(tmp, coldata)
+        end if
     end do
 
     end function IO_ReadChainRows
 
 
-    subroutine IO_OutputMargeStats(Names, froot,num_vars,num_contours, contours,contours_str, &
-    cont_lines, colix, mean, sddev, has_limits_bot, has_limits_top, labels)
+    subroutine IO_OutputMargeStats(Names, froot,num_vars,num_contours, contours_str, &
+        cont_lines, colix, mean, sddev, has_limits_bot, has_limits_top, labels)
     use ParamNames
     class(TParamNames) :: Names
     character(LEN=*), intent(in) :: froot
     integer, intent(in) :: num_vars, num_contours
     logical,intent(in) :: has_limits_bot(:,:),has_limits_top(:,:)
-    real(mcp), intent(in) :: mean(*), sddev(*), contours(*), cont_lines(:,:,:)
+    real(mcp), intent(in) :: mean(*), sddev(*), cont_lines(:,:,:)
     character(LEN=*), intent(in) :: contours_str
     integer,intent(in) :: colix(*)
     character(LEN=128) labels(*), tag, nameFormat
@@ -317,7 +326,7 @@
     call F%NewLine()
 
     do j=1, num_vars
-        call F%WriteLeftAligned(nameFormat,Names%NameOrNumber(colix(j)-2))
+        call F%WriteLeftAligned(nameFormat,Names%NameOrNumber(colix(j)-2, tag_derived=.true.))
         call F%WriteInLineItems(mean(j), sddev(j))
         do i=1, num_contours
             call F%WriteInLineItems(cont_lines(j,1,i),cont_lines(j,2,i)) !don't send array section to avoid ifort 14 bug

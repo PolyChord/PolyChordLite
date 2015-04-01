@@ -1,6 +1,9 @@
     module Interpolation
     use FileUtils
     use MpiUtils
+    use MiscUtils
+    use Stringutils
+    use ObjectLists
     implicit none
 
 #ifdef SINGLE
@@ -10,8 +13,9 @@
 #endif
     real(sp_acc), parameter :: SPLINE_DANGLE=1.e30_sp_acc
     integer, parameter :: GI = sp_acc
+    integer, parameter :: Interpolation_version = 1
 
-    Type :: TInterpolator
+    Type, extends(TSaveLoadStateObject) :: TInterpolator
         private
         logical :: initialized =.false.
     contains
@@ -19,24 +23,80 @@
     procedure :: Error => TInterpolator_Error
     end Type TInterpolator
 
-    Type, extends(TInterpolator) :: TCubicSpline
-        integer n
-        real(sp_acc), dimension(:), allocatable :: X
-        real(sp_acc), dimension(:), allocatable :: F,  ddF
+    type, extends(TInterpolator) :: TInterpolator1D
+        real(sp_acc) :: Xmin_interp, Xmax_interp
+        integer :: n = 0 !number of function points
+        real(sp_acc), allocatable :: F(:) !function values
+        real(sp_acc) :: fraction_tol =  1.e-5_sp_acc !fraction of step size allowed past end
+        real(sp_acc), private :: Xmin_check, Xmax_check, Xend_tol_interp
+        integer, private :: read_version = Interpolation_version
+        real(sp_acc) :: start_bc = SPLINE_DANGLE
+        real(sp_acc) :: end_bc = SPLINE_DANGLE
     contains
+    procedure, private :: TInterpolator1D_IntValue
+    procedure, private :: GetValue => TInterpolator1D_Value
+    procedure :: Clear => TInterpolator1D_Clear
+    procedure :: FirstUse =>  TInterpolator1D_FirstUse
+    procedure :: LoadState => TInterpolator1D_LoadState
+    procedure :: SaveState => TInterpolator1D_SaveState
+    procedure :: InitForSize => TInterpolator1D_InitForSize
+    procedure :: InitInterp => TInterpolator1D_InitInterp
+    generic :: Value => GetValue, TInterpolator1D_IntValue
+    end Type TInterpolator1D
+
+    Type, extends(TInterpolator1D) :: TSpline1D
+        real(sp_acc), allocatable :: ddF(:)
+    contains
+    procedure :: Clear => TSpline1D_Clear
+    procedure :: GetValue => TSpline1D_Value
+    procedure, private :: TSpline1D_ArrayValue
+    procedure, private :: TSpline1D_IntRangeValue
+    procedure :: Derivative => TSpline1D_Derivative
+    procedure :: FindNext => TSpline1D_FindNext
+    procedure :: FindValue => TSpline1D_FindValue
+    generic :: Array => TSpline1D_ArrayValue, TSpline1D_IntRangeValue
+    end Type TSpline1D
+
+
+    Type, extends(TSpline1D) :: TCubicSpline
+        ! 1D cubic spline interpolator with irregular monotonic X spacing
+        real(sp_acc), allocatable :: X(:)
+    contains
+    procedure, private, nopass :: spline
     procedure, private :: TCubicSpline_Init
     procedure, private :: TCubicSpline_InitInt
-    procedure, private :: TCubicSpline_Value
-    procedure, private :: TCubicSpline_ArrayValue
-    procedure, private :: TCubicSpline_IntRangeValue
     procedure :: InitFromFile => TCubicSpline_InitFromFile
+    procedure :: InitForSize => TCubicSpline_InitForSize
     procedure :: InitInterp => TCubicSpline_InitInterp
-    procedure :: Derivative => TCubicSpline_Derivative
-    generic :: Value => TCubicSpline_Value
-    generic :: Array => TCubicSpline_ArrayValue, TCubicSpline_IntRangeValue
+    procedure :: Clear => TCubicSpline_Clear
+    procedure :: FindNext => TCubicSpline_FindNext
+    procedure :: LoadState => TCubicSpline_LoadState
+    procedure :: SaveState => TCubicSpline_SaveState
     generic :: Init => TCubicSpline_Init, TCubicSpline_InitInt
     FINAL :: TCubicSpline_Free !not needed in standard, just for compiler bugs
     end Type
+
+    Type, extends(TSpline1D) :: TRegularCubicSpline
+        ! 1D interpolation with regular X spacing
+        real(sp_acc) :: xmin, xmax, delta_x
+    contains
+    procedure, private, nopass :: regular_spline
+    procedure :: Init => TRegularCubicSpline_Init
+    procedure :: InitInterp => TRegularCubicSpline_InitInterp
+    procedure :: FindNext => TRegularCubicSpline_FindNext
+    procedure :: LoadState => TRegularCubicSpline_LoadState
+    procedure :: SaveState => TRegularCubicSpline_SaveState
+    end Type
+
+
+    Type, extends(TRegularCubicSpline) :: TLogRegularCubicSpline
+        ! 1D interpolation with regular log(X) spacing
+    contains
+    procedure :: Init => TLogRegularCubicSpline_Init
+    procedure :: Derivative => TLogRegularCubicSpline_Derivative
+    procedure :: GetValue => TLogRegularCubicSpline_Value
+    end Type
+
 
     Type, extends(TInterpolator) :: TInterpGrid2D
         !      ALGORITHM 760, COLLECTED ALGORITHMS FROM ACM.
@@ -45,61 +105,301 @@
         REAL(GI), private, allocatable :: wk(:,:,:)
         REAL(GI), allocatable :: x(:), y(:)
         REAL(GI), allocatable :: z(:,:)
-        integer nx, ny
+        integer :: nx=0, ny=0
     contains
     procedure :: Init => TInterpGrid2D_Init
     procedure :: InitFromFile => TInterpGrid2D_InitFromFile
     procedure :: Value => TInterpGrid2D_Value !one point
     procedure :: Values => TInterpGrid2D_Values !array of points
-    procedure :: Error => TInterpGrid2D_error
+    procedure :: Clear => TInterpGrid2D_Clear
     procedure, private :: InitInterp => TInterpGrid2D_InitInterp
     FINAL :: TInterpGrid2D_Free
     end Type TInterpGrid2D
 
 
-    public TCubicSpline, TInterpGrid2D, SPLINE_DANGLE
+    public TInterpolator1D, TSpline1D, TCubicSpline, TRegularCubicSpline, TInterpGrid2D, SPLINE_DANGLE
 
     contains
 
-    subroutine TInterpolator_FirstUse(W)
-    class(TInterpolator) W
+    subroutine TInterpolator_FirstUse(this)
+    class(TInterpolator) this
 
-    W%Initialized = .true.
-    call W%error('TInterpolator not initialized')
+    this%Initialized = .true.
+    call this%error('TInterpolator not initialized')
 
     end subroutine TInterpolator_FirstUse
 
-    subroutine TInterpolator_error(W,S)
-    class(TInterpolator):: W
+    subroutine TInterpolator_error(this,S,v1,v2)
+    class(TInterpolator):: this
     character(LEN=*), intent(in) :: S
+    class(*), intent(in), optional :: v1, v2
 
-    call MpiStop('Interpolation error: '//trim(S))
+    call MpiStop(FormatString('Interpolation error: '//trim(S),v1,v2))
 
     end subroutine TInterpolator_error
 
+    !!! 1D interpolation
 
-    subroutine TCubicSpline_Init(W, Xarr,  values, n, End1, End2 )
-    class(TCubicSpline) :: W
-    real(sp_acc), intent(in) :: Xarr(:), values(:)
+    subroutine TInterpolator1D_FirstUse(this)
+    class(TInterpolator1D) this
+
+    if (.not. this%Initialized) then
+        call this%InitInterp()
+        this%Initialized = .true.
+    end if
+
+    end subroutine TInterpolator1D_FirstUse
+
+    subroutine TInterpolator1D_InitInterp(this,End1,End2)
+    class(TInterpolator1D):: this
+    real(sp_acc), intent(in), optional :: End1, End2
+
+    if (.not. allocated(this%F)) call this%error('Interpolator has no data')
+    this%start_bc = PresentDefault(this%start_bc, End1)
+    this%end_bc = PresentDefault(this%end_bc, End2)
+
+    end subroutine TInterpolator1D_InitInterp
+
+    subroutine TInterpolator1D_InitForSize(this, n)
+    class(TInterpolator1D) :: this
+    integer, intent(in) :: n
+
+    call this%Clear()
+    this%n = n
+    allocate(this%F(this%n))
+
+    end subroutine TInterpolator1D_InitForSize
+
+    subroutine TInterpolator1D_Clear(this)
+    class(TInterpolator1D) :: this
+
+    if (allocated(this%F)) deallocate(this%F)
+    this%n = 0
+    this%start_bc = SPLINE_DANGLE
+    this%end_bc = SPLINE_DANGLE
+    this%Initialized = .false.
+
+    end subroutine TInterpolator1D_Clear
+
+    function TInterpolator1D_Value(this, x, error )
+    class(TInterpolator1D) :: this
+    real(sp_acc) :: TInterpolator1D_Value
+    real(sp_acc), intent(in) :: x
+    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
+
+    TInterpolator1D_Value = 0
+    call this%error('Value not implemented')
+
+    end function TInterpolator1D_Value
+
+    function TInterpolator1D_IntValue(this, x, error )
+    class(TInterpolator1D) :: this
+    real(sp_acc) :: TInterpolator1D_IntValue
+    integer, intent(in) :: x
+    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
+
+    TInterpolator1D_IntValue = this%Value(real(x,sp_acc),error)
+
+    end function TInterpolator1D_IntValue
+
+    subroutine TInterpolator1D_LoadState(this,F)
+    class(TInterpolator1D) :: this
+    class(TFileStream) :: F
+    integer n
+
+    call this%Clear()
+    call F%Read(n, this%read_version)
+    if (n>0) then
+        call this%InitForSize(n)
+        call F%Read(this%F)
+    end if
+    end subroutine TInterpolator1D_LoadState
+
+    subroutine TInterpolator1D_SaveState(this,F)
+    class(TInterpolator1D) :: this
+    class(TFileStream) :: F
+
+    call F%Write(this%n, Interpolation_version)
+    if (this%n>0) call F%Write(this%F)
+
+    end subroutine TInterpolator1D_SaveState
+
+
+    subroutine TSpline1D_FindNext(this, x, llo, xlo, xhi)
+    class(TSpline1D) :: this
+    real(sp_acc), intent(in) :: x
+    integer, intent(inout) :: llo
+    real(sp_acc), intent(out) :: xlo, xhi
+
+    xlo = x
+    xhi = 0
+    llo=0
+    call this%Error('FindNext not implemented')
+
+    end subroutine TSpline1D_FindNext
+
+    subroutine TSpline1D_FindValue(this, x, llo, xlo, xhi, error)
+    class(TSpline1D) :: this
+    real(sp_acc), intent(in) :: x
+    integer, intent(out) :: llo
+    real(sp_acc), intent(out) :: xlo, xhi
+    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
+
+    if (.not. this%Initialized) call this%FirstUse
+
+    if (x< this%Xmin_check .or. x> this%Xmax_check) then
+        if (present(error)) then
+            error = -1
+            return
+        else
+            call this%Error('Spline x = %f out of range',x)
+        end if
+    end if
+    llo=1
+    call this%FindNext(x,llo, xlo, xhi)
+
+    end subroutine TSpline1D_FindValue
+
+
+    function TSpline1D_Value(this, x, error )
+    class(TSpline1D) :: this
+    real(sp_acc) :: TSpline1D_Value
+    real(sp_acc), intent(in) :: x
+    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
+    integer llo,lhi
+    real(sp_acc) a0,b0,ho,xlo,xhi
+
+    call this%FindValue(x, llo, xlo, xhi, error)
+
+    lhi=llo+1
+    ho=xhi - xlo
+    a0=(xhi-x)/ho
+    b0 = 1-a0
+    !TSpline1D_Value = a0*this%F(llo)+ b0*this%F(lhi)+((a0**3-a0)* this%ddF(llo) +(b0**3-b0)*this%ddF(lhi))*ho**2/6
+    TSpline1D_Value = b0*this%F(lhi)+a0*(this%F(llo) -b0*((a0+1)*this%ddF(llo) +(2-a0)*this%ddF(lhi))*ho**2/6)
+
+    end function TSpline1D_Value
+
+    ! Get derivative of spline
+    function TSpline1D_Derivative(this, x, error )
+    class(TSpline1D) :: this
+    real(sp_acc) :: TSpline1D_Derivative
+    real(sp_acc), intent(in) :: x
+    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
+    integer llo,lhi
+    real(sp_acc) a0,b0,ho,dely, xlo, xhi
+
+    call this%FindValue(x, llo, xlo, xhi, error)
+
+    lhi=llo+1
+    ho = xhi - xlo
+    a0=(xhi-x)/ho
+    b0 = 1-a0
+    dely=this%F(lhi)-this%F(llo)
+    TSpline1D_Derivative = dely/ho+ ((1-3*a0**2)*this%ddF(llo) + (3*b0**2-1)*this%ddF(lhi))*ho/6
+
+    end function TSpline1D_Derivative
+
+    subroutine TSpline1D_ArrayValue(this, x, y, error )
+    !Get array of values y(x), assuming x is monotonically increasing
+    class(TSpline1D) :: this
+    real(sp_acc), intent(in) :: x(1:)
+    real(sp_acc), intent(out) :: y(1:)
+    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
+    integer llo,lhi, i
+    real(sp_acc) a0,b0,ho, xlo, xhi
+
+    if (.not. this%Initialized) call this%FirstUse
+
+    if (x(1)< this%Xmin_check .or. x(size(x))> this%Xmax_check) then
+        if (present(error)) then
+            error = -1
+            return
+        else
+            call this%Error('Spline ArrayValue: out of range')
+        end if
+    end if
+
+    llo=1
+    do i=1, size(x)
+        call this%FindNext(x(i),llo, xlo, xhi)
+        lhi=llo+1
+        ho=xhi - xlo
+        a0=(xhi-x(i))/ho
+        b0=1-a0
+        y(i) = b0*this%F(lhi)+a0*(this%F(llo) -b0*((a0+1)*this%ddF(llo) +(2-a0)*this%ddF(lhi))*ho**2/6)
+    end do
+
+    end subroutine TSpline1D_ArrayValue
+
+    subroutine TSpline1D_IntRangeValue(this, xmin, xmax, y, error )
+    !Get array of values y(x), assuming x is monotonically increasing
+    class(TSpline1D) :: this
+    integer, intent(in) :: xmin, xmax
+    real(sp_acc), intent(out) :: y(xmin:)
+    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
+    integer llo,lhi, x
+    real(sp_acc) a0,b0,ho,xlo,xhi
+
+    if (.not. this%Initialized) call this%FirstUse
+
+    if (xmin< this%Xmin_check .or. xmax> this%Xmax_check ) then
+        if (present(error)) then
+            error = -1
+            return
+        else
+            call this%Error('Array spline: limits out of range ')
+        end if
+    end if
+
+    llo=1
+    do x=xmin, xmax
+        call this%FindNext(real(x,sp_acc),llo, xlo, xhi)
+        lhi=llo+1
+        ho=xhi-xlo
+        a0=(xhi-x)/ho
+        b0=1-a0
+        y(x) = b0*this%F(lhi)+a0*(this%F(llo) -b0*((a0+1)*this%ddF(llo) +(2-a0)*this%ddF(lhi))*ho**2/6)
+    end do
+
+    end subroutine TSpline1D_IntRangeValue
+
+    subroutine TSpline1D_Clear(this)
+    class(TSpline1D) :: this
+
+    call TInterpolator1D_Clear(this)
+    if (allocated(this%ddF)) deallocate(this%ddF)
+
+    end subroutine TSpline1D_Clear
+
+    !Irregular Cubic spline
+
+    subroutine TCubicSpline_InitForSize(this, n)
+    class(TCubicSpline) :: this
+    integer, intent(in) :: n
+
+    call TInterpolator1D_InitForSize(this,n)
+    allocate(this%X(this%n))
+
+    end subroutine TCubicSpline_InitForSize
+
+
+    subroutine TCubicSpline_Init(this, Xarr,  values, n, End1, End2 )
+    class(TCubicSpline) :: this
+    real(sp_acc), intent(in) :: Xarr(1:), values(1:)
     integer, intent(in), optional :: n
     real(sp_acc), intent(in), optional :: End1, End2
 
-    if (present(n)) then
-        W%n = n
-    else
-        W%n = size(Xarr)
-    end if
+    call this%InitForSize(PresentDefault(size(Xarr),n))
 
-    allocate(W%F(W%n))
-    W%F = values(1:W%n)
-    allocate(W%X(W%n))
-    W%X = Xarr(1:W%n)
-    call W%InitInterp(End1, End2)
+    this%F = values(1:this%n)
+    this%X = Xarr(1:this%n)
+    call this%InitInterp(End1, End2)
 
     end subroutine TCubicSpline_Init
 
-    subroutine TCubicSpline_InitInt(W, Xarr,  values, n, End1, End2 )
-    class(TCubicSpline) :: W
+    subroutine TCubicSpline_InitInt(this, Xarr,  values, n, End1, End2 )
+    class(TCubicSpline) :: this
     integer, intent(in) :: XArr(:)
     real(sp_acc), intent(in) :: values(:)
     real(sp_acc), allocatable :: XReal(:)
@@ -108,35 +408,29 @@
 
     allocate(XReal(size(XArr)))
     XReal =  XArr
-    call W%Init(XReal, values, n, End1, End2)
+    call this%Init(XReal, values, n, End1, End2)
 
     end subroutine TCubicSpline_InitInt
 
-    subroutine TCubicSpline_InitInterp(W,End1,End2)
-    class(TCubicSpline):: W
+    subroutine TCubicSpline_InitInterp(this,End1,End2)
+    class(TCubicSpline):: this
     real(sp_acc), intent(in), optional :: End1, End2
-    real(sp_acc) :: e1,e2
 
-    if (present(End1)) then
-        e1 = End1
-    else
-        e1 = SPLINE_DANGLE
-    end if
+    call this%TSpline1D%InitInterp(End1,End2)
 
-    if (present(End2)) then
-        e2 = End2
-    else
-        e2 = SPLINE_DANGLE
-    end if
-
-    allocate(W%ddF(W%n))
-    call spline(W%X,W%F,W%n,e1,e2,W%ddF)
-    W%Initialized = .true.
+    this%Xend_tol_interp = (this%X(2)-this%X(1))*this%fraction_tol
+    this%Xmin_interp = this%X(1)
+    this%Xmax_interp = this%X(this%n)
+    this%Xmin_check = this%X(1) - this%Xend_tol_interp
+    this%Xmax_check = this%X(this%n) + this%Xend_tol_interp
+    allocate(this%ddF(this%n))
+    call spline(this%X,this%F,this%n,this%start_bc,this%end_bc,this%ddF)
+    this%Initialized = .true.
 
     end subroutine TCubicSpline_InitInterp
 
-    subroutine TCubicSpline_InitFromFile(W, Filename, xcol, ycol)
-    class(TCubicSpline):: W
+    subroutine TCubicSpline_InitFromFile(this, Filename, xcol, ycol)
+    class(TCubicSpline):: this
     character(LEN=*), intent(in) :: Filename
     integer, intent(in), optional :: xcol, ycol
     integer :: ixcol=1,iycol=2
@@ -159,186 +453,198 @@
             if (.not. F%ReadLineSkipEmptyAndComments(InLine)) exit
 
             read(InLine,*, iostat=status) tmp
-            if (status/=0) call W%Error('Error reading line: '//trim(InLine))
+            if (status/=0) call this%Error('Error reading line: '//trim(InLine))
 
             nx=nx+1
             if (parse==2) then
-                W%X(nx) = tmp(ixcol)
-                W%F(nx) = tmp(iycol)
+                this%X(nx) = tmp(ixcol)
+                this%F(nx) = tmp(iycol)
             endif
         end do
 
         if (parse==2) exit
 
-        if (nx<2) call W%Error('not enough values to interpolate')
-        W%n = nx
-        allocate(W%X(W%n))
-        allocate(W%F(W%n))
+        if (nx<2) call this%Error('not enough values to interpolate')
+        call this%InitForSize(nx)
         status=0
         call F%Rewind()
     end do
 
     call F%Close()
 
-    call W%InitInterp()
+    call this%InitInterp()
 
     end subroutine TCubicSpline_InitFromFile
 
+    subroutine TCubicSpline_Clear(this)
+    class(TCubicSpline) :: this
 
-    subroutine TCubicSpline_Free(W)
-    Type(TCubicSpline) :: W
+    call this%TSpline1D%Clear()
+    if (allocated(this%X)) deallocate(this%X)
 
-    if (allocated(W%X)) then
-        deallocate(W%X)
-        deallocate(W%F)
-        deallocate(W%ddF)
-    end if
-    W%Initialized = .false.
+    end subroutine TCubicSpline_Clear
+
+    subroutine TCubicSpline_Free(this)
+    Type(TCubicSpline) :: this
+
+    call this%Clear()
 
     end subroutine TCubicSpline_Free
 
-    function TCubicSpline_Value(W, x, error )
-    class(TCubicSpline) :: W
-    real(sp_acc) :: TCubicSpline_Value
+    subroutine TCubicSpline_FindNext(this, x, llo, xlo, xhi)
+    !No error checking, assumes x>= x at point point llo, updating llo
+    class(TCubicSpline) :: this
     real(sp_acc), intent(in) :: x
-    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
-    integer llo,lhi
-    real(sp_acc) a0,b0,ho
+    integer, intent(inout) :: llo
+    real(sp_acc), intent(out) :: xlo, xhi
 
-    if (.not. W%Initialized) call W%FirstUse
-
-    if (x< W%X(1) .or. x> W%X(W%n)) then
-        if (present(error)) then
-            error = -1
-            TCubicSpline_Value=0
-            return
-        else
-            write (*,*) 'TCubicSpline_Value: out of range ', x
-            stop
-        end if
-    end if
-
-    llo=1
-    do while (W%X(llo+1) < x)  !could do binary search here if large
+    do while (llo < this%n .and. this%X(llo+1) < x)  !could do binary search here if large
         llo = llo + 1
     end do
+    xlo = this%X(llo)
+    xhi = this%X(llo+1)
 
-    lhi=llo+1
-    ho=W%X(lhi)-W%X(llo)
-    a0=(W%X(lhi)-x)/ho
-    b0=(x-W%X(llo))/ho
-    TCubicSpline_Value = a0*W%F(llo)+ b0*W%F(lhi)+((a0**3-a0)* W%ddF(llo) +(b0**3-b0)*W%ddF(lhi))*ho**2/6
+    end subroutine TCubicSpline_FindNext
 
-    end function TCubicSpline_Value
+    subroutine TCubicSpline_LoadState(this,F)
+    class(TCubicSpline) :: this
+    class(TFileStream) :: F
 
-    subroutine TCubicSpline_ArrayValue(W, x, y, error )
-    !Get array of values y(x), assuming x is monotonically increasing
-    class(TCubicSpline) :: W
-    real(sp_acc), intent(in) :: x(1:)
-    real(sp_acc), intent(out) :: y(1:)
-    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
-    integer llo,lhi, i
-    real(sp_acc) a0,b0,ho
-
-    if (.not. W%Initialized) call W%FirstUse
-
-    if (x(1)< W%X(1) .or. x(size(x))> W%X(W%n)) then
-        if (present(error)) then
-            error = -1
-            return
-        else
-            write (*,*) 'TCubicSpline_Value: out of range ', x
-            stop
-        end if
+    call TInterpolator1D_LoadState(this,F)
+    if (this%n>0) then
+        call F%Read(this%X)
+        call F%Read(this%start_bc, this%end_bc)
+        call this%InitInterp(this%start_bc, this%end_bc)
     end if
 
-    llo=1
-    do i=1, size(x)
-        do while (W%X(llo+1) < x(i))  !could do binary search here if large
-            llo = llo + 1
-        end do
+    end subroutine TCubicSpline_LoadState
 
-        lhi=llo+1
-        ho=W%X(lhi)-W%X(llo)
-        a0=(W%X(lhi)-x(i))/ho
-        b0=(x(i)-W%X(llo))/ho
-        y(i) = a0*W%F(llo)+ b0*W%F(lhi)+((a0**3-a0)* W%ddF(llo) +(b0**3-b0)*W%ddF(lhi))*ho**2/6
-    end do
+    subroutine TCubicSpline_SaveState(this,F)
+    class(TCubicSpline) :: this
+    class(TFileStream) :: F
 
-    end subroutine TCubicSpline_ArrayValue
+    call TInterpolator1D_SaveState(this,F)
+    if (this%n==0) return
+    call F%Write(this%X)
+    call F%Write(this%start_bc, this%end_bc)
 
-    subroutine TCubicSpline_IntRangeValue(W, xmin, xmax, y, error )
-    !Get array of values y(x), assuming x is monotonically increasing
-    class(TCubicSpline) :: W
-    integer, intent(in) :: xmin, xmax
-    real(sp_acc), intent(out) :: y(xmin:)
-    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
-    integer llo,lhi, x
-    real(sp_acc) a0,b0,ho
+    end subroutine TCubicSpline_SaveState
 
-    if (.not. W%Initialized) call W%FirstUse
+    !Cubic spline on regular x
 
-    if (xmin< W%X(1) .or. xmax> W%X(W%n)) then
-        if (present(error)) then
-            error = -1
-            return
-        else
-            write (*,*) 'TCubicSpline_Value: out of range ', x
-            stop
-        end if
+    subroutine TRegularCubicSpline_Init(this, xmin, xmax, n, values, End1, End2 )
+    class(TRegularCubicSpline) :: this
+    real(sp_acc), intent(in) :: xmin, xmax
+    integer, intent(in) :: n
+    real(sp_acc), intent(in), optional :: values(1:)
+    real(sp_acc), intent(in), optional :: End1, End2
+
+    if (xmax < xmin) call this%Error('TRegularCubicSpline_Init xmax (%f) < xmin (%f)',xmax, xmin)
+    if (n<2) call this%Error('TRegularCubicSpline_Init needs at at least 2 points')
+    call this%InitForSize(n)
+    this%xmin =xmin
+    this%xmax =xmax
+    this%delta_x = (xmax - xmin)/(n-1)
+    this%xmin_interp = xmin
+    this%xmax_interp = xmax
+    if (present(values)) then
+        this%F = values(1:this%n)
+        call this%InitInterp(End1, End2)
     end if
 
-    llo=1
-    do x=xmin, xmax
-        do while (W%X(llo+1) < x)  !could do binary search here if large
-            llo = llo + 1
-        end do
+    end subroutine TRegularCubicSpline_Init
 
-        lhi=llo+1
-        ho=W%X(lhi)-W%X(llo)
-        a0=(W%X(lhi)-x)/ho
-        b0=(x-W%X(llo))/ho
-        y(x) = a0*W%F(llo)+ b0*W%F(lhi)+((a0**3-a0)* W%ddF(llo) +(b0**3-b0)*W%ddF(lhi))*ho**2/6
-    end do
+    subroutine TRegularCubicSpline_InitInterp(this,End1,End2)
+    class(TRegularCubicSpline):: this
+    real(sp_acc), intent(in), optional :: End1, End2
 
-    end subroutine TCubicSpline_IntRangeValue
+    call this%TSpline1D%InitInterp(End1,End2)
 
-    ! Get derivative of spline
-    function TCubicSpline_Derivative(W, x, error )
-    class(TCubicSpline) :: W
-    real(sp_acc) :: TCubicSpline_Derivative
+    this%Xend_tol_interp = this%delta_x*this%fraction_tol
+    this%xmin_check = this%xmin_interp - this%Xend_tol_interp
+    this%xmax_check = this%xmax_interp + this%Xend_tol_interp
+    allocate(this%ddF(this%n))
+    call regular_spline(this%delta_x,this%F,this%n,this%start_bc,this%end_bc,this%ddF)
+    this%Initialized = .true.
+
+    end subroutine TRegularCubicSpline_InitInterp
+
+
+    subroutine TRegularCubicSpline_FindNext(this, x, llo, xlo, xhi)
+    class(TRegularCubicSpline) :: this
+    real(sp_acc), intent(in) :: x
+    integer, intent(inout) :: llo
+    real(sp_acc), intent(out) :: xlo, xhi
+
+    llo = min(max(0,int((x - this%xmin_interp)/this%delta_x)), this%n-2)
+    xlo = this%xmin_interp + llo*this%delta_x
+    llo = llo+1
+    xhi = xlo + this%delta_x
+
+    end subroutine TRegularCubicSpline_FindNext
+
+    subroutine TRegularCubicSpline_LoadState(this,F)
+    class(TRegularCubicSpline) :: this
+    class(TFileStream) :: F
+
+    call TInterpolator1D_LoadState(this,F)
+    call F%Read(this%xmin, this%xmax, this%delta_x)
+    this%delta_x = (this%xmax - this%xmin)/(this%n-1)
+    this%xmin_interp = this%xmin
+    this%xmax_interp = this%xmax
+
+    end subroutine TRegularCubicSpline_LoadState
+
+    subroutine TRegularCubicSpline_SaveState(this,F)
+    class(TRegularCubicSpline) :: this
+    class(TFileStream) :: F
+
+    call TInterpolator1D_SaveState(this,F)
+    call F%Write(this%xmin, this%xmax, this%delta_x)
+
+    end subroutine TRegularCubicSpline_SaveState
+
+    !Cubic spline on with regular spacing in log(x)
+
+    subroutine TLogRegularCubicSpline_Init(this, xmin, xmax, n, values, End1, End2 )
+    class(TLogRegularCubicSpline) :: this
+    real(sp_acc), intent(in) :: xmin, xmax
+    integer, intent(in) :: n
+    real(sp_acc), intent(in), optional :: values(1:)
+    real(sp_acc), intent(in), optional :: End1, End2
+
+    if (xmin < 0) call this%Error('TLogRegularCubicSpline_Init log with xmin (%f) <0', xmin)
+
+    call TRegularCubicSpline_Init(this,xmin,xmax,n)
+    this%xmin_interp = log(xmin)
+    this%xmax_interp = log(xmax)
+    this%delta_x = (this%xmax_interp - this%xmin_interp)/(n-1)
+    if (present(values)) then
+        this%F = values(1:this%n)
+        call this%InitInterp(End1, End2)
+    end if
+
+    end subroutine TLogRegularCubicSpline_Init
+
+    function TLogRegularCubicSpline_Value(this, x, error )
+    class(TLogRegularCubicSpline) :: this
+    real(sp_acc) :: TLogRegularCubicSpline_Value
     real(sp_acc), intent(in) :: x
     integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
-    integer llo,lhi
-    real(sp_acc) a0,b0,ho,dely
 
-    if (.not. W%Initialized) call W%FirstUse
+    TLogRegularCubicSpline_Value = TSpline1D_Value(this, log(x), error)
 
-    if (x< W%X(1) .or. x> W%X(W%n)) then
-        if (present(error)) then
-            error = -1
-            TCubicSpline_Derivative=0
-            return
-        else
-            write (*,*) 'TCubicSpline_Derivative: out of range ', x
-            stop
-        end if
-    end if
+    end function TLogRegularCubicSpline_Value
 
-    llo=1
-    do while (W%X(llo+1) < x)  !could do binary search here if large
-        llo = llo + 1
-    end do
+    function TLogRegularCubicSpline_Derivative(this, x, error )
+    class(TLogRegularCubicSpline) :: this
+    real(sp_acc) :: TLogRegularCubicSpline_Derivative
+    real(sp_acc), intent(in) :: x
+    integer, intent(inout), optional :: error !initialize to zero outside, changed if bad
 
-    lhi=llo+1
-    ho=W%X(lhi)-W%X(llo)
-    a0=(W%X(lhi)-x)/ho
-    b0=(x-W%X(llo))/ho
-    dely=W%F(lhi)-W%F(llo)
-    TCubicSpline_Derivative = dely/ho-(3.d0*a0**2-1.0d0)*ho*W%ddF(llo)/6.0d0 + &
-    (3.d0*b0**2-1.0d0)*ho*W%ddF(lhi)/6.0d0
+    TLogRegularCubicSpline_Derivative = TSpline1D_Derivative(this, log(x), error)/x
 
-    end function TCubicSpline_Derivative
+    end function TLogRegularCubicSpline_Derivative
 
 
     !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -390,46 +696,79 @@
     end do
     end subroutine spline
 
+    subroutine regular_spline(delta,y,n,d11,d1n,d2)
+    integer, intent(in) :: n
+    real(sp_acc), intent(in) :: delta, y(n), d11, d1n
+    real(sp_acc), intent(out) :: d2(n)
+    integer i
+    real(sp_acc) xp,qn,un,d1l,d1r
+    real(sp_acc), allocatable :: u(:)
 
-    subroutine TInterpGrid2D_InitInterp(W)
-    class(TInterpGrid2D):: W
+    allocate(u(n-1))
 
-    allocate(W%Wk(3,W%NX,W%NY))
-    CALL rgpd3p(W%nx, W%ny, W%x, W%y, W%z, W%wk)
-    W%Initialized = .true.
+    d1r= (y(2)-y(1))/delta
+    if (d11==SPLINE_DANGLE) then
+        d2(1)=0._sp_acc
+        u(1)=0._sp_acc
+    else
+        d2(1)=-0.5_sp_acc
+        u(1)=(3._sp_acc/delta)*(d1r-d11)
+    endif
+
+    do i=2,n-1
+        d1l=d1r
+        d1r=(y(i+1)-y(i))/delta
+        xp=1/(d2(i-1)/2+2._sp_acc)
+        d2(i)=-xp/2
+        u(i)=(3*(d1r-d1l)/delta  -u(i-1)/2)*xp
+    end do
+    d1l=d1r
+
+    if (d1n==SPLINE_DANGLE) then
+        qn=0._sp_acc
+        un=0._sp_acc
+    else
+        qn=0.5_sp_acc
+        un=(3._sp_acc/delta)*(d1n-d1l)
+    endif
+
+    d2(n)=(un-qn*u(n-1))/(qn*d2(n-1)+1._sp_acc)
+    do i=n-1,1,-1
+        d2(i)=d2(i)*d2(i+1)+u(i)
+    end do
+
+    end subroutine regular_spline
+
+
+    subroutine TInterpGrid2D_InitInterp(this)
+    class(TInterpGrid2D):: this
+
+    allocate(this%Wk(3,this%NX,this%NY))
+    CALL rgpd3p(this%nx, this%ny, this%x, this%y, this%z, this%wk)
+    this%Initialized = .true.
 
     end subroutine TInterpGrid2D_InitInterp
 
     !F2003 wrappers by AL, 2013
-    subroutine TInterpGrid2D_Init(W, x, y, z)
-    class(TInterpGrid2D):: W
+    subroutine TInterpGrid2D_Init(this, x, y, z)
+    class(TInterpGrid2D):: this
     REAL(GI), INTENT(IN)      :: x(:)
     REAL(GI), INTENT(IN)      :: y(:)
     REAL(GI), INTENT(IN)      :: z(:,:)
 
-    W%nx = size(x)
-    W%ny = size(y)
-    allocate(W%x(W%nx), source = x)
-    allocate(W%y(W%ny), source = y)
-    allocate(W%z(size(z,1),size(z,2)), source = z)
+    call this%Clear()
+    this%nx = size(x)
+    this%ny = size(y)
+    allocate(this%x(this%nx), source = x)
+    allocate(this%y(this%ny), source = y)
+    allocate(this%z(size(z,1),size(z,2)), source = z)
 
-    call W%InitInterp()
+    call this%InitInterp()
 
     end subroutine TInterpGrid2D_Init
 
-
-    subroutine TInterpGrid2D_error(W,S)
-    class(TInterpGrid2D):: W
-    character(LEN=*), intent(in) :: S
-
-    write(*,*) 'InterGrid2D Error: '//trim(S)
-    stop
-
-    end subroutine TInterpGrid2D_error
-
-
-    subroutine TInterpGrid2D_InitFromFile(W, Filename, xcol, ycol, zcol)
-    class(TInterpGrid2D):: W
+    subroutine TInterpGrid2D_InitFromFile(this, Filename, xcol, ycol, zcol)
+    class(TInterpGrid2D):: this
     character(LEN=*), intent(in) :: Filename
     integer, intent(in), optional :: xcol, ycol, zcol
     integer :: ixcol=1,iycol=2,izcol=3
@@ -455,80 +794,88 @@
         nx=0
         do while(F%ReadLineSkipEmptyAndComments(InLine))
 
-        read(InLine,*, iostat=status) tmp
-        if (status/=0) call W%Error('Error reading line: '//trim(InLine))
+            read(InLine,*, iostat=status) tmp
+            if (status/=0) call this%Error('Error reading line: '//trim(InLine))
 
-        if (first .or. tmp(iycol)/=lasty) then
-            lasty=tmp(iycol)
-            ny=ny+1
-            nx=0
-            first = .false.
-        end if
+            if (first .or. tmp(iycol)/=lasty) then
+                lasty=tmp(iycol)
+                ny=ny+1
+                nx=0
+                first = .false.
+            end if
 
-        nx=nx+1
-        if (parse==2) then
-            if (ny==1) then
-                W%x(nx) = tmp(ixcol)
-            else
-                if (tmp(ixcol)/=W%x(nx)) call W%Error('Non-grid x values')
-            end if
-            if (nx==1) then
-                W%y(ny) = tmp(iycol)
-            else
-                if (tmp(iycol)/=W%y(ny))call W%Error('Non-grid y values')
-            end if
-            W%z(nx, ny) = tmp(izcol)
-        endif
+            nx=nx+1
+            if (parse==2) then
+                if (ny==1) then
+                    this%x(nx) = tmp(ixcol)
+                else
+                    if (tmp(ixcol)/=this%x(nx)) call this%Error('Non-grid x values')
+                end if
+                if (nx==1) then
+                    this%y(ny) = tmp(iycol)
+                else
+                    if (tmp(iycol)/=this%y(ny))call this%Error('Non-grid y values')
+                end if
+                this%z(nx, ny) = tmp(izcol)
+            endif
         end do
 
         if (parse==2) exit
 
-        if (nx<2 .or. ny<2) call W%Error('not enough values to interpolate')
-        W%nx = nx
-        W%ny = ny
-        allocate(W%x(W%nx))
-        allocate(W%y(W%ny))
-        allocate(W%z(nx,ny))
+        if (nx<2 .or. ny<2) call this%Error('not enough values to interpolate')
+        this%nx = nx
+        this%ny = ny
+        allocate(this%x(this%nx))
+        allocate(this%y(this%ny))
+        allocate(this%z(nx,ny))
         status=0
         call F%Rewind()
     end do
 
     call F%Close()
 
-    call W%InitInterp()
+    call this%InitInterp()
 
     end subroutine TInterpGrid2D_InitFromFile
 
-    subroutine TInterpGrid2D_Free(W)
-    Type(TInterpGrid2D):: W
+    subroutine TInterpGrid2D_Clear(this)
+    class(TInterpGrid2D):: this
 
-    if (allocated(W%Wk)) then
-        deallocate(W%x)
-        deallocate(W%y)
-        deallocate(W%Wk)
-        deallocate(W%z)
+    if (allocated(this%Wk)) then
+        deallocate(this%x)
+        deallocate(this%y)
+        deallocate(this%Wk)
+        deallocate(this%z)
     end if
-    W%Initialized = .false.
+    this%Initialized = .false.
+
+    end subroutine TInterpGrid2D_Clear
+
+
+    subroutine TInterpGrid2D_Free(this)
+    Type(TInterpGrid2D):: this
+
+    call this%Clear()
 
     end subroutine TInterpGrid2D_Free
 
-    function TInterpGrid2D_Value(W,x,y,error) result (res)
+    function TInterpGrid2D_Value(this,x,y,error) result (res)
     !Z matrix not stored internally to save mem, so must pass again
-    class(TInterpGrid2D) :: W
+    class(TInterpGrid2D) :: this
     real(GI) res, z(1), xx(1),yy(1)
     real(GI), intent(in) :: x,y
     integer, intent(inout), optional :: error
 
     xx(1)=x
     yy(1)=y
-    call W%Values(1,xx,yy,z,error)
+    call this%Values(1,xx,yy,z,error)
     res = z(1)
 
     end function TInterpGrid2D_Value
 
-    subroutine TInterpGrid2D_Values(W, nip, x,y,z, error)
+    subroutine TInterpGrid2D_Values(this, nip, x,y,z, error)
     !Z matrix not stored internally to save mem, so must pass again
-    class(TInterpGrid2D) :: W
+    class(TInterpGrid2D) :: this
     integer, intent(in) :: nip
     real(GI), intent(out):: z(*)
     real(GI), intent(in) :: x(*),y(*)
@@ -536,13 +883,13 @@
     integer md,ier
 
     md=2
-    if (.not. W%Initialized)  call W%FirstUse
+    if (.not. this%Initialized)  call this%FirstUse
 
-    call rgbi3p(W%Wk,md, W%nx, W%ny, W%x, W%y, W%z, nip, x, y, z, ier)
+    call rgbi3p(this%Wk,md, this%nx, this%ny, this%x, this%y, this%z, nip, x, y, z, ier)
     if (present(error)) then
         error=ier
     elseif (ier/=0) then
-        call W%Error('error interpolating value')
+        call this%Error('error interpolating value')
     end if
 
     end subroutine TInterpGrid2D_Values
@@ -683,7 +1030,7 @@
 
         ! Calculates the z values at the output points.
         CALL rgplnl(nxd, nyd, xd, yd, zd, wk, nipi, xi(iip), yi(iip), inxi, inyi, &
-        zi(iip))
+            zi(iip))
     END DO
     RETURN
 
@@ -709,9 +1056,9 @@
 9000 FORMAT (/' *** RGBI3P Error 1: NXD = 1 or less')
 9010 FORMAT (/' *** RGBI3P Error 2: NYD = 1 or less')
 9020 FORMAT (/' *** RGBI3P Error 3: Identical XD values or',  &
-    ' XD values out of sequence'/ '    IX =', i6, ',  XD(IX) =', e11.3)
+        ' XD values out of sequence'/ '    IX =', i6, ',  XD(IX) =', e11.3)
 9030 FORMAT (/' *** RGBI3P Error 4: Identical YD values or',  &
-    ' YD values out of sequence',/,'    IY =',i6,',  YD(IY) =', e11.3)
+        ' YD values out of sequence',/,'    IY =',i6,',  YD(IY) =', e11.3)
 9040 FORMAT (/' *** RGBI3P Error 5: NIP = 0 or less')
 9050 FORMAT ('    NXD =', i5,',  NYD =', i5,',  NIP =', i5/)
     END SUBROUTINE rgbi3p
@@ -866,7 +1213,7 @@
 
             ! Calculates the z values at the output-grid points.
             CALL rgplnl(nxd, nyd, xd, yd, zd, wk, nipi, xi(ixi), yii, inxi, inyi,  &
-            zi(ixi,iyi))
+                zi(ixi,iyi))
         END DO
     END DO
     RETURN
@@ -896,9 +1243,9 @@
 9000 FORMAT (/' *** RGSF3P Error 1: NXD = 1 or less')
 9010 FORMAT (/' *** RGSF3P Error 2: NYD = 1 or less')
 9020 FORMAT (/' *** RGSF3P Error 3: Identical XD values or',  &
-    ' XD values out of sequence',/,'    IX =',i6,',  XD(IX) =', e11.3)
+        ' XD values out of sequence',/,'    IX =',i6,',  XD(IX) =', e11.3)
 9030 FORMAT (/' *** RGSF3P Error 4: Identical YD values or',  &
-    ' YD values out of sequence',/,'    IY =',i6,',  YD(IY) =', e11.3)
+        ' YD values out of sequence',/,'    IY =',i6,',  YD(IY) =', e11.3)
 9040 FORMAT (/' *** RGSF3P Error 5: NXI = 0 or less')
 9050 FORMAT (/' *** RGSF3P Error 6: NYI = 0 or less')
 9060 FORMAT ('    NXD =', i5, ',  NYD =', i5, ',  NXI =', i5,',  NYI =', i5 /)
@@ -929,7 +1276,7 @@
     REAL(GI)              :: fn_val
 
     fn_val = ((zz2-zz0)*(xx3-xx1)/xx2 - (zz1-zz0)*(xx3-xx2)/xx1) *  &
-    (xx3/(xx2-xx1)) + zz0
+        (xx3/(xx2-xx1)) + zz0
     RETURN
     END FUNCTION z3f
 
@@ -980,21 +1327,21 @@
     !     ..
     !     .. Local Scalars ..
     REAL(GI) :: b00, b00x, b00y, b01, b10, b11, cx1, cx2, cx3, cy1, cy2,  &
-    cy3, disf, dnm, dz00, dz01, dz02, dz03, dz10, dz11, dz12,  &
-    dz13, dz20, dz21, dz22, dz23, dz30, dz31, dz32, dz33,  &
-    dzx10, dzx20, dzx30, dzxy11, dzxy12, dzxy13, dzxy21,  &
-    dzxy22, dzxy23, dzxy31, dzxy32, dzxy33, dzy01, dzy02,  &
-    dzy03, epsln, pezx, pezxy, pezy, smpef, smpei, smwtf,  &
-    smwti, sx, sxx, sxxy, sxxyy, sxy, sxyy, sxyz, sxz, sy, syy,  &
-    syz, sz, volf, wt, x0, x1, x2, x3, y0, y1, y2,  &
-    y3, z00, z01, z02, z03, z10, z11, z12, z13, z20, z21, z22,  &
-    z23, z30, z31, z32, z33, zxdi, zxydi, zydi
+        cy3, disf, dnm, dz00, dz01, dz02, dz03, dz10, dz11, dz12,  &
+        dz13, dz20, dz21, dz22, dz23, dz30, dz31, dz32, dz33,  &
+        dzx10, dzx20, dzx30, dzxy11, dzxy12, dzxy13, dzxy21,  &
+        dzxy22, dzxy23, dzxy31, dzxy32, dzxy33, dzy01, dzy02,  &
+        dzy03, epsln, pezx, pezxy, pezy, smpef, smpei, smwtf,  &
+        smwti, sx, sxx, sxxy, sxxyy, sxy, sxyy, sxyz, sxz, sy, syy,  &
+        syz, sz, volf, wt, x0, x1, x2, x3, y0, y1, y2,  &
+        y3, z00, z01, z02, z03, z10, z11, z12, z13, z20, z21, z22,  &
+        z23, z30, z31, z32, z33, zxdi, zxydi, zydi
     INTEGER :: ipex, ipey, ix0, ix1, ix2, ix3, iy0, iy1, iy2, iy3, nx0, ny0
     !     ..
     !     .. Local Arrays ..
     REAL(GI)    :: b00xa(4), b00ya(4), b01a(4), b10a(4), cxa(3,4), cya(3,4),   &
-    sxa(4), sxxa(4), sya(4), syya(4), xa(3,4), ya(3,4),   &
-    z0ia(3,4), zi0a(3,4)
+        sxa(4), sxxa(4), sya(4), syya(4), xa(3,4), ya(3,4),   &
+        z0ia(3,4), zi0a(3,4)
 
     INTEGER, parameter :: idlt(3,4) = RESHAPE([-3, -2, -1, -2, -1, 1,-1, 1,2, 1 ,2, 3 ], [ 3, 4 ] )
     !AL Jun 14: Fixed F90 translation
@@ -1024,7 +1371,7 @@
                 ix2 = ix0 + idlt(2,ipex)
                 ix3 = ix0 + idlt(3,ipex)
                 IF ((ix1 < 1) .OR. (ix2 < 1) .OR. (ix3 < 1) .OR.  &
-                (ix1 > nx0) .OR. (ix2 > nx0) .OR. (ix3 > nx0)) CYCLE
+                    (ix1 > nx0) .OR. (ix2 > nx0) .OR. (ix3 > nx0)) CYCLE
                 ! Selects and/or supplements the x and z values.
                 x1 = xd(ix1) - x0
                 z10 = zd(ix1,iy0)
@@ -1123,7 +1470,7 @@
                 iy2 = iy0 + idlt(2,ipey)
                 iy3 = iy0 + idlt(3,ipey)
                 IF ((iy1 < 1) .OR. (iy2 < 1) .OR. (iy3 < 1) .OR.  &
-                (iy1 > ny0) .OR. (iy2 > ny0) .OR. (iy3 > ny0)) CYCLE
+                    (iy1 > ny0) .OR. (iy2 > ny0) .OR. (iy3 > ny0)) CYCLE
                 ! Selects and/or supplements the y and z values.
                 y1 = yd(iy1) - y0
                 z01 = zd(ix0,iy1)
@@ -1220,7 +1567,7 @@
                 ix2 = ix0 + idlt(2,ipex)
                 ix3 = ix0 + idlt(3,ipex)
                 IF ((ix1 < 1) .OR. (ix2 < 1) .OR. (ix3 < 1) .OR.  &
-                (ix1 > nx0) .OR. (ix2 > nx0) .OR. (ix3 > nx0)) CYCLE
+                    (ix1 > nx0) .OR. (ix2 > nx0) .OR. (ix3 > nx0)) CYCLE
                 ! Retrieves the necessary values for estimating zxy in the x direction.
                 x1 = xa(1,ipex)
                 x2 = xa(2,ipex)
@@ -1242,7 +1589,7 @@
                     iy2 = iy0 + idlt(2,ipey)
                     iy3 = iy0 + idlt(3,ipey)
                     IF ((iy1 < 1) .OR. (iy2 < 1) .OR. (iy3 < 1) .OR. (iy1 > ny0) .OR.  &
-                    (iy2 > ny0) .OR. (iy3 > ny0)) CYCLE
+                        (iy2 > ny0) .OR. (iy3 > ny0)) CYCLE
                     ! Retrieves the necessary values for estimating zxy in the y direction.
                     y1 = ya(1,ipey)
                     y2 = ya(2,ipey)
@@ -1337,8 +1684,8 @@
                     dzxy32 = (z32-z30-z02+z00)/ (x3*y2)
                     dzxy33 = (z33-z30-z03+z00)/ (x3*y3)
                     pezxy = cx1* (cy1*dzxy11+cy2*dzxy12+cy3*dzxy13) +  &
-                    cx2* (cy1*dzxy21+cy2*dzxy22+cy3*dzxy23) +  &
-                    cx3* (cy1*dzxy31+cy2*dzxy32+cy3*dzxy33)
+                        cx2* (cy1*dzxy21+cy2*dzxy22+cy3*dzxy23) +  &
+                        cx3* (cy1*dzxy31+cy2*dzxy32+cy3*dzxy33)
                     ! Calculates the volatility factor and distance factor in the x
                     ! and y directions for the primary estimate of zxy.
                     b00 = (b00x+b00y)/2.0
@@ -1347,7 +1694,7 @@
                     sxyy = sx*syy
                     sxxyy = sxx*syy
                     sxyz = x1* (y1*z11+y2*z12+y3*z13) + x2* (y1*z21+y2*z22+y3*z23) +  &
-                    x3* (y1*z31+y2*z32+y3*z33)
+                        x3* (y1*z31+y2*z32+y3*z33)
                     b11 = (sxyz-b00*sxy-b10*sxxy-b01*sxyy)/sxxyy
                     dz00 = z00 - b00
                     dz01 = z01 - (b00+b01*y1)
@@ -1366,14 +1713,14 @@
                     dz32 = z32 - (b00+b01*y2+x3* (b10+b11*y2))
                     dz33 = z33 - (b00+b01*y3+x3* (b10+b11*y3))
                     volf = dz00**2 + dz01**2 + dz02**2 + dz03**2 +  &
-                    dz10**2 + dz11**2 + dz12**2 + dz13**2 +  &
-                    dz20**2 + dz21**2 + dz22**2 + dz23**2 +  &
-                    dz30**2 + dz31**2 + dz32**2 + dz33**2
+                        dz10**2 + dz11**2 + dz12**2 + dz13**2 +  &
+                        dz20**2 + dz21**2 + dz22**2 + dz23**2 +  &
+                        dz30**2 + dz31**2 + dz32**2 + dz33**2
                     disf = sxx*syy
                     ! Calculates EPSLN.
                     epsln = (z00**2 + z01**2 + z02**2 + z03**2 + z10**2 +   &
-                    z11**2 + z12**2 + z13**2 + z20**2 + z21**2 + z22**2 +   &
-                    z23**2 + z30**2 + z31**2 + z32**2 + z33**2)* 1.0E-12
+                        z11**2 + z12**2 + z13**2 + z20**2 + z21**2 + z22**2 +   &
+                        z23**2 + z30**2 + z31**2 + z32**2 + z33**2)* 1.0E-12
                     ! Accumulates the weighted primary estimates of zxy and their weights.
                     IF (volf > epsln) THEN
                         ! - For a finite weight.
@@ -1614,11 +1961,11 @@
 
     !     ..
     !     .. Local Scalars ..
-    REAL(GI) :: a, b, c, W, dx, dxsq, dy, dysq, p00, p01, p02, p03, p10, p11,  &
-    p12, p13, p20, p21, p22, p23, p30, p31, p32, p33, q0, q1, q2,  &
-    q3, u, v, x0, xii, y0, yii, z00, z01, z0dx, z0dy, z10, z11,  &
-    z1dx, z1dy, zdxdy, zii, zx00, zx01, zx0dy, zx10, zx11,  &
-    zx1dy, zxy00, zxy01, zxy10, zxy11, zy00, zy01, zy0dx, zy10, zy11, zy1dx
+    REAL(GI) :: a, b, c, this, dx, dxsq, dy, dysq, p00, p01, p02, p03, p10, p11,  &
+        p12, p13, p20, p21, p22, p23, p30, p31, p32, p33, q0, q1, q2,  &
+        q3, u, v, x0, xii, y0, yii, z00, z01, z0dx, z0dy, z10, z11,  &
+        z1dx, z1dy, zdxdy, zii, zx00, zx01, zx0dy, zx10, zx11,  &
+        zx1dy, zxy00, zxy01, zxy10, zxy11, zy00, zy01, zy0dx, zy10, zy11, zy1dx
     INTEGER :: iip, ixd0, ixd1, ixdi, ixdipv, iyd0, iyd1, iydi, iydipv
     !     ..
     !     .. Intrinsic Functions ..
@@ -1690,7 +2037,7 @@
                 a = zdxdy - zx0dy - zy0dx + zxy00
                 b = zx1dy - zx0dy - zxy10 + zxy00
                 c = zy1dx - zy0dx - zxy01 + zxy00
-                W = zxy11 - zxy10 - zxy01 + zxy00
+                this = zxy11 - zxy10 - zxy01 + zxy00
                 p00 = z00
                 p01 = zy00
                 p02 = (2.0* (z0dy-zy00)+z0dy-zy01)/dy
@@ -1701,12 +2048,12 @@
                 p13 = (-2.0*zx0dy+zxy01+zxy00)/dysq
                 p20 = (2.0* (z0dx-zx00)+z0dx-zx10)/dx
                 p21 = (2.0* (zy0dx-zxy00)+zy0dx-zxy10)/dx
-                p22 = (3.0* (3.0*a-b-c)+W)/ (dx*dy)
-                p23 = (-6.0*a+2.0*b+3.0*c-W)/ (dx*dysq)
+                p22 = (3.0* (3.0*a-b-c)+this)/ (dx*dy)
+                p23 = (-6.0*a+2.0*b+3.0*c-this)/ (dx*dysq)
                 p30 = (-2.0*z0dx+zx10+zx00)/dxsq
                 p31 = (-2.0*zy0dx+zxy10+zxy00)/dxsq
-                p32 = (-6.0*a+3.0*b+2.0*c-W)/ (dxsq*dy)
-                p33 = (2.0* (2.0*a-b-c)+W)/ (dxsq*dysq)
+                p32 = (-6.0*a+3.0*b+2.0*c-this)/ (dxsq*dy)
+                p33 = (2.0* (2.0*a-b-c)+this)/ (dxsq*dysq)
             END IF
 
             ! Evaluates the polynomial.
@@ -1722,91 +2069,91 @@
             ! Case 2.  When the rectangle is inside the data area in the x
             ! direction but outside in the y direction.
         ELSE IF ((ixdi > 0.AND.ixdi < nxd) .AND.  &
-        (iydi <= 0.OR.iydi >= nyd)) THEN
-            ! Retrieves the z and partial derivative values at the other
-            ! vertex of the semi-infinite rectangle.
-            IF (ixdi /= ixdipv .OR. iydi /= iydipv) THEN
-                ixd1 = ixd0 + 1
-                dx = xd(ixd1) - x0
-                dxsq = dx*dx
-                z10 = zd(ixd1,iyd0)
-                zx10 = pdd(1,ixd1,iyd0)
-                zy10 = pdd(2,ixd1,iyd0)
-                zxy10 = pdd(3,ixd1,iyd0)
-                ! Calculates the polynomial coefficients.
-                z0dx = (z10-z00)/dx
-                zy0dx = (zy10-zy00)/dx
-                p00 = z00
-                p01 = zy00
-                p10 = zx00
-                p11 = zxy00
-                p20 = (2.0* (z0dx-zx00)+z0dx-zx10)/dx
-                p21 = (2.0* (zy0dx-zxy00)+zy0dx-zxy10)/dx
-                p30 = (-2.0*z0dx+zx10+zx00)/dxsq
-                p31 = (-2.0*zy0dx+zxy10+zxy00)/dxsq
-            END IF
-            ! Evaluates the polynomial.
-            u = xii - x0
-            v = yii - y0
-            q0 = p00 + v*p01
-            q1 = p10 + v*p11
-            q2 = p20 + v*p21
-            q3 = p30 + v*p31
-            zii = q0 + u* (q1+u* (q2+u*q3))
-            ! End of Case 2
-
-            ! Case 3.  When the rectangle is outside the data area in the x
-            ! direction but inside in the y direction.
-        ELSE IF ((ixdi <= 0.OR.ixdi >= nxd) .AND.  &
-        (iydi > 0 .AND. iydi < nyd)) THEN
-            ! Retrieves the z and partial derivative values at the other
-            ! vertex of the semi-infinite rectangle.
-            IF (ixdi /= ixdipv .OR. iydi /= iydipv) THEN
-                iyd1 = iyd0 + 1
-                dy = yd(iyd1) - y0
-                dysq = dy*dy
-                z01 = zd(ixd0,iyd1)
-                zx01 = pdd(1,ixd0,iyd1)
-                zy01 = pdd(2,ixd0,iyd1)
-                zxy01 = pdd(3,ixd0,iyd1)
-                ! Calculates the polynomial coefficients.
-                z0dy = (z01-z00)/dy
-                zx0dy = (zx01-zx00)/dy
-                p00 = z00
-                p01 = zy00
-                p02 = (2.0*(z0dy-zy00)+z0dy-zy01)/dy
-                p03 = (-2.0*z0dy+zy01+zy00)/dysq
-                p10 = zx00
-                p11 = zxy00
-                p12 = (2.0*(zx0dy-zxy00) + zx0dy - zxy01)/dy
-                p13 = (-2.0*zx0dy + zxy01 + zxy00)/dysq
-            END IF
-
-            ! Evaluates the polynomial.
-            u = xii - x0
-            v = yii - y0
-            q0 = p00 + v* (p01 + v*(p02+v*p03))
-            q1 = p10 + v* (p11 + v*(p12+v*p13))
-            zii = q0 + u*q1
-            ! End of Case 3
-
-            ! Case 4.  When the rectangle is outside the data area in both the
-            ! x and y direction.
-        ELSE IF ((ixdi <= 0 .OR. ixdi >= nxd) .AND.  &
-        (iydi <= 0 .OR. iydi >= nyd)) THEN
+            (iydi <= 0.OR.iydi >= nyd)) THEN
+        ! Retrieves the z and partial derivative values at the other
+        ! vertex of the semi-infinite rectangle.
+        IF (ixdi /= ixdipv .OR. iydi /= iydipv) THEN
+            ixd1 = ixd0 + 1
+            dx = xd(ixd1) - x0
+            dxsq = dx*dx
+            z10 = zd(ixd1,iyd0)
+            zx10 = pdd(1,ixd1,iyd0)
+            zy10 = pdd(2,ixd1,iyd0)
+            zxy10 = pdd(3,ixd1,iyd0)
             ! Calculates the polynomial coefficients.
-            IF (ixdi /= ixdipv .OR. iydi /= iydipv) THEN
-                p00 = z00
-                p01 = zy00
-                p10 = zx00
-                p11 = zxy00
-            END IF
-            ! Evaluates the polynomial.
-            u = xii - x0
-            v = yii - y0
-            q0 = p00 + v*p01
-            q1 = p10 + v*p11
-            zii = q0 + u*q1
+            z0dx = (z10-z00)/dx
+            zy0dx = (zy10-zy00)/dx
+            p00 = z00
+            p01 = zy00
+            p10 = zx00
+            p11 = zxy00
+            p20 = (2.0* (z0dx-zx00)+z0dx-zx10)/dx
+            p21 = (2.0* (zy0dx-zxy00)+zy0dx-zxy10)/dx
+            p30 = (-2.0*z0dx+zx10+zx00)/dxsq
+            p31 = (-2.0*zy0dx+zxy10+zxy00)/dxsq
+        END IF
+        ! Evaluates the polynomial.
+        u = xii - x0
+        v = yii - y0
+        q0 = p00 + v*p01
+        q1 = p10 + v*p11
+        q2 = p20 + v*p21
+        q3 = p30 + v*p31
+        zii = q0 + u* (q1+u* (q2+u*q3))
+        ! End of Case 2
+
+        ! Case 3.  When the rectangle is outside the data area in the x
+        ! direction but inside in the y direction.
+        ELSE IF ((ixdi <= 0.OR.ixdi >= nxd) .AND.  &
+            (iydi > 0 .AND. iydi < nyd)) THEN
+        ! Retrieves the z and partial derivative values at the other
+        ! vertex of the semi-infinite rectangle.
+        IF (ixdi /= ixdipv .OR. iydi /= iydipv) THEN
+            iyd1 = iyd0 + 1
+            dy = yd(iyd1) - y0
+            dysq = dy*dy
+            z01 = zd(ixd0,iyd1)
+            zx01 = pdd(1,ixd0,iyd1)
+            zy01 = pdd(2,ixd0,iyd1)
+            zxy01 = pdd(3,ixd0,iyd1)
+            ! Calculates the polynomial coefficients.
+            z0dy = (z01-z00)/dy
+            zx0dy = (zx01-zx00)/dy
+            p00 = z00
+            p01 = zy00
+            p02 = (2.0*(z0dy-zy00)+z0dy-zy01)/dy
+            p03 = (-2.0*z0dy+zy01+zy00)/dysq
+            p10 = zx00
+            p11 = zxy00
+            p12 = (2.0*(zx0dy-zxy00) + zx0dy - zxy01)/dy
+            p13 = (-2.0*zx0dy + zxy01 + zxy00)/dysq
+        END IF
+
+        ! Evaluates the polynomial.
+        u = xii - x0
+        v = yii - y0
+        q0 = p00 + v* (p01 + v*(p02+v*p03))
+        q1 = p10 + v* (p11 + v*(p12+v*p13))
+        zii = q0 + u*q1
+        ! End of Case 3
+
+        ! Case 4.  When the rectangle is outside the data area in both the
+        ! x and y direction.
+        ELSE IF ((ixdi <= 0 .OR. ixdi >= nxd) .AND.  &
+            (iydi <= 0 .OR. iydi >= nyd)) THEN
+        ! Calculates the polynomial coefficients.
+        IF (ixdi /= ixdipv .OR. iydi /= iydipv) THEN
+            p00 = z00
+            p01 = zy00
+            p10 = zx00
+            p11 = zxy00
+        END IF
+        ! Evaluates the polynomial.
+        u = xii - x0
+        v = yii - y0
+        q0 = p00 + v*p01
+        q1 = p10 + v*p11
+        zii = q0 + u*q1
         END IF
         ! End of Case 4
         zi(iip) = zii

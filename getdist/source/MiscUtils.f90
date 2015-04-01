@@ -9,7 +9,36 @@
     module procedure IfThenElse_S, IfThenElse_L, IfThenElse_I, IfThenElse_R, IfThenElse_D
     END INTERFACE IfThenElse
 
+    INTERFACE IsFloat
+    module procedure IsFloat0, IsFloat1, IsFloat2
+    END INTERFACE IsFloat
+
     contains
+
+    function DefaultFalse(S) result(Sout)
+    logical, intent(in), optional :: S
+    logical :: Sout
+
+    if (present(S)) then
+        SOut = S
+    else
+        SOut = .false.
+    end if
+
+    end function DefaultFalse
+
+    function DefaultTrue(S) result(Sout)
+    logical, intent(in), optional :: S
+    logical :: Sout
+
+    if (present(S)) then
+        SOut = S
+    else
+        SOut = .true.
+    end if
+
+    end function DefaultTrue
+
 
     function PresentDefault_S(default, S) result(Sout)
     character(LEN=*), intent(in), target :: default
@@ -120,6 +149,7 @@
     end if
 
     end function
+
     function IfThenElse_D(flag, either, or) result(IfThenElse)
     logical, intent(in) :: flag
     double precision :: IfThenElse, either, or
@@ -131,6 +161,34 @@
     end if
 
     end function
+
+    logical function isFloat0(R)
+    class(*), intent(in) :: R
+
+    select type(R)
+    type is (real)
+        isFloat0 = .true.
+    type is (double precision)
+        isFloat0 = .true.
+        class default
+        isFloat0 = .false.
+    end select
+    end function isFloat0
+
+    logical function isFloat1(R)
+    class(*), intent(in) :: R(:)
+
+    isFloat1 = isFloat0(R(LBOUND(R,1)))
+
+    end function isFloat1
+
+    logical function isFloat2(R)
+    class(*), intent(in) :: R(:,:)
+
+    isFloat2 = isFloat0(R(LBOUND(R,1),LBOUND(R,2)))
+
+    end function isFloat2
+
 
 
     end module MiscUtils

@@ -24,7 +24,7 @@
 
 
     double precision, parameter :: pi=3.14159265358979323846264338328d0, &
-    twopi=2*pi, fourpi=4*pi
+        twopi=2*pi, fourpi=4*pi
     double precision, parameter :: root2 = 1.41421356237309504880168872421d0, sqrt2 = root2
     double precision, parameter :: log2 = 0.693147180559945309417232121458d0
 
@@ -34,7 +34,7 @@
 
     logical :: use_fast_slow = .false.
 
-    character(LEN=*), parameter :: CosmoMC_Version = 'May2014'
+    character(LEN=*), parameter :: CosmoMC_Version = 'Feb2015'
 
     character(LEN=:), allocatable :: chisq_label
 
@@ -42,7 +42,6 @@
         !Allowing things like param[name] =
     contains
     procedure :: NamedKey => TNameKeyIniFile_NamedKey
-    procedure :: TagValuesForName => TNameKeyIniFile_TagValuesForName
     end type TNameKeyIniFile
 
 
@@ -50,7 +49,10 @@
     contains
     procedure :: FailStop => TSettingIni_FailStop
     procedure :: ReadFilename => TSettingIni_ReadFilename
+    procedure :: ReadRelativeFilename => TSettingIni_ReadRelativeFilename
     procedure :: ReplaceDirs => TSettingIni_ReplaceDirs
+    procedure :: TagValuesForName => TSettingIni_TagValuesForName
+    procedure :: SettingValuesForTagName => TSettingIni_SettingValuesForTagName
     end type
 
     real(mcp) :: AccuracyLevel = 1
@@ -63,16 +65,16 @@
 
     integer, parameter :: max_likelihood_functions = 50
 
-    integer, parameter :: max_data_params = 100
-    integer, parameter :: max_theory_params = 30
+    integer, parameter :: max_data_params = 200
+    integer, parameter :: max_theory_params = 50
     integer, parameter :: max_num_params = max_theory_params + max_data_params
 
     !Set to false if using a slow likelihood function so no there's point is treating
     !'fast' parameters differently (in fact, doing so will make performance worse)
 
     integer, parameter :: sampling_metropolis = 1, sampling_slice = 2, sampling_fastslice =3, &
-    sampling_slowgrid = 4,  sampling_multicanonical = 5,  sampling_wang_landau = 6, &
-    sampling_fast_dragging = 7
+        sampling_slowgrid = 4,  sampling_multicanonical = 5,  sampling_wang_landau = 6, &
+        sampling_fast_dragging = 7
 
     integer :: sampling_method = sampling_metropolis
 
@@ -128,10 +130,12 @@
 
     subroutine DoStop(S, abort)
     character(LEN=*), intent(in), optional :: S
-    integer ierror
     logical, intent(in), optional :: abort
     logical wantbort
+#ifdef MPI
+    integer ierror
     real(time_dp) runTime
+#endif
 
     call ChainOutFile%Close()
 
@@ -145,7 +149,7 @@
 #ifdef MPI
     runTime = MPI_WTime() - MPIrun_Start_Time
     if (Feedback > 0 .and. MPIRank==0) &
-    write (*,'("Total time:  ",I0,"  (",F10.5," hours  )")')nint(runTime),runTime/(60*60)
+        write (*,'("Total time:  ",I0,"  (",F10.5," hours  )")')nint(runTime),runTime/(60*60)
     ierror =0
     if (wantbort) then
         !Abort all in case other continuing chains want to communicate with us
@@ -162,15 +166,15 @@
     stop
     end subroutine DoStop
 
-    subroutine TSettingIni_FailStop(L)
-    class(TSettingIni) :: L
+    subroutine TSettingIni_FailStop(this)
+    class(TSettingIni) :: this
 
     call MpiStop()
 
     end subroutine TSettingIni_FailStop
 
-    function TSettingIni_ReplaceDirs(Ini,inname, ADir) result(filename)
-    class(TSettingIni) :: Ini
+    function TSettingIni_ReplaceDirs(this,inname, ADir) result(filename)
+    class(TSettingIni) :: this
     character(LEN=*) :: inname
     character(LEN=:), allocatable :: filename
     character(LEN=*), optional, intent(in) :: ADir
@@ -178,36 +182,103 @@
     filename = inname
     call StringReplace('%DATASETDIR%',PresentDefault(DataDir,ADir),filename)
     call StringReplace('%LOCALDIR%',LocalDir,filename)
-    if (allocated(Ini%Original_filename)) &
-    & call StringReplace('%THISDIR%',File%ExtractPath(Ini%Original_filename),filename)
+    if (allocated(this%Original_filename)) &
+        & call StringReplace('%THISDIR%',File%ExtractPath(this%Original_filename),filename)
 
     end function TSettingIni_ReplaceDirs
 
-    function TSettingIni_ReadFilename(Ini,key, ADir, NotFoundFail, relative) result (filename)
-    class(TSettingIni) :: Ini
+    function TSettingIni_ReadRelativeFilename(this,key, ADir, NotFoundFail) result (filename)
+    class(TSettingIni) :: this
+    character(LEN=*), intent(in) :: Key
+    character(LEN=*), optional, intent(in) :: ADir
+    character(LEN=:), allocatable :: filename
+    logical, optional :: NotFoundFail
+
+    filename = this%ReadFileName(key,Adir,NotFoundFail,.true.)
+
+    end function TSettingIni_ReadRelativeFilename
+
+    function TSettingIni_ReadFilename(this,key, ADir, NotFoundFail, relative) result (filename)
+    class(TSettingIni) :: this
     character(LEN=*), intent(in) :: Key
     character(LEN=*), optional, intent(in) :: ADir
     character(LEN=:), allocatable :: filename
     logical, optional :: NotFoundFail, relative
     integer i
 
-    filename = Ini%Read_String(key, NotFoundFail)
+    filename = this%Read_String(key, NotFoundFail)
     if (filename=='') return
 
-    filename = Ini%ReplaceDirs(filename, ADir)
+    filename = this%ReplaceDirs(filename, ADir)
 
     do i=1, CustomParams%Count
         call StringReplace('%'//CustomParams%Name(i)//'%',&
-        trim(Ini%ReplaceDirs(CustomParams%Value(i), ADir)) ,filename)
+            trim(this%ReplaceDirs(CustomParams%Value(i), ADir)) ,filename)
     end do
-    if (PresentDefault(.false., relative) .and. .not. File%IsFullPath(filename)) then
-        filename =  File%ExtractPath(Ini%Original_filename)//filename
+    if (DefaultFalse(relative) .and. .not. File%IsFullPath(filename)) then
+        filename =  File%ExtractPath(this%Original_filename)//filename
     end if
 
     end function TSettingIni_ReadFilename
 
-    function TNameKeyIniFile_NamedKey(Ini, Key, Name) result(NamedKey)
-    class(TNameKeyIniFile) :: Ini
+    subroutine TSettingIni_TagValuesForName(this, name, OutList, filename)
+    !Reads all entries of the form "name[tag] = value", storing tag=value in OutList
+    class(TSettingIni) :: this
+    character(LEN=*), intent(in) :: name
+    character(LEN=:), allocatable :: tag, value
+    class(TNameValueList) :: OutList
+    integer i, ix
+    character(LEN=:), pointer :: KeyName
+    logical, intent(in), optional :: filename
+
+    call OutList%Clear()
+    tag = trim(name) //'['
+
+    do i=1, this%Count
+        KeyName=>this%Name(i)
+        if (StringStarts(KeyName, tag) .and. this%Value(i)/='') then
+            ix = index(KeyName, ']')
+            if (ix /= len(keyName))  call this%Error('Error reading tagged key', name)
+            if (index(KeyName,',')/=0) cycle
+            value =this%Read_String(KeyName)
+            if (DefaultFalse(filename) .and. value/='') value = this%ReplaceDirs(value)
+            call OutList%Add(KeyName(len(tag)+1:len(KeyName)-1), value)
+            !!Note: Use Read_String so read values are stored
+        end if
+    end do
+
+    end subroutine TSettingIni_TagValuesForName
+
+
+    subroutine TSettingIni_SettingValuesForTagName(this, name, tag, OutList, filename)
+    !Reads all entries of the form "name[tag,setting] = value", storing setting=value in OutList
+    class(TSettingIni) :: this
+    character(LEN=*), intent(in) :: name, tag
+    character(LEN=:), allocatable :: value, stem
+    class(TNameValueList) :: OutList
+    integer i, ix
+    character(LEN=:), pointer :: KeyName
+    logical, intent(in), optional :: filename
+
+    call OutList%Clear()
+    stem = trim(name) //'['//trim(tag)//','
+
+    do i=1, this%Count
+        KeyName=>this%Name(i)
+        if (StringStarts(KeyName, stem)) then
+            ix = index(KeyName, ']')
+            if (ix /= len(KeyName)) call this%Error('Error reading tagged key setting', name)
+            value =this%Read_String(KeyName)
+            if (DefaultFalse(filename) .and. value/='') value = this%ReplaceDirs(value)
+            call OutList%Add(KeyName(len(stem)+1:len(KeyName)-1), value)
+        end if
+    end do
+
+    end subroutine TSettingIni_SettingValuesForTagName
+
+
+    function TNameKeyIniFile_NamedKey(this, Key, Name) result(NamedKey)
+    class(TNameKeyIniFile) :: this
     character(LEN=*), intent(in) :: Key, Name
     character(LEN=:), allocatable :: NamedKey
 
@@ -215,29 +286,6 @@
 
     end function TNameKeyIniFile_NamedKey
 
-    subroutine TNameKeyIniFile_TagValuesForName(Ini, name, OutList)
-    !Reads all entries of the form "name[tag] = value", storing tag=value in OutList
-    class(TNameKeyIniFile) :: Ini
-    character(LEN=*), intent(in) :: name
-    character(LEN=:), allocatable :: tag
-    class(TNameValueList) :: OutList
-    integer i, ix
-    character(LEN=:), pointer :: KeyName
-
-    call OutList%Clear()
-    tag = trim(name) //'['
-
-    do i=1, Ini%Count
-        KeyName=>Ini%Name(i)
-        if (StringStarts(KeyName, tag) .and. Ini%Value(i)/='') then
-            ix = index(KeyName, ']')
-            if (ix /= len(KeyName)) call Ini%Error('Error readding tagged key', name)
-            call OutList%Add(KeyName(len(tag)+1:len(KeyName)-1), Ini%Read_String(KeyName))
-            !!Note: Use Read_String so read values are stored
-        end if
-    end do
-
-    end subroutine TNameKeyIniFile_TagValuesForName
 
     subroutine CheckParamChangeF(F)
     character(LEN=*), intent(in) ::  F

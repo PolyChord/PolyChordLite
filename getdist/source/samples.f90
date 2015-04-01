@@ -12,6 +12,15 @@
     procedure :: ConfidVal => TSampleList_ConfidVal
     end Type TSampleList
 
+    Type TKernel1D
+        real(mcp), allocatable :: Win(:), xWin(:)
+        real(mcp) :: h
+        integer :: winw
+        real(mcp), allocatable :: a0(:), boundary_K(:), boundary_xK(:)
+    contains
+    procedure ::  Init => Kernel1D_Init
+    end Type TKernel1D
+    
     !Spline interpolated density function
     Type TDensity1D
         integer n
@@ -215,5 +224,45 @@
 
     end subroutine Density1D_Limits
 
+
+    subroutine Kernel1D_Init(this,winw, h, has_boundary)    
+    class(TKernel1D) :: this
+    integer, intent(in) :: winw
+    real(mcp), intent(in) :: h
+    logical, intent(in) :: has_boundary
+    real(mcp), allocatable :: a1(:), a2(:)
+    integer i
+    
+    this%winw=winw
+    this%h = h
+    allocate(this%Win(-winw:winw))
+    do i=-winw,winw
+        this%Win(i)=exp(-(i/h)**2/2)
+    end do
+    this%Win=this%Win/sum(this%win)
+    if (has_boundary) then
+        allocate(this%xWin(-winw:winw))
+        allocate(this%a0(0:winw))
+        allocate(a1(0:winw), a2(0:winw))
+        allocate(this%boundary_K(0:winw))
+        allocate(this%boundary_xK(0:winw))
+        a2(0)=0
+        do i=-winw,0
+            this%xWin(i) = this%Win(i)*i
+            a2(0) = a2(0) + this%Win(i)*i**2
+        end do
+        this%a0(0) = sum(this%Win(-winw:0))
+        a1(0) = sum(this%xWin(-winw:0)) 
+        do i=1,winw
+            this%xWin(i) = this%Win(i)*i
+            this%a0(i) = this%a0(i-1)+ this%Win(i)
+            a1(i) = a1(i-1) + this%xWin(i)
+            a2(i) = a2(i-1) + this%xWin(i)*i
+        end do
+        this%boundary_K = a2/ (this%a0*a2-a1**2)
+        this%boundary_xK = a1/ (this%a0*a2-a1**2)
+    end if
+    
+    end subroutine Kernel1D_Init 
 
     end module Samples

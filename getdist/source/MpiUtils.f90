@@ -147,7 +147,7 @@
     character(LEN=*), intent(in), optional :: Msg
     real(TTimer_dp), optional :: start
     real(TTimer_dp) T, DeltaT
-    character(LEN=max(len(Msg)+2,128)) tmp
+    character(LEN=:), allocatable :: tmp
 
     if (present(start)) then
         T=start
