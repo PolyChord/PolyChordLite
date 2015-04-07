@@ -27,7 +27,7 @@ contains
         settings%nDims = size(params)
         settings%nDerived = size(derived_params)
 
-        call write_paramnames_file(settings,params,derived_params)
+        if(settings%write_paramnames.and.(settings%equals.or.settings%posteriors)) call write_paramnames_file(settings,params,derived_params)
 
         call create_priors(priors,params,settings)
 
