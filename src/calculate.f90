@@ -31,7 +31,7 @@ module calculate_module
             point(settings%l0) = loglikelihood( point(settings%p0:settings%p1), point(settings%d0:settings%d1))
 
             ! accumulate the number of likelihood calls that we've made
-            nlike = nlike+1
+            if(point(settings%l0)>logzero) nlike = nlike+1
         end if
 
     end subroutine calculate_point

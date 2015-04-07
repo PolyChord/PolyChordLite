@@ -24,16 +24,20 @@ module settings_module
         !! Set equal to -1 for no maximum number
         integer :: max_ndead = -1
 
-        !> What to thin the posterior points (i.e. probability of keeping a given point)
-        double precision :: thin_posterior = 1d0
+        !> What factor should we bulk up the posterior points by (using
+        !! inter-chain points)
+        !!
+        !! set to <=0 to use all of them
+        double precision :: boost_posterior = 5d0
 
         logical :: posteriors = .false.        !> Whether to calculate weighted posteriors
         logical :: equals     = .true.         !> Whether to calculate equally weighted posteriors
         logical :: cluster_posteriors = .false.!> Whether to calculate clustered posteriors
-        logical :: write_paramnames = .false.  !> Whether or not to write paramnames files
+
 
         
         logical :: write_resume = .false. !> Whether or not to write resume files
+        logical :: write_paramnames = .false. !> Whether or not to write paramnames file
         logical :: read_resume = .false.  !> Whether or not to resume from file
         logical :: write_stats = .true.   !> Whether or not to write stats file
         logical :: write_live = .false.   !> Whether or not to write phys_live points

@@ -61,7 +61,7 @@ module generate_module
         use priors_module,    only: prior
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
-        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len,minpos
+        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len,minpos,time
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
@@ -131,20 +131,23 @@ module generate_module
         end if
 
 
+        total_time=0
         if(linear_mode(mpi_info)) then
             !===================== LINEAR MODE =========================
 
-            call cpu_time(time0)
             do while(RTI%nlive(1)<settings%nlive)
 
                 ! Generate a random coordinate
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
 
                 ! Compute physical coordinates, likelihoods and derived parameters
+                time0 = time()
                 call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+                time1 = time()
 
                 ! If its valid, and we need more points, add it to the array
                 if(live_point(settings%l0)>logzero) then
+                    total_time =total_time+ time1-time0
 
                     call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
@@ -161,8 +164,6 @@ module generate_module
                 end if
 
             end do
-            call cpu_time(time1)
-            total_time = time1-time0
 
 
 #ifdef MPI
@@ -213,17 +214,17 @@ module generate_module
             else
 
                 ! The slaves simply generate and send points until they're told to stop by the master
-                call cpu_time(time0)
                 do while(.true.)
         
                     live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                    time0 = time()
                     call calculate_point( loglikelihood, priors, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
+                    time1 = time()
+                    if(live_point(settings%l0)>logzero) total_time = total_time + time1-time0
                     call throw_point(live_point,mpi_info)                                    ! Send it to the root node
                     if(.not. more_points_needed(mpi_info)) exit                              ! If we've recieved a kill signal, then exit this loop
 
                 end do
-                call cpu_time(time1)
-                total_time=time1-time0
             end if
 #endif
         end if !(nprocs case)
@@ -239,7 +240,7 @@ module generate_module
         ! ----------------------------------------------- !
         ! Find the average time taken
         speed(1) = total_time/settings%nlive
-        call time_speeds(loglikelihood,priors,settings,speed,mpi_info) 
+        call time_speeds(loglikelihood,priors,settings,RTI,speed,mpi_info) 
 
 
 
@@ -258,6 +259,14 @@ module generate_module
             if(.not. allocated(RTI%num_repeats) ) allocate(RTI%num_repeats(size(settings%grade_dims)))
             RTI%num_repeats(1) = settings%num_repeats
             RTI%num_repeats(2:) = nint(settings%grade_frac(2:)/(settings%grade_frac(1)+0d0)*RTI%num_repeats(1)*speed(1)/speed(2:))
+
+            ! Set the posterior thinning factor
+            if(settings%boost_posterior<0d0) then
+                RTI%thin_posterior = 1d0
+            else
+                RTI%thin_posterior = (settings%boost_posterior+0d0)/(sum(RTI%num_repeats)+0d0)
+            end if
+
         end if
 
 
@@ -268,11 +277,12 @@ module generate_module
 
 
 
-    subroutine time_speeds(loglikelihood,priors,settings,speed,mpi_info)
+    subroutine time_speeds(loglikelihood,priors,settings,RTI,speed,mpi_info)
         use priors_module,    only: prior
         use settings_module,  only: program_settings
+        use run_time_module,   only: run_time_info
         use random_module,   only: random_reals
-        use utils_module,    only: logzero,normal_fb,stdout_unit,fancy_fb
+        use utils_module,    only: logzero,normal_fb,stdout_unit,fancy_fb,time
         use calculate_module, only: calculate_point
         use abort_module
 #ifdef MPI
@@ -296,6 +306,9 @@ module generate_module
 
         !> Program settings
         type(program_settings), intent(in) :: settings
+       
+        ! The run time info (very important, see src/run_time_info.f90)
+        type(run_time_info) :: RTI
 
         double precision,dimension(size(settings%grade_dims)) :: speed
 
@@ -319,7 +332,7 @@ module generate_module
             if (live_point(settings%l0)> logzero) exit
         end do
 
-        if(settings%feedback>=fancy_fb.and.is_root(mpi_info)) write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds")') char(13), 1, speed(1)
+        if(settings%feedback>=normal_fb.and.is_root(mpi_info)) write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds")') char(13), 1, speed(1)
         do i_speed=2,size(speed)
 
             h0 = settings%h0+sum(settings%grade_dims(:i_speed-1))
@@ -328,28 +341,31 @@ module generate_module
             i_live=0
             total_time=0
             
-            if(settings%feedback<=normal_fb.and.is_root(mpi_info)) then
+            if(settings%feedback>=fancy_fb.and.is_root(mpi_info)) then
                 write(stdout_unit,'(A1,"Speed ",I2, " = ? (calculating)")',advance='no') char(13), i_speed
                 flush(stdout_unit)
             end if
 
-            call cpu_time(time0)
-            time1=time0
-            do while( (time1-time0)/settings%grade_frac(i_speed)< speed(1)/settings%grade_frac(1) )
+            do while( total_time/settings%grade_frac(i_speed)< speed(1)/settings%grade_frac(1) *settings%nlive / dble(mpi_info%nprocs ))
                 live_point(h0:h1) = random_reals(h1-h0+1)
 
+                time0 = time()
                 call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+                time1 = time()
 
-                if(live_point(settings%l0)>logzero) i_live=i_live+1
+                if(live_point(settings%l0)>logzero) then
+                    total_time=total_time+time1-time0
+                    i_live=i_live+1
+                end if
 
-                call cpu_time(time1)
             end do
-            total_time=time1-time0
 #ifdef MPI
             total_time=sum_doubles(total_time,mpi_info)
             i_live = sum_integers(i_live,mpi_info)
+            nlike = sum_integers(nlike,mpi_info)
 #endif
             speed(i_speed) = total_time/i_live
+            if(is_root(mpi_info)) RTI%nlike(i_speed) =  RTI%nlike(i_speed) + nlike
             if(settings%feedback>=fancy_fb.and.is_root(mpi_info)) then
                 write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds     ")') char(13), i_speed, speed(i_speed)
             else if(settings%feedback>=normal_fb.and.is_root(mpi_info)) then

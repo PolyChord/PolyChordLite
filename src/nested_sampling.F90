@@ -1,7 +1,7 @@
 module nested_sampling_module
 
 #ifdef MPI
-    use mpi_module, only: get_mpi_info,mpi_type,is_root,linear_mode,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers,mpi_time,mpi_synchronise
+    use mpi_module, only: get_mpi_info,mpi_type,is_root,linear_mode,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers,mpi_synchronise
 #else
     use mpi_module, only: get_mpi_info,mpi_type,is_root,linear_mode
 #endif
@@ -15,7 +15,7 @@ module nested_sampling_module
     function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
         use priors_module,     only: prior,prior_log_volume
         use settings_module,   only: program_settings
-        use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero,cyc,normal_fb,stdout_unit
+        use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero,cyc,normal_fb,stdout_unit,time
         use read_write_module
         use feedback_module
         use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats,delete_cluster,update_posteriors
@@ -321,7 +321,7 @@ module nested_sampling_module
             call throw_babies(baby_points,nlike,mpi_info)
             wait_time = 0
             slice_time = 0
-            time1 = mpi_time()
+            time1 = time()
 
 
 
@@ -329,13 +329,13 @@ module nested_sampling_module
             ! 1) Listen for a seed point being sent by the master
             !    Note that this also tests for a kill signal sent by the master
             do while(catch_seed(seed_point,cholesky,logL,mpi_info))
-                time0 = mpi_time()
+                time0 = time()
                 ! 2) Generate a new set of baby points
                 baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike,num_repeats)
 
 
                 wait_time = wait_time + time0-time1
-                time1 = mpi_time()
+                time1 = time()
                 slice_time = slice_time + time1-time0
 
 

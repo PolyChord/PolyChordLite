@@ -145,7 +145,8 @@ module read_write_module
         write(write_resume_unit,fmt_dbl) RTI%logZ                
         write(write_resume_unit,'("=== global evidence^2 -- log(<Z^2>) ===")')                    
         write(write_resume_unit,fmt_dbl) RTI%logZ2              
-
+        write(write_resume_unit,'("=== posterior thin factor ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%thin_posterior
 
 
         write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster, DB_FMT   ! Initialise the double array format
@@ -411,6 +412,8 @@ module read_write_module
         read(read_resume_unit,fmt_dbl) RTI%logZ                ! global evidence estimate
         read(read_resume_unit,*)                               ! 
         read(read_resume_unit,fmt_dbl) RTI%logZ2               ! global evidence^2 estimate
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_dbl) RTI%thin_posterior      ! what to thin the posterior by
 
 
 
