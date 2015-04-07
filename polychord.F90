@@ -119,7 +119,7 @@ program PolyChord
         settings%update_resume = settings%nlive
         settings%update_posterior = -1
 
-        settings%thin_posterior= 1d0
+        settings%boost_posterior= 5d0
         allocate(settings%grade_frac(1)) 
         settings%grade_frac=[1d0]
 
