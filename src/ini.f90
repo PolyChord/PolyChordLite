@@ -70,7 +70,7 @@ contains
         settings%update_resume      = get_integer(file_name,'update_resume',settings%nlive)
         settings%update_posterior   = get_integer(file_name,'update_posteriors',settings%nlive)
 
-        settings%thin_posterior= get_double(file_name,'thin_factor',0d0)
+        settings%boost_posterior    = get_double(file_name,'boost_posterior',0d0)
 
         call get_doubles(file_name,'grade_frac',settings%grade_frac)
 

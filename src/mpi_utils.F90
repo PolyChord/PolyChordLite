@@ -165,14 +165,6 @@ module mpi_module
 
 
 
-    !> This gets the wallclock timer from the mpi library
-    function mpi_time() 
-        implicit none
-        double precision :: mpi_time
-
-        mpi_time = MPI_Wtime()
-    end function
-
     !> Split a communicator into n even groups
     function mpi_split(n,mpi_communicator) result(mpi_info)
         implicit none

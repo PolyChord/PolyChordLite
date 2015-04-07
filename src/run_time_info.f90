@@ -95,6 +95,9 @@ module run_time_module
         double precision, allocatable, dimension(:) :: maxlogweight_dead
         double precision                            :: maxlogweight_global
 
+        !> what to thin the posterior by
+        double precision :: thin_posterior
+
     end type run_time_info
 
     contains
@@ -192,6 +195,8 @@ module run_time_module
         RTI%maxlogweight = logzero
         RTI%maxlogweight_dead = logzero
         RTI%maxlogweight_global = logzero
+
+        RTI%thin_posterior = 0d0
 
 
     end subroutine initialise_run_time_info
@@ -818,7 +823,7 @@ module run_time_module
 
                     ! Calculate the posterior point and add it to the array
                     if(settings%equals .or. settings%posteriors ) then
-                        if(bernoulli_trial(settings%thin_posterior)) then
+                        if(bernoulli_trial(RTI%thin_posterior)) then
                             posterior_point = calculate_posterior_point(settings,deleted_point,&
                                     RTI%posterior_stack(settings%pos_w,i_stack(1),i_cluster), &!logweight
                                     RTI%posterior_stack(settings%pos_Z,i_stack(1),i_cluster), &!RTI%logZ

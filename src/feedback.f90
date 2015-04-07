@@ -42,7 +42,6 @@ module feedback_module
             if(settings%equals) write(stdout_unit,'("Generating equally weighted posteriors")')
             if(settings%posteriors) write(stdout_unit,'("Generating weighted posteriors")')
             if((settings%equals.or.settings%posteriors).and.settings%cluster_posteriors.and.settings%do_clustering) write(stdout_unit,'("Clustering on posteriors")')
-            if(settings%equals.or.settings%posteriors) write(stdout_unit,'("Thinning phantoms to a factor", E17.8, " of their original numbers")') settings%thin_posterior
             if(settings%write_resume) write(stdout_unit,'("Writing a resume file to",A)') trim(resume_file(settings,.false.))
 
             write(stdout_unit,'("")')
@@ -188,10 +187,7 @@ module feedback_module
 
         if(feedback>=normal_fb) then
             write(fmt_int,'("( ""number of repeats: "",",I0,A,")")') size(num_repeats),INT_FMT
-
-            do i=1,size(num_repeats)
-                write(stdout_unit,fmt_int) num_repeats
-            end do
+            write(stdout_unit,fmt_int) num_repeats
         end if
 
     end subroutine write_num_repeats
