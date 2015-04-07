@@ -1,5 +1,5 @@
 # List of available example likelihoods
-EXAMPLES = gaussian rastrigin twin_gaussian random_gaussian himmelblau rosenbrock eggbox half_gaussian fitting
+EXAMPLES = gaussian pyramidal rastrigin twin_gaussian random_gaussian himmelblau rosenbrock eggbox half_gaussian fitting 
 
 # Your likelihood programs
 PROGRAMS = my_likelihood my_cpp_likelihood 
@@ -44,8 +44,8 @@ ifdef MPI
 # Using MPI
 # ---------
 # Set a define flag for MPI
-FCFLAGS = -DMPI
-CCFLAGS = -DMPI
+FCFLAGS += -DMPI
+CCFLAGS += -DMPI
 # Choose the mpi wrapper
 FC = mpif90
 CC = mpicc
@@ -64,7 +64,6 @@ CC = g++
 endif
 
 endif
-
 
 
 # ============ COMPILER_TYPE settings ================

@@ -116,7 +116,7 @@ module utils_module
         logical :: cyc
 
         if(cycle_size<=0) then
-            cyc = .true.
+            cyc = .false.
         else
             cyc = mod(iterator,cycle_size)==0
         end if
@@ -156,6 +156,29 @@ module utils_module
         distance2 = dot_product(a-b,a-b) 
 
     end function distance2
+
+    function loggamma(n)
+        use iso_c_binding
+        implicit none
+        double precision            :: loggamma
+        double precision,intent(in) :: n
+        real(c_double) :: c_n
+        interface 
+            function lgamma (y) bind(c)
+                use iso_c_binding
+                implicit none
+                real(c_double)        :: lgamma
+                real(c_double), value :: y
+            end function
+        end interface
+
+
+        c_n = n
+
+        loggamma = lgamma(c_n)
+
+
+    end function loggamma
 
 
     !> Mutual proximity 

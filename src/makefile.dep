@@ -70,6 +70,7 @@ generate.o :  \
 	abort.o \
 	read_write.o \
 	run_time_info.o \
+	mpi_utils.o \
 	array_utils.o \
 	random_utils.o \
 	feedback.o
@@ -81,8 +82,11 @@ feedback.o :  \
 	run_time_info.o \
 	read_write.o
 
+mpi_utils.o :  \
+	abort.o
 
 random_utils.o :  \
+	mpi_utils.o \
 	utils.o
 
 nested_sampling.o :  \
@@ -93,6 +97,7 @@ nested_sampling.o :  \
 	priors.o \
 	read_write.o \
 	run_time_info.o \
+	mpi_utils.o \
 	clustering.o \
 	random_utils.o \
 	feedback.o

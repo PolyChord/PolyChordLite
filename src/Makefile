@@ -1,40 +1,12 @@
-# Object files
-# ============
-OBJECTS_PAR =                \
-		  utils.o            \
-		  abort.o            \
-		  mpi_utils.o        \
-		  array_utils.o      \
-		  random_utils.o     \
-		  params.o           \
-		  settings.o         \
-		  priors.o           \
-		  calculate.o        \
-		  run_time_info.o    \
-		  feedback.o         \
-		  read_write.o       \
-		  clustering.o       \
-		  chordal_sampling.o \
-		  generate.o         \
-		  nested_sampling.o  \
-		  ini.o
-ifdef MPI
-# MPI pararellised
-# -----------------
-OBJECTS = $(OBJECTS_PAR)
-include makefile_mpi.dep
-else
-# No parallelisaton
-# -----------------
-#  strip out the mpi_utils file
-OBJECTS = $(patsubst mpi_utils.o,,$(OBJECTS_PAR))
+# Object files:
+# find all files ending in 90, and change .f90 and .F90 to .o, 
+OBJECTS = $(patsubst %.F90,%.o,$(patsubst %.f90,%.o,$(wildcard *90)))
+
+# include the dependencies
 include makefile.dep
-endif
 
-# "make" builds all
-all: libchord.a
-
-# The polychord library
+# The polychord library depends on the objects
+# we should make all the objects and the archive them with AR
 libchord.a: $(OBJECTS)
 	$(AR) $@ $^
 

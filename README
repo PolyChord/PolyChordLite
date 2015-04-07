@@ -184,7 +184,10 @@ Common Problems & FAQs:
 
 1. PolyChord crashes after segmentation fault.
 
-Try increasing the stack size (ulimit -s unlimited on Linux) & resume your job.
+Try increasing the stack size:
+Linux:    ulimit -s unlimited 
+OSX:      ulimit -s hard 
+& resume your job.
 The slice sampling & clustering steps use a recursive procedure. The default memory
 allocated to recursive procedures is embarassingly small (to guard against memory
 leaks).

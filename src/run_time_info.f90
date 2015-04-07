@@ -92,6 +92,7 @@ module run_time_module
 
         !> Maximum weight
         double precision, allocatable, dimension(:) :: maxlogweight
+        double precision, allocatable, dimension(:) :: maxlogweight_dead
         double precision                            :: maxlogweight_global
 
     end type run_time_info
@@ -144,6 +145,7 @@ module run_time_module
             RTI%nequals_dead(0),                                        &
             RTI%nequals_global(1),                                      &
             RTI%maxlogweight(1),                                        &
+            RTI%maxlogweight_dead(0),                                   &
             RTI%cholesky(settings%nDims,settings%nDims,1),              &
             RTI%covmat(settings%nDims,settings%nDims,1),                &
             RTI%num_repeats(size(settings%grade_dims)),                 &
@@ -188,6 +190,7 @@ module run_time_module
 
         ! maximum logweight
         RTI%maxlogweight = logzero
+        RTI%maxlogweight_dead = logzero
         RTI%maxlogweight_global = logzero
 
 
@@ -283,7 +286,7 @@ module run_time_module
 
     end function update_evidence
 
-    !> This function takes the evidence info in cluster i and splits it into
+    !> This function takes the evidence info in cluster p and splits it into
     !! several clusters according to the cluster numbers ni.
     !!
     !! It places these new clusters at the end of the active array, and deletes the old cluster
@@ -338,9 +341,12 @@ module run_time_module
         double precision :: logn
         double precision :: logn1
         double precision :: logXp
+        double precision :: logZp
+        double precision :: logZp2
         double precision, dimension(RTI%ncluster-1) :: logXpXq
         double precision :: logXp2
         double precision :: logZXp
+        double precision :: logZpXp
 
         ! 1) Save the old points as necessary
         old_live  = RTI%live(:,:RTI%nlive(p),p)                 ! Save the old live points
@@ -363,7 +369,10 @@ module run_time_module
         ! Define some useful variables
         logXp  = RTI%logXp(p)
         logXp2 = RTI%logXpXq(p,p)
+        logZp  = RTI%logZp(p)
+        logZp2 = RTI%logZp2(p)
         logZXp = RTI%logZXp(p)
+        logZpXp= RTI%logZpXp(p)
         logXpXq= [ RTI%logXpXq(p,:p-1) , RTI%logXpXq(p,p+1:) ]
 
 
@@ -451,10 +460,10 @@ module run_time_module
         RTI%logXp(new_target) = logXp + logni - logn
         ! Initialise the new global evidence -local volume cross correlation
         RTI%logZXp(new_target) = logZXp + logni - logn 
-        ! Initialise local evidences at 0
-        RTI%logZp(new_target) = logzero
-        RTI%logZp2(new_target) = logzero
-        RTI%logZpXp(new_target) = logzero
+        ! Initialise local evidences 
+        RTI%logZp(new_target) = logZp + logni - logn 
+        RTI%logZp2(new_target) = logZp2 + logni + logni1 - logn - logn1
+        RTI%logZpXp(new_target) = logZpXp + logni + logni1 - logn - logn1 
 
 
         ! Initialise the volume cross correlations
@@ -473,6 +482,15 @@ module run_time_module
             RTI%logXpXq(new_target(i_cluster),new_target(i_cluster)) &
                 = logXp2 + logni(i_cluster)+ logni1(i_cluster)-logn-logn1
 
+        end do
+
+
+
+
+        ! reduce the logweighting of posterior points by a factor proportional to the evidence
+        do i_cluster=1,num_new_clusters
+            RTI%equals(settings%pos_l,:RTI%nequals(new_target(i_cluster)),new_target(i_cluster)) = RTI%equals(settings%pos_l,:RTI%nequals(new_target(i_cluster)),new_target(i_cluster)) + RTI%logZp(new_target(i_cluster)) -logZp
+            RTI%posterior(settings%pos_l,:RTI%nposterior(new_target(i_cluster)),new_target(i_cluster)) = RTI%posterior(settings%pos_l,:RTI%nposterior(new_target(i_cluster)),new_target(i_cluster)) + RTI%logZp(new_target(i_cluster)) -logZp
         end do
 
     end subroutine add_cluster
@@ -520,6 +538,7 @@ module run_time_module
             call reallocate_1_i(RTI%nequals_dead,   new_size1=RTI%ncluster_dead)
             call reallocate_1_d(RTI%logZp_dead,     new_size1=RTI%ncluster_dead)
             call reallocate_1_d(RTI%logZp2_dead,    new_size1=RTI%ncluster_dead)
+            call reallocate_1_d(RTI%maxlogweight_dead,new_size1=RTI%ncluster_dead)
 
             ! Place the newly dead cluster into this
             RTI%nposterior_dead(RTI%ncluster_dead) = RTI%nposterior(p(1))
@@ -528,6 +547,7 @@ module run_time_module
             RTI%equals_dead(:,:RTI%nequals_dead(RTI%ncluster_dead),RTI%ncluster_dead) = RTI%equals(:,:RTI%nequals(p(1)),p(1))
             RTI%logZp_dead(RTI%ncluster_dead)  = RTI%logZp(p(1))
             RTI%logZp2_dead(RTI%ncluster_dead) = RTI%logZp2(p(1))
+            RTI%maxlogweight_dead(RTI%ncluster_dead) = RTI%maxlogweight(p(1))
 
 
             ! Reallocate the live,phantom and posterior points

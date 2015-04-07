@@ -174,6 +174,8 @@ module read_write_module
         if(RTI%ncluster_dead>0) write(write_resume_unit,fmt_dbl) RTI%logZp_dead
         write(write_resume_unit,'("=== local dead evidence^2 -- log(<Z_p^2>) ===")')
         if(RTI%ncluster_dead>0) write(write_resume_unit,fmt_dbl) RTI%logZp2_dead
+        write(write_resume_unit,'("=== maximum dead log weights -- log(w_p) ===")')                    
+        write(write_resume_unit,fmt_dbl) RTI%maxlogweight_dead
 
 
         write(fmt_dbl,'("(",I0,A,")")') settings%nDims, DB_FMT   ! Initialise the double array format for matrices
@@ -398,7 +400,8 @@ module read_write_module
             RTI%logXpXq(RTI%ncluster,RTI%ncluster),                                   &
             RTI%covmat(settings%nDims,settings%nDims,RTI%ncluster),                   &
             RTI%cholesky(settings%nDims,settings%nDims,RTI%ncluster),                 &
-            RTI%maxlogweight(RTI%ncluster)                                            &
+            RTI%maxlogweight(RTI%ncluster),                                           &
+            RTI%maxlogweight_dead(RTI%ncluster_dead)                                  &
             )
 
 
@@ -436,6 +439,8 @@ module read_write_module
         if(RTI%ncluster_dead>0) read(read_resume_unit,fmt_dbl) RTI%logZp_dead               ! local dead evidence estimate
         read(read_resume_unit,*)                                    ! 
         if(RTI%ncluster_dead>0) read(read_resume_unit,fmt_dbl) RTI%logZp2_dead              ! local dead evidence^2 estimate
+        read(read_resume_unit,*)                               ! 
+        read(read_resume_unit,fmt_dbl) RTI%maxlogweight_dead   ! max dead log weights
 
 
         write(fmt_dbl,'("(",I0,A,")")') settings%nDims, DB_FMT   ! Initialise the double array format for matrices
@@ -592,7 +597,7 @@ module read_write_module
 
                     ! Print out the posterior for the active clusters
                     do i_post = 1,RTI%nequals(i_cluster)
-                        write(write_equals_unit,fmt_dbl) 1d0,RTI%equals(settings%p_2l:,i_post,i_cluster)
+                        write(write_equals_unit,fmt_dbl) exp(RTI%logZp(i_cluster)-RTI%logZ),RTI%equals(settings%p_2l:,i_post,i_cluster)
                     end do
 
                     ! Close the equally weighted cluster posterior file
@@ -607,7 +612,7 @@ module read_write_module
 
                     ! Print out the posterior for the dead clusters
                     do i_post = 1,RTI%nequals_dead(i_cluster)
-                        write(write_equals_unit,fmt_dbl) 1d0,RTI%equals_dead(settings%p_2l:,i_post,i_cluster)
+                        write(write_equals_unit,fmt_dbl) exp(RTI%logZp_dead(i_cluster)-RTI%logZ),RTI%equals_dead(settings%p_2l:,i_post,i_cluster)
                     end do
 
                     ! Close the equally weighted cluster posterior file
@@ -642,7 +647,7 @@ module read_write_module
 
                     ! Print out the posterior for the active clusters
                     do i_post = 1,RTI%nposterior(i_cluster)
-                        weight = exp(RTI%posterior(settings%pos_w,i_post,i_cluster) + RTI%posterior(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster)) 
+                        weight = exp(RTI%posterior(settings%pos_w,i_post,i_cluster) + RTI%posterior(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster) +RTI%logZp(i_cluster)-RTI%logZ)
                         if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior(settings%pos_l,i_post,i_cluster),RTI%posterior(settings%pos_p0:,i_post,i_cluster) 
                     end do
 
@@ -658,7 +663,7 @@ module read_write_module
 
                     ! Print out the posterior for the dead clusters
                     do i_post = 1,RTI%nposterior_dead(i_cluster)
-                        weight = exp(RTI%posterior_dead(settings%pos_w,i_post,i_cluster) + RTI%posterior_dead(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster)) 
+                        weight = exp(RTI%posterior_dead(settings%pos_w,i_post,i_cluster) + RTI%posterior_dead(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight_dead(i_cluster) +RTI%logZp_dead(i_cluster)-RTI%logZ)
                         if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior_dead(settings%pos_l,i_post,i_cluster),RTI%posterior_dead(settings%pos_p0:,i_post,i_cluster) 
                     end do
 
@@ -765,13 +770,11 @@ module read_write_module
         write(write_stats_unit, '("----------------")')
         write(write_stats_unit,'("")')
 
+        write(fmt_Z,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, """ (Still Active)"")")') 'I2',DB_FMT,DB_FMT
+        do p=1,RTI%ncluster
+            write(write_stats_unit,fmt_Z) p, logZp(p), sqrt(varlogZp(p))
+        end do
         write(fmt_Z,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, ")")') 'I2',DB_FMT,DB_FMT
-
-        if(RTI%ncluster>1) then
-            do p=1,RTI%ncluster
-                write(write_stats_unit,fmt_Z) p, logZp(p), sqrt(varlogZp(p))
-            end do
-        end if
         do p=1,RTI%ncluster_dead
             write(write_stats_unit,fmt_Z) p+RTI%ncluster, logZp_dead(p), sqrt(varlogZp_dead(p))
         end do
