@@ -30,7 +30,7 @@ module settings_module
         logical :: posteriors = .false.        !> Whether to calculate weighted posteriors
         logical :: equals     = .true.         !> Whether to calculate equally weighted posteriors
         logical :: cluster_posteriors = .false.!> Whether to calculate clustered posteriors
-
+        logical :: write_paramnames = .false.  !> Whether or not to write paramnames files
 
         
         logical :: write_resume = .false. !> Whether or not to write resume files
