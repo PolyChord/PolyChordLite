@@ -116,7 +116,7 @@ module utils_module
         logical :: cyc
 
         if(cycle_size<=0) then
-            cyc = .true.
+            cyc = .false.
         else
             cyc = mod(iterator,cycle_size)==0
         end if
