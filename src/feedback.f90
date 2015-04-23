@@ -258,7 +258,7 @@ module feedback_module
             write(stdout_unit,fmt_nlike) RTI%nlike
 
             write(fmt_nlike,'(  "(""<nlike>    ="","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
-            write(stdout_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_resume),dble(nlikesum)/dble(RTI%num_repeats*settings%update_resume)
+            write(stdout_unit,fmt_nlike) dble(nlikesum)/dble(settings%nlive),dble(nlikesum)/dble(RTI%num_repeats*settings%nlive)
 
 
             call calculate_logZ_estimate(RTI,logZ,varlogZ,logZp,varlogZp,logZp_dead,varlogZp_dead)            
