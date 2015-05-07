@@ -393,6 +393,89 @@ module utils_module
 
     end subroutine logincexp
 
+
+    !> Return the sorted indices of an array of doubles
+    !!
+    function sort_doubles(a) result(k)
+        implicit none
+        double precision,intent(in), dimension(:) :: a
+        double precision, dimension(size(a)) :: b
+        integer, dimension(size(a)) :: i
+        integer, dimension(size(a)) :: k
+
+        integer :: j
+
+        b = a
+        i = [ (j,j=1,size(a)) ]
+
+        call quicksort(b,i)
+
+        k=i
+        !do j=1,size(a)
+            !k(i(j)) = j
+        !end do
+
+    end function sort_doubles
+
+    recursive subroutine quicksort(A,Ai)
+        double precision, intent(inout), dimension(:) :: A
+        integer, intent(inout), dimension(:) :: Ai
+        integer :: iq
+
+        if(size(A) > 1) then
+            call Partition(A,Ai,iq)
+            call quicksort(A(:iq-1),Ai(:iq-1))
+            call quicksort(A(iq:),Ai(iq:))
+        endif
+    end subroutine quicksort
+
+    subroutine Partition(A,Ai,marker)
+        double precision, intent(inout), dimension(:) :: A
+        integer, intent(inout), dimension(:) :: Ai
+        integer, intent(out) :: marker
+        integer :: i, j
+        double precision :: temp
+        integer :: tempi
+        double precision :: x      ! pivot point
+        x = A(1)
+        i= 0
+        j= size(A) + 1
+
+        do
+            j = j-1
+            do
+                if (A(j) <= x) exit
+                j = j-1
+            end do
+            i = i+1
+            do
+                if (A(i) >= x) exit
+                i = i+1
+            end do
+            if (i < j) then
+                ! exchange A(i) and A(j)
+                temp = A(i)
+                A(i) = A(j)
+                A(j) = temp
+                tempi = Ai(i)
+                Ai(i) = Ai(j)
+                Ai(j) = tempi
+
+            elseif (i == j) then
+                marker = i+1
+                return
+            else
+                marker = i
+                return
+            endif
+        end do
+
+    end subroutine Partition
+
+
+
+
+
     !> Hypergeometric function 1F1
     !!
     !!
