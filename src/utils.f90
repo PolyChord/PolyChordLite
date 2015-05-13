@@ -65,9 +65,6 @@ module utils_module
     !> unit for paramnames file
     integer, parameter :: paramnames_unit = 22
 
-    !> Log[1/2 Erfc[j/Sqrt[2]]]
-    double precision, parameter,dimension(20) :: logsigma = (/-1.84102, -3.78318, -6.60773, -10.3601, -15.065, -20.7368, -27.3843, -35.0134, -43.6281, -53.2313, -63.8249, -75.4107, -87.9897, -101.563, -116.131, -131.695, -148.256, -165.812, -184.366, -203.917 /)
-
     ! All series used to approximate F are computed with relative
     ! tolerance:
     double precision eps
