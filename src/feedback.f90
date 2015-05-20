@@ -212,7 +212,7 @@ module feedback_module
     subroutine write_intermediate_results(settings,RTI,nlikesum)
         use run_time_module, only: run_time_info,calculate_logZ_estimate
         use settings_module, only: program_settings
-        use utils_module,    only: stdout_unit,logzero,fmt_len,normal_fb
+        use utils_module,    only: stdout_unit,logzero,fmt_len,normal_fb,sort_doubles
         implicit none
         type(program_settings), intent(in)    :: settings    !> program settings
         type(run_time_info),    intent(in)    :: RTI         !> run time info
@@ -226,6 +226,9 @@ module feedback_module
         double precision, dimension(RTI%ncluster) :: varlogZp 
         double precision, dimension(RTI%ncluster_dead) :: logZp_dead      
         double precision, dimension(RTI%ncluster_dead) :: varlogZp_dead 
+
+        integer, dimension(RTI%ncluster+RTI%ncluster_dead) :: ordering
+        integer, dimension(RTI%ncluster+RTI%ncluster_dead) :: kpos
 
         character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_equals,fmt_tail,fmt_nlike
 
@@ -267,22 +270,27 @@ module feedback_module
                 write(stdout_unit,'("log(Z)     = ", F8.2, " +/- ", F5.2)') logZ,sqrt(varlogZ)
             end if
 
-            do p=1,RTI%ncluster
-                if(RTI%logZp(p)>logzero) then
-                    write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2, " (still evaluating)")') p, logZp(p),sqrt(varlogZp(p))
-                else
-                    write(stdout_unit,'("log(Z_",I2,")  = ? (still evaluating)")') p
-                end if
-            end do
-            if(RTI%ncluster_dead>0) then
-                do p=1,RTI%ncluster_dead
-                    if(RTI%logZp_dead(p)>logzero) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2)') p+RTI%ncluster, logZp_dead(p),sqrt(varlogZp_dead(p))
+            ordering = sort_doubles([-RTI%logZp,-RTI%logZp_dead])
+
+            do p=1,RTI%ncluster+RTI%ncluster_dead
+
+                if(ordering(p)<=RTI%ncluster) then
+
+                    if(RTI%logZp(ordering(p))>logzero) then
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2, " (still evaluating)")') p, logZp(ordering(p)),sqrt(varlogZp(ordering(p)))
                     else
-                        write(stdout_unit,'("log(Z_",I2,")  = ?")') p+RTI%ncluster
+                        write(stdout_unit,'("log(Z_",I2,")  = ? (still evaluating)")') p
                     end if
-                end do
-            end if
+
+                else
+                    if(RTI%logZp_dead(ordering(p)-RTI%ncluster)>logzero) then
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2)') p, logZp_dead(ordering(p)-RTI%ncluster),sqrt(varlogZp_dead(ordering(p)-RTI%ncluster))
+                    else
+                        write(stdout_unit,'("log(Z_",I2,")  = ?")') p
+                    end if
+                end if
+
+            end do
 
             write(stdout_unit,'("")')
             write(stdout_unit,'("")')
