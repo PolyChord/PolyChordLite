@@ -16,58 +16,60 @@ module mpi_module
     integer, parameter :: tag_run_cholesky=6
     integer, parameter :: tag_run_logL=7
     integer, parameter :: tag_run_nlike=8
-    integer, parameter :: tag_run_stop=9
+    integer, parameter :: tag_run_epoch_seed=9
+    integer, parameter :: tag_run_epoch_babies=10
+    integer, parameter :: tag_run_stop=11
 
-    type mpi_type
+    type mpi_bundle
         integer :: rank
         integer :: nprocs
         integer :: root
         integer :: colour
         integer :: communicator
 
-    end type mpi_type
+    end type mpi_bundle
 
 
 
     contains
 
     !> Subroutine to get all mpi information
-    function get_mpi_info(mpi_communicator,colour) result(mpi_info)
+    function get_mpi_information(mpi_communicator,colour) result(mpi_information)
         implicit none
         integer, intent(in)           :: mpi_communicator
         integer, intent(in), optional :: colour
-        type(mpi_type)                :: mpi_info
+        type(mpi_bundle)                :: mpi_information
 
-        mpi_info%rank         = get_rank(mpi_communicator)
-        mpi_info%nprocs       = get_nprocs(mpi_communicator)
-        mpi_info%root         = get_root(mpi_communicator)
-        mpi_info%communicator = mpi_communicator
+        mpi_information%rank         = get_rank(mpi_communicator)
+        mpi_information%nprocs       = get_nprocs(mpi_communicator)
+        mpi_information%root         = get_root(mpi_communicator)
+        mpi_information%communicator = mpi_communicator
 
         if(present(colour)) then
-            mpi_info%colour = colour
+            mpi_information%colour = colour
         else
-            mpi_info%colour = 0
+            mpi_information%colour = 0
         end if
 
     end function
 
     !> Returns whether this is the root node
-    function is_root(mpi_info) 
+    function is_root(mpi_information) 
         implicit none
-        type(mpi_type),intent(in) :: mpi_info
+        type(mpi_bundle),intent(in) :: mpi_information
         logical :: is_root
 
-        is_root = mpi_info%rank==mpi_info%root
+        is_root = mpi_information%rank==mpi_information%root
 
     end function is_root
 
     !> Returns whether there is a single processor
-    function linear_mode(mpi_info) 
+    function linear_mode(mpi_information) 
         implicit none
-        type(mpi_type),intent(in) :: mpi_info
+        type(mpi_bundle),intent(in) :: mpi_information
         logical :: linear_mode
 
-        linear_mode = mpi_info%nprocs==1
+        linear_mode = mpi_information%nprocs==1
 
     end function linear_mode
 
@@ -166,11 +168,11 @@ module mpi_module
 
 
     !> Split a communicator into n even groups
-    function mpi_split(n,mpi_communicator) result(mpi_info)
+    function mpi_split(n,mpi_communicator) result(mpi_information)
         implicit none
         integer,intent(in)  :: n
         integer,intent(in)  :: mpi_communicator
-        type(mpi_type)      :: mpi_info
+        type(mpi_bundle)      :: mpi_information
 
         integer :: new_mpi_communicator
         integer :: numprocs
@@ -178,31 +180,31 @@ module mpi_module
         integer :: key
 
         ! Get the original mpi info
-        mpi_info = get_mpi_info(mpi_communicator)
+        mpi_information = get_mpi_information(mpi_communicator)
 
         ! Define the new number of processors
-        numprocs= ceiling(dble(mpi_info%nprocs)/dble(n))
+        numprocs= ceiling(dble(mpi_information%nprocs)/dble(n))
 
         ! Define the 'colour' of this process by dividing it into n adjacent processes
-        colour = mpi_info%rank / numprocs
+        colour = mpi_information%rank / numprocs
 
         ! The new rank is just modulo this
-        key  = mod(mpi_info%rank, numprocs)
+        key  = mod(mpi_information%rank, numprocs)
 
         ! Split up the communicator
         call MPI_COMM_SPLIT(mpi_communicator,colour,key,new_mpi_communicator,mpierror)
 
         ! Assign the new mpi info
-        mpi_info = get_mpi_info(new_mpi_communicator,colour)
+        mpi_information = get_mpi_information(new_mpi_communicator,colour)
 
     end function mpi_split
 
-    subroutine mpi_synchronise(mpi_info)
+    subroutine mpi_synchronise(mpi_information)
         implicit none
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
 
 #ifdef MPI
-        call MPI_BARRIER(mpi_info%communicator,mpierror)
+        call MPI_BARRIER(mpi_information%communicator,mpierror)
 #endif 
 
     end subroutine mpi_synchronise
@@ -214,10 +216,10 @@ module mpi_module
     !!
     !! http://www.mpich.org/static/docs/v3.1/www3/MPI_Allreduce.html
     !!
-    function sum_integers(intgr_local,mpi_info) result(intgr)
+    function sum_integers(intgr_local,mpi_information) result(intgr)
         implicit none
         integer, intent(in) :: intgr_local
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
         integer :: intgr
 
         call MPI_ALLREDUCE(    &
@@ -226,16 +228,16 @@ module mpi_module
             1,                 &!number of elements sent
             MPI_INTEGER,       &!type of element sent
             MPI_SUM,           &!reduce by finding the minimum
-            mpi_info%communicator,  &!handle
+            mpi_information%communicator,  &!handle
             mpierror           &!error flag
             )
 
     end function sum_integers
 
-    function sum_doubles(db_local,mpi_info) result(db)
+    function sum_doubles(db_local,mpi_information) result(db)
         implicit none
         double precision, intent(in) :: db_local
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
         double precision :: db
 
         call MPI_ALLREDUCE(       &
@@ -244,39 +246,39 @@ module mpi_module
             1,                    &!number of elements sent
             MPI_DOUBLE_PRECISION, &!type of element sent
             MPI_SUM,              &!reduce by finding the minimum
-            mpi_info%communicator,     &!handle
+            mpi_information%communicator,     &!handle
             mpierror              &!error flag
             )
 
     end function sum_doubles
 
-    subroutine broadcast_doubles(doubles,mpi_info)
+    subroutine broadcast_doubles(doubles,mpi_information)
         implicit none
         double precision, dimension(:), intent(inout) :: doubles
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
 
         call MPI_BCAST(            & 
             doubles,               &!broadcast buffer
             size(doubles),         &!size of buffer
             MPI_DOUBLE_PRECISION,  &!type of element sent
-            mpi_info%root,         &!root doing the sending
-            mpi_info%communicator, &!handle
+            mpi_information%root,         &!root doing the sending
+            mpi_information%communicator, &!handle
             mpierror               &!error flag
             )
 
     end subroutine broadcast_doubles
 
-    subroutine broadcast_integers(integers,mpi_info)
+    subroutine broadcast_integers(integers,mpi_information)
         implicit none
         integer, dimension(:), intent(inout) :: integers
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
 
         call MPI_BCAST(            & 
             integers,              &!broadcast buffer
             size(integers),        &!size of buffer
             MPI_INT,               &!type of element sent
-            mpi_info%root,         &!root doing the sending
-            mpi_info%communicator, &!handle
+            mpi_information%root,         &!root doing the sending
+            mpi_information%communicator, &!handle
             mpierror               &!error flag
             )
 
@@ -303,15 +305,15 @@ module mpi_module
     !!
     !! This a process by which the root node 'catches' a thrown point from 
     !! any slave, and returns the slave identifier for use to throw back
-    function catch_point(live_point,mpi_info) result(slave_id)
+    function catch_point(live_point,mpi_information) result(slave_id)
         implicit none
 
         double precision,intent(out),dimension(:) :: live_point !> The caught live point
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
 
         integer :: slave_id ! slave identifier
 
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status ! status identifier
+        integer, dimension(MPI_STATUS_SIZE) :: mpistatus ! status identifier
 
         call MPI_RECV(             &!
             live_point,            &!
@@ -319,12 +321,12 @@ module mpi_module
             MPI_DOUBLE_PRECISION,  &!
             MPI_ANY_SOURCE,        &!
             tag_gen_point,         &!
-            mpi_info%communicator,      &!
-            mpi_status,            &!
+            mpi_information%communicator,      &!
+            mpistatus,            &!
             mpierror               &!
             )
 
-        slave_id = mpi_status(MPI_SOURCE) ! Pass on the slave id
+        slave_id = mpistatus(MPI_SOURCE) ! Pass on the slave id
 
     end function catch_point
 
@@ -332,19 +334,19 @@ module mpi_module
     !> Slave throws a point to the master
     !!
     !! This a process by which a slave node 'throws' a point to the root
-    subroutine throw_point(live_point,mpi_info)
+    subroutine throw_point(live_point,mpi_information)
         implicit none
 
         double precision,intent(in),dimension(:) :: live_point !> live point to throw
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
 
         call MPI_SEND(             &!
             live_point,            &!
             size(live_point),      &!
             MPI_DOUBLE_PRECISION,  &!
-            mpi_info%root,                  &!
+            mpi_information%root,                  &!
             tag_gen_point,         &!
-            mpi_info%communicator,      &!
+            mpi_information%communicator,      &!
             mpierror               &!
             )
 
@@ -357,16 +359,17 @@ module mpi_module
 
 
     !> Master catches babies thrown by any slave, and returns the slave identity that did the throwing
-    function catch_babies(baby_points,nlike,mpi_info) result(slave_id)
+    function catch_babies(baby_points,nlike,epoch,mpi_information) result(slave_id)
         implicit none
 
         double precision,intent(out),dimension(:,:) :: baby_points !> The babies to be caught
         integer, dimension(:), intent(out)          :: nlike       !> The number of likelihood evaluations to be caught
-        type(mpi_type), intent(in)                  :: mpi_info    !> The mpi communicator
+        integer,               intent(out)          :: epoch       !> The epoch the points were generated in
+        type(mpi_bundle), intent(in)                :: mpi_information    !> The mpi communicator
 
         integer :: slave_id ! slave identifier
 
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status ! status identifier
+        integer, dimension(MPI_STATUS_SIZE) :: mpistatus ! status identifier
 
         call MPI_RECV(                               &!
             baby_points,                             &!
@@ -374,13 +377,13 @@ module mpi_module
             MPI_DOUBLE_PRECISION,                    &!
             MPI_ANY_SOURCE,                          &!
             tag_run_baby,                            &!
-            mpi_info%communicator,                   &!
-            mpi_status,                              &!
+            mpi_information%communicator,            &!
+            mpistatus,                               &!
             mpierror                                 &!
             )
 
         ! Pass on the slave id
-        slave_id = mpi_status(MPI_SOURCE)
+        slave_id = mpistatus(MPI_SOURCE)
 
         call MPI_RECV(            &! 
             nlike,                &! 
@@ -388,37 +391,58 @@ module mpi_module
             MPI_INT,              &! 
             slave_id,             &! 
             tag_run_nlike,        &! 
-            mpi_info%communicator,&! 
-            mpi_status,           &! 
+            mpi_information%communicator,&! 
+            mpistatus,            &! 
+            mpierror              &! 
+            )
+
+        call MPI_RECV(            &! 
+            epoch,                &! 
+            1,                    &! 
+            MPI_INT,              &! 
+            slave_id,             &! 
+            tag_run_epoch_babies, &! 
+            mpi_information%communicator,&! 
+            mpistatus,            &! 
             mpierror              &! 
             )
 
     end function catch_babies
 
     !> Slave throws babies to the master
-    subroutine throw_babies(baby_points,nlike,mpi_info)
+    subroutine throw_babies(baby_points,nlike,epoch,mpi_information)
         implicit none
 
         double precision,intent(in),dimension(:,:) :: baby_points !> The babies to be thrown
         integer, dimension(:), intent(in) :: nlike                !> The number of likelihood evaluations to be caught
-        type(mpi_type), intent(in) :: mpi_info
+        integer,               intent(in) :: epoch                !> The epoch the babies were generated in
+        type(mpi_bundle), intent(in) :: mpi_information
 
         call MPI_SEND(                               &! 
             baby_points,                             &! 
             size(baby_points,1)*size(baby_points,2), &! 
             MPI_DOUBLE_PRECISION,                    &! 
-            mpi_info%root,                                    &! 
+            mpi_information%root,                                    &! 
             tag_run_baby,                            &! 
-            mpi_info%communicator,                        &! 
+            mpi_information%communicator,                        &! 
             mpierror                                 &! 
             )                                        
         call MPI_SEND(         &!  
             nlike,             &!  
             size(nlike),       &!  
             MPI_INT,           &!  
-            mpi_info%root,              &!  
+            mpi_information%root,              &!  
             tag_run_nlike,     &!  
-            mpi_info%communicator,  &!  
+            mpi_information%communicator,  &!  
+            mpierror           &!  
+            )
+        call MPI_SEND(         &!  
+            epoch,             &!  
+            1,                 &!  
+            MPI_INT,           &!  
+            mpi_information%root,              &!  
+            tag_run_epoch_babies,&!  
+            mpi_information%communicator,  &!  
             mpierror           &!  
             )
 
@@ -430,35 +454,36 @@ module mpi_module
 
 
     !> slave catches seed thrown by master
-    function catch_seed(seed_point,cholesky,logL,mpi_info) result(more_points_needed)
+    function catch_seed(seed_point,cholesky,logL,epoch,mpi_information) result(more_points_needed)
         use abort_module, only: halt_program
         implicit none
 
 
         double precision,intent(out),dimension(:) :: seed_point  !> The seed point to be caught
         double precision,intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
-        double precision,intent(in)                :: logL       !> loglikelihood contour to be caught
-        type(mpi_type), intent(in) :: mpi_info
+        double precision,intent(out)               :: logL       !> loglikelihood contour to be caught
+        integer,         intent(out)               :: epoch
+        type(mpi_bundle), intent(in)               :: mpi_information
 
         logical :: more_points_needed ! whether or not we need more points
 
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status ! status identifier
+        integer, dimension(MPI_STATUS_SIZE) :: mpistatus ! status identifier
 
 
         call MPI_RECV(                      &!
             seed_point,                     &!
             size(seed_point),               &!
             MPI_DOUBLE_PRECISION,           &!
-            mpi_info%root,                           &!
+            mpi_information%root,                           &!
             MPI_ANY_TAG,                    &!
-            mpi_info%communicator,               &!
-            mpi_status,                     &!
+            mpi_information%communicator,               &!
+            mpistatus,                     &!
             mpierror                        &!
             )
-        if(mpi_status(MPI_TAG) == tag_run_stop ) then
+        if(mpistatus(MPI_TAG) == tag_run_stop ) then
             more_points_needed = .false.
             return
-        else if(mpi_status(MPI_TAG) == tag_run_seed) then
+        else if(mpistatus(MPI_TAG) == tag_run_seed) then
             more_points_needed = .true.
         else
             call halt_program('slave error: unrecognised tag')
@@ -468,21 +493,31 @@ module mpi_module
             cholesky,                         &!
             size(cholesky,1)*size(cholesky,1),&!
             MPI_DOUBLE_PRECISION,             &!
-            mpi_info%root,                             &!
+            mpi_information%root,                             &!
             tag_run_cholesky,                 &!
-            mpi_info%communicator,                 &!
-            mpi_status,                       &!
+            mpi_information%communicator,                 &!
+            mpistatus,                       &!
             mpierror                          &!
             )
         call MPI_RECV(                 &!
             logL,                      &!
             1,                         &!
             MPI_DOUBLE_PRECISION,      &!
-            mpi_info%root,                      &!
+            mpi_information%root,      &!
             tag_run_logL,              &!
-            mpi_info%communicator,          &!
-            mpi_status,                &!
+            mpi_information%communicator,          &!
+            mpistatus,                 &!
             mpierror                   &!
+            )
+        call MPI_RECV(            &! 
+            epoch,                &! 
+            1,                    &! 
+            MPI_INT,              &! 
+            mpi_information%root, &! 
+            tag_run_epoch_seed,   &! 
+            mpi_information%communicator,&! 
+            mpistatus,            &! 
+            mpierror              &! 
             )
 
     end function catch_seed
@@ -490,14 +525,15 @@ module mpi_module
 
 
     !> root throws seed to slave
-    subroutine throw_seed(seed_point,cholesky,logL,mpi_info,slave_id,keep_going)
+    subroutine throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,epoch,keep_going)
         implicit none
 
         double precision,intent(in),dimension(:) :: seed_point   !> seed to be thrown
         double precision,intent(in),dimension(:,:) :: cholesky   !> cholesky to be thrown
         double precision,intent(in)                :: logL       !> loglikelihood contour to be thrown
-        type(mpi_type),intent(in) :: mpi_info                    !> mpi handle
+        type(mpi_bundle),intent(in) :: mpi_information           !> mpi handle
         integer, intent(in) :: slave_id                          !> identity of target slave
+        integer, intent(in) :: epoch                             !> epoch of seed
         logical, intent(in) :: keep_going                        !> Further signal whether to keep going 
 
         integer :: tag ! tag variable to
@@ -512,7 +548,7 @@ module mpi_module
             MPI_DOUBLE_PRECISION,  &!  
             slave_id,              &!  
             tag,                   &!  
-            mpi_info%communicator,      &!  
+            mpi_information%communicator,      &!  
             mpierror               &!  
             )
 
@@ -524,7 +560,7 @@ module mpi_module
             MPI_DOUBLE_PRECISION,               &!  
             slave_id,                           &!  
             tag_run_cholesky,                   &!  
-            mpi_info%communicator,                   &!  
+            mpi_information%communicator,                   &!  
             mpierror                            &!  
             )
         call MPI_SEND(              &!  
@@ -533,8 +569,17 @@ module mpi_module
             MPI_DOUBLE_PRECISION,   &!  
             slave_id,               &!  
             tag_run_logL,           &!  
-            mpi_info%communicator,       &!  
+            mpi_information%communicator,       &!  
             mpierror                &!  
+            )
+        call MPI_SEND(         &!  
+            epoch,             &!  
+            1,                 &!  
+            MPI_INT,           &!  
+            slave_id,          &!  
+            tag_run_epoch_seed,&!  
+            mpi_information%communicator,  &!  
+            mpierror           &!  
             )
 
 
@@ -555,9 +600,9 @@ module mpi_module
     !> Request point
     !!
     !! This subroutine is used by the root node to request a new live point
-    subroutine request_point(mpi_info,slave_id)
+    subroutine request_point(mpi_information,slave_id)
         implicit none
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
         integer, intent(in) :: slave_id         !> Slave to request a new point from
 
 
@@ -569,7 +614,7 @@ module mpi_module
             MPI_INT,           &! sending no integers
             slave_id,          &! process id to send to
             tag_gen_request,   &! continuation tag
-            mpi_info%communicator,  &! mpi handle
+            mpi_information%communicator,  &! mpi handle
             mpierror           &! error flag
             )
 
@@ -579,9 +624,9 @@ module mpi_module
     !> No more points please
     !!
     !! This subroutine is used by the root node to signal that no more points are required
-    subroutine no_more_points(mpi_info,slave_id)
+    subroutine no_more_points(mpi_information,slave_id)
         implicit none
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
         integer, intent(in) :: slave_id         !> Slave to request a new point from
 
 
@@ -593,7 +638,7 @@ module mpi_module
             MPI_INT,           &! sending no integers
             slave_id,          &! process id to send to
             tag_gen_stop,      &! continuation tag
-            mpi_info%communicator,  &! mpi handle
+            mpi_information%communicator,  &! mpi handle
             mpierror           &! error flag
             )
 
@@ -602,13 +647,13 @@ module mpi_module
     !> See if more points are needed
     !!
     !! This subroutine is used by the root node to request a new live point
-    function more_points_needed(mpi_info)
+    function more_points_needed(mpi_information)
         use abort_module
         implicit none
-        type(mpi_type), intent(in) :: mpi_info
+        type(mpi_bundle), intent(in) :: mpi_information
 
         integer :: empty_buffer(0) ! empty buffer to send
-        integer, dimension(MPI_STATUS_SIZE) :: mpi_status  ! status identifier
+        integer, dimension(MPI_STATUS_SIZE) :: mpistatus  ! status identifier
 
         logical :: more_points_needed !> Whether we need more points or not
 
@@ -616,17 +661,17 @@ module mpi_module
             empty_buffer,    &!
             0,               &!
             MPI_INT,         &!
-            mpi_info%root,            &!
+            mpi_information%root,            &!
             MPI_ANY_TAG,     &!
-            mpi_info%communicator,&!
-            mpi_status,      &!
+            mpi_information%communicator,&!
+            mpistatus,      &!
             mpierror         &!
             )
 
         ! If we've recieved a kill signal, then exit this loop
-        if(mpi_status(MPI_TAG) == tag_gen_stop ) then
+        if(mpistatus(MPI_TAG) == tag_gen_stop ) then
             more_points_needed = .false.
-        else if(mpi_status(MPI_TAG) == tag_gen_request) then
+        else if(mpistatus(MPI_TAG) == tag_gen_request) then
             more_points_needed = .true.
         else
             call halt_program('generate error: unrecognised tag')

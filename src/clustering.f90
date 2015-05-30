@@ -249,7 +249,7 @@ module cluster_module
     implicit none
     contains
 
-    subroutine do_clustering(settings,RTI)
+    function do_clustering(settings,RTI)
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info,add_cluster
         use calculate_module,  only: calculate_similarity_matrix
@@ -260,6 +260,9 @@ module cluster_module
         type(program_settings), intent(in) :: settings
         !> The evidence storage
         type(run_time_info), intent(inout) :: RTI
+        !> Whether or not a cluster has been found
+        logical :: do_clustering
+
 
         ! Similarity matrix
         double precision,dimension(settings%nlive,settings%nlive) :: similarity_matrix
@@ -272,6 +275,9 @@ module cluster_module
         integer :: nlive
 
         integer :: i_cluster
+
+        ! Initially no clusters found
+        do_clustering=.false.
 
         ! Get the number of old clusters
         num_old_clusters=RTI%ncluster
@@ -290,6 +296,7 @@ module cluster_module
                 ! Do clustering on this 
                 if ( num_clusters>1 ) then
                     ! If we find a cluster
+                    do_clustering=.true.
 
                     ! we split this cluster into n, and put the others at the end
                     call add_cluster(settings,RTI,i_cluster,clusters(:nlive),num_clusters)
@@ -305,7 +312,7 @@ module cluster_module
             
         end do
 
-    end subroutine do_clustering
+    end function do_clustering
 
 
 

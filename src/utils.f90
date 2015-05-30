@@ -65,9 +65,6 @@ module utils_module
     !> unit for paramnames file
     integer, parameter :: paramnames_unit = 22
 
-    !> Log[1/2 Erfc[j/Sqrt[2]]]
-    double precision, parameter,dimension(20) :: logsigma = (/-1.84102, -3.78318, -6.60773, -10.3601, -15.065, -20.7368, -27.3843, -35.0134, -43.6281, -53.2313, -63.8249, -75.4107, -87.9897, -101.563, -116.131, -131.695, -148.256, -165.812, -184.366, -203.917 /)
-
     ! All series used to approximate F are computed with relative
     ! tolerance:
     double precision eps
@@ -392,6 +389,89 @@ module utils_module
         end if
 
     end subroutine logincexp
+
+
+    !> Return the sorted indices of an array of doubles
+    !!
+    function sort_doubles(a) result(k)
+        implicit none
+        double precision,intent(in), dimension(:) :: a
+        double precision, dimension(size(a)) :: b
+        integer, dimension(size(a)) :: i
+        integer, dimension(size(a)) :: k
+
+        integer :: j
+
+        b = a
+        i = [ (j,j=1,size(a)) ]
+
+        call quicksort(b,i)
+
+        k=i
+        !do j=1,size(a)
+            !k(i(j)) = j
+        !end do
+
+    end function sort_doubles
+
+    recursive subroutine quicksort(A,Ai)
+        double precision, intent(inout), dimension(:) :: A
+        integer, intent(inout), dimension(:) :: Ai
+        integer :: iq
+
+        if(size(A) > 1) then
+            call Partition(A,Ai,iq)
+            call quicksort(A(:iq-1),Ai(:iq-1))
+            call quicksort(A(iq:),Ai(iq:))
+        endif
+    end subroutine quicksort
+
+    subroutine Partition(A,Ai,marker)
+        double precision, intent(inout), dimension(:) :: A
+        integer, intent(inout), dimension(:) :: Ai
+        integer, intent(out) :: marker
+        integer :: i, j
+        double precision :: temp
+        integer :: tempi
+        double precision :: x      ! pivot point
+        x = A(1)
+        i= 0
+        j= size(A) + 1
+
+        do
+            j = j-1
+            do
+                if (A(j) <= x) exit
+                j = j-1
+            end do
+            i = i+1
+            do
+                if (A(i) >= x) exit
+                i = i+1
+            end do
+            if (i < j) then
+                ! exchange A(i) and A(j)
+                temp = A(i)
+                A(i) = A(j)
+                A(j) = temp
+                tempi = Ai(i)
+                Ai(i) = Ai(j)
+                Ai(j) = tempi
+
+            elseif (i == j) then
+                marker = i+1
+                return
+            else
+                marker = i
+                return
+            endif
+        end do
+
+    end subroutine Partition
+
+
+
+
 
     !> Hypergeometric function 1F1
     !!

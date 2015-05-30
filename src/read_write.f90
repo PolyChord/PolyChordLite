@@ -558,7 +558,7 @@ module read_write_module
 
 
     subroutine write_posterior_file(settings,RTI)
-        use utils_module, only: DB_FMT,fmt_len,write_posterior_unit,write_equals_unit
+        use utils_module, only: DB_FMT,fmt_len,write_posterior_unit,write_equals_unit,sort_doubles
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info 
         implicit none
@@ -569,6 +569,8 @@ module read_write_module
         integer :: i_cluster
         integer :: i_post
         double precision :: weight
+
+        integer, dimension(RTI%ncluster+RTI%ncluster_dead) :: ordering
 
         character(len=fmt_len) :: fmt_dbl
 
@@ -590,38 +592,40 @@ module read_write_module
             ! Close the equally weighted global posterior file
             close(write_equals_unit)
 
+
+            ! Sort the indices into order
+            ordering = sort_doubles([-RTI%logZp,-RTI%logZp_dead])
+
             ! ------------- cluster equally weighted posteriors ----------------
+
             if(settings%cluster_posteriors) then
 
-                do i_cluster = 1,RTI%ncluster
+                do i_cluster = 1,RTI%ncluster+RTI%ncluster_dead
 
-                    ! Open the equally weighted cluster posterior file
-                    open(write_equals_unit,file=trim(posterior_file(settings,.false.,i_cluster)))
+                    if(ordering(i_cluster)<=RTI%ncluster) then
+                        ! Open the equally weighted cluster posterior file
+                        open(write_equals_unit,file=trim(posterior_file(settings,.false.,i_cluster)))
 
-                    ! Print out the posterior for the active clusters
-                    do i_post = 1,RTI%nequals(i_cluster)
-                        write(write_equals_unit,fmt_dbl) exp(RTI%logZp(i_cluster)-RTI%logZ),RTI%equals(settings%p_2l:,i_post,i_cluster)
-                    end do
+                        ! Print out the posterior for the active clusters
+                        do i_post = 1,RTI%nequals(ordering(i_cluster))
+                            write(write_equals_unit,fmt_dbl) exp(RTI%logZp(ordering(i_cluster))-RTI%logZ),RTI%equals(settings%p_2l:,i_post,ordering(i_cluster))
+                        end do
 
-                    ! Close the equally weighted cluster posterior file
-                    close(write_equals_unit)
+                    else
+                        ! Open the equally weighted cluster posterior file
+                        open(write_equals_unit,file=trim(posterior_file(settings,.false.,i_cluster)))
 
-                end do
-
-                do i_cluster = 1,RTI%ncluster_dead
-
-                    ! Open the equally weighted cluster posterior file
-                    open(write_equals_unit,file=trim(posterior_file(settings,.false.,i_cluster+RTI%ncluster)))
-
-                    ! Print out the posterior for the dead clusters
-                    do i_post = 1,RTI%nequals_dead(i_cluster)
-                        write(write_equals_unit,fmt_dbl) exp(RTI%logZp_dead(i_cluster)-RTI%logZ),RTI%equals_dead(settings%p_2l:,i_post,i_cluster)
-                    end do
+                        ! Print out the posterior for the dead clusters
+                        do i_post = 1,RTI%nequals_dead(ordering(i_cluster)-RTI%ncluster)
+                            write(write_equals_unit,fmt_dbl) exp(RTI%logZp_dead(ordering(i_cluster)-RTI%ncluster)-RTI%logZ),RTI%equals_dead(settings%p_2l:,i_post,ordering(i_cluster)-RTI%ncluster)
+                        end do
+                    end if
 
                     ! Close the equally weighted cluster posterior file
                     close(write_equals_unit)
 
                 end do
+
             end if
         end if
 
@@ -643,32 +647,30 @@ module read_write_module
 
             ! ------------- cluster weighted posteriors ----------------
             if(settings%cluster_posteriors) then
-                do i_cluster = 1,RTI%ncluster
+                do i_cluster = 1,RTI%ncluster+RTI%ncluster_dead
 
-                    ! Open the weighted cluster posterior file
-                    open(write_posterior_unit,file=trim(posterior_file(settings,.true.,i_cluster)))
+                    if(ordering(i_cluster)<=RTI%ncluster) then
 
-                    ! Print out the posterior for the active clusters
-                    do i_post = 1,RTI%nposterior(i_cluster)
-                        weight = exp(RTI%posterior(settings%pos_w,i_post,i_cluster) + RTI%posterior(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight(i_cluster) +RTI%logZp(i_cluster)-RTI%logZ)
-                        if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior(settings%pos_l,i_post,i_cluster),RTI%posterior(settings%pos_p0:,i_post,i_cluster) 
-                    end do
+                        ! Open the weighted cluster posterior file
+                        open(write_posterior_unit,file=trim(posterior_file(settings,.true.,i_cluster)))
 
-                    ! Close the weighted cluster posterior file
-                    close(write_posterior_unit)
+                        ! Print out the posterior for the active clusters
+                        do i_post = 1,RTI%nposterior(ordering(i_cluster))
+                            weight = exp(RTI%posterior(settings%pos_w,i_post,ordering(i_cluster)) + RTI%posterior(settings%pos_l,i_post,ordering(i_cluster)) - RTI%maxlogweight(ordering(i_cluster)) +RTI%logZp(ordering(i_cluster))-RTI%logZ)
+                            if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior(settings%pos_l,i_post,ordering(i_cluster)),RTI%posterior(settings%pos_p0:,i_post,ordering(i_cluster)) 
+                        end do
+                    else
 
-                end do
+                        ! Open the weighted cluster posterior file
+                        open(write_posterior_unit,file=trim(posterior_file(settings,.true.,i_cluster+RTI%ncluster)))
 
-                do i_cluster = 1,RTI%ncluster_dead
+                        ! Print out the posterior for the dead clusters
+                        do i_post = 1,RTI%nposterior_dead(ordering(i_cluster)-RTI%ncluster)
+                            weight = exp(RTI%posterior_dead(settings%pos_w,i_post,ordering(i_cluster)-RTI%ncluster) + RTI%posterior_dead(settings%pos_l,i_post,ordering(i_cluster)-RTI%ncluster) - RTI%maxlogweight_dead(ordering(i_cluster)-RTI%ncluster) +RTI%logZp_dead(ordering(i_cluster)-RTI%ncluster)-RTI%logZ)
+                            if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior_dead(settings%pos_l,i_post,ordering(i_cluster)-RTI%ncluster),RTI%posterior_dead(settings%pos_p0:,i_post,ordering(i_cluster)-RTI%ncluster) 
+                        end do
 
-                    ! Open the weighted cluster posterior file
-                    open(write_posterior_unit,file=trim(posterior_file(settings,.true.,i_cluster+RTI%ncluster)))
-
-                    ! Print out the posterior for the dead clusters
-                    do i_post = 1,RTI%nposterior_dead(i_cluster)
-                        weight = exp(RTI%posterior_dead(settings%pos_w,i_post,i_cluster) + RTI%posterior_dead(settings%pos_l,i_post,i_cluster) - RTI%maxlogweight_dead(i_cluster) +RTI%logZp_dead(i_cluster)-RTI%logZ)
-                        if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior_dead(settings%pos_l,i_post,i_cluster),RTI%posterior_dead(settings%pos_p0:,i_post,i_cluster) 
-                    end do
+                    end if
 
                     ! Close the weighted cluster posterior file
                     close(write_posterior_unit)
