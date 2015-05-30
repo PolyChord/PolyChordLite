@@ -16,7 +16,9 @@ module mpi_module
     integer, parameter :: tag_run_cholesky=6
     integer, parameter :: tag_run_logL=7
     integer, parameter :: tag_run_nlike=8
-    integer, parameter :: tag_run_stop=9
+    integer, parameter :: tag_run_epoch_seed=9
+    integer, parameter :: tag_run_epoch_babies=10
+    integer, parameter :: tag_run_stop=11
 
     type mpi_bundle
         integer :: rank
@@ -357,12 +359,13 @@ module mpi_module
 
 
     !> Master catches babies thrown by any slave, and returns the slave identity that did the throwing
-    function catch_babies(baby_points,nlike,mpi_information) result(slave_id)
+    function catch_babies(baby_points,nlike,epoch,mpi_information) result(slave_id)
         implicit none
 
         double precision,intent(out),dimension(:,:) :: baby_points !> The babies to be caught
         integer, dimension(:), intent(out)          :: nlike       !> The number of likelihood evaluations to be caught
-        type(mpi_bundle), intent(in)                  :: mpi_information    !> The mpi communicator
+        integer,               intent(out)          :: epoch       !> The epoch the points were generated in
+        type(mpi_bundle), intent(in                 :: mpi_information    !> The mpi communicator
 
         integer :: slave_id ! slave identifier
 
@@ -374,8 +377,8 @@ module mpi_module
             MPI_DOUBLE_PRECISION,                    &!
             MPI_ANY_SOURCE,                          &!
             tag_run_baby,                            &!
-            mpi_information%communicator,                   &!
-            mpistatus,                              &!
+            mpi_information%communicator,            &!
+            mpistatus,                               &!
             mpierror                                 &!
             )
 
@@ -389,18 +392,30 @@ module mpi_module
             slave_id,             &! 
             tag_run_nlike,        &! 
             mpi_information%communicator,&! 
-            mpistatus,           &! 
+            mpistatus,            &! 
+            mpierror              &! 
+            )
+
+        call MPI_RECV(            &! 
+            epoch,                &! 
+            1,                    &! 
+            MPI_INT,              &! 
+            slave_id,             &! 
+            tag_run_epoch_babies, &! 
+            mpi_information%communicator,&! 
+            mpistatus,            &! 
             mpierror              &! 
             )
 
     end function catch_babies
 
     !> Slave throws babies to the master
-    subroutine throw_babies(baby_points,nlike,mpi_information)
+    subroutine throw_babies(baby_points,nlike,epoch,mpi_information)
         implicit none
 
         double precision,intent(in),dimension(:,:) :: baby_points !> The babies to be thrown
         integer, dimension(:), intent(in) :: nlike                !> The number of likelihood evaluations to be caught
+        integer,               intent(in) :: epoch                !> The epoch the babies were generated in
         type(mpi_bundle), intent(in) :: mpi_information
 
         call MPI_SEND(                               &! 
@@ -421,6 +436,15 @@ module mpi_module
             mpi_information%communicator,  &!  
             mpierror           &!  
             )
+        call MPI_SEND(         &!  
+            epoch,             &!  
+            1,                 &!  
+            MPI_INT,           &!  
+            mpi_information%root,              &!  
+            tag_run_epoch_babies,&!  
+            mpi_information%communicator,  &!  
+            mpierror           &!  
+            )
 
     end subroutine throw_babies
 
@@ -430,15 +454,16 @@ module mpi_module
 
 
     !> slave catches seed thrown by master
-    function catch_seed(seed_point,cholesky,logL,mpi_information) result(more_points_needed)
+    function catch_seed(seed_point,cholesky,logL,epoch,mpi_information) result(more_points_needed)
         use abort_module, only: halt_program
         implicit none
 
 
         double precision,intent(out),dimension(:) :: seed_point  !> The seed point to be caught
         double precision,intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
-        double precision,intent(in)                :: logL       !> loglikelihood contour to be caught
-        type(mpi_bundle), intent(in) :: mpi_information
+        double precision,intent(out)               :: logL       !> loglikelihood contour to be caught
+        integer,         intent(out)               :: epoch
+        type(mpi_bundle), intent(in)               :: mpi_information
 
         logical :: more_points_needed ! whether or not we need more points
 
@@ -478,11 +503,21 @@ module mpi_module
             logL,                      &!
             1,                         &!
             MPI_DOUBLE_PRECISION,      &!
-            mpi_information%root,                      &!
+            mpi_information%root,      &!
             tag_run_logL,              &!
             mpi_information%communicator,          &!
-            mpistatus,                &!
+            mpistatus,                 &!
             mpierror                   &!
+            )
+        call MPI_RECV(            &! 
+            epoch,                &! 
+            1,                    &! 
+            MPI_INT,              &! 
+            mpi_information%root, &! 
+            tag_run_epoch_seed,   &! 
+            mpi_information%communicator,&! 
+            mpistatus,            &! 
+            mpierror              &! 
             )
 
     end function catch_seed
@@ -490,14 +525,15 @@ module mpi_module
 
 
     !> root throws seed to slave
-    subroutine throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,keep_going)
+    subroutine throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,epoch,keep_going)
         implicit none
 
         double precision,intent(in),dimension(:) :: seed_point   !> seed to be thrown
         double precision,intent(in),dimension(:,:) :: cholesky   !> cholesky to be thrown
         double precision,intent(in)                :: logL       !> loglikelihood contour to be thrown
-        type(mpi_bundle),intent(in) :: mpi_information                    !> mpi handle
+        type(mpi_bundle),intent(in) :: mpi_information           !> mpi handle
         integer, intent(in) :: slave_id                          !> identity of target slave
+        integer, intent(in) :: epoch                             !> epoch of seed
         logical, intent(in) :: keep_going                        !> Further signal whether to keep going 
 
         integer :: tag ! tag variable to
@@ -535,6 +571,15 @@ module mpi_module
             tag_run_logL,           &!  
             mpi_information%communicator,       &!  
             mpierror                &!  
+            )
+        call MPI_SEND(         &!  
+            epoch,             &!  
+            1,                 &!  
+            MPI_INT,           &!  
+            slave_id,          &!  
+            tag_run_epoch_seed,&!  
+            mpi_information%communicator,  &!  
+            mpierror           &!  
             )
 
 

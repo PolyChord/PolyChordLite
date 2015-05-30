@@ -95,6 +95,7 @@ module nested_sampling_module
         type(mpi_bundle) :: mpi_information
 
 
+
 #ifdef MPI
         ! MPI specific variables
         ! ----------------------
@@ -102,6 +103,13 @@ module nested_sampling_module
         integer                            :: slave_id      ! Slave identifier
         integer, dimension(:), allocatable :: slave_cluster ! The cluster the slave is currently working on
         double precision :: time0,time1,slice_time,wait_time
+
+        ! Slave switch
+        ! ------------
+        ! This prevents slaves delivering points to incorrect clusters after clustering
+        ! has reorganised the cluster indices
+        integer ::  slave_epoch
+        integer ::  master_epoch
 #endif
 
 
@@ -113,10 +121,15 @@ module nested_sampling_module
 #ifdef MPI
         allocate(slave_cluster(mpi_information%nprocs-1)) ! Allocate the slave arrays
         slave_cluster = 1                          ! initialise with 1
+
+        ! slave switch
+        slave_epoch=0
+        master_epoch=0
 #endif
 
         ! Rolling loglikelihood calculation
         nlikesum=0
+
 
 
         !-------------------------------------------------------!
@@ -200,10 +213,10 @@ module nested_sampling_module
                     ! -------------
 
                     ! Recieve any new baby points from any slave currently sending
-                    slave_id = catch_babies(baby_points,nlike,mpi_information)
+                    slave_id = catch_babies(baby_points,nlike,slave_epoch,mpi_information)
 
                     ! and throw seeding information back to slave (true => keep going)
-                    call throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,.true.)
+                    call throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,master_epoch,.true.)
 
                     ! set cluster_id to be the cluster identity of the babies just recieved 
                     ! (saved in slave_cluster from the last send) and set slave_cluster to 
@@ -294,7 +307,7 @@ module nested_sampling_module
                 RTI%nlike = RTI%nlike + nlike
 
                 ! Send kill signal to slave slave_id (note that we no longer care about seed_point, so we'll just use the last one
-                call throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,.false.) 
+                call throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,master_epoch,.false.) 
 
             end do
 
@@ -328,7 +341,7 @@ module nested_sampling_module
 
             ! 1) Listen for a seed point being sent by the master
             !    Note that this also tests for a kill signal sent by the master
-            do while(catch_seed(seed_point,cholesky,logL,mpi_information))
+            do while(catch_seed(seed_point,cholesky,logL,slave_epoch,mpi_information))
                 time0 = time()
                 ! 2) Generate a new set of baby points
                 baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike,num_repeats)
@@ -340,7 +353,7 @@ module nested_sampling_module
 
 
                 ! 3) Send the baby points back
-                call throw_babies(baby_points,nlike,mpi_information)
+                call throw_babies(baby_points,nlike,slave_epoch,mpi_information)
 
             end do
 
