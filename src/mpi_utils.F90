@@ -365,7 +365,7 @@ module mpi_module
         double precision,intent(out),dimension(:,:) :: baby_points !> The babies to be caught
         integer, dimension(:), intent(out)          :: nlike       !> The number of likelihood evaluations to be caught
         integer,               intent(out)          :: epoch       !> The epoch the points were generated in
-        type(mpi_bundle), intent(in                 :: mpi_information    !> The mpi communicator
+        type(mpi_bundle), intent(in)                :: mpi_information    !> The mpi communicator
 
         integer :: slave_id ! slave identifier
 

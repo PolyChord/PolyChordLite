@@ -232,38 +232,44 @@ module nested_sampling_module
 
 
                 ! See if this point is suitable to be added to the arrays
-                if( replace_point(settings,RTI,baby_points,cluster_id) ) then
+#ifdef MPI
+                if( linear_mode(mpi_information) .or. master_epoch==slave_epoch ) then
+#endif
+                    if(replace_point(settings,RTI,baby_points,cluster_id) ) then
 
-                    ! Check to see if we need more samples
-                    need_more_samples = more_samples_needed(settings,RTI) 
+                        ! Check to see if we need more samples
+                        need_more_samples = more_samples_needed(settings,RTI) 
 
-                    ! Update the posterior array every nlive iterations
-                    if( cyc(RTI%ndead,settings%nlive) .or. .not. need_more_samples ) call update_posteriors(settings,RTI) 
+                        ! Update the posterior array every nlive iterations
+                        if( cyc(RTI%ndead,settings%nlive) .or. .not. need_more_samples ) call update_posteriors(settings,RTI) 
 
-                    ! Update the resume files every settings%update_resume iterations,
-                    ! or at the end of the run
-                    if( cyc(RTI%ndead,settings%update_resume) .or. .not. need_more_samples ) then
-                        if(settings%write_resume)        call write_resume_file(settings,RTI)
-                        if(settings%write_live)          call write_phys_live_points(settings,RTI)
-                        if(settings%write_stats)         call write_stats_file(settings,RTI,nlikesum)
+                        ! Update the resume files every settings%update_resume iterations,
+                        ! or at the end of the run
+                        if( cyc(RTI%ndead,settings%update_resume) .or. .not. need_more_samples ) then
+                            if(settings%write_resume)        call write_resume_file(settings,RTI)
+                            if(settings%write_live)          call write_phys_live_points(settings,RTI)
+                            if(settings%write_stats)         call write_stats_file(settings,RTI,nlikesum)
+                        end if
+
+                        if( cyc(RTI%ndead,settings%update_posterior) .or. .not.need_more_samples ) call write_posterior_file(settings,RTI)  
+
+                        call delete_cluster(settings,RTI) ! Delete any clusters as necessary
+
+                        ! update the clustering and covariance matrices every nlive iterations
+                        if( cyc(RTI%ndead,settings%nlive) ) then
+                            !--------------------------------------------!
+                            call write_intermediate_results(settings,RTI,nlikesum)
+                            nlikesum=0
+                            !--------------------------------------------!
+                            if(settings%do_clustering) then
+                                if( do_clustering(settings,RTI) )  master_epoch = master_epoch+1
+                            end if
+                            call calculate_covmats(settings,RTI)
+                        end if
                     end if
-
-                    if( cyc(RTI%ndead,settings%update_posterior) .or. .not.need_more_samples ) call write_posterior_file(settings,RTI)  
-
-                    call delete_cluster(settings,RTI) ! Delete any clusters as necessary
-
-                    ! update the clustering and covariance matrices every nlive iterations
-                    if( cyc(RTI%ndead,settings%nlive) ) then
-                        !--------------------------------------------!
-                        call write_intermediate_results(settings,RTI,nlikesum)
-                        nlikesum=0
-                        !--------------------------------------------!
-                        if(settings%do_clustering) call do_clustering(settings,RTI)
-                        call calculate_covmats(settings,RTI)
-                    end if
-
-
+#ifdef MPI
                 end if
+#endif
 
             end do ! End of main loop body
 
@@ -301,7 +307,7 @@ module nested_sampling_module
             do i_slave=mpi_information%nprocs-1,1,-1
 
                 ! Recieve baby point from slave slave_id
-                slave_id = catch_babies(baby_points,nlike,mpi_information)
+                slave_id = catch_babies(baby_points,nlike,slave_epoch,mpi_information)
 
                 ! Add the likelihood calls to our counter
                 RTI%nlike = RTI%nlike + nlike
@@ -331,7 +337,7 @@ module nested_sampling_module
             baby_points = 0d0                     ! Avoid sending nonsense
             baby_points(settings%l0,:) = logzero  ! zero contour to ensure these are all thrown away
             nlike = 0                             ! no likelihood calls in this round
-            call throw_babies(baby_points,nlike,mpi_information)
+            call throw_babies(baby_points,nlike,slave_epoch,mpi_information)
             wait_time = 0
             slice_time = 0
             time1 = time()
