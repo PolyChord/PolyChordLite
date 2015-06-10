@@ -1,17 +1,21 @@
-PolyChord v 1.3
+PolyChord v 1.4
 Will Handley, Mike Hobson & Anthony Lasenby
 wh260@mrao.cam.ac.uk
 arXiv:1502.01856
-Released May 2015
+arXiv:1506.00171
+Released June 2015
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PolyChord Licence
 =================
 
-Users are required to accept the licence agreement given in LICENCE file.
+Users are required to accept the licence agreement given in LICENCE
+file. PolyChord is free for academic usage
 
-Users are also required to cite the PolyChord paper (arXiv:1502.01856) in their
-publications.
+Users are also required to cite the PolyChord papers: 
+arXiv:1502.01856
+arXiv:1506.00171
+in their publications.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 MPI Support

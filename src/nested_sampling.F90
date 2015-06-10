@@ -253,7 +253,11 @@ module nested_sampling_module
 
                         if( cyc(RTI%ndead,settings%update_posterior) .or. .not.need_more_samples ) call write_posterior_file(settings,RTI)  
 
-                        call delete_cluster(settings,RTI) ! Delete any clusters as necessary
+                        if(delete_cluster(settings,RTI)) then
+#ifdef MPI
+                            master_epoch = master_epoch+1
+#endif
+                        end if! Delete any clusters as necessary
 
                         ! update the clustering and covariance matrices every nlive iterations
                         if( cyc(RTI%ndead,settings%nlive) ) then
@@ -262,7 +266,11 @@ module nested_sampling_module
                             nlikesum=0
                             !--------------------------------------------!
                             if(settings%do_clustering) then
-                                if( do_clustering(settings,RTI) )  master_epoch = master_epoch+1
+                                if( do_clustering(settings,RTI) )  then
+#ifdef MPI
+                                    master_epoch = master_epoch+1
+#endif
+                                end if
                             end if
                             call calculate_covmats(settings,RTI)
                         end if

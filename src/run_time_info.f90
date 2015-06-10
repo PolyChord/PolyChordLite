@@ -500,13 +500,14 @@ module run_time_module
 
     end subroutine add_cluster
 
-    subroutine delete_cluster(settings,RTI) 
+    function delete_cluster(settings,RTI) 
         use settings_module, only: program_settings
         use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i
         implicit none
         !> The variable containing all of the runtime information
         type(run_time_info), intent(inout) :: RTI
         type(program_settings), intent(in) :: settings
+        logical :: delete_cluster
 
         !The cluster index to be deleted
         integer            :: p(1)
@@ -519,8 +520,12 @@ module run_time_module
         ! Contstructor iterator
         integer :: i
 
+        delete_cluster=.false.
 
         if(any(RTI%nlive==0)) then
+
+            delete_cluster=.true.
+
             ! Update the posterior arrays
             call update_posteriors(settings,RTI) 
 
@@ -586,7 +591,7 @@ module run_time_module
         end if
 
 
-    end subroutine delete_cluster
+    end function delete_cluster
 
 
     subroutine calculate_covmats(settings,RTI)
