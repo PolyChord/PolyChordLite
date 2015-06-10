@@ -768,7 +768,7 @@ module read_write_module
         write(write_stats_unit, '("Global evidence:")')
         write(write_stats_unit, '("----------------")')
         write(write_stats_unit,'("")')
-        write(write_stats_unit,fmt_Z) logZ,sqrt(varlogZ)
+        write(write_stats_unit,fmt_Z) logZ,sqrt(abs(varlogZ))
         write(write_stats_unit,'("")')
         write(write_stats_unit,'("")')
         write(write_stats_unit, '("Local evidences:")')
@@ -777,11 +777,11 @@ module read_write_module
 
         write(fmt_Z,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, """ (Still Active)"")")') 'I2',DB_FMT,DB_FMT
         do p=1,RTI%ncluster
-            write(write_stats_unit,fmt_Z) p, logZp(p), sqrt(varlogZp(p))
+            write(write_stats_unit,fmt_Z) p, logZp(p), sqrt(abs(varlogZp(p)))
         end do
         write(fmt_Z,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, ")")') 'I2',DB_FMT,DB_FMT
         do p=1,RTI%ncluster_dead
-            write(write_stats_unit,fmt_Z) p+RTI%ncluster, logZp_dead(p), sqrt(varlogZp_dead(p))
+            write(write_stats_unit,fmt_Z) p+RTI%ncluster, logZp_dead(p), sqrt(abs(varlogZp_dead(p)))
         end do
 
         write(write_stats_unit,'("")')

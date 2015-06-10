@@ -27,9 +27,9 @@ module feedback_module
             write(stdout_unit,'("")')
             write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
             write(stdout_unit,'("copyright: Will Handley, Mike Hobson & Anthony Lasenby")')
-            write(stdout_unit,'("  version: 1.3")')
-            write(stdout_unit,'("  release: 30th May 2015")')
-            write(stdout_unit,'("    email: wh260@cam.ac.uk")')
+            write(stdout_unit,'("  version: 1.4")')
+            write(stdout_unit,'("  release: 10th June 2015")')
+            write(stdout_unit,'("    email: wh260@mrao.cam.ac.uk")')
             write(stdout_unit,'("")')
         end if
 
@@ -267,7 +267,7 @@ module feedback_module
             call calculate_logZ_estimate(RTI,logZ,varlogZ,logZp,varlogZp,logZp_dead,varlogZp_dead)            
 
             if(RTI%logZ>logzero) then
-                write(stdout_unit,'("log(Z)     = ", F8.2, " +/- ", F5.2)') logZ,sqrt(varlogZ)
+                write(stdout_unit,'("log(Z)     = ", F8.2, " +/- ", F5.2)') logZ,sqrt(abs(varlogZ))
             end if
 
             ordering = sort_doubles([-RTI%logZp,-RTI%logZp_dead])
@@ -277,14 +277,14 @@ module feedback_module
                 if(ordering(p)<=RTI%ncluster) then
 
                     if(RTI%logZp(ordering(p))>logzero) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2, " (still evaluating)")') p, logZp(ordering(p)),sqrt(varlogZp(ordering(p)))
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2, " (still evaluating)")') p, logZp(ordering(p)),sqrt(abs(varlogZp(ordering(p))))
                     else
                         write(stdout_unit,'("log(Z_",I2,")  = ? (still evaluating)")') p
                     end if
 
                 else
                     if(RTI%logZp_dead(ordering(p)-RTI%ncluster)>logzero) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2)') p, logZp_dead(ordering(p)-RTI%ncluster),sqrt(varlogZp_dead(ordering(p)-RTI%ncluster))
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2)') p, logZp_dead(ordering(p)-RTI%ncluster),sqrt(abs(varlogZp_dead(ordering(p)-RTI%ncluster)))
                     else
                         write(stdout_unit,'("log(Z_",I2,")  = ?")') p
                     end if
@@ -321,8 +321,8 @@ module feedback_module
             write(stdout_unit,'(A42)')                                        ' ________________________________________ '
             write(stdout_unit,'(A42)')                                        '|                                        |'
             write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') nint(output_info(3))
-            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1),sqrt(output_info(2))
-            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') output_info(1)+prior_log_volume(priors),sqrt(output_info(2))
+            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1),sqrt(abs(output_info(2)))
+            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') output_info(1)+prior_log_volume(priors),sqrt(abs(output_info(2)))
             write(stdout_unit,'(A42)')                                        '|________________________________________|'
         endif
     end subroutine write_final_results
