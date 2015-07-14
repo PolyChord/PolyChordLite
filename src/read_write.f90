@@ -176,7 +176,7 @@ module read_write_module
         write(write_resume_unit,'("=== local dead evidence^2 -- log(<Z_p^2>) ===")')
         if(RTI%ncluster_dead>0) write(write_resume_unit,fmt_dbl) RTI%logZp2_dead
         write(write_resume_unit,'("=== maximum dead log weights -- log(w_p) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%maxlogweight_dead
+        if(RTI%ncluster_dead>0) write(write_resume_unit,fmt_dbl) RTI%maxlogweight_dead
 
 
         write(fmt_dbl,'("(",I0,A,")")') settings%nDims, DB_FMT   ! Initialise the double array format for matrices
@@ -443,7 +443,7 @@ module read_write_module
         read(read_resume_unit,*)                                    ! 
         if(RTI%ncluster_dead>0) read(read_resume_unit,fmt_dbl) RTI%logZp2_dead              ! local dead evidence^2 estimate
         read(read_resume_unit,*)                               ! 
-        read(read_resume_unit,fmt_dbl) RTI%maxlogweight_dead   ! max dead log weights
+        if(RTI%ncluster_dead>0) read(read_resume_unit,fmt_dbl) RTI%maxlogweight_dead   ! max dead log weights
 
 
         write(fmt_dbl,'("(",I0,A,")")') settings%nDims, DB_FMT   ! Initialise the double array format for matrices
