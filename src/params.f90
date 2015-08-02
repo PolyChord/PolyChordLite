@@ -8,6 +8,7 @@ module params_module
         integer                   :: speed       ! grade of parameter
         integer                   :: prior_type  ! type of prior
         integer                   :: prior_block ! prior block
+        logical                   :: sub_cluster ! sub_clustering?
 
         ! Parameters in the prior
         double precision, dimension(:), allocatable :: prior_params
@@ -15,14 +16,15 @@ module params_module
 
     contains
 
-    subroutine assign_parameter(param,paramname,latex,speed,prior_type,prior_block,prior_params)
+    subroutine assign_parameter(param,paramname,latex,speed,prior_type,prior_block,prior_params,sub_cluster)
         implicit none
+        type(param_type),intent(out):: param       ! Parameter to be returned
         character(len=*),intent(in) :: paramname   ! Name of parameter
         character(len=*),intent(in) :: latex       ! LaTeX name
         integer         ,intent(in) :: speed       ! grade of parameter
         integer         ,intent(in) :: prior_type  ! type of prior
         integer         ,intent(in) :: prior_block ! prior block
-        type(param_type),intent(out):: param       ! Parameter to be returned
+        logical,optional,intent(in) :: sub_cluster ! sub clustering?
 
         ! Parameters in the prior
         double precision, dimension(:),intent(in) :: prior_params
@@ -35,10 +37,15 @@ module params_module
         param%prior_block = prior_block
         allocate( param%prior_params(size(prior_params)) )
         param%prior_params = prior_params
+        if(present(sub_cluster)) then
+            param%sub_cluster = sub_cluster
+        else 
+            param%sub_cluster = .false.
+        end if
 
     end subroutine assign_parameter
 
-    subroutine add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params)
+    subroutine add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params,sub_cluster)
         implicit none
         ! Parameter array
         type(param_type),dimension(:),allocatable,intent(inout) :: params
@@ -48,6 +55,7 @@ module params_module
         integer         ,intent(in),optional :: speed       ! grade of parameter
         integer         ,intent(in),optional :: prior_type  ! type of prior
         integer         ,intent(in),optional :: prior_block ! prior block
+        logical         ,intent(in),optional :: sub_cluster ! sub cluster on this?
 
         ! Parameters in the prior
         double precision, dimension(:),intent(in),optional :: prior_params 
@@ -71,7 +79,11 @@ module params_module
 
 
         if(present(speed) .and. present(prior_type) .and. present(prior_block) .and. present(prior_params) ) then
-            call assign_parameter(params(num_params+1),paramname,latex,speed,prior_type,prior_block,prior_params) 
+            if(present(sub_cluster)) then
+                call assign_parameter(params(num_params+1),paramname,latex,speed,prior_type,prior_block,prior_params,.true.) 
+            else
+                call assign_parameter(params(num_params+1),paramname,latex,speed,prior_type,prior_block,prior_params) 
+            end if
         else
             call assign_parameter(params(num_params+1),paramname,latex,1,0,0,blank_params) 
         end if

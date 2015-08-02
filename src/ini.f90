@@ -51,6 +51,7 @@ contains
         type(param_type),dimension(:),allocatable,intent(out) :: params         ! Parameter array
         type(param_type),dimension(:),allocatable,intent(out) :: derived_params ! Derived parameter array
 
+
         settings%nlive              = get_integer(file_name,'nlive')
         settings%num_repeats        = get_integer(file_name,'num_repeats')
         settings%do_clustering      = get_logical(file_name,'do_clustering',.false.)
@@ -79,9 +80,11 @@ contains
     end subroutine read_params
 
 
+
     function get_string(file_name,key_word,dflt,ith)
         use utils_module,  only: STR_LENGTH,params_unit
         use abort_module,  only: halt_program
+        implicit none
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
         character(len=*),intent(in),optional  :: dflt  !> keyword to search for
@@ -278,6 +281,9 @@ contains
         integer                                  :: prior_block     ! prior block
         double precision,allocatable,dimension(:):: prior_params    ! prior parameters
 
+        integer                                  :: sub_cluster     ! whether or not to do sub clustering on this parameter
+        character(1),parameter                   :: sc='*'          ! indicator for sub clustering
+
 
         integer :: i_param
 
@@ -291,7 +297,12 @@ contains
 
             !1) Parameter name
             read(line_buffer,*) paramname !read in string
-            paramname=trim(paramname)     !trim string
+            sub_cluster = index(paramname,sc)
+            if(sub_cluster>0) then
+                paramname=trim(paramname(:sub_cluster-1))
+            else
+                paramname=trim(paramname)     !trim string
+            end if
 
 
             !2) Latex name
@@ -322,7 +333,12 @@ contains
             call get_prior_params(prior_params,line_buffer) ! get the prior params
 
             ! Add this parameter to the array
-            call add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params) 
+            if(sub_cluster==0) then
+                call add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params) 
+            else
+                call add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params,.true.) 
+            end if
+
         end do
 
         i_param = 1
@@ -399,6 +415,48 @@ contains
         end do
 
     end subroutine get_prior_params
+
+
+
+
+
+
+
+
+    function split_string(string,separator)
+        implicit none
+        character(len=*),intent(in) :: string
+        character(1),intent(in) :: separator
+        character(len=len(string)), dimension(:), allocatable :: split_string
+
+        character(len=len(string)) :: temp_string
+
+        character(len=len(string)), dimension(:), allocatable :: temp_split_string
+
+        integer :: i,j,k
+
+
+        allocate(split_string(0))
+        temp_split_string = split_string
+        i = 0
+        k = 0
+        do 
+            j = index(string(i+1:),separator)
+            if(trim(adjustl(string(i+1:i+j)))=='') exit
+
+            k = k+1 
+            deallocate(split_string)
+            allocate(split_string(k))
+            split_string(:k-1) = temp_split_string
+            deallocate(temp_split_string)
+            split_string(k) = trim(adjustl(string(i+1:i+j))) 
+            temp_split_string = split_string
+
+            i = i+j
+        end do
+
+    end function split_string
+
 
 
  

@@ -249,7 +249,7 @@ module cluster_module
     implicit none
     contains
 
-    function do_clustering(settings,RTI)
+    function do_clustering(settings,RTI,sub_dimensions)
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info,add_cluster
         use calculate_module,  only: calculate_similarity_matrix
@@ -260,6 +260,8 @@ module cluster_module
         type(program_settings), intent(in) :: settings
         !> The evidence storage
         type(run_time_info), intent(inout) :: RTI
+        !> Dimensions to cluster on
+        integer,dimension(:),optional,intent(in) :: sub_dimensions
         !> Whether or not a cluster has been found
         logical :: do_clustering
 
@@ -289,7 +291,13 @@ module cluster_module
 
             if(nlive>2) then 
                 ! Calculate the similarity matrix for this cluster
-                similarity_matrix(:nlive,:nlive) = calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
+                if(present(sub_dimensions)) then
+                    similarity_matrix(:nlive,:nlive) =&
+                        calculate_similarity_matrix(RTI%live(sub_dimensions,:nlive,i_cluster))
+                else 
+                    similarity_matrix(:nlive,:nlive) =&
+                        calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
+                end if
 
                 clusters(:nlive) = NN_clustering(similarity_matrix(:nlive,:nlive),num_clusters)
 

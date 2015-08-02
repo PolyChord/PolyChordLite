@@ -7,8 +7,8 @@ module loglikelihood_module
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
     !!
-    !! The mean is set at 0.5 by default, apart from the x directions, where
-    !! they are separated by 20 sigma widths and all sigmas at 0.01
+    !! The mean is set at 0.5 by default, apart from the x and y directions, where
+    !! they are separated by 20sqrt(2) sigma widths and all sigmas at 0.01
 
     function loglikelihood(theta,phi)
         use utils_module, only: logaddexp,logTwoPi
@@ -29,8 +29,10 @@ module loglikelihood_module
         sigma  = 1d-1 ! all sigma set relatively small
         mu1    = 0d0  ! mean in the center
         mu1(1) = -5d-1
+        mu1(2) = -5d-1
         mu2    = 0d0  ! mean in the center
         mu2(1) = +5d-1
+        mu2(2) = +5d-1
 
         ! Gaussian normalisation
         loglikelihood1 = - sum( log( sigma ) + logTwoPi/2d0 ) 

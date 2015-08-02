@@ -400,6 +400,8 @@ module priors_module
         integer, dimension(size(params)) :: hypercube_indices
         integer :: i_hypercube
 
+        integer,dimension(:), allocatable :: sub_clustering
+
         num_params = size(params) 
 
         ! First determine how many prior blocks there are
@@ -445,6 +447,14 @@ module priors_module
             end do
             settings%grade_dims(i_speed) = count(speeds==i_speed)
         end do
+
+        if(count([ (params(i_params)%sub_cluster, i_params=1,num_params) ]) > 0 ) then
+            allocate(sub_clustering(count([ (params(i_params)%sub_cluster, i_params=1,num_params) ])))
+            where([ (params(i_params)%sub_cluster, i_params=1,num_params) ])
+                sub_clustering = hypercube_indices
+            end where
+            settings%sub_clustering_dimensions = sub_clustering
+        end if
 
 
         ! Finally, add each of the parameters to the prior blocks, coupled with the hypercube information

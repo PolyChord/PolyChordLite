@@ -43,6 +43,14 @@ module feedback_module
             if(settings%posteriors) write(stdout_unit,'("Generating weighted posteriors")')
             if((settings%equals.or.settings%posteriors).and.settings%cluster_posteriors.and.settings%do_clustering) write(stdout_unit,'("Clustering on posteriors")')
             if(settings%write_resume) write(stdout_unit,'("Writing a resume file to",A)') trim(resume_file(settings,.false.))
+            if(allocated(settings%sub_clustering_dimensions)) then
+                if(size(settings%sub_clustering_dimensions)==1) then
+                    write(stdout_unit,'("Sub clustering on ",I4," dimension")') size(settings%sub_clustering_dimensions)
+                else 
+                    write(stdout_unit,'("Sub clustering on ",I4," dimensions")') size(settings%sub_clustering_dimensions)
+                end if
+                write(*,*) settings%sub_clustering_dimensions
+            end if
 
             write(stdout_unit,'("")')
         end if

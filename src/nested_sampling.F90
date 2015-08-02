@@ -266,6 +266,16 @@ module nested_sampling_module
                             nlikesum=0
                             !--------------------------------------------!
                             if(settings%do_clustering) then
+
+                                ! If we want to cluster on sub dimensions, then do this first
+                                if(allocated(settings%sub_clustering_dimensions)) then
+                                    if( do_clustering(settings,RTI,settings%sub_clustering_dimensions) )  then
+#ifdef MPI
+                                        master_epoch = master_epoch+1
+#endif
+                                    end if
+                                end if
+
                                 if( do_clustering(settings,RTI) )  then
 #ifdef MPI
                                     master_epoch = master_epoch+1

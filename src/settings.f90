@@ -119,6 +119,11 @@ module settings_module
         integer :: p_d1
         integer :: np
 
+
+
+        ! Sub clustering dimensions
+        integer,dimension(:),allocatable :: sub_clustering_dimensions
+
     end type program_settings
 
     contains
