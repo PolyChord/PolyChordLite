@@ -51,8 +51,8 @@ module read_write_module
 
         i_cluster = 1
         do while ( &
-                delete_file( posterior_file(settings,.true.,i_cluster), fb ) .or.  &
-                delete_file( posterior_file(settings,.false.,i_cluster), fb )   &
+                delete_file( posterior_file(settings,.true.,.false.,i_cluster), fb ) .or.  &
+                delete_file( posterior_file(settings,.false.,.false.,i_cluster), fb )   &
                 )
             i_cluster = i_cluster + 1
         end do
@@ -582,7 +582,7 @@ module read_write_module
             ! ------------- global equally weighted posteriors ----------------
 
             ! Open the equally weighted global posterior file
-            open(write_equals_unit,file=trim(posterior_file(settings,.false.)))
+            open(write_equals_unit,file=trim(posterior_file(settings,.false.,.true.)))
 
             ! Print out the posteriors
             do i_post=1,RTI%nequals_global(1)
@@ -604,7 +604,7 @@ module read_write_module
 
                     if(ordering(i_cluster)<=RTI%ncluster) then
                         ! Open the equally weighted cluster posterior file
-                        open(write_equals_unit,file=trim(posterior_file(settings,.false.,i_cluster)))
+                        open(write_equals_unit,file=trim(posterior_file(settings,.false.,.true.,i_cluster)))
 
                         ! Print out the posterior for the active clusters
                         do i_post = 1,RTI%nequals(ordering(i_cluster))
@@ -613,7 +613,7 @@ module read_write_module
 
                     else
                         ! Open the equally weighted cluster posterior file
-                        open(write_equals_unit,file=trim(posterior_file(settings,.false.,i_cluster)))
+                        open(write_equals_unit,file=trim(posterior_file(settings,.false.,.true.,i_cluster)))
 
                         ! Print out the posterior for the dead clusters
                         do i_post = 1,RTI%nequals_dead(ordering(i_cluster)-RTI%ncluster)
@@ -634,7 +634,7 @@ module read_write_module
             ! ------------- global weighted posteriors ----------------
 
             ! Open the weighted global posterior file
-            open(write_posterior_unit,file=trim(posterior_file(settings,.true.)))
+            open(write_posterior_unit,file=trim(posterior_file(settings,.true.,.true.)))
 
             ! Print out the posteriors
             do i_post=1,RTI%nposterior_global(1)
@@ -652,7 +652,7 @@ module read_write_module
                     if(ordering(i_cluster)<=RTI%ncluster) then
 
                         ! Open the weighted cluster posterior file
-                        open(write_posterior_unit,file=trim(posterior_file(settings,.true.,i_cluster)))
+                        open(write_posterior_unit,file=trim(posterior_file(settings,.true.,.true.,i_cluster)))
 
                         ! Print out the posterior for the active clusters
                         do i_post = 1,RTI%nposterior(ordering(i_cluster))
@@ -662,7 +662,7 @@ module read_write_module
                     else
 
                         ! Open the weighted cluster posterior file
-                        open(write_posterior_unit,file=trim(posterior_file(settings,.true.,i_cluster+RTI%ncluster)))
+                        open(write_posterior_unit,file=trim(posterior_file(settings,.true.,.true.,i_cluster+RTI%ncluster)))
 
                         ! Print out the posterior for the dead clusters
                         do i_post = 1,RTI%nposterior_dead(ordering(i_cluster)-RTI%ncluster)
@@ -677,6 +677,21 @@ module read_write_module
 
                 end do
             end if
+        end if
+
+        ! Rename the files
+        if(settings%equals) then
+            call rename(trim(posterior_file(settings,.false.,.true.)),trim(posterior_file(settings,.false.,.false.)))
+            do i_cluster = 1,RTI%ncluster+RTI%ncluster_dead
+                call rename(trim(posterior_file(settings,.false.,.true.,i_cluster)),trim(posterior_file(settings,.false.,.false.,i_cluster)))
+            end do
+        end if
+
+        if(settings%posteriors) then
+            call rename(trim(posterior_file(settings,.true. ,.true.)),trim(posterior_file(settings,.true. ,.false.)))
+            do i_cluster = 1,RTI%ncluster+RTI%ncluster_dead
+                call rename(trim(posterior_file(settings,.true.,.true.,i_cluster)),trim(posterior_file(settings,.true.,.false.,i_cluster)))
+            end do
         end if
 
     end subroutine write_posterior_file
@@ -884,12 +899,13 @@ module read_write_module
 
     end function cluster_dir
 
-    function posterior_file(settings,weighted,i) result(file_name)
+    function posterior_file(settings,weighted,temp,i) result(file_name)
         use settings_module, only: program_settings
         use utils_module,    only: STR_LENGTH
         implicit none
         type(program_settings), intent(in) :: settings
         logical,intent(in) :: weighted
+        logical,intent(in),optional :: temp !> whether to put a temporary prefix on it
         integer,intent(in),optional :: i
 
         character(STR_LENGTH) :: file_name
@@ -901,6 +917,10 @@ module read_write_module
             file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) // '_' // trim(adjustl(cluster_num)) 
         else 
             file_name = trim(settings%base_dir) // '/' // trim(settings%file_root)
+        end if
+
+        if(present(temp)) then
+            if(temp) file_name = trim(file_name) // '_temp'
         end if
 
         if(weighted) then
