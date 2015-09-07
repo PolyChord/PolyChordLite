@@ -16,3 +16,7 @@ getdist/plot_data/*
 getdist/plots/*
 *.pyc
 bin/*
+*.gcda
+*.gcno
+*.gcov
+gmon.out
