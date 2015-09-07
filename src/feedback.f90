@@ -190,7 +190,6 @@ module feedback_module
         integer, dimension(:) :: num_repeats
         integer, intent(in) :: feedback 
 
-        integer :: i
         character(len=fmt_len) fmt_int
 
         if(feedback>=normal_fb) then
@@ -236,7 +235,6 @@ module feedback_module
         double precision, dimension(RTI%ncluster_dead) :: varlogZp_dead 
 
         integer, dimension(RTI%ncluster+RTI%ncluster_dead) :: ordering
-        integer, dimension(RTI%ncluster+RTI%ncluster_dead) :: kpos
 
         character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_equals,fmt_tail,fmt_nlike
 

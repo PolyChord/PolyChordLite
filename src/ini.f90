@@ -429,8 +429,6 @@ contains
         character(1),intent(in) :: separator
         character(len=len(string)), dimension(:), allocatable :: split_string
 
-        character(len=len(string)) :: temp_string
-
         character(len=len(string)), dimension(:), allocatable :: temp_split_string
 
         integer :: i,j,k

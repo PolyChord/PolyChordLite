@@ -298,7 +298,7 @@ module run_time_module
     !!
     subroutine add_cluster(settings,RTI,p,cluster_list,num_new_clusters) 
         use settings_module, only: program_settings
-        use utils_module, only: logzero,logsumexp,logaddexp
+        use utils_module, only: logsumexp,logaddexp
         use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i,add_point
         implicit none
 
