@@ -245,13 +245,14 @@ module nested_sampling_module
 
                         ! Update the resume files every settings%update_resume iterations,
                         ! or at the end of the run
-                        if( cyc(RTI%ndead,settings%update_resume) .or. .not. need_more_samples ) then
-                            if(settings%write_resume)        call write_resume_file(settings,RTI)
-                            if(settings%write_live)          call write_phys_live_points(settings,RTI)
-                            if(settings%write_stats)         call write_stats_file(settings,RTI,nlikesum)
+                        if( cyc(RTI%ndead,settings%update_files) .or. .not. need_more_samples ) then
+                            if(settings%write_resume)                  call write_resume_file(settings,RTI)
+                            if(settings%write_live)                    call write_phys_live_points(settings,RTI)
+                            if(settings%write_stats)                   call write_stats_file(settings,RTI,nlikesum)
+                            if(settings%equals.or.settings%posteriors) call write_posterior_file(settings,RTI)   
+                            call rename_files(settings,RTI)
                         end if
 
-                        if( cyc(RTI%ndead,settings%update_posterior) .or. .not.need_more_samples ) call write_posterior_file(settings,RTI)  
 
                         if(delete_cluster(settings,RTI)) then
 #ifdef MPI

@@ -1,4 +1,4 @@
-!> This is the main driving routine of the nested sampling algorithm
+!-lstdc++> This is the main driving routine of the nested sampling algorithm
 program PolyChord
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
@@ -116,8 +116,7 @@ program PolyChord
         settings%cluster_posteriors = .false.
 
         settings%feedback      = 1
-        settings%update_resume = settings%nlive
-        settings%update_posterior = -1
+        settings%update_files  = settings%nlive
 
         settings%boost_posterior= 5d0
         allocate(settings%grade_frac(1)) 

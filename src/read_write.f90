@@ -22,6 +22,7 @@ module read_write_module
 
     end function resume_file_exists
 
+
     !> Remove resume files
     subroutine delete_files(settings)
         use settings_module, only: program_settings
@@ -59,6 +60,34 @@ module read_write_module
 
 
     end subroutine delete_files
+
+    subroutine rename_files(settings,RTI)
+        use settings_module, only: program_settings
+        use run_time_module, only: run_time_info
+        implicit none
+        type(program_settings), intent(in) :: settings
+        type(run_time_info),    intent(in) :: RTI
+
+        integer i_cluster
+
+        ! Move the resume file if resume
+        if(settings%write_resume) call rename(trim(resume_file(settings,.true.)),trim(resume_file(settings,.false.)))
+
+        ! Rename the files
+        if(settings%equals) then
+            call rename(trim(posterior_file(settings,.false.,.true.)),trim(posterior_file(settings,.false.,.false.)))
+            do i_cluster = 1,RTI%ncluster+RTI%ncluster_dead
+                call rename(trim(posterior_file(settings,.false.,.true.,i_cluster)),trim(posterior_file(settings,.false.,.false.,i_cluster)))
+            end do
+        end if
+
+        if(settings%posteriors) then
+            call rename(trim(posterior_file(settings,.true. ,.true.)),trim(posterior_file(settings,.true. ,.false.)))
+            do i_cluster = 1,RTI%ncluster+RTI%ncluster_dead
+                call rename(trim(posterior_file(settings,.true.,.true.,i_cluster)),trim(posterior_file(settings,.true.,.false.,i_cluster)))
+            end do
+        end if
+    end subroutine
 
 
     subroutine write_resume_file(settings,RTI)
@@ -261,9 +290,6 @@ module read_write_module
         end do
         ! Close the writing file
         close(write_resume_unit)
-
-        ! Move the temp file onto the new file
-        call rename(trim(resume_file(settings,.true.)),trim(resume_file(settings,.false.)))
 
     end subroutine write_resume_file
 
@@ -814,7 +840,7 @@ module read_write_module
         write(write_stats_unit,fmt_nlike) RTI%nlike
 
         write(fmt_nlike,'(  "("" <nlike>:    "","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
-        write(write_stats_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_resume),dble(nlikesum)/dble(RTI%num_repeats*settings%update_resume)
+        write(write_stats_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_files),dble(nlikesum)/dble(RTI%num_repeats*settings%update_files)
 
 
         close(write_stats_unit)
