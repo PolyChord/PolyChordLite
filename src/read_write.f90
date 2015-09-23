@@ -538,7 +538,7 @@ module read_write_module
         read(read_resume_unit,*)                               
         do i_point=1,nposterior_global(1)
             read(read_resume_unit,fmt_dbl) temp_posterior
-            call add_point(temp_equal,RTI%posterior_global,RTI%nposterior_global,1)
+            call add_point(temp_posterior,RTI%posterior_global,RTI%nposterior_global,1)
         end do
 
 
