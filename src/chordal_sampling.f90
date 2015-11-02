@@ -214,7 +214,6 @@ module chordal_module
             i_step=i_step+1
             R(S%h0:S%h1) = x0(S%h0:S%h1) + nhat * w * i_step
             call calculate_point(loglikelihood,priors,R,S,n)
-            n=n+1
         end do
         if(i_step>100) write(*,'(" too many R steps (",I10,")")') i_step
 
