@@ -59,6 +59,7 @@ contains
         settings%base_dir           = get_string(file_name,'base_directory','chains')
         settings%file_root          = get_string(file_name,'rootname','test')
 
+        settings%write_paramnames   = get_logical(file_name,'write_paramnames',.false.)
         settings%write_resume       = get_logical(file_name,'write_resume',.false.)
         settings%read_resume        = get_logical(file_name,'resume',.false.)
         settings%write_live         = get_logical(file_name,'write_live',.false.)
@@ -113,9 +114,11 @@ contains
 
         counter=1
 
-        do while(io_stat==0) 
+        do 
             ! Read in the next line
             read(params_unit,'(A)',iostat=io_stat) line_buffer
+            ! Exit if io_stat is less than zero
+            if (io_stat < 0) exit
 
             ! Skip any comment lines
             if( scan(line_buffer,comment) /=0 ) cycle
