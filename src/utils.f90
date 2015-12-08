@@ -79,6 +79,26 @@ module utils_module
 
 
     contains
+    
+    ! Write format for n integers
+    function integer_format(n)
+        implicit none
+        integer, intent(in) :: n
+        character(len=fmt_len) :: integer_format
+
+        write(integer_format,'("(",I0,A,")")') n,INT_FMT   ! define the integer format
+
+    end function integer_format
+
+    ! Write format for n doubles
+    function double_format(n)
+        implicit none
+        integer, intent(in) :: n
+        character(len=fmt_len) :: double_format
+
+        write(double_format,'("(",I0,A,")")') n,DB_FMT   ! define the integer format
+
+    end function double_format
 
     !> Swaps two integers via a temporary variable
     subroutine swap_integers(a,b)
