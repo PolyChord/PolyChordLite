@@ -87,11 +87,97 @@ module read_write_module
                 call rename(trim(posterior_file(settings,.true.,.true.,i_cluster)),trim(posterior_file(settings,.true.,.false.,i_cluster)))
             end do
         end if
-    end subroutine
+    end subroutine rename_files
+    
+
+
+
+
+
+
+
+
+    subroutine write_integer(a,str)
+        use utils_module, only: write_resume_unit,integer_format
+        implicit none
+        integer, intent(in) :: a
+        character(len=*), intent(in),optional :: str
+
+        if(present(str)) write(write_resume_unit,'("'//trim(str)//'")')
+        write(write_resume_unit,integer_format(1)) a
+
+    end subroutine write_integer
+
+    subroutine write_integers(arr,str)
+        use utils_module, only: write_resume_unit,integer_format
+        implicit none
+        integer,dimension(:), intent(in) :: arr
+        character(len=*), intent(in),optional :: str
+
+        if(present(str)) write(write_resume_unit,'("'//trim(str)//'")')
+        if(size(arr)>0) write(write_resume_unit,integer_format(size(arr))) arr
+
+    end subroutine write_integers
+    
+    subroutine write_double(a,str)
+        use utils_module, only: write_resume_unit,double_format
+        implicit none
+        double precision, intent(in) :: a
+        character(len=*), intent(in),optional :: str
+
+        if(present(str)) write(write_resume_unit,'("'//trim(str)//'")')
+        write(write_resume_unit,double_format(1)) a
+
+    end subroutine write_double
+
+    subroutine write_doubles(arr,str)
+        use utils_module, only: write_resume_unit,double_format
+        implicit none
+        double precision,dimension(:), intent(in) :: arr
+        character(len=*), intent(in),optional :: str
+
+        if(present(str)) write(write_resume_unit,'("'//trim(str)//'")')
+        if(size(arr)>0) write(write_resume_unit,double_format(size(arr))) arr
+
+    end subroutine write_doubles
+
+    subroutine write_doubles_2(arr,str)
+        use utils_module, only: write_resume_unit,double_format
+        implicit none
+        double precision,dimension(:,:), intent(in) :: arr
+        character(len=*), intent(in),optional :: str
+        integer :: i
+
+        if(present(str)) write(write_resume_unit,'("'//trim(str)//'")')
+        do i=1,size(arr,2)
+            call write_doubles( arr(:,i) )
+        end do
+
+    end subroutine write_doubles_2
+
+    subroutine write_doubles_3(arr,str,n)
+        use utils_module, only: write_resume_unit,double_format
+        implicit none
+        double precision,dimension(:,:,:), intent(in) :: arr
+        integer, intent(in),dimension(size(arr,3)),optional :: n
+        character(len=*), intent(in),optional :: str
+        integer :: i
+
+        if(present(str)) write(write_resume_unit,'("'//trim(str)//'")')
+        do i=1,size(arr,3)
+            if(present(n)) then
+                call write_doubles_2( arr(:,:n(i),i), '---------------------------------------' )
+            else
+                call write_doubles_2( arr(:,:,i), '---------------------------------------' )
+            end if
+        end do
+
+    end subroutine write_doubles_3
+
 
 
     subroutine write_resume_file(settings,RTI)
-        use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_resume_unit
+        use utils_module,    only: write_resume_unit
         use run_time_module, only: run_time_info
         use settings_module, only: program_settings
 
@@ -99,486 +185,245 @@ module read_write_module
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(in) :: RTI
 
-        integer :: i_cluster
-        integer :: i_dims
-        integer :: i_point
-
-
-        character(len=fmt_len) :: fmt_int
-        character(len=fmt_len) :: fmt_dbl
-
-
-
         ! Open the .resume file
         open(write_resume_unit,file=trim(resume_file(settings,.true.)), action='write') 
 
         ! write integers 
-        write(fmt_int,'("(",I0,A,")")') 1,INT_FMT   ! define the integer format
+        call write_integer(settings%nDims,           "=== Number of dimensions ===")
+        call write_integer(settings%nDerived,        "=== Number of derived parameters ===")                    
+        call write_integer(RTI%ndead,                "=== Number of dead points/iterations ===")                    
+        call write_integer(RTI%ncluster,             "=== Number of clusters ===")
+        call write_integer(RTI%ncluster_dead,        "=== Number of dead clusters ===")
+        call write_integer(RTI%nposterior_global(1), "=== Number of global weighted posterior points ===")
+        call write_integer(RTI%nequals_global(1),    "=== Number of global equally weighted posterior points ===")
+        call write_integer(size(settings%grade_dims),"=== Number of grades ===")
+        call write_integers(settings%grade_dims,     "=== positions of grades ===")
+        call write_integers(RTI%num_repeats,         "=== Number of repeats ===")
+        call write_integers(RTI%nlike,               "=== Number of likelihood calls ===")                    
+        call write_integers(RTI%nlive,               "=== Number of live points in each cluster ===")
+        call write_integers(RTI%nphantom,            "=== Number of phantom points in each cluster ===")                    
+        call write_integers(RTI%nposterior,          "=== Number of weighted posterior points in each cluster ===")                    
+        call write_integers(RTI%nequals,             "=== Number of equally weighted posterior points in each cluster ===")                    
+        call write_integers(RTI%i,                   "=== Minimum loglikelihood positions ===")                    
+        call write_integers(RTI%nposterior_dead,     "=== Number of weighted posterior points in each dead cluster ===")
+        call write_integers(RTI%nequals_dead,        "=== Number of equally weighted posterior points in each dead cluster ===")
+  
+       ! write evidences
+        call write_double(RTI%logZ,                  "=== global evidence -- log(<Z>) ===")                    
+        call write_double(RTI%logZ2,                 "=== global evidence^2 -- log(<Z^2>) ===")                    
+        call write_double(RTI%thin_posterior,        "=== posterior thin factor ===")                    
+        call write_doubles(RTI%logLp,                "=== local loglikelihood bounds ===")                    
+        call write_doubles(RTI%logXp,                "=== local volume -- log(<X_p>) ===")                    
+        call write_doubles(RTI%logZXp,               "=== global evidence volume cross correlation -- log(<ZX_p>) ===")                    
+        call write_doubles(RTI%logZp,                "=== local evidence -- log(<Z_p>) ===")                    
+        call write_doubles(RTI%logZp2,               "=== local evidence^2 -- log(<Z_p^2>) ===")                    
+        call write_doubles(RTI%logZpXp,              "=== local evidence volume cross correlation -- log(<Z_pX_p>) ===")                    
+        call write_doubles_2(RTI%logXpXq,            "=== local volume cross correlation -- log(<X_pX_q>) ===")                    
+        call write_doubles(RTI%maxlogweight,         "=== maximum log weights -- log(w_p) ===")                    
+  
+        call write_doubles(RTI%logZp_dead,           "=== local dead evidence -- log(<Z_p>) ===")
+        call write_doubles(RTI%logZp2_dead,          "=== local dead evidence^2 -- log(<Z_p^2>) ===")
+        call write_doubles(RTI%maxlogweight_dead,    "=== maximum dead log weights -- log(w_p) ===")                    
+  
+        call write_doubles_3(RTI%covmat,             "=== covariance matrices ===")
+        call write_doubles_3(RTI%cholesky,           "=== cholesky decompositions ===")
+  
+        call write_doubles_3(RTI%live,               "=== live points ===",                               RTI%nlive )
+        call write_doubles_3(RTI%phantom,            "=== phantom points ===",                            RTI%nphantom )
+        call write_doubles_3(RTI%posterior,          "=== weighted posterior points ===",                 RTI%nposterior )
+        call write_doubles_3(RTI%posterior_dead,     "=== dead weighted posterior points ===",            RTI%nposterior_dead )
+        call write_doubles_3(RTI%posterior_global,   "=== global weighted posterior points ===",          RTI%nposterior_global )
+        call write_doubles_3(RTI%equals,             "=== equally weighted posterior points ===",         RTI%nequals )
+        call write_doubles_3(RTI%equals_dead,        "=== dead equally weighted posterior points ===",    RTI%nequals_dead )
+        call write_doubles_3(RTI%equals_global,      "=== global equally weighted posterior points ===",  RTI%nequals_global )
 
-        write(write_resume_unit,'("=== Number of dimensions ===")')
-        write(write_resume_unit,fmt_int) settings%nDims
-
-        write(write_resume_unit,'("=== Number of derived parameters ===")')                    
-        write(write_resume_unit,fmt_int) settings%nDerived
-
-        write(write_resume_unit,'("=== Number of dead points/iterations ===")')                    
-        write(write_resume_unit,fmt_int) RTI%ndead
-        write(write_resume_unit,'("=== Number of clusters ===")')
-        write(write_resume_unit,fmt_int) RTI%ncluster
-        write(write_resume_unit,'("=== Number of dead clusters ===")')
-        write(write_resume_unit,fmt_int) RTI%ncluster_dead
-
-        write(write_resume_unit,'("=== number of global weighted posterior points ===")')
-        write(write_resume_unit,fmt_int) RTI%nposterior_global(1)
-        write(write_resume_unit,'("=== number of global equally weighted posterior points ===")')
-        write(write_resume_unit,fmt_int) RTI%nequals_global(1)
-
-        ! Write out the grade information
-        write(write_resume_unit,'("=== Number of grades ===")')
-        write(write_resume_unit,fmt_int) size(settings%grade_dims)
-        write(fmt_int,'("(",I0,A,")")') size(settings%grade_dims),INT_FMT   ! define the integer array format
-        write(write_resume_unit,'("=== positions of grades ===")')
-        write(write_resume_unit,fmt_int) settings%grade_dims
-        write(write_resume_unit,'("=== number of repeats ===")')
-        write(write_resume_unit,fmt_int) RTI%num_repeats
-        write(write_resume_unit,'("=== Number of likelihood calls ===")')                    
-        write(write_resume_unit,fmt_int) RTI%nlike
-
-
-        ! write number of live and phantom points
-        write(fmt_int,'("(",I0,A,")")') RTI%ncluster,INT_FMT   ! define the integer array format
-
-        write(write_resume_unit,'("=== Number of live points in each cluster ===")')
-        write(write_resume_unit,fmt_int) RTI%nlive           
-        write(write_resume_unit,'("=== Number of phantom points in each cluster ===")')                    
-        write(write_resume_unit,fmt_int) RTI%nphantom         
-        write(write_resume_unit,'("=== Number of weighted posterior points in each cluster ===")')                    
-        write(write_resume_unit,fmt_int) RTI%nposterior
-        write(write_resume_unit,'("=== Number of equally weighted posterior points in each cluster ===")')                    
-        write(write_resume_unit,fmt_int) RTI%nequals
-        write(write_resume_unit,'("=== Minimum loglikelihood positions ===")')                    
-        write(write_resume_unit,fmt_int) RTI%i
-
-
-        ! write number of live and phantom points
-        write(fmt_int,'("(",I0,A,")")') RTI%ncluster_dead,INT_FMT   ! define the integer array format
-
-        write(write_resume_unit,'("=== Number of weighted posterior points in each dead cluster ===")')                    
-        if(RTI%ncluster_dead>0) write(write_resume_unit,fmt_int) RTI%nposterior_dead
-        write(write_resume_unit,'("=== Number of equally weighted posterior points in each dead cluster ===")')                    
-        if(RTI%ncluster_dead>0) write(write_resume_unit,fmt_int) RTI%nequals_dead
-
-        ! write evidences
-        write(fmt_dbl,'("(",I0,A,")")') 1, DB_FMT              ! Initialise the double format
-        write(write_resume_unit,'("=== global evidence -- log(<Z>) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logZ                
-        write(write_resume_unit,'("=== global evidence^2 -- log(<Z^2>) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logZ2              
-        write(write_resume_unit,'("=== posterior thin factor ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%thin_posterior
-
-
-        write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster, DB_FMT   ! Initialise the double array format
-        write(write_resume_unit,'("=== local loglikelihood bounds ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logLp
-        write(write_resume_unit,'("=== local volume -- log(<X_p>) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logXp
-        write(write_resume_unit,'("=== global evidence volume cross correlation -- log(<ZX_p>) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logZXp
-        write(write_resume_unit,'("=== local evidence -- log(<Z_p>) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logZp
-        write(write_resume_unit,'("=== local evidence^2 -- log(<Z_p^2>) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logZp2
-        write(write_resume_unit,'("=== local evidence volume cross correlation -- log(<Z_pX_p>) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%logZpXp
-        write(write_resume_unit,'("=== local volume cross correlation -- log(<X_pX_q>) ===")')                    
-        do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,fmt_dbl) RTI%logXpXq       
-        end do
-
-        write(write_resume_unit,'("=== maximum log weights -- log(w_p) ===")')                    
-        write(write_resume_unit,fmt_dbl) RTI%maxlogweight
-
-        if(RTI%ncluster_dead>0) write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster_dead, DB_FMT   ! Initialise the double array format
-        write(write_resume_unit,'("=== local dead evidence -- log(<Z_p>) ===")')
-        if(RTI%ncluster_dead>0) write(write_resume_unit,fmt_dbl) RTI%logZp_dead
-        write(write_resume_unit,'("=== local dead evidence^2 -- log(<Z_p^2>) ===")')
-        if(RTI%ncluster_dead>0) write(write_resume_unit,fmt_dbl) RTI%logZp2_dead
-        write(write_resume_unit,'("=== maximum dead log weights -- log(w_p) ===")')                    
-        if(RTI%ncluster_dead>0) write(write_resume_unit,fmt_dbl) RTI%maxlogweight_dead
-
-
-        write(fmt_dbl,'("(",I0,A,")")') settings%nDims, DB_FMT   ! Initialise the double array format for matrices
-        write(write_resume_unit,'("=== covariance matrices ===")') 
-        do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,'("--- covariance matrix ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
-            do i_dims=1,settings%nDims
-                write(write_resume_unit,fmt_dbl) RTI%covmat(:,i_dims,i_cluster)
-            end do
-        end do
-        write(write_resume_unit,'("=== cholesky decompositions ===")') 
-        do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,'("--- cholesky decomposition ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
-            do i_dims=1,settings%nDims
-                write(write_resume_unit,fmt_dbl) RTI%cholesky(:,i_dims,i_cluster)
-            end do
-        end do
-
-
-        write(fmt_dbl,'("(",I0,A,")")') settings%nTotal, DB_FMT   ! Initialise the double array format for live points
-
-        ! write live points
-        write(write_resume_unit,'("=== live points ===")')                    
-        do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,'("--- live points ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
-            do i_point=1,RTI%nlive(i_cluster)
-                write(write_resume_unit,fmt_dbl) RTI%live(:,i_point,i_cluster)
-            end do
-        end do
-
-        ! write phantom points
-        write(write_resume_unit,'("=== phantom points ===")')                    
-        do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,'("--- phantom points ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
-            do i_point=1,RTI%nphantom(i_cluster)
-                write(write_resume_unit,fmt_dbl) RTI%phantom(:,i_point,i_cluster)
-            end do
-        end do
-
-        write(write_resume_unit,'("=== weighted posterior points ===")')                    
-        write(fmt_dbl,'("(",I0,A,")")') settings%nposterior, DB_FMT   ! Initialise the double array format for weighted posterior points
-        do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,'("--- weighted posterior points ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
-            do i_point=1,RTI%nposterior(i_cluster)
-                write(write_resume_unit,fmt_dbl) RTI%posterior(:,i_point,i_cluster)
-            end do
-        end do
-
-        write(write_resume_unit,'("=== dead weighted posterior points ===")')                    
-        do i_cluster=1,RTI%ncluster_dead
-            write(write_resume_unit,'("--- dead weighted posterior points ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
-            do i_point=1,RTI%nposterior_dead(i_cluster)
-                write(write_resume_unit,fmt_dbl) RTI%posterior_dead(:,i_point,i_cluster)
-            end do
-        end do
-
-        write(write_resume_unit,'("=== global weighted posterior points ===")')                    
-        do i_point=1,RTI%nposterior_global(1)
-            write(write_resume_unit,fmt_dbl) RTI%posterior_global(:,i_point,1)
-        end do
-
-        write(write_resume_unit,'("=== equally weighted posterior points ===")')                    
-        write(fmt_dbl,'("(",I0,A,")")') settings%np, DB_FMT   ! Initialise the double array format for weighted posterior points
-        do i_cluster=1,RTI%ncluster
-            write(write_resume_unit,'("--- equally weighted posterior points ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
-            do i_point=1,RTI%nequals(i_cluster)
-                write(write_resume_unit,fmt_dbl) RTI%equals(:,i_point,i_cluster)
-            end do
-        end do
-
-        write(write_resume_unit,'("=== dead equally weighted posterior points ===")')                    
-        do i_cluster=1,RTI%ncluster_dead
-            write(write_resume_unit,'("--- dead equally weighted posterior points ",I3,"/",I3," ---")') i_cluster, RTI%ncluster
-            do i_point=1,RTI%nequals_dead(i_cluster)
-                write(write_resume_unit,fmt_dbl) RTI%equals_dead(:,i_point,i_cluster)
-            end do
-        end do
-
-        write(write_resume_unit,'("=== global equally weighted posterior points ===")')                    
-        do i_point=1,RTI%nequals_global(1)
-            write(write_resume_unit,fmt_dbl) RTI%equals_global(:,i_point,1)
-        end do
         ! Close the writing file
         close(write_resume_unit)
 
     end subroutine write_resume_file
 
 
+
+
+
+
+    subroutine read_integer(a,str)
+        use utils_module, only: read_resume_unit,integer_format
+        implicit none
+        integer, intent(out) :: a
+        character(len=*), intent(in),optional :: str
+
+        if(present(str)) read(read_resume_unit,*)
+        read(read_resume_unit,integer_format(1)) a
+
+    end subroutine read_integer
+
+    subroutine read_integers(arr,str,n)
+        use utils_module, only: read_resume_unit,integer_format
+        implicit none
+        integer, allocatable, dimension(:), intent(out) :: arr
+        integer, intent(in) :: n
+        character(len=*), intent(in),optional :: str
+
+        if(present(str)) read(read_resume_unit,*)
+        allocate(arr(n))
+        if(n>0) read(read_resume_unit,integer_format(n)) arr
+
+    end subroutine read_integers
+
+    subroutine read_double(a,str)
+        use utils_module, only: read_resume_unit,double_format
+        implicit none
+        double precision, intent(out) :: a
+        character(len=*), intent(in),optional :: str
+
+        if(present(str)) read(read_resume_unit,*)
+        read(read_resume_unit,double_format(1)) a
+
+    end subroutine read_double
+
+    subroutine read_doubles(arr,str,n)
+        use utils_module, only: read_resume_unit,double_format
+        implicit none
+        double precision,allocatable,dimension(:), intent(out) :: arr
+        integer,intent(in) :: n
+        character(len=*), intent(in),optional :: str
+
+        if(present(str)) read(read_resume_unit,*)
+        allocate(arr(n))
+        if(n>0) read(read_resume_unit,double_format(n)) arr
+
+    end subroutine read_doubles
+
+    subroutine read_doubles_2(arr,str,n1,n2)
+        use utils_module, only: read_resume_unit,double_format
+        implicit none
+        double precision,allocatable,dimension(:,:), intent(out) :: arr
+        integer,intent(in) :: n1,n2
+        character(len=*), intent(in),optional :: str
+        integer :: i2
+
+        if(present(str)) read(read_resume_unit,*)
+        allocate(arr(n1,n2))
+        do i2=1,n2
+            read(read_resume_unit,double_format(n1)) arr(:,i2)
+        end do
+
+    end subroutine read_doubles_2
+
+    subroutine read_doubles_3(arr,str,n1,n2,n3,n)
+        use utils_module, only: read_resume_unit,double_format
+        implicit none
+        double precision,allocatable,dimension(:,:,:), intent(out) :: arr
+        integer,intent(in) :: n1,n2,n3
+        integer,optional,intent(in),dimension(n3) :: n
+        character(len=*), intent(in),optional :: str
+        integer :: i2,i3,m
+
+        if(present(str)) read(read_resume_unit,*)
+        allocate(arr(n1,n2,n3))
+        do i3=1,n3
+            read(read_resume_unit,*)
+            if(present(n)) then
+                m=n(i3)
+            else
+                m=n2
+            end if
+            do i2=1,m
+                read(read_resume_unit,double_format(n1)) arr(:,i2,i3)
+            end do
+        end do
+
+    end subroutine read_doubles_3
+
     subroutine read_resume_file(settings,RTI)
-        use utils_module, only: DB_FMT,INT_FMT,fmt_len,read_resume_unit
+        use utils_module,    only: read_resume_unit
         use run_time_module, only: run_time_info
         use settings_module, only: program_settings
-        use abort_module, only: halt_program
-        use array_module, only: add_point
+        use abort_module,    only: halt_program
         implicit none
 
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(out) :: RTI
 
-        integer :: i_cluster
-        integer :: i_dims
-        integer :: i_point
         integer :: i_temp
-
-
-        character(len=fmt_len) :: fmt_int
-        character(len=fmt_len) :: fmt_dbl
-
-        double precision, dimension(settings%nTotal) :: temp_point
-        double precision, dimension(settings%nposterior) :: temp_posterior
-        double precision, dimension(settings%np) :: temp_equal
-
-        integer, allocatable,dimension(:) :: nlive
-        integer, allocatable,dimension(:) :: nphantom
-        integer, allocatable,dimension(:) :: nposterior
-        integer, allocatable,dimension(:) :: nposterior_dead
-        integer, allocatable,dimension(:) :: nposterior_global
-        integer, allocatable,dimension(:) :: nequals
-        integer, allocatable,dimension(:) :: nequals_dead
-        integer, allocatable,dimension(:) :: nequals_global
-
+        integer,allocatable,dimension(:) :: i_temps
+        integer :: ngrades
 
         ! Open the .resume file
         open(read_resume_unit,file=trim(resume_file(settings,.false.)), action='read') 
 
-        ! Read in integers 
-        write(fmt_int,'("(",I0,A,")")') 1,INT_FMT   ! define the integer format
-
-        ! number of dimensions
-        read(read_resume_unit,*)                    
-        read(read_resume_unit,fmt_int) i_temp       
+        call read_integer(i_temp,'-') ! number of dimensions
         if(settings%nDims/=i_temp) call halt_program('resume error: nDims does not match')
-
-        ! number of derived parameters
-        read(read_resume_unit,*)                    
-        read(read_resume_unit,fmt_int) i_temp       
+  
+        call read_integer(i_temp,'-') ! number of derived parameters
         if(settings%nDerived/=i_temp) call halt_program('resume error: nDerived does not match')
-
-        read(read_resume_unit,*)                         ! 
-        read(read_resume_unit,fmt_int) RTI%ndead         ! number of dead points
-        read(read_resume_unit,*)                         ! 
-        read(read_resume_unit,fmt_int) RTI%ncluster      ! number of clusters
-        read(read_resume_unit,*)                         ! 
-        read(read_resume_unit,fmt_int) RTI%ncluster_dead ! number of dead clusters
-
-        ! Allocate nlive and nphantom arrays based on these
-        allocate(RTI%nlive(RTI%ncluster),RTI%nphantom(RTI%ncluster),RTI%nposterior(RTI%ncluster),RTI%nequals(RTI%ncluster),RTI%i(RTI%ncluster),nlive(RTI%ncluster),nphantom(RTI%ncluster),nposterior(RTI%ncluster),nequals(RTI%ncluster),RTI%nposterior_dead(RTI%ncluster_dead),RTI%nequals_dead(RTI%ncluster_dead),nposterior_dead(RTI%ncluster_dead),nequals_dead(RTI%ncluster_dead),RTI%nposterior_stack(RTI%ncluster),RTI%num_repeats(size(settings%grade_dims)),RTI%nequals_global(1),nequals_global(1),RTI%nposterior_global(1),nposterior_global(1))
-        RTI%nphantom=0
-        RTI%nlive=0
-        RTI%nposterior=0
-        RTI%nposterior_dead=0
-        RTI%nposterior_global=0
-        RTI%nequals=0
-        RTI%nequals_dead=0
-        RTI%nequals_global=0
-        RTI%nposterior_stack=0
-
-        read(read_resume_unit,*)                         ! 
-        read(read_resume_unit,fmt_int) nposterior_global ! number of weighted posteriors
-        read(read_resume_unit,*)                         ! 
-        read(read_resume_unit,fmt_int) nequals_global    ! number of equally weighted posteriors
-
-        ! read in out the grade information
-        read(read_resume_unit,*)                    
-        read(read_resume_unit,fmt_int) i_temp
-        if(size(settings%grade_dims)/=i_temp) call halt_program('resume error: Grades do not match')
-        allocate(RTI%nlike(i_temp))
-        write(fmt_int,'("(",I0,A,")")') size(settings%grade_dims),INT_FMT   ! define the integer array format
-        read(read_resume_unit,*)                    
-        read(read_resume_unit,*)
-        read(read_resume_unit,*)                    
-        read(read_resume_unit,fmt_int) RTI%num_repeats
-        read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) RTI%nlike    ! number of likelihood calls
-
-        ! Read in number of live and phantom points
-        write(fmt_int,'("(",I0,A,")")') RTI%ncluster,INT_FMT  ! define the integer array format
-
-        read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) nlive        ! temporary number of live points
-        read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) nphantom     ! temporary number of phantom points
-        read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) nposterior   ! temporary number of weighted posteriors
-        read(read_resume_unit,*)                    ! 
-        read(read_resume_unit,fmt_int) nequals      ! temporary number of equally weighted posterors
-        read(read_resume_unit,*)                    !
-        read(read_resume_unit,fmt_int) RTI%i        ! minimum loglikelihood positions
-
-        write(fmt_int,'("(",I0,A,")")') RTI%ncluster_dead,INT_FMT  ! define the integer array format
-        read(read_resume_unit,*)                         ! 
-        if(RTI%ncluster_dead>0) read(read_resume_unit,fmt_int) nposterior_dead   ! temporary number of weighted posteriors
-        read(read_resume_unit,*)                         ! 
-        if(RTI%ncluster_dead>0) read(read_resume_unit,fmt_int) nequals_dead      ! temporary number of equally weighted posterors
-
-
+  
+        call read_integer(RTI%ndead,'-')                ! number of dead points
+        call read_integer(RTI%ncluster,'-')             ! number of clusters
+        call read_integer(RTI%ncluster_dead,'-')        ! number of dead clusters
+        call read_integers(RTI%nposterior_global,'-',1) ! number of weighted posteriors 
+        call read_integers(RTI%nequals_global,'-',1)    ! number of equally weighted posteriors 
+  
+        call read_integer(ngrades,'-') ! check the number of grades
+        if(size(settings%grade_dims)/=ngrades) call halt_program('resume error: number of grades does not match')
+  
+        call read_integers(i_temps,'-',ngrades)    ! check the grades themselves
+        if(any(settings%grade_dims/=i_temps)) call halt_program('resume error: Grades do not match') 
+  
+        call read_integers(RTI%num_repeats,'-',ngrades)  ! number of repeats per grade
+        call read_integers(RTI%nlike,'-',ngrades)        ! number of likelihood calls per grade
+  
+        call read_integers(RTI%nlive,'-',RTI%ncluster)
+        call read_integers(RTI%nphantom,'-',RTI%ncluster)
+        call read_integers(RTI%nposterior,'-',RTI%ncluster)
+        call read_integers(RTI%nequals,'-',RTI%ncluster)
+        call read_integers(RTI%i,'-',RTI%ncluster)
+  
         ! Check to see if this is consistent with settings
-        if(settings%nlive/=sum(nlive)) call halt_program('resume error: nlive does not match')
-
-
-        ! Allocate the rest of the arrays
-        allocate(                                                                     &
-            RTI%live(settings%nTotal,settings%nlive,RTI%ncluster),                    &
-            RTI%phantom(settings%nTotal,settings%nlive,RTI%ncluster),                 &
-            RTI%posterior(settings%nposterior,settings%nlive,RTI%ncluster),           &
-            RTI%posterior_dead(settings%nposterior,settings%nlive,RTI%ncluster_dead), &
-            RTI%posterior_global(settings%nposterior,settings%nlive,1),               &
-            RTI%equals(settings%np,settings%nlive,RTI%ncluster),                      &
-            RTI%equals_dead(settings%np,settings%nlive,RTI%ncluster_dead),            &
-            RTI%equals_global(settings%np,settings%nlive,1),                          &
-            RTI%logLp(RTI%ncluster),                                                  &
-            RTI%logXp(RTI%ncluster),                                                  &
-            RTI%logZp(RTI%ncluster),                                                  &
-            RTI%logZp_dead(RTI%ncluster_dead),                                        &
-            RTI%logZXp(RTI%ncluster),                                                 &
-            RTI%logZp2(RTI%ncluster),                                                 &
-            RTI%logZp2_dead(RTI%ncluster_dead),                                       &
-            RTI%logZpXp(RTI%ncluster),                                                &
-            RTI%logXpXq(RTI%ncluster,RTI%ncluster),                                   &
-            RTI%covmat(settings%nDims,settings%nDims,RTI%ncluster),                   &
-            RTI%cholesky(settings%nDims,settings%nDims,RTI%ncluster),                 &
-            RTI%maxlogweight(RTI%ncluster),                                           &
-            RTI%maxlogweight_dead(RTI%ncluster_dead)                                  &
-            )
-
-
-        ! Read in evidences
-        write(fmt_dbl,'("(",I0,A,")")') 1, DB_FMT              ! Initialise the double format
-        read(read_resume_unit,*)                               !
-        read(read_resume_unit,fmt_dbl) RTI%logZ                ! global evidence estimate
-        read(read_resume_unit,*)                               ! 
-        read(read_resume_unit,fmt_dbl) RTI%logZ2               ! global evidence^2 estimate
-        read(read_resume_unit,*)                               ! 
-        read(read_resume_unit,fmt_dbl) RTI%thin_posterior      ! what to thin the posterior by
-
-
-
-        write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster, DB_FMT   ! Initialise the double array format
-        read(read_resume_unit,*)                               !
-        read(read_resume_unit,fmt_dbl) RTI%logLp               ! local loglikehood bound
-        read(read_resume_unit,*)                               ! 
-        read(read_resume_unit,fmt_dbl) RTI%logXp               ! local volume estimate
-        read(read_resume_unit,*)                               ! 
-        read(read_resume_unit,fmt_dbl) RTI%logZXp              ! global evidence volume cross correlation
-        read(read_resume_unit,*)                               ! 
-        read(read_resume_unit,fmt_dbl) RTI%logZp               ! local evidence estimate
-        read(read_resume_unit,*)                               ! 
-        read(read_resume_unit,fmt_dbl) RTI%logZp2              ! local evidence^2 estimate
-        read(read_resume_unit,*)                               ! 
-        read(read_resume_unit,fmt_dbl) RTI%logZpXp             ! local evidence volume cross correlation
-        read(read_resume_unit,*)                               ! 
-        do i_cluster=1,RTI%ncluster
-            read(read_resume_unit,fmt_dbl) RTI%logXpXq         ! local volume cross correlation
-        end do
-        read(read_resume_unit,*)                               ! 
-        read(read_resume_unit,fmt_dbl) RTI%maxlogweight        ! max log weights
-
-        write(fmt_dbl,'("(",I0,A,")")') RTI%ncluster_dead, DB_FMT   ! Initialise the double array format
-        read(read_resume_unit,*)                                    ! 
-        if(RTI%ncluster_dead>0) read(read_resume_unit,fmt_dbl) RTI%logZp_dead               ! local dead evidence estimate
-        read(read_resume_unit,*)                                    ! 
-        if(RTI%ncluster_dead>0) read(read_resume_unit,fmt_dbl) RTI%logZp2_dead              ! local dead evidence^2 estimate
-        read(read_resume_unit,*)                               ! 
-        if(RTI%ncluster_dead>0) read(read_resume_unit,fmt_dbl) RTI%maxlogweight_dead   ! max dead log weights
-
-
-        write(fmt_dbl,'("(",I0,A,")")') settings%nDims, DB_FMT   ! Initialise the double array format for matrices
-        read(read_resume_unit,*) 
-        do i_cluster=1,RTI%ncluster
-            read(read_resume_unit,*)
-            do i_dims=1,settings%nDims
-                read(read_resume_unit,fmt_dbl) RTI%covmat(:,i_dims,i_cluster)
-            end do
-        end do
-        read(read_resume_unit,*) 
-        do i_cluster=1,RTI%ncluster
-            read(read_resume_unit,*)
-            do i_dims=1,settings%nDims
-                read(read_resume_unit,fmt_dbl) RTI%cholesky(:,i_dims,i_cluster)
-            end do
-        end do
-
-
-        write(fmt_dbl,'("(",I0,A,")")') settings%nTotal, DB_FMT   ! Initialise the double array format for live points
-
-        ! Read in live points
-        read(read_resume_unit,*)                               
-        do i_cluster=1,RTI%ncluster
-            read(read_resume_unit,*)                               
-            do i_point=1,nlive(i_cluster)
-                read(read_resume_unit,fmt_dbl) temp_point
-                call add_point(temp_point,RTI%live,RTI%nlive,i_cluster)
-            end do
-        end do
-
-        ! Read in phantom points
-        read(read_resume_unit,*)                               
-        do i_cluster=1,RTI%ncluster
-            read(read_resume_unit,*)                               
-            do i_point=1,nphantom(i_cluster)
-                read(read_resume_unit,fmt_dbl) temp_point
-                call add_point(temp_point,RTI%phantom,RTI%nphantom,i_cluster)
-            end do
-        end do
-
-
-        write(fmt_dbl,'("(",I0,A,")")') settings%nposterior, DB_FMT   ! Initialise the double array format for weighted posterior points
-
-        ! Read in weighted posterior points
-        read(read_resume_unit,*)                               
-        do i_cluster=1,RTI%ncluster
-            read(read_resume_unit,*)                               
-            do i_point=1,nposterior(i_cluster)
-                read(read_resume_unit,fmt_dbl) temp_posterior
-                call add_point(temp_posterior,RTI%posterior,RTI%nposterior,i_cluster)
-            end do
-        end do
-
-        ! read in dead weighted posterior points
-        read(read_resume_unit,*)                               
-        do i_cluster=1,RTI%ncluster_dead
-            read(read_resume_unit,*)                               
-            do i_point=1,nposterior_dead(i_cluster)
-                read(read_resume_unit,fmt_dbl) temp_posterior
-                call add_point(temp_posterior,RTI%posterior_dead,RTI%nposterior_dead,i_cluster)
-            end do
-        end do
-
-        ! Read in global weighted posterior points
-        read(read_resume_unit,*)                               
-        do i_point=1,nposterior_global(1)
-            read(read_resume_unit,fmt_dbl) temp_posterior
-            call add_point(temp_posterior,RTI%posterior_global,RTI%nposterior_global,1)
-        end do
-
-
-
-        write(fmt_dbl,'("(",I0,A,")")') settings%np, DB_FMT   ! Initialise the double array format for equally weighted posterior points
-
-        ! Read in equally weighted posterior points
-        read(read_resume_unit,*)                               
-        do i_cluster=1,RTI%ncluster
-            read(read_resume_unit,*)                               
-            do i_point=1,nequals(i_cluster)
-                read(read_resume_unit,fmt_dbl) temp_equal
-                call add_point(temp_equal,RTI%equals,RTI%nequals,i_cluster)
-            end do
-        end do
-
-        ! read in dead equally weighted posterior points
-        read(read_resume_unit,*)                               
-        do i_cluster=1,RTI%ncluster_dead
-            read(read_resume_unit,*)                               
-            do i_point=1,nequals_dead(i_cluster)
-                read(read_resume_unit,fmt_dbl) temp_equal
-                call add_point(temp_equal,RTI%equals_dead,RTI%nequals_dead,i_cluster)
-            end do
-        end do
-
-        ! Read in global equally weighted posterior points
-        read(read_resume_unit,*)                               
-        do i_point=1,nequals_global(1)
-            read(read_resume_unit,fmt_dbl) temp_equal
-            call add_point(temp_equal,RTI%equals_global,RTI%nequals_global,1)
-        end do
+        if(settings%nlive/=sum(RTI%nlive)) call halt_program('resume error: nlive does not match')
+  
+        call read_integers(RTI%nposterior_dead,'-',RTI%ncluster_dead)
+        call read_integers(RTI%nequals_dead,'-',RTI%ncluster_dead)
+        call read_double(RTI%logZ,'-')
+        call read_double(RTI%logZ2,'-')
+        call read_double(RTI%thin_posterior,'-')
+        
+        call read_doubles(RTI%logLp,'-',RTI%ncluster)
+        call read_doubles(RTI%logXp,'-',RTI%ncluster)
+        call read_doubles(RTI%logZXp,'-',RTI%ncluster)
+        call read_doubles(RTI%logZp,'-',RTI%ncluster)
+        call read_doubles(RTI%logZp2,'-',RTI%ncluster)
+        call read_doubles(RTI%logZpXp,'-',RTI%ncluster)
+        call read_doubles_2(RTI%logXpXq,'-',RTI%ncluster,RTI%ncluster)
+        call read_doubles(RTI%maxlogweight,'-',RTI%ncluster)
+  
+        call read_doubles(RTI%logZp_dead,'-',RTI%ncluster_dead)
+        call read_doubles(RTI%logZp2_dead,'-',RTI%ncluster_dead)
+        call read_doubles(RTI%maxlogweight_dead,'-',RTI%ncluster_dead)
+  
+        call read_doubles_3(RTI%covmat,'-',settings%nDims,settings%nDims,RTI%ncluster)
+        call read_doubles_3(RTI%cholesky,'-',settings%nDims,settings%nDims,RTI%ncluster)
+  
+        call read_doubles_3(RTI%live,'-',settings%nTotal,maxval(RTI%nlive),RTI%ncluster,RTI%nlive)
+        call read_doubles_3(RTI%phantom,'-',settings%nTotal,maxval(RTI%nphantom),RTI%ncluster,RTI%nphantom)
+  
+        call read_doubles_3(RTI%posterior,'-',settings%nposterior,maxval(RTI%nposterior),RTI%ncluster,RTI%nposterior)
+        call read_doubles_3(RTI%posterior_dead,'-',settings%nposterior,maxval(RTI%nposterior_dead),RTI%ncluster_dead,RTI%nposterior_dead)
+        call read_doubles_3(RTI%posterior_global,'-',settings%nposterior,maxval(RTI%nposterior_global),1,RTI%nposterior_global)
+  
+        call read_doubles_3(RTI%equals,'-',settings%np,maxval(RTI%nequals),RTI%ncluster,RTI%nequals)
+        call read_doubles_3(RTI%equals_dead,'-',settings%np,maxval(RTI%nequals_dead),RTI%ncluster_dead,RTI%nequals_dead)
+        call read_doubles_3(RTI%equals_global,'-',settings%np,maxval(RTI%nequals_global),1,RTI%nequals_global)
 
         ! Close the reading unit
         close(read_resume_unit)
 
-
         ! Allocate the posterior stack if we're calculating this
-        allocate(RTI%posterior_stack(settings%nposterior,settings%nlive,RTI%ncluster))
+        allocate(RTI%posterior_stack(settings%nposterior,settings%nlive,RTI%ncluster),RTI%nposterior_stack(RTI%ncluster))
         RTI%nposterior_stack = 0 ! Initialise number of posterior points at 0
+
+        RTI%maxlogweight_global = maxval(RTI%maxlogweight)
 
     end subroutine read_resume_file
 
