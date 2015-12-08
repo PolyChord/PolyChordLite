@@ -49,7 +49,7 @@ COMPILER_TYPE = intel
 for intel compilers (proprietary, much faster)
 
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Running PolyChord
 =================
 
@@ -125,10 +125,11 @@ provided by the input files. The general process for this can be found in
 
 
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Output files 
 =============
-PolyChord produces several output files depending on which settings are chosen
+PolyChord produces several output files depending on which settings
+are chosen
 
 
 [root].stats
@@ -143,12 +144,14 @@ This is used if settings%read_resume=.true.
 
 [root].txt
 ----------
-File containing weighted posterior samples. Compatable with the format required by
-getdist package which is part of the CosmoMC package. Contains npars+ndims+2 columns:
+File containing weighted posterior samples. Compatable with the format
+required by getdist package which is part of the CosmoMC package.
+Contains npars+ndims+2 columns:
 
 weight -2*loglike <params> <derived params>
 
-Refer to the following website in order to download or get more information about getdist:
+Refer to the following website in order to download or get more
+information about getdist:
 http://cosmologist.info/cosmomc/readme.html#Analysing
 
 If settings%cluster_posteriors=.true. there are additional cluster files in
@@ -156,55 +159,70 @@ clusters/[root]_<integer>.txt
 
 [root]_equal_weights.txt
 ------------------------
-As above, but the posterior points are equally weighted. This is better for 'eyeballing'
-the posterior, and provides a natural ~4 fold compression of the .txt file. 
+As above, but the posterior points are equally weighted. This is
+better for 'eyeballing' the posterior, and provides a natural ~4 fold
+compression of the .txt file. 
 
 
 [root]_phys_live.txt
 --------------------
 Live points in the physical space. This is produced if
 settings%write_phys_live=.true.
-This file contains npars+ndims+1 columns, indicating the physical parameters,
-derived parameters and the log-likelihood. This is useful for monitoring a run
-as it progresses. 
+This file contains npars+ndims+1 columns, indicating the physical
+parameters, derived parameters and the log-likelihood. This is useful
+for monitoring a run as it progresses. 
 
 [root].paramnames
 ------------
 Parameter names file for compatibility with getdist
 
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Visualization of PolyChord Output:
 
-[root].txt file created by PolyChord is compatable with the format required by
-getdist package which is part of the CosmoMC package. Refer to the following
-website in order to download or get more information about getdist:
-http://cosmologist.info/cosmomc/readme.html#Analysing
+[root].txt file created by PolyChord is compatable with the format
+required by getdist package which is part of the CosmoMC package.
+Refer to the following website in order to download or get more
+information about getdist:
+http://getdist.readthedocs.org/en/latest/
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Common Problems & FAQs:
 
 
+Run time Issues
+===============
 1. PolyChord crashes after segmentation fault.
 
 Try increasing the stack size:
 Linux:    ulimit -s unlimited 
 OSX:      ulimit -s hard 
 & resume your job.
-The slice sampling & clustering steps use a recursive procedure. The default memory
-allocated to recursive procedures is embarassingly small (to guard against memory
-leaks).
+The slice sampling & clustering steps use a recursive procedure. The
+default memory allocated to recursive procedures is embarassingly
+small (to guard against memory leaks).
 
 
-2. Output files ([root].txt & [root]_equal_weights.dat) files have very few (of order tens) points.
+2. Output files ([root].txt & [root]_equal_weights.dat) files have
+very few (of order tens) points.
 
-These files only become populated as the algorithm approaches the peak(s) of the
-posterior. Wait for the run to be closer to finishing.
+These files only become populated as the algorithm approaches the
+peak(s) of the posterior. Wait for the run to be closer to finishing.
 
 
 3. MPI doesn't help
 
-Currently, the MPI parallelisation will only increase speed for 'slow' likelihoods, 
-i.e. likelihoods where the slice sampling step is the dominant computational cost 
-(compared to the organisation of live points and clustering steps). 
+* Currently, the MPI parallelisation will only increase speed for 
+  'slow' likelihoods, i.e. likelihoods where the slice sampling step
+  is the dominant computational cost (compared to the organisation of
+  live points and clustering steps). 
+* Parallelisation is only effective up to ncores~O(nlive).
+
+
+Compilation Issues
+==================
+Most issues are usually one associated with an out-of-date MPI library or
+fortran compiler. Ideally you should be using:
+* gfortran 4.8    or    ifort 14
+* openMPI 1.6.5   or    Intel MPI 4.1
