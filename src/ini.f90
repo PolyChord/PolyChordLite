@@ -63,6 +63,7 @@ contains
         settings%write_resume       = get_logical(file_name,'write_resume',.false.)
         settings%read_resume        = get_logical(file_name,'resume',.false.)
         settings%write_live         = get_logical(file_name,'write_live',.false.)
+        settings%write_dead         = get_logical(file_name,'write_dead',.false.)
 
         settings%equals             = get_logical(file_name,'equally_weighted_posteriors',.false.)
         settings%posteriors         = get_logical(file_name,'weighted_posteriors',.false.)
@@ -179,7 +180,7 @@ contains
 
     subroutine get_doubles(file_name,key_word,doubles)
         use utils_module,  only: STR_LENGTH
-        use array_module,  only: reallocate_1_d
+        use array_module,  only: reallocate
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
         double precision, intent(out), allocatable, dimension(:) :: doubles
@@ -197,7 +198,7 @@ contains
 
         do while( trim(string)/='' )
             i=size(doubles)+1
-            call reallocate_1_d(doubles,i)
+            call reallocate(doubles,i)
             read(string,*) doubles(i)
             call next_element(string,' ')
         end do
