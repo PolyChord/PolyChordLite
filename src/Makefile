@@ -9,6 +9,8 @@ include makefile.dep
 # we should make all the objects and the archive them with AR
 libchord.a: $(OBJECTS)
 	$(AR) $@ $^
+libchord.so: $(OBJECTS)
+	$(LINKLIB) -o $@ $^
 
 # General rule for building object file (.o)  from fortran files (.f90)
 %.o: %.f90

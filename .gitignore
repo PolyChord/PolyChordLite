@@ -11,6 +11,7 @@ planck
 chains
 batch
 *.a
+*.so
 getdist/getdist
 getdist/plot_data/*
 getdist/plots/*
