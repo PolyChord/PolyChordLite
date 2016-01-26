@@ -41,6 +41,7 @@ module settings_module
         logical :: read_resume = .false.  !> Whether or not to resume from file
         logical :: write_stats = .true.   !> Whether or not to write stats file
         logical :: write_live = .false.   !> Whether or not to write phys_live points
+        logical :: write_dead = .false.   !> Whether or not to write dead points
 
         integer :: update_files = 500 !> How often to update the resume file
 

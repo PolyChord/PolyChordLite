@@ -33,9 +33,9 @@ module run_time_module
 
 
         integer, allocatable, dimension(:) :: nposterior_dead
-        integer, allocatable, dimension(:) :: nposterior_global
+        integer                            :: nposterior_global
         integer, allocatable, dimension(:) :: nequals_dead
-        integer, allocatable, dimension(:) :: nequals_global
+        integer                            :: nequals_global
 
         !> Live points
         double precision, allocatable, dimension(:,:,:) :: live
@@ -50,13 +50,15 @@ module run_time_module
         !> weighted posterior points
         double precision, allocatable, dimension(:,:,:) :: posterior
         double precision, allocatable, dimension(:,:,:) :: posterior_dead
-        double precision, allocatable, dimension(:,:,:) :: posterior_global
+        double precision, allocatable, dimension(:,:)   :: posterior_global
 
         !> Equally weighted posterior points
         double precision, allocatable, dimension(:,:,:) :: equals
         double precision, allocatable, dimension(:,:,:) :: equals_dead
-        double precision, allocatable, dimension(:,:,:) :: equals_global
+        double precision, allocatable, dimension(:,:)   :: equals_global
 
+        !> Pure nested sampling points
+        double precision, allocatable, dimension(:,:)   :: dead
 
         !> Covariance Matrices
         double precision, allocatable, dimension(:,:,:) :: covmat
@@ -120,14 +122,15 @@ module run_time_module
         RTI%ncluster_dead = 0
         allocate(                                                       &
             RTI%live(settings%nTotal,settings%nlive,1),                 &
+            RTI%dead(settings%nTotal,settings%nlive),                   &
             RTI%phantom(settings%nTotal,settings%nlive,1),              &
             RTI%posterior_stack(settings%nposterior,settings%nlive,1),  &
             RTI%posterior(settings%nposterior,settings%nlive,1),        &
             RTI%posterior_dead(settings%nposterior,settings%nlive,0),   &
-            RTI%posterior_global(settings%nposterior,settings%nlive,1), &
+            RTI%posterior_global(settings%nposterior,settings%nlive),   &
             RTI%equals(settings%np,settings%nlive,1),                   &
             RTI%equals_dead(settings%np,settings%nlive,0),              &
-            RTI%equals_global(settings%np,settings%nlive,1),            &
+            RTI%equals_global(settings%np,settings%nlive),              &
             RTI%logZp(1),                                               &
             RTI%logZp_dead(0),                                          &
             RTI%logXp(1),                                               &
@@ -143,10 +146,8 @@ module run_time_module
             RTI%nposterior_stack(1),                                    &
             RTI%nposterior(1),                                          &
             RTI%nposterior_dead(0),                                     &
-            RTI%nposterior_global(1),                                   &
             RTI%nequals(1),                                             &
             RTI%nequals_dead(0),                                        &
-            RTI%nequals_global(1),                                      &
             RTI%maxlogweight(1),                                        &
             RTI%maxlogweight_dead(0),                                   &
             RTI%cholesky(settings%nDims,settings%nDims,1),              &
@@ -286,9 +287,6 @@ module run_time_module
             end if
         end do
 
-        ! Update the number of dead points
-        RTI%ndead = RTI%ndead+1
-
     end function update_evidence
 
     !> This function takes the evidence info in cluster p and splits it into
@@ -299,7 +297,7 @@ module run_time_module
     subroutine add_cluster(settings,RTI,p,cluster_list,num_new_clusters) 
         use settings_module, only: program_settings
         use utils_module, only: logsumexp,logaddexp
-        use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i,add_point
+        use array_module, only: reallocate,add_point
         implicit none
 
         type(program_settings), intent(in) :: settings  !> Program settings
@@ -385,33 +383,33 @@ module run_time_module
         ! 2) Reallocate the arrays
 
         ! Reallocate the live,phantom and posterior points
-        call reallocate_3_d(RTI%live,            new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
-        call reallocate_1_i(RTI%nlive,           new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
-        call reallocate_3_d(RTI%phantom,         new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
-        call reallocate_1_i(RTI%nphantom,        new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
-        call reallocate_3_d(RTI%posterior_stack, new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
-        call reallocate_1_i(RTI%nposterior_stack,new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
-        call reallocate_3_d(RTI%posterior,       new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
-        call reallocate_1_i(RTI%nposterior,      new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
-        call reallocate_3_d(RTI%equals,          new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
-        call reallocate_1_i(RTI%nequals,         new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate(RTI%live,            new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate(RTI%nlive,           new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate(RTI%phantom,         new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate(RTI%nphantom,        new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate(RTI%posterior_stack, new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate(RTI%nposterior_stack,new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate(RTI%posterior,       new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate(RTI%nposterior,      new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
+        call reallocate(RTI%equals,          new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate(RTI%nequals,         new_size1=RTI%ncluster, save_indices1=old_save,target_indices1=old_target)
 
         ! Reallocate the cholesky matrices
-        call reallocate_3_d(RTI%cholesky, new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
-        call reallocate_3_d(RTI%covmat,   new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate(RTI%cholesky, new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
+        call reallocate(RTI%covmat,   new_size3=RTI%ncluster, save_indices3=old_save,target_indices3=old_target)
 
         ! Reallocate the evidence arrays 
-        call reallocate_1_d(RTI%logXp,   RTI%ncluster,old_save,old_target)
-        call reallocate_1_d(RTI%logZXp,  RTI%ncluster,old_save,old_target)
-        call reallocate_1_d(RTI%logZp,   RTI%ncluster,old_save,old_target)
-        call reallocate_1_d(RTI%logZp2,  RTI%ncluster,old_save,old_target)
-        call reallocate_1_d(RTI%logZpXp, RTI%ncluster,old_save,old_target)
-        call reallocate_2_d(RTI%logXpXq, RTI%ncluster,RTI%ncluster,old_save,old_save,old_target,old_target)
+        call reallocate(RTI%logXp,   RTI%ncluster,old_save,old_target)
+        call reallocate(RTI%logZXp,  RTI%ncluster,old_save,old_target)
+        call reallocate(RTI%logZp,   RTI%ncluster,old_save,old_target)
+        call reallocate(RTI%logZp2,  RTI%ncluster,old_save,old_target)
+        call reallocate(RTI%logZpXp, RTI%ncluster,old_save,old_target)
+        call reallocate(RTI%logXpXq, RTI%ncluster,RTI%ncluster,old_save,old_save,old_target,old_target)
 
-        call reallocate_1_d(RTI%logLp,   RTI%ncluster,old_save,old_target) 
-        call reallocate_1_i(RTI%i,       RTI%ncluster,old_save,old_target)
+        call reallocate(RTI%logLp,   RTI%ncluster,old_save,old_target) 
+        call reallocate(RTI%i,       RTI%ncluster,old_save,old_target)
 
-        call reallocate_1_d(RTI%maxlogweight,   RTI%ncluster,old_save,old_target) 
+        call reallocate(RTI%maxlogweight,   RTI%ncluster,old_save,old_target) 
 
 
         ! 3) Assign the new live points to their new clusters
@@ -502,7 +500,7 @@ module run_time_module
 
     function delete_cluster(settings,RTI) 
         use settings_module, only: program_settings
-        use array_module, only: reallocate_3_d,reallocate_2_d,reallocate_1_d,reallocate_1_i
+        use array_module, only: reallocate
         implicit none
         !> The variable containing all of the runtime information
         type(run_time_info), intent(inout) :: RTI
@@ -541,14 +539,14 @@ module run_time_module
 
             ! Reallocate the dead arrays
             size_n = max(size(RTI%posterior_dead,2),RTI%nposterior(p(1)))
-            call reallocate_3_d(RTI%posterior_dead, new_size2=size_n,new_size3=RTI%ncluster_dead)
-            call reallocate_1_i(RTI%nposterior_dead,new_size1=RTI%ncluster_dead)
+            call reallocate(RTI%posterior_dead, new_size2=size_n,new_size3=RTI%ncluster_dead)
+            call reallocate(RTI%nposterior_dead,new_size1=RTI%ncluster_dead)
             size_n = max(size(RTI%equals_dead,2),RTI%nequals(p(1)))
-            call reallocate_3_d(RTI%equals_dead,    new_size2=size_n,new_size3=RTI%ncluster_dead)
-            call reallocate_1_i(RTI%nequals_dead,   new_size1=RTI%ncluster_dead)
-            call reallocate_1_d(RTI%logZp_dead,     new_size1=RTI%ncluster_dead)
-            call reallocate_1_d(RTI%logZp2_dead,    new_size1=RTI%ncluster_dead)
-            call reallocate_1_d(RTI%maxlogweight_dead,new_size1=RTI%ncluster_dead)
+            call reallocate(RTI%equals_dead,    new_size2=size_n,new_size3=RTI%ncluster_dead)
+            call reallocate(RTI%nequals_dead,   new_size1=RTI%ncluster_dead)
+            call reallocate(RTI%logZp_dead,     new_size1=RTI%ncluster_dead)
+            call reallocate(RTI%logZp2_dead,    new_size1=RTI%ncluster_dead)
+            call reallocate(RTI%maxlogweight_dead,new_size1=RTI%ncluster_dead)
 
             ! Place the newly dead cluster into this
             RTI%nposterior_dead(RTI%ncluster_dead) = RTI%nposterior(p(1))
@@ -561,33 +559,33 @@ module run_time_module
 
 
             ! Reallocate the live,phantom and posterior points
-            call reallocate_3_d(RTI%live,            new_size3=RTI%ncluster, save_indices3=indices)
-            call reallocate_1_i(RTI%nlive,           new_size1=RTI%ncluster, save_indices1=indices)
-            call reallocate_3_d(RTI%phantom,         new_size3=RTI%ncluster, save_indices3=indices)
-            call reallocate_1_i(RTI%nphantom,        new_size1=RTI%ncluster, save_indices1=indices)
-            call reallocate_3_d(RTI%posterior_stack, new_size3=RTI%ncluster, save_indices3=indices)
-            call reallocate_1_i(RTI%nposterior_stack,new_size1=RTI%ncluster, save_indices1=indices)
-            call reallocate_3_d(RTI%posterior,       new_size3=RTI%ncluster, save_indices3=indices)
-            call reallocate_1_i(RTI%nposterior,      new_size1=RTI%ncluster, save_indices1=indices)
-            call reallocate_3_d(RTI%equals,          new_size3=RTI%ncluster, save_indices3=indices)
-            call reallocate_1_i(RTI%nequals,         new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate(RTI%live,            new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate(RTI%nlive,           new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate(RTI%phantom,         new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate(RTI%nphantom,        new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate(RTI%posterior_stack, new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate(RTI%nposterior_stack,new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate(RTI%posterior,       new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate(RTI%nposterior,      new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate(RTI%equals,          new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate(RTI%nequals,         new_size1=RTI%ncluster, save_indices1=indices)
 
             ! Reallocate the cholesky matrices
-            call reallocate_3_d(RTI%cholesky, new_size3=RTI%ncluster, save_indices3=indices)
-            call reallocate_3_d(RTI%covmat,   new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate(RTI%cholesky, new_size3=RTI%ncluster, save_indices3=indices)
+            call reallocate(RTI%covmat,   new_size3=RTI%ncluster, save_indices3=indices)
 
             ! Reallocate the evidence arrays 
-            call reallocate_1_d(RTI%logXp,   new_size1=RTI%ncluster,save_indices1=indices)
-            call reallocate_1_d(RTI%logZXp,  new_size1=RTI%ncluster,save_indices1=indices)
-            call reallocate_1_d(RTI%logZp,   new_size1=RTI%ncluster,save_indices1=indices)
-            call reallocate_1_d(RTI%logZp2,  new_size1=RTI%ncluster,save_indices1=indices)
-            call reallocate_1_d(RTI%logZpXp, new_size1=RTI%ncluster,save_indices1=indices)
-            call reallocate_2_d(RTI%logXpXq, new_size1=RTI%ncluster,new_size2=RTI%ncluster,save_indices1=indices,save_indices2=indices)
+            call reallocate(RTI%logXp,   new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate(RTI%logZXp,  new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate(RTI%logZp,   new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate(RTI%logZp2,  new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate(RTI%logZpXp, new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate(RTI%logXpXq, new_size1=RTI%ncluster,new_size2=RTI%ncluster,save_indices1=indices,save_indices2=indices)
 
-            call reallocate_1_d(RTI%logLp,   new_size1=RTI%ncluster,save_indices1=indices) 
-            call reallocate_1_i(RTI%i,       new_size1=RTI%ncluster,save_indices1=indices)
+            call reallocate(RTI%logLp,   new_size1=RTI%ncluster,save_indices1=indices) 
+            call reallocate(RTI%i,       new_size1=RTI%ncluster,save_indices1=indices)
 
-            call reallocate_1_d(RTI%maxlogweight,   new_size1=RTI%ncluster,save_indices1=indices) 
+            call reallocate(RTI%maxlogweight,   new_size1=RTI%ncluster,save_indices1=indices) 
         end if
 
 
@@ -769,7 +767,8 @@ module run_time_module
                 cluster_del   = minpos(RTI%logLp)                                                ! find the cluster we're deleting from
                 logweight     = update_evidence(RTI,cluster_del)                                 ! Update the evidence value
                 deleted_point = delete_point(RTI%i(cluster_del),RTI%live,RTI%nlive,cluster_del)  ! Delete the live point from the array
-                call add_point(point,RTI%live,RTI%nlive,cluster_add)                             ! Add the new live point
+                call add_point(point,RTI%live,RTI%nlive,cluster_add)                             ! Add the new live point to the live points
+                call add_point(deleted_point,RTI%dead,RTI%ndead)                                 ! Add the deleted point to the dead points
                 call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
 
 
@@ -946,21 +945,21 @@ module run_time_module
         if(settings%equals) then
             ! Clean the global equally weighted posteriors
             i_post=1
-            do while(i_post<=RTI%nequals_global(1)) 
+            do while(i_post<=RTI%nequals_global) 
                 ! We don't need to bother with points that have a weight equal to
                 ! the max weight, these are automatically accepted
-                if(RTI%equals_global(settings%p_w,i_post,1)<RTI%maxlogweight_global) then
+                if(RTI%equals_global(settings%p_w,i_post)<RTI%maxlogweight_global) then
 
                     ! accept with probability p = weight/maxweight
-                    if(bernoulli_trial( exp(RTI%equals_global(settings%p_w,i_post,1)-RTI%maxlogweight(1)) )) then
+                    if(bernoulli_trial( exp(RTI%equals_global(settings%p_w,i_post)-RTI%maxlogweight_global) )) then
                         ! If accepted, then their new probability is maxlogweight (for
                         ! the next round of stripping)
-                        RTI%equals_global(settings%p_w,i_post,1) = RTI%maxlogweight_global
+                        RTI%equals_global(settings%p_w,i_post) = RTI%maxlogweight_global
                         ! move on to the next point
                         i_post=i_post+1
                     else
                         ! delete this point if not accepted
-                        posterior_point = delete_point(i_post,RTI%equals_global,RTI%nequals_global,1)
+                        posterior_point = delete_point(i_post,RTI%equals_global,RTI%nequals_global)
                     end if
                 else
                     i_post=i_post+1 ! move on to the next point if automatically accepted
@@ -1007,7 +1006,7 @@ module run_time_module
                         posterior_point(settings%p_w) = RTI%maxlogweight_global
                         posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post,i_cluster)
                         posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post,i_cluster)
-                        call add_point(posterior_point,RTI%equals_global,RTI%nequals_global,1)
+                        call add_point(posterior_point,RTI%equals_global,RTI%nequals_global)
                     end if
 
                     ! Add the clustered equally weighted posteriors
@@ -1025,7 +1024,7 @@ module run_time_module
 
                 if(settings%posteriors) then
                     ! Add point to global weighted posterior array
-                    call add_point(RTI%posterior_stack(:,i_post,i_cluster),RTI%posterior_global,RTI%nposterior_global,1)
+                    call add_point(RTI%posterior_stack(:,i_post,i_cluster),RTI%posterior_global,RTI%nposterior_global)
                     ! Add point to cluster weighted posterior array
                     if(settings%cluster_posteriors) call add_point(RTI%posterior_stack(:,i_post,i_cluster),RTI%posterior,RTI%nposterior,i_cluster)
                 end if

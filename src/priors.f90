@@ -459,7 +459,7 @@ module priors_module
 
     subroutine add_param_to_prior(priori,param,physical_index,hypercube_index)
         use params_module, only: param_type
-        use array_module,  only: reallocate_1_i,reallocate_1_d
+        use array_module,  only: reallocate
         use abort_module,  only: halt_program
         implicit none
         type(prior), intent(inout)   :: priori          !> The prior to be added to
@@ -473,10 +473,10 @@ module priors_module
 
         priori%npars=priori%npars+1                               ! Increment the number of parameters
 
-        call reallocate_1_i(priori%physical_indices,priori%npars) ! reallocate the physical index array
+        call reallocate(priori%physical_indices,priori%npars) ! reallocate the physical index array
         priori%physical_indices(priori%npars) = physical_index    ! give it the physical index of this point
 
-        call reallocate_1_i(priori%hypercube_indices,priori%npars) ! reallocate the physical index array
+        call reallocate(priori%hypercube_indices,priori%npars) ! reallocate the physical index array
         priori%hypercube_indices(priori%npars) = hypercube_index   ! give it the physical index of this point
 
         if(priori%prior_type==unknown_type) then
@@ -488,7 +488,7 @@ module priors_module
         ! Allocate the prior parameters if its unallocated
         if (.not. allocated(priori%parameters) ) allocate(priori%parameters(0))
         ! expand the parameters array by size prior_params
-        call reallocate_1_d(priori%parameters,size(priori%parameters)+size(param%prior_params))
+        call reallocate(priori%parameters,size(priori%parameters)+size(param%prior_params))
         ! add these to the end
         priori%parameters(size(priori%parameters)-size(param%prior_params)+1:size(priori%parameters)) =param%prior_params
 
