@@ -27,4 +27,4 @@ clean:
 	rm -f *.o *.mod *.MOD
 
 veryclean: clean
-	rm -f *~ *.a
+	rm -f *~ *.a *.so

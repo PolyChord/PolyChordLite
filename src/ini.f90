@@ -81,6 +81,31 @@ contains
     end subroutine read_params
 
 
+    function default_params(nDims,root)
+        use priors_module, only: uniform_type
+        use params_module, only: param_type,add_parameter
+        implicit none
+        integer, intent(in) :: nDims
+        type(param_type),dimension(:),allocatable :: default_params
+
+        integer :: i
+        character(len=*) :: root
+        character(len=500) :: i_string
+        character(len=500) :: paramname
+        character(len=500) :: latex
+
+        allocate(default_params(0))
+
+        do i=1,nDims
+            write(i_string, '(I20)') i
+            paramname = trim(adjustl(root))//trim(adjustl(i_string))
+            latex = trim(adjustl(root))//'_{'//trim(adjustl(i_string))//'}'
+            call add_parameter(default_params,trim(adjustl(paramname)),trim(adjustl(latex)),1,uniform_type,1,[ 0d0 , 1d0 ])
+        end do
+
+    end function default_params
+
+
 
     function get_string(file_name,key_word,dflt,ith)
         use utils_module,  only: STR_LENGTH,params_unit

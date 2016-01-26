@@ -101,3 +101,20 @@ nested_sampling.o :  \
 	clustering.o \
 	random_utils.o \
 	feedback.o
+
+interfaces.o :  \
+	ini.o \
+	params.o \
+	nested_sampling.o \
+	abort.o \
+	chordal_sampling.o \
+	generate.o \
+	settings.o \
+	utils.o \
+	priors.o \
+	read_write.o \
+	run_time_info.o \
+	mpi_utils.o \
+	clustering.o \
+	random_utils.o \
+	feedback.o
