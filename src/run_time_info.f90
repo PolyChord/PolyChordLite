@@ -709,11 +709,10 @@ module run_time_module
 
 
     function replace_point(settings,RTI,baby_points,cluster_add) result(replaced)
-        use utils_module, only: logsumexp,logincexp,minpos
+        use utils_module, only: logsumexp,logincexp
         use settings_module, only: program_settings
-        use calculate_module, only: calculate_posterior_point
         use random_module, only: bernoulli_trial
-        use array_module, only: add_point,delete_point
+        use array_module, only: add_point
 
         implicit none
         type(program_settings), intent(in) :: settings !> Program settings
@@ -730,11 +729,6 @@ module run_time_module
         double precision :: logL ! loglikelihood bound
 
         integer :: i_baby ! point iterator
-
-        integer                                     :: cluster_del     ! cluster to delete from
-        double precision,dimension(settings%nTotal) :: deleted_point   ! point we have just deleted
-        double precision,dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
-        double precision                            :: logweight       ! The log weighting of this point
         
 
         ! The loglikelihood contour is defined by the cluster it belongs to
@@ -763,21 +757,9 @@ module run_time_module
             if( identify_cluster(settings,RTI,point) == cluster_add) then !(2)
 
                 replaced = .true.  ! Mark this as a replaced live point
-
-                cluster_del   = minpos(RTI%logLp)                                                ! find the cluster we're deleting from
-                logweight     = update_evidence(RTI,cluster_del)                                 ! Update the evidence value
-                deleted_point = delete_point(RTI%i(cluster_del),RTI%live,RTI%nlive,cluster_del)  ! Delete the live point from the array
+                call delete_outermost_point(settings,RTI)
                 call add_point(point,RTI%live,RTI%nlive,cluster_add)                             ! Add the new live point to the live points
-                call add_point(deleted_point,RTI%dead,RTI%ndead)                                 ! Add the deleted point to the dead points
                 call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
-
-
-                ! Calculate the posterior point and add it to the posterior stack
-                posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
-                call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
-                RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
-                RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
-
             else
                 replaced = .false.                                  ! We haven't killed of any points
             end if
@@ -786,6 +768,35 @@ module run_time_module
         end if
 
     end function replace_point
+
+    subroutine delete_outermost_point(settings,RTI)
+        use settings_module, only: program_settings
+        use utils_module, only: logsumexp,logincexp,minpos
+        use array_module, only: add_point,delete_point
+        use calculate_module, only: calculate_posterior_point
+        implicit none
+        type(program_settings), intent(in) :: settings !> Program settings
+        type(run_time_info),intent(inout)  :: RTI      !> Run time information
+
+        double precision,dimension(settings%nTotal)     :: deleted_point   ! point we have just deleted
+        double precision,dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
+        double precision                                :: logweight       ! The log weighting of this point
+        integer                                     :: cluster_del     ! cluster to delete from
+
+        cluster_del   = minpos(RTI%logLp)                                                ! find the cluster we're deleting from
+        logweight     = update_evidence(RTI,cluster_del)                                 ! Update the evidence value
+        deleted_point = delete_point(RTI%i(cluster_del),RTI%live,RTI%nlive,cluster_del)  ! Delete the live point from the array
+        call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
+        call add_point(deleted_point,RTI%dead,RTI%ndead)                                 ! Add the deleted point to the dead points
+
+        ! Calculate the posterior point and add it to the posterior stack
+        posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
+        call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
+        RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
+        RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
+
+    end subroutine delete_outermost_point 
+
 
     subroutine clean_phantoms(settings,RTI)
         use utils_module, only: logsumexp,logincexp,minpos

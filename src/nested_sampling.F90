@@ -18,7 +18,7 @@ module nested_sampling_module
         use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero,cyc,normal_fb,stdout_unit,time
         use read_write_module
         use feedback_module
-        use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats,delete_cluster,update_posteriors
+        use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats,delete_cluster,update_posteriors,delete_outermost_point
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: do_clustering
@@ -89,6 +89,7 @@ module nested_sampling_module
         ! Logical Switches
         ! ----------------
         logical :: need_more_samples
+        logical :: temp_logical
 
         ! MPI process variable
         ! --------------------
@@ -129,7 +130,6 @@ module nested_sampling_module
 
         ! Rolling loglikelihood calculation
         nlikesum=0
-
 
 
         !-------------------------------------------------------!
@@ -241,11 +241,11 @@ module nested_sampling_module
                         need_more_samples = more_samples_needed(settings,RTI) 
 
                         ! Update the posterior array every nlive iterations
-                        if( cyc(RTI%ndead,settings%nlive) .or. .not. need_more_samples ) call update_posteriors(settings,RTI) 
+                        if( cyc(RTI%ndead,settings%nlive) ) call update_posteriors(settings,RTI) 
 
                         ! Update the resume files every settings%update_resume iterations,
                         ! or at the end of the run
-                        if( cyc(RTI%ndead,settings%update_files) .or. .not. need_more_samples ) then
+                        if( cyc(RTI%ndead,settings%update_files) ) then
                             if(settings%write_resume)                  call write_resume_file(settings,RTI)
                             if(settings%write_live)                    call write_phys_live_points(settings,RTI)
                             if(settings%write_dead)                    call write_dead_points(settings,RTI)   
@@ -293,6 +293,20 @@ module nested_sampling_module
 
             end do ! End of main loop body
 
+            ! Clean up the remaining live points
+            if(settings%write_resume)                  call write_resume_file(settings,RTI)
+
+           do while(RTI%ncluster > 0)
+               call delete_outermost_point(settings,RTI)
+               temp_logical = delete_cluster(settings,RTI)
+           end do
+
+            call update_posteriors(settings,RTI) 
+            if(settings%write_live)                    call write_phys_live_points(settings,RTI)
+            if(settings%write_stats)                   call write_stats_file(settings,RTI,nlikesum)
+            if(settings%equals.or.settings%posteriors) call write_posterior_file(settings,RTI)   
+            if(settings%write_dead)                    call write_dead_points(settings,RTI)   
+            call rename_files(settings,RTI)
 
             ! Create the output array
             ! (1) log evidence
