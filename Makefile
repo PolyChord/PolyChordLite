@@ -190,11 +190,20 @@ export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS EXAMPLE_LIKELIHOODS IPO 
 all: $(EXAMPLES) $(PROGRAMS)
 
 
-# Rule for building polychord library
+# Rule for building polychord static library
 libchord.a:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.a
+
+# Rule for building polychord shared library
 libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.so
+
+# Rule for building pypolychord
+pypolychord: 
+	rm python/*
+	f2py -m pypolychord -h python/pypolychord.pyf src/interfaces.F90
+	f2py -c -L./src/ -lchord -I./src/  python/pypolychord.pyf src/interfaces.F90
+	mv pypolychord.so python
 
 # Rule for building likelihood libraries
 $(EXAMPLE_LIKELIHOODS) $(PROGRAM_LIKELIHOODS): libchord.a

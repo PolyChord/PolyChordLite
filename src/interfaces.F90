@@ -6,7 +6,7 @@ module interfaces_module
 
     contains
 
-subroutine simple_interface(loglikelihood, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, &
+subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, &
     boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, &
     write_dead, update_files, nDims, nDerived, grade_dims, grade_frac)
 
@@ -18,19 +18,17 @@ subroutine simple_interface(loglikelihood, nlive, num_repeats, do_clustering, fe
     use nested_sampling_module,   only: NestedSampling
     use utils_module,             only: STR_LENGTH
     use abort_module,             only: halt_program
-#ifdef MPI
-    use mpi_module,               only: initialise_mpi, finalise_mpi
-    use mpi,                      only: MPI_COMM_WORLD
-#endif
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
 
     interface
-        function loglikelihood(theta,phi)
-            double precision, intent(in),  dimension(:) :: theta
-            double precision, intent(out),  dimension(:) :: phi
-            double precision :: loglikelihood
+        function loglikelihood_wrapper(theta,phi,nDims,nDerived)
+            integer, intent(in) :: nDims
+            integer, intent(in) :: nDerived
+            double precision, intent(in),  dimension(nDims) :: theta
+            double precision, intent(out),  dimension(nDerived) :: phi
+            double precision :: loglikelihood_wrapper
         end function
     end interface
 
@@ -72,10 +70,10 @@ subroutine simple_interface(loglikelihood, nlive, num_repeats, do_clustering, fe
     ! Temporary variables for initialising loglikelihoods
     double precision :: loglike
 
+    double precision, dimension(nDims)    :: theta0
+    double precision, dimension(nDerived) :: phi0
+
     ! Basic initialisation
-#ifdef MPI
-    call initialise_mpi()
-#endif
     call initialise_random()
 
     settings%nlive               = nlive                
@@ -106,17 +104,23 @@ subroutine simple_interface(loglikelihood, nlive, num_repeats, do_clustering, fe
     params = default_params(settings%nDims,'theta')
     derived_params = default_params(settings%nDerived,'phi')
 
+    write(*,'("Checking Likelihood for theta =")')
+    theta0 = 0.5
+    write(*,*) theta0
+    write(*,*) "Loglike: ", loglikelihood(theta0,phi0)
+    write(*,*) "phi: ", phi0
+
     call initialise_program(settings,priors,params,derived_params)
 
-#ifdef MPI
-    output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
-#else
     output_info = NestedSampling(loglikelihood,priors,settings,0) 
-#endif
 
-#ifdef MPI
-    call finalise_mpi
-#endif
+    contains
+        function loglikelihood(theta,phi)
+            double precision, intent(in),  dimension(:) :: theta
+            double precision, intent(out),  dimension(:) :: phi
+            double precision :: loglikelihood
+            loglikelihood = loglikelihood_wrapper(theta,phi,size(theta),size(phi))
+        end function
 
 end subroutine simple_interface
 

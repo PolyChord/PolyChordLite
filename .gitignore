@@ -12,6 +12,7 @@ chains
 batch
 *.a
 *.so
+*.pyf
 getdist/getdist
 getdist/plot_data/*
 getdist/plots/*
