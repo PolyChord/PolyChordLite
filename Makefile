@@ -198,11 +198,13 @@ libchord.a:
 libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.so
 
-# Rule for building pypolychord
-pypolychord: 
-	f2py -m pypolychord -h python/pypolychord.pyf src/interfaces.F90
-	f2py -c -L./src/ -lchord -I./src/  python/pypolychord.pyf src/interfaces.F90
-	mv pypolychord.so python
+pypolychord.pyf:
+	f2py -m pypolychord -h pypolychord/pypolychord.pyf src/interfaces.F90
+
+pypolychord.so: pypolychord.pyf
+	f2py -c -L./src/ -lchord -I./src/  pypolychord/pypolychord.pyf src/interfaces.F90
+	mv pypolychord.so pypolychord
+
 
 # Rule for building likelihood libraries
 $(EXAMPLE_LIKELIHOODS) $(PROGRAM_LIKELIHOODS): libchord.a
