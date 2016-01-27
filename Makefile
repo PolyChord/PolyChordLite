@@ -200,7 +200,6 @@ libchord.so:
 
 # Rule for building pypolychord
 pypolychord: 
-	rm python/*
 	f2py -m pypolychord -h python/pypolychord.pyf src/interfaces.F90
 	f2py -c -L./src/ -lchord -I./src/  python/pypolychord.pyf src/interfaces.F90
 	mv pypolychord.so python

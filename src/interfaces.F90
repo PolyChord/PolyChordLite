@@ -8,7 +8,7 @@ module interfaces_module
 
 subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, &
     boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, &
-    write_dead, update_files, nDims, nDerived, grade_dims, grade_frac)
+    write_dead, update_files, nDims, nDerived, base_dir, file_root, grade_dims, grade_frac)
 
     use ini_module,               only: read_params,initialise_program,default_params
     use params_module,            only: add_parameter,param_type
@@ -16,7 +16,6 @@ subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_cluste
     use settings_module,          only: program_settings,initialise_settings
     use random_module,            only: initialise_random
     use nested_sampling_module,   only: NestedSampling
-    use utils_module,             only: STR_LENGTH
     use abort_module,             only: halt_program
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
@@ -52,8 +51,12 @@ subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_cluste
     integer, intent(in)          :: nDims
     integer, intent(in)          :: nDerived
 
-    integer, intent(in), dimension(:) :: grade_dims          !> The number of parameters in each grade
-    double precision, intent(in), dimension(:) :: grade_frac !> The fraction of time spent in each grade
+    character(*), intent(in)     :: base_dir
+    character(*), intent(in)     :: file_root
+
+    integer, intent(in), dimension(:) :: grade_dims
+    double precision, intent(in), dimension(:) :: grade_frac
+
 
 
 
@@ -63,7 +66,6 @@ subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_cluste
     type(program_settings)    :: settings  ! The program settings 
     type(prior), dimension(:),allocatable     :: priors    ! The details of the priors
 
-    character(len=STR_LENGTH)                 :: input_file     ! input file
     type(param_type),dimension(:),allocatable :: params         ! Parameter array
     type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
 
@@ -96,6 +98,9 @@ subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_cluste
     settings%nDims               = nDims
     settings%nDerived            = nDerived
 
+    settings%base_dir            = base_dir
+    settings%file_root           = file_root
+
     allocate(settings%grade_dims(size(grade_dims)))
     settings%grade_dims          = grade_dims           
     allocate(settings%grade_frac(size(grade_frac)))
@@ -103,12 +108,6 @@ subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_cluste
 
     params = default_params(settings%nDims,'theta')
     derived_params = default_params(settings%nDerived,'phi')
-
-    write(*,'("Checking Likelihood for theta =")')
-    theta0 = 0.5
-    write(*,*) theta0
-    write(*,*) "Loglike: ", loglikelihood(theta0,phi0)
-    write(*,*) "phi: ", phi0
 
     call initialise_program(settings,priors,params,derived_params)
 

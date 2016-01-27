@@ -11,7 +11,6 @@ program PolyChord
     use utils_module,             only: STR_LENGTH
     use abort_module,             only: halt_program
     use loglikelihood_module,     only: loglikelihood, setup_loglikelihood
-    use interfaces_module,        only: simple_interface
 #ifdef MPI
     use mpi_module,               only: initialise_mpi, finalise_mpi
     use mpi,                      only: MPI_COMM_WORLD
@@ -37,9 +36,6 @@ program PolyChord
 
 
 
-    call simple_interface(loglikelihood, 500, 20, .true., 2, 0.001d0, -1, &
-        0.d0, .true., .true., .true., .true., .true., .false., .true., .true., &
-        .true., 500, 20, 2, [1], [1d0])
 
     ! ======= (1) Initialisation =======
     ! We need to initialise:
@@ -47,8 +43,6 @@ program PolyChord
     ! b) random number generator
     ! c) priors & settings
     ! d) loglikelihood
-
-    stop
 
     ! ------- (1a) Initialise MPI threads -------------------
 #ifdef MPI
