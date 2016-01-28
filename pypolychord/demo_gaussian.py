@@ -3,7 +3,7 @@ from run import run_polychord
 
 def gaussian(theta, nderived, ndims):
     """ A simple gaussian with mean mu and variance sigma """
-    mu, sigma = 0.5, 0.1
+    mu, sigma = 0.0, 0.1
 
     loglike = - numpy.log(2*numpy.pi*sigma*sigma)/2*ndims
 
@@ -14,4 +14,8 @@ def gaussian(theta, nderived, ndims):
 
     return loglike, phi
 
-run_polychord(gaussian, 2, file_root='gaussian')
+def uniform_prior(cube):
+    theta = 2*(cube-0.5)
+    return theta
+
+run_polychord(gaussian, 2, prior=uniform_prior,  file_root='gaussian')
