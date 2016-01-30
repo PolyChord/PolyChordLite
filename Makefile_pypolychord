@@ -1,0 +1,18 @@
+.PHONY:all
+
+all: pypolychord.so
+
+F2PY = f2py
+MODULE = pypolychord
+PYF = ./pypolychord/pypolychord.pyf
+FORTRAN_SOURCE = src/interfaces.F90
+LIBS = -L./src/ -lchord
+INCLUDE = -I./src
+FLAGS = --f90exec=gfortran 
+
+$(PYF): 
+	$(F2PY) -m $(MODULE) -h $@ $(FORTRAN_SOURCE)
+
+pypolychord.so: $(PYF)
+	$(F2PY) -c $(LIBS) $(INCLUDE) $(FLAGS) $(PYF) $(FORTRAN_SOURCE)
+	mv pypolychord.so pypolychord

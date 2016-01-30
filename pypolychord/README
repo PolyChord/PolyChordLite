@@ -15,7 +15,7 @@ Run these commands:
 
 $ make veryclean
 $ make MPI= libchord.so
-$ make pypolychord.so
+$ make -f Makefile_pypolychord
 $ export LD_LIBRARY_PATH=$PWD'/src/':$LD_LIBRARY_PATH
 
 The last command is essential, otherwise python cannot find libchord.so 
