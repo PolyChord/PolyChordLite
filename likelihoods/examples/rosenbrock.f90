@@ -1,11 +1,12 @@
 module loglikelihood_module
+    use utils_module, only: dp
 
-    double precision :: normalisation
+    real(dp) :: normalisation
 
     ! Parameters of the rosenbrock function
-    double precision, parameter :: a = 1d0
-    double precision, parameter :: b = 1d2
-    double precision, parameter :: pi = 4d0*atan(1d0) ! \pi in double precision
+    real(dp), parameter :: a = 1d0
+    real(dp), parameter :: b = 1d2
+    real(dp), parameter :: pi = 4d0*atan(1d0) ! \pi in double precision
 
     ! number of dimensions
     integer :: nDims
@@ -43,9 +44,9 @@ module loglikelihood_module
     !!
     function loglikelihood(theta,phi)
         implicit none
-        double precision, intent(in),  dimension(:) :: theta         !> Input parameters
-        double precision, intent(out), dimension(:) :: phi           !> Output derived parameters
-        double precision                            :: loglikelihood ! loglikelihood value to output
+        real(dp), intent(in),  dimension(:) :: theta         !> Input parameters
+        real(dp), intent(out), dimension(:) :: phi           !> Output derived parameters
+        real(dp)                            :: loglikelihood ! loglikelihood value to output
 
 
         ! Normalisation for 2D
@@ -72,7 +73,7 @@ module loglikelihood_module
 
     function det(n)
         integer,intent(in) :: n
-        double precision   :: det
+        real(dp)   :: det
 
         det = abs(-2d0*b*recur(n-1) - 16*b*b*recur(n-2))
 
@@ -80,7 +81,7 @@ module loglikelihood_module
 
     recursive function recur(n) result(ans)
         integer,intent(in) :: n
-        double precision   :: ans
+        real(dp)   :: ans
 
         if(n<=0) then
             ans = 0d0

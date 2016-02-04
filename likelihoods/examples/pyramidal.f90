@@ -1,4 +1,5 @@
 module loglikelihood_module
+    use utils_module, only: dp
 
     contains
 
@@ -17,20 +18,20 @@ module loglikelihood_module
         use utils_module, only: loggamma
         implicit none
         !> Input parameters
-        double precision, intent(in), dimension(:)   :: theta
+        real(dp), intent(in), dimension(:)   :: theta
         !> Output derived parameters
-        double precision, intent(out),  dimension(:) :: phi
+        real(dp), intent(out),  dimension(:) :: phi
 
         integer,save :: nDims=0
-        double precision, save :: factor=1d0
+        real(dp), save :: factor=1d0
 
-        double precision :: loglikelihood
+        real(dp) :: loglikelihood
 
-        double precision, dimension(size(theta)) :: sigma ! Standard deviation (uncorrelated) 
-        double precision, dimension(size(theta)) :: mu    ! Mean
+        real(dp), dimension(size(theta)) :: sigma ! Standard deviation (uncorrelated) 
+        real(dp), dimension(size(theta)) :: mu    ! Mean
 
-        double precision, parameter :: logSqrtTwoPi = log(sqrt(8d0*atan(1d0)))
-        double precision, parameter :: PiOverTwo = 2d0*atan(1d0)
+        real(dp), parameter :: logSqrtTwoPi = log(sqrt(8d0*atan(1d0)))
+        real(dp), parameter :: PiOverTwo = 2d0*atan(1d0)
 
 
 

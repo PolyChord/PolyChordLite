@@ -1,4 +1,5 @@
 module loglikelihood_module
+    use utils_module, only: dp
 
     contains
 
@@ -8,9 +9,9 @@ module loglikelihood_module
     !!
     function loglikelihood(theta,phi)
         implicit none
-        double precision, intent(in),  dimension(:) :: theta         !> Input parameters
-        double precision, intent(out), dimension(:) :: phi           !> Output derived parameters
-        double precision                            :: loglikelihood ! loglikelihood value to output
+        real(dp), intent(in),  dimension(:) :: theta         !> Input parameters
+        real(dp), intent(out), dimension(:) :: phi           !> Output derived parameters
+        real(dp)                            :: loglikelihood ! loglikelihood value to output
 
         ! No normalisation implemented yet
         loglikelihood = 0

@@ -1,10 +1,11 @@
 module loglikelihood_module
+    use utils_module, only: dp
     use utils_module, only: logzero
 
-    double precision, parameter :: sigma  = 0.1d0   ! all sigma set relatively small
-    double precision, parameter :: radius = 2d0
+    real(dp), parameter :: sigma  = 0.1d0   ! all sigma set relatively small
+    real(dp), parameter :: radius = 2d0
 
-    double precision :: A = logzero
+    real(dp) :: A = logzero
 
     contains
 
@@ -12,22 +13,22 @@ module loglikelihood_module
         use utils_module, only: logTwoPi,Vn,loggamma,logincexp,Hypergeometric1F1
         implicit none
         !> Input parameters
-        double precision, intent(in), dimension(:)   :: theta
+        real(dp), intent(in), dimension(:)   :: theta
         !> Output derived parameters
-        double precision, intent(out),  dimension(:) :: phi
+        real(dp), intent(out),  dimension(:) :: phi
 
-        double precision :: loglikelihood
-        double precision :: loglikelihood_temp
+        real(dp) :: loglikelihood
+        real(dp) :: loglikelihood_temp
 
-        double precision, dimension(size(theta)) :: mu    ! Mean
+        real(dp), dimension(size(theta)) :: mu    ! Mean
 
-        double precision,parameter :: logsqrttwopi = log(sqrt(8d0*atan(1d0)))
-        double precision,parameter :: logpi = log(4d0*atan(1d0))
+        real(dp),parameter :: logsqrttwopi = log(sqrt(8d0*atan(1d0)))
+        real(dp),parameter :: logpi = log(4d0*atan(1d0))
 
         integer :: ndims
         integer :: i
 
-        double precision :: r0,sigma0,logf0
+        real(dp) :: r0,sigma0,logf0
 
         ndims  = size(theta)
 

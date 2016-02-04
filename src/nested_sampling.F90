@@ -1,4 +1,5 @@
 module nested_sampling_module
+    use utils_module, only: dp
 
 #ifdef MPI
     use mpi_module, only: get_mpi_information,mpi_bundle,is_root,linear_mode,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers,mpi_synchronise
@@ -30,15 +31,17 @@ module nested_sampling_module
 
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in), dimension(:)  :: theta
-                double precision, intent(out), dimension(:) :: phi
-                double precision :: loglikelihood
+                import :: dp
+                real(dp), intent(in), dimension(:)  :: theta
+                real(dp), intent(out), dimension(:) :: phi
+                real(dp) :: loglikelihood
             end function
         end interface
         interface
             function prior(cube) result(theta)
-                double precision, intent(in), dimension(:) :: cube
-                double precision, dimension(size(cube))    :: theta
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
             end function
         end interface
 
@@ -55,7 +58,7 @@ module nested_sampling_module
         ! 3) ndead
         ! 4) number of likelihood calls
         ! 5) log(evidence) + log(prior volume)
-        double precision, dimension(4) :: output_info
+        real(dp), dimension(4) :: output_info
 
 
 
@@ -76,13 +79,13 @@ module nested_sampling_module
         ! Temporary variables
         ! -------------------
         ! Seed point to generate babies from
-        double precision, dimension(settings%nTotal) :: seed_point
+        real(dp), dimension(settings%nTotal) :: seed_point
         ! Cholesky matrix to generate babies from
-        double precision, dimension(settings%nDims,settings%nDims)   :: cholesky
+        real(dp), dimension(settings%nDims,settings%nDims)   :: cholesky
         ! Loglikelihood bound to generate babies from
-        double precision :: logL
+        real(dp) :: logL
         ! New-born baby points, created by slice sampling routine
-        double precision, allocatable, dimension(:,:) :: baby_points
+        real(dp), allocatable, dimension(:,:) :: baby_points
 
         integer :: cluster_id ! Cluster identifier
 
@@ -104,7 +107,7 @@ module nested_sampling_module
         integer                            :: i_slave       ! Slave iterator
         integer                            :: slave_id      ! Slave identifier
         integer, dimension(:), allocatable :: slave_cluster ! The cluster the slave is currently working on
-        double precision :: time0,time1,slice_time,wait_time
+        real(dp) :: time0,time1,slice_time,wait_time
 
         ! Slave switch
         ! ------------

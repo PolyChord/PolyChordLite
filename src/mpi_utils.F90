@@ -1,4 +1,5 @@
 module mpi_module
+    use utils_module, only: dp
 
 #ifdef MPI
     use mpi
@@ -236,9 +237,9 @@ module mpi_module
 
     function sum_doubles(db_local,mpi_information) result(db)
         implicit none
-        double precision, intent(in) :: db_local
+        real(dp), intent(in) :: db_local
         type(mpi_bundle), intent(in) :: mpi_information
-        double precision :: db
+        real(dp) :: db
 
         call MPI_ALLREDUCE(       &
             db_local,             &!send buffer 
@@ -254,7 +255,7 @@ module mpi_module
 
     subroutine broadcast_doubles(doubles,mpi_information)
         implicit none
-        double precision, dimension(:), intent(inout) :: doubles
+        real(dp), dimension(:), intent(inout) :: doubles
         type(mpi_bundle), intent(in) :: mpi_information
 
         call MPI_BCAST(            & 
@@ -308,7 +309,7 @@ module mpi_module
     function catch_point(live_point,mpi_information) result(slave_id)
         implicit none
 
-        double precision,intent(out),dimension(:) :: live_point !> The caught live point
+        real(dp),intent(out),dimension(:) :: live_point !> The caught live point
         type(mpi_bundle), intent(in) :: mpi_information
 
         integer :: slave_id ! slave identifier
@@ -337,7 +338,7 @@ module mpi_module
     subroutine throw_point(live_point,mpi_information)
         implicit none
 
-        double precision,intent(in),dimension(:) :: live_point !> live point to throw
+        real(dp),intent(in),dimension(:) :: live_point !> live point to throw
         type(mpi_bundle), intent(in) :: mpi_information
 
         call MPI_SEND(             &!
@@ -362,7 +363,7 @@ module mpi_module
     function catch_babies(baby_points,nlike,epoch,mpi_information) result(slave_id)
         implicit none
 
-        double precision,intent(out),dimension(:,:) :: baby_points !> The babies to be caught
+        real(dp),intent(out),dimension(:,:) :: baby_points !> The babies to be caught
         integer, dimension(:), intent(out)          :: nlike       !> The number of likelihood evaluations to be caught
         integer,               intent(out)          :: epoch       !> The epoch the points were generated in
         type(mpi_bundle), intent(in)                :: mpi_information    !> The mpi communicator
@@ -413,7 +414,7 @@ module mpi_module
     subroutine throw_babies(baby_points,nlike,epoch,mpi_information)
         implicit none
 
-        double precision,intent(in),dimension(:,:) :: baby_points !> The babies to be thrown
+        real(dp),intent(in),dimension(:,:) :: baby_points !> The babies to be thrown
         integer, dimension(:), intent(in) :: nlike                !> The number of likelihood evaluations to be caught
         integer,               intent(in) :: epoch                !> The epoch the babies were generated in
         type(mpi_bundle), intent(in) :: mpi_information
@@ -459,9 +460,9 @@ module mpi_module
         implicit none
 
 
-        double precision,intent(out),dimension(:) :: seed_point  !> The seed point to be caught
-        double precision,intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
-        double precision,intent(out)               :: logL       !> loglikelihood contour to be caught
+        real(dp),intent(out),dimension(:) :: seed_point  !> The seed point to be caught
+        real(dp),intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
+        real(dp),intent(out)               :: logL       !> loglikelihood contour to be caught
         integer,         intent(out)               :: epoch
         type(mpi_bundle), intent(in)               :: mpi_information
 
@@ -528,9 +529,9 @@ module mpi_module
     subroutine throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,epoch,keep_going)
         implicit none
 
-        double precision,intent(in),dimension(:) :: seed_point   !> seed to be thrown
-        double precision,intent(in),dimension(:,:) :: cholesky   !> cholesky to be thrown
-        double precision,intent(in)                :: logL       !> loglikelihood contour to be thrown
+        real(dp),intent(in),dimension(:) :: seed_point   !> seed to be thrown
+        real(dp),intent(in),dimension(:,:) :: cholesky   !> cholesky to be thrown
+        real(dp),intent(in)                :: logL       !> loglikelihood contour to be thrown
         type(mpi_bundle),intent(in) :: mpi_information           !> mpi handle
         integer, intent(in) :: slave_id                          !> identity of target slave
         integer, intent(in) :: epoch                             !> epoch of seed

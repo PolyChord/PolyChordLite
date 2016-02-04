@@ -1,4 +1,5 @@
 module loglikelihood_module
+    use utils_module, only: dp
 
     contains
     !> Upside down [Rastrigin function](http://en.wikipedia.org/wiki/Rastrigin_function).
@@ -19,15 +20,15 @@ module loglikelihood_module
     function loglikelihood(theta,phi)
         implicit none
         !> Input parameters
-        double precision, intent(in), dimension(:)   :: theta
+        real(dp), intent(in), dimension(:)   :: theta
         !> Output derived parameters
-        double precision, intent(out),  dimension(:) :: phi
+        real(dp), intent(out),  dimension(:) :: phi
 
-        double precision, parameter :: A=10d0
-        double precision, parameter :: TwoPi = 8d0*atan(1d0)
+        real(dp), parameter :: A=10d0
+        real(dp), parameter :: TwoPi = 8d0*atan(1d0)
 
         ! The return value
-        double precision :: loglikelihood
+        real(dp) :: loglikelihood
 
         loglikelihood =  - sum( log(4991.21750d0) + theta**2 - A*cos(TwoPi*theta) )
 

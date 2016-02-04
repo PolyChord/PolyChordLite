@@ -1,4 +1,5 @@
 module KNN_clustering
+    use utils_module, only: dp
 
     implicit none
     contains
@@ -16,7 +17,7 @@ module KNN_clustering
         use abort_module, only: halt_program
         implicit none
 
-        double precision, intent(in), dimension(:,:) :: similarity_matrix
+        real(dp), intent(in), dimension(:,:) :: similarity_matrix
 
         integer, dimension(size(similarity_matrix,1)) :: cluster_list
         integer, intent(out):: num_clusters
@@ -135,7 +136,7 @@ module KNN_clustering
         implicit none
 
         !> The data to compute on
-        double precision, intent(in),dimension(:,:) :: similarity_matrix
+        real(dp), intent(in),dimension(:,:) :: similarity_matrix
 
         !> The number of nearest neighbors to compute
         integer, intent(in) :: k
@@ -147,7 +148,7 @@ module KNN_clustering
 
         integer :: insert_index(1)
 
-        double precision, dimension(k) :: distance2s
+        real(dp), dimension(k) :: distance2s
 
         nPoints = size(similarity_matrix,1)
 
@@ -246,6 +247,7 @@ end module KNN_clustering
 
 
 module cluster_module
+    use utils_module, only: dp
     implicit none
     contains
 
@@ -267,7 +269,7 @@ module cluster_module
 
 
         ! Similarity matrix
-        double precision,dimension(settings%nlive,settings%nlive) :: similarity_matrix
+        real(dp),dimension(settings%nlive,settings%nlive) :: similarity_matrix
         integer,dimension(settings%nlive) :: clusters
 
         integer :: num_clusters

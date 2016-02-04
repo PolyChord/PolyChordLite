@@ -1,4 +1,5 @@
 module array_module
+    use utils_module, only: dp
 
     interface add_point
         module procedure add_point_3d, add_point_2d
@@ -39,13 +40,13 @@ module array_module
     subroutine reallocate_1_d(array,new_size1,save_indices1,target_indices1)
         use abort_module, only: halt_program
         implicit none
-        double precision, dimension(:),allocatable, intent(inout) :: array !> Array to be reallocated
+        real(dp), dimension(:),allocatable, intent(inout) :: array !> Array to be reallocated
         integer, intent(in),optional :: new_size1                          !> New size of the array
         integer, dimension(:),intent(in),optional :: save_indices1         !> indices of old array to be transferred
         integer, dimension(:),intent(in),optional :: target_indices1       !> new array indices after reallocation
 
         ! Temporary versions of the above variables
-        double precision, dimension(size(array,1)) :: a
+        real(dp), dimension(size(array,1)) :: a
         integer :: n1
         integer, allocatable, dimension(:) :: s1
         integer, allocatable, dimension(:) :: t1
@@ -113,7 +114,7 @@ module array_module
         use abort_module, only: halt_program
         implicit none
         !> Array to be reallocated
-        double precision, dimension(:,:),allocatable, intent(inout) :: array
+        real(dp), dimension(:,:),allocatable, intent(inout) :: array
         !> New size of the array 
         integer, intent(in),optional :: new_size1,new_size2
         !> indices of old array to be transferred
@@ -122,7 +123,7 @@ module array_module
         integer, dimension(:),intent(in),optional :: target_indices1,target_indices2
 
         ! Temporary versions of the above variables
-        double precision, dimension(size(array,1),size(array,2)) :: a
+        real(dp), dimension(size(array,1),size(array,2)) :: a
         integer :: n1,n2
         integer, allocatable, dimension(:) :: s1,s2
         integer, allocatable, dimension(:) :: t1,t2
@@ -230,7 +231,7 @@ module array_module
         use abort_module, only: halt_program
         implicit none
         !> Array to be reallocated
-        double precision, dimension(:,:,:),allocatable, intent(inout) :: array
+        real(dp), dimension(:,:,:),allocatable, intent(inout) :: array
         !> New size of the array 
         integer, intent(in),optional :: new_size1,new_size2,new_size3
         !> indices of old array to be transferred
@@ -239,7 +240,7 @@ module array_module
         integer, dimension(:),intent(in),optional :: target_indices1,target_indices2,target_indices3
 
         ! Temporary versions of the above variables
-        double precision, dimension(size(array,1),size(array,2),size(array,3)) :: a
+        real(dp), dimension(size(array,1),size(array,2),size(array,3)) :: a
         integer :: n1,n2,n3
         integer, allocatable, dimension(:) :: s1,s2,s3
         integer, allocatable, dimension(:) :: t1,t2,t3
@@ -467,8 +468,8 @@ module array_module
 
     subroutine add_point_3d(point,array,narray,cluster_id)
         implicit none
-        double precision, dimension(:), intent(in) :: point                     !> Point to be added to end of array
-        double precision, dimension(:,:,:), allocatable, intent(inout) :: array !> Array to be added to
+        real(dp), dimension(:), intent(in) :: point                     !> Point to be added to end of array
+        real(dp), dimension(:,:,:), allocatable, intent(inout) :: array !> Array to be added to
         integer,dimension(:), allocatable, intent(inout) :: narray              !> number of points in array (second index)
         integer, intent(in) :: cluster_id                                       !> cluster identity (third index)
 
@@ -483,8 +484,8 @@ module array_module
 
     subroutine add_point_2d(point,array,narray)
         implicit none
-        double precision, dimension(:), intent(in) :: point                   !> Point to be added to end of array
-        double precision, dimension(:,:), allocatable, intent(inout) :: array !> Array to be added to
+        real(dp), dimension(:), intent(in) :: point                   !> Point to be added to end of array
+        real(dp), dimension(:,:), allocatable, intent(inout) :: array !> Array to be added to
         integer, intent(inout) :: narray                                      !> number of points in array (second index)
 
         narray = narray + 1         ! Increase the number of points
@@ -501,10 +502,10 @@ module array_module
     function delete_point_3d(i_point,array,narray,cluster_id) result(point)
         implicit none
         integer, intent(in) :: i_point                                          !> Position of point to be deleted from array
-        double precision, dimension(:,:,:), allocatable, intent(inout) :: array !> Array to be delete from
+        real(dp), dimension(:,:,:), allocatable, intent(inout) :: array !> Array to be delete from
         integer,dimension(:), allocatable, intent(inout) :: narray              !> number of points in array (second index)
         integer, intent(in) :: cluster_id                                       !> cluster identity (third index)
-        double precision, dimension(size(array,1)) :: point                     ! The point we have just deleted
+        real(dp), dimension(size(array,1)) :: point                     ! The point we have just deleted
 
         point = array(:,i_point,cluster_id)                                  ! Output the point to be deleted
         array(:,i_point,cluster_id) = array(:,narray(cluster_id),cluster_id) ! delete the point by overwriting it with the point at the end 
@@ -515,9 +516,9 @@ module array_module
     function delete_point_2d(i_point,array,narray) result(point)
         implicit none
         integer, intent(in) :: i_point                                          !> Position of point to be deleted from array
-        double precision, dimension(:,:), allocatable, intent(inout) :: array   !> Array to be delete from
+        real(dp), dimension(:,:), allocatable, intent(inout) :: array   !> Array to be delete from
         integer, intent(inout) :: narray                                        !> number of points in array (second index)
-        double precision, dimension(size(array,1)) :: point                     ! The point we have just deleted
+        real(dp), dimension(size(array,1)) :: point                     ! The point we have just deleted
 
         point = array(:,i_point)           ! Output the point to be deleted
         array(:,i_point) = array(:,narray) ! delete the point by overwriting it with the point at the end 

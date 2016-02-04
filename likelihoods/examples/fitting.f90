@@ -1,33 +1,34 @@
 module loglikelihood_module
+    use utils_module, only: dp
 
         integer :: nDims
         integer :: n_knots
         integer :: nStats
 
-        double precision, allocatable, dimension(:)   :: theta_saved
-        double precision, allocatable, dimension(:,:) :: spline_data
+        real(dp), allocatable, dimension(:)   :: theta_saved
+        real(dp), allocatable, dimension(:,:) :: spline_data
 
-        double precision, allocatable, dimension(:)   :: x0
-        double precision, allocatable, dimension(:)   :: y0
-        double precision, allocatable, dimension(:)   :: sigmax
-        double precision, allocatable, dimension(:)   :: sigmay
+        real(dp), allocatable, dimension(:)   :: x0
+        real(dp), allocatable, dimension(:)   :: y0
+        real(dp), allocatable, dimension(:)   :: sigmax
+        real(dp), allocatable, dimension(:)   :: sigmay
 
-        double precision :: x_min_int, x_max_int
-        double precision :: x_min, x_max
+        real(dp) :: x_min_int, x_max_int
+        real(dp) :: x_min, x_max
 
     contains
 
     function loglikelihood(theta,phi)
         use utils_module, only: logzero, logincexp,logTwoPi
         implicit none
-        double precision, intent(in),  dimension(:) :: theta         !> Input parameters
-        double precision, intent(out), dimension(:) :: phi           !> Output derived parameters
-        double precision                            :: loglikelihood ! loglikelihood value to output
+        real(dp), intent(in),  dimension(:) :: theta         !> Input parameters
+        real(dp), intent(out), dimension(:) :: phi           !> Output derived parameters
+        real(dp)                            :: loglikelihood ! loglikelihood value to output
 
-        double precision :: loglikelihood_temp
+        real(dp) :: loglikelihood_temp
         integer :: i_stats
         integer :: i_int
-        double precision :: x,y
+        real(dp) :: x,y
 
 
         ! Read in the spline array if necessary
@@ -123,15 +124,15 @@ module loglikelihood_module
         use utils_module, only: logzero,logincexp
         implicit none
 
-        double precision, intent(in) :: x0,y0,sx,sy,xmin,xmax
-        double precision :: log_exp_int
+        real(dp), intent(in) :: x0,y0,sx,sy,xmin,xmax
+        real(dp) :: log_exp_int
 
         integer :: i,n
-        double precision :: m,c,x1,x2,y1,y2
+        real(dp) :: m,c,x1,x2,y1,y2
 
-        double precision :: s,e,f
+        real(dp) :: s,e,f
 
-        double precision,parameter :: logsqrtpiby2 = log(sqrt(atan(1d0)*2d0))
+        real(dp),parameter :: logsqrtpiby2 = log(sqrt(atan(1d0)*2d0))
 
         log_exp_int = logzero
 
@@ -177,10 +178,10 @@ module loglikelihood_module
     function logderf(a,b)
         use utils_module, only: logzero
         implicit none
-        double precision,intent(in) :: a,b
-        double precision logderf
+        real(dp),intent(in) :: a,b
+        real(dp) logderf
 
-        double precision :: erfa,erfb
+        real(dp) :: erfa,erfb
 
         erfb = erf(b)
         erfa = erf(a)
@@ -195,11 +196,11 @@ module loglikelihood_module
 
     function erfapprox(x)
         implicit none
-        double precision, intent(in) :: x
-        double precision erfapprox
+        real(dp), intent(in) :: x
+        real(dp) erfapprox
 
-        double precision, parameter :: pi = atan(1d0)*4d0
-        double precision, parameter :: a = 8*(pi-3)/(3*pi*(4-pi))
+        real(dp), parameter :: pi = atan(1d0)*4d0
+        real(dp), parameter :: a = 8*(pi-3)/(3*pi*(4-pi))
 
         erfapprox = sign(1d0,x)*sqrt(1-exp(-x**2*(4/pi + a*x**2)/(1+a*x**2)))
     end function erfapprox
@@ -280,16 +281,16 @@ module loglikelihood_module
 
         implicit none 
 
-        double precision            :: y                  ! dependent variable
-        double precision,intent(in) :: x                  ! independent variable
-        double precision,intent(in) :: spline_array(:,:)  ! x coords of interpolation
+        real(dp)            :: y                  ! dependent variable
+        real(dp),intent(in) :: x                  ! independent variable
+        real(dp),intent(in) :: spline_array(:,:)  ! x coords of interpolation
                                                           ! y coords of interpolation
         integer,         intent(in) :: deriv              ! whether 0 or 1 derivatives
 
         integer i
         integer :: num_nodes
-        double precision, dimension(size(spline_array,1)) :: x_node
-        double precision, dimension(size(spline_array,1)) :: y_node
+        real(dp), dimension(size(spline_array,1)) :: x_node
+        real(dp), dimension(size(spline_array,1)) :: y_node
 
         !------------------------------------------------------------------------------
         !                                    

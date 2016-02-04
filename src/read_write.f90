@@ -1,5 +1,6 @@
 !> Module for reading and writing to files
 module read_write_module
+    use utils_module, only: dp
     implicit none
     interface read_doubles
         module procedure read_doubles_1, read_doubles_2, read_doubles_3
@@ -128,7 +129,7 @@ module read_write_module
     subroutine write_double(a,str)
         use utils_module, only: write_resume_unit,double_format
         implicit none
-        double precision, intent(in) :: a
+        real(dp), intent(in) :: a
         character(len=*), intent(in),optional :: str
 
         if(present(str)) write(write_resume_unit,'("'//trim(str)//'")')
@@ -139,7 +140,7 @@ module read_write_module
     subroutine write_doubles_1(arr,str)
         use utils_module, only: write_resume_unit,double_format
         implicit none
-        double precision,dimension(:), intent(in) :: arr
+        real(dp),dimension(:), intent(in) :: arr
         character(len=*), intent(in),optional :: str
 
         if(present(str)) write(write_resume_unit,'("'//trim(str)//'")')
@@ -150,7 +151,7 @@ module read_write_module
     subroutine write_doubles_2(arr,str,n)
         use utils_module, only: write_resume_unit,double_format
         implicit none
-        double precision,dimension(:,:), intent(in) :: arr
+        real(dp),dimension(:,:), intent(in) :: arr
         integer, intent(in), optional :: n
         character(len=*), intent(in),optional :: str
         integer :: i
@@ -171,7 +172,7 @@ module read_write_module
     subroutine write_doubles_3(arr,str,n)
         use utils_module, only: write_resume_unit,double_format
         implicit none
-        double precision,dimension(:,:,:), intent(in) :: arr
+        real(dp),dimension(:,:,:), intent(in) :: arr
         integer, intent(in),dimension(size(arr,3)),optional :: n
         character(len=*), intent(in),optional :: str
         integer :: i
@@ -288,7 +289,7 @@ module read_write_module
     subroutine read_double(a,str)
         use utils_module, only: read_resume_unit,double_format
         implicit none
-        double precision, intent(out) :: a
+        real(dp), intent(out) :: a
         character(len=*), intent(in),optional :: str
 
         if(present(str)) read(read_resume_unit,*)
@@ -299,7 +300,7 @@ module read_write_module
     subroutine read_doubles_1(arr,str,n)
         use utils_module, only: read_resume_unit,double_format
         implicit none
-        double precision,allocatable,dimension(:), intent(out) :: arr
+        real(dp),allocatable,dimension(:), intent(out) :: arr
         integer,intent(in) :: n
         character(len=*), intent(in),optional :: str
 
@@ -312,7 +313,7 @@ module read_write_module
     subroutine read_doubles_2(arr,str,n1,n2)
         use utils_module, only: read_resume_unit,double_format
         implicit none
-        double precision,allocatable,dimension(:,:), intent(out) :: arr
+        real(dp),allocatable,dimension(:,:), intent(out) :: arr
         integer,intent(in) :: n1,n2
         character(len=*), intent(in),optional :: str
         integer :: i2
@@ -328,7 +329,7 @@ module read_write_module
     subroutine read_doubles_3(arr,str,n1,n2,n3,n)
         use utils_module, only: read_resume_unit,double_format
         implicit none
-        double precision,allocatable,dimension(:,:,:), intent(out) :: arr
+        real(dp),allocatable,dimension(:,:,:), intent(out) :: arr
         integer,intent(in) :: n1,n2,n3
         integer,optional,intent(in),dimension(n3) :: n
         character(len=*), intent(in),optional :: str
@@ -454,7 +455,7 @@ module read_write_module
 
         integer :: i_cluster
         integer :: i_post
-        double precision :: weight
+        real(dp) :: weight
 
         integer, dimension(RTI%ncluster+RTI%ncluster_dead) :: ordering
 
@@ -673,12 +674,12 @@ module read_write_module
         type(run_time_info),    intent(in) :: RTI
         integer,dimension(:),   intent(in) :: nlikesum    !> number of likelihood calls since last call
 
-        double precision                           :: logZ       
-        double precision                           :: varlogZ  
-        double precision, dimension(RTI%ncluster) :: logZp      
-        double precision, dimension(RTI%ncluster) :: varlogZp 
-        double precision, dimension(RTI%ncluster_dead) :: logZp_dead      
-        double precision, dimension(RTI%ncluster_dead) :: varlogZp_dead 
+        real(dp)                           :: logZ       
+        real(dp)                           :: varlogZ  
+        real(dp), dimension(RTI%ncluster) :: logZp      
+        real(dp), dimension(RTI%ncluster) :: varlogZp 
+        real(dp), dimension(RTI%ncluster_dead) :: logZp_dead      
+        real(dp), dimension(RTI%ncluster_dead) :: varlogZp_dead 
 
         integer :: p
 

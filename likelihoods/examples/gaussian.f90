@@ -1,4 +1,5 @@
 module loglikelihood_module
+    use utils_module, only: dp
 
     contains
 
@@ -12,14 +13,14 @@ module loglikelihood_module
         use utils_module, only: logTwoPi,Vn
         implicit none
         !> Input parameters
-        double precision, intent(in), dimension(:)   :: theta
+        real(dp), intent(in), dimension(:)   :: theta
         !> Output derived parameters
-        double precision, intent(out),  dimension(:) :: phi
+        real(dp), intent(out),  dimension(:) :: phi
 
-        double precision :: loglikelihood
+        real(dp) :: loglikelihood
 
-        double precision, dimension(size(theta)) :: sigma ! Standard deviation (uncorrelated) 
-        double precision, dimension(size(theta)) :: mu    ! Mean
+        real(dp), dimension(size(theta)) :: sigma ! Standard deviation (uncorrelated) 
+        real(dp), dimension(size(theta)) :: mu    ! Mean
 
 
         ! Initialise the mean and standard deviation

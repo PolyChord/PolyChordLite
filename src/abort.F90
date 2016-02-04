@@ -1,4 +1,5 @@
 module abort_module
+    use utils_module, only: dp
 #ifdef MPI
     use mpi
 #endif

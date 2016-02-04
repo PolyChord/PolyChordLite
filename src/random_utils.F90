@@ -2,6 +2,7 @@
 !> Module containing utilities to generate random numbers
 
 module random_module
+    use utils_module, only: dp
 
 #ifdef MPI
     use mpi_module
@@ -118,7 +119,7 @@ module random_module
         integer,intent(in) :: nDims 
 
         ! The output nDims coordinate
-        double precision, dimension(nDims) :: reals
+        real(dp), dimension(nDims) :: reals
 
         call random_number(reals)
 
@@ -135,7 +136,7 @@ module random_module
         integer,intent(in) :: nDims 
 
         !> probability of true
-        double precision,intent(in) :: p 
+        real(dp),intent(in) :: p 
 
         ! The output nDims coordinate
         logical, dimension(nDims) :: random_logicals
@@ -154,8 +155,8 @@ module random_module
         implicit none
 
         ! The output nDims coordinate
-        double precision :: random_real
-        double precision :: random_real_vec(1)
+        real(dp) :: random_real
+        real(dp) :: random_real_vec(1)
 
         random_real_vec = random_reals(1)
         random_real = random_real_vec(1)
@@ -179,8 +180,8 @@ module random_module
 
         ! The output nDims coordinate
         integer, intent(in) :: nDims
-        double precision,intent(in) :: p
-        double precision,intent(in),optional :: q
+        real(dp),intent(in) :: p
+        real(dp),intent(in),optional :: q
 
         logical, dimension(nDims) :: bernoulli_trials
 
@@ -202,8 +203,8 @@ module random_module
         implicit none
 
         ! The output nDims coordinate
-        double precision,intent(in) :: p
-        double precision,intent(in),optional :: q
+        real(dp),intent(in) :: p
+        real(dp),intent(in),optional :: q
 
         logical :: bernoulli_trial
         logical :: bernoulli_trial_vec(1)
@@ -251,7 +252,7 @@ module random_module
         integer,intent(in) :: nDims
 
         ! The output unit vector
-        double precision, dimension(nDims) :: random_gaussian
+        real(dp), dimension(nDims) :: random_gaussian
 
         random_gaussian = inv_normal_cdf(random_reals(nDims))
 
@@ -275,8 +276,8 @@ module random_module
         integer,intent(in) :: nDims
 
         ! The output unit vector
-        double precision, dimension(nDims) :: random_direction
-        double precision :: random_direction2
+        real(dp), dimension(nDims) :: random_direction
+        real(dp) :: random_direction2
 
         random_direction2=0
         do while(random_direction2<=0)
@@ -308,11 +309,11 @@ module random_module
 
         !> Size of vector to be generated
         integer,intent(in) :: nDims
-        double precision, dimension(nDims),intent(in) :: rhat
+        real(dp), dimension(nDims),intent(in) :: rhat
 
         ! The output unit vector
-        double precision, dimension(nDims) :: random_subdirection
-        double precision :: random_subdirection2
+        real(dp), dimension(nDims) :: random_subdirection
+        real(dp) :: random_subdirection2
 
         random_subdirection2=0
         do while (random_subdirection2<=0)
@@ -351,10 +352,10 @@ module random_module
         integer,intent(in) :: nDims 
 
         ! The output vector
-        double precision, dimension(nDims) :: random_point_in_sphere
+        real(dp), dimension(nDims) :: random_point_in_sphere
 
         ! Temporary variable for storing a random radius
-        double precision :: rand_rad
+        real(dp) :: rand_rad
 
 
         ! generate a random direction
@@ -378,7 +379,7 @@ module random_module
         integer, intent(in) ::  nDims
 
         ! Set of vectors, the ith vector is in basis(:,i)
-        double precision, dimension(nDims,nDims) :: basis
+        real(dp), dimension(nDims,nDims) :: basis
 
         ! Iterators
         integer :: i,j
@@ -407,9 +408,9 @@ module random_module
         integer, intent(in) ::  num_nhats
 
         ! Set of vectors, the ith vector is in basis(:,i)
-        double precision, dimension(nDims,num_nhats) :: nhats
+        real(dp), dimension(nDims,num_nhats) :: nhats
 
-        double precision, dimension(nDims,nDims) :: basis
+        real(dp), dimension(nDims,nDims) :: basis
 
         integer :: lower_index,upper_index
 
@@ -450,7 +451,7 @@ module random_module
     !! We thus use the first method if k is less than 0.63n
     function random_distinct_integers(m,k) result(integers)
         implicit none
-        double precision, parameter :: cutoff=0.6321205588285576784d0
+        real(dp), parameter :: cutoff=0.6321205588285576784d0
 
         !> The upper bound of integers to be generated
         integer, intent(in) :: m
@@ -542,13 +543,13 @@ module random_module
     !!
     function random_integer_P(probabilities)
         implicit none
-        double precision, dimension(:),intent(in) :: probabilities
+        real(dp), dimension(:),intent(in) :: probabilities
 
         integer :: random_integer_P
 
-        double precision :: norm
-        double precision :: cdf
-        double precision :: rand
+        real(dp) :: norm
+        real(dp) :: cdf
+        real(dp) :: rand
 
 
         ! Calculate normalisation constant
@@ -576,14 +577,14 @@ module random_module
     subroutine random_inverse_covmat(invcovmat,logdetcovmat,sigma,nDims)
         implicit none
         integer,          intent(in)                         :: nDims
-        double precision, intent(out),dimension(nDims,nDims) :: invcovmat
-        double precision, intent(out)                        :: logdetcovmat
-        double precision, intent(in)                         :: sigma
+        real(dp), intent(out),dimension(nDims,nDims) :: invcovmat
+        real(dp), intent(out)                        :: logdetcovmat
+        real(dp), intent(in)                         :: sigma
 
-        double precision, dimension(nDims)       :: eigenvalues
-        double precision, dimension(nDims,nDims) :: eigenvectors
+        real(dp), dimension(nDims)       :: eigenvalues
+        real(dp), dimension(nDims,nDims) :: eigenvectors
         integer :: j
-        double precision, parameter :: rng=1d-2
+        real(dp), parameter :: rng=1d-2
 
         ! Generate a random basis for the eigenvectors
         eigenvectors = random_orthonormal_basis(nDims)

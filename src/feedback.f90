@@ -10,6 +10,7 @@
 !! |    1     | Indicate when entering various major sections of the program
 
 module feedback_module
+    use utils_module, only: dp
     implicit none
 
     contains
@@ -135,7 +136,7 @@ module feedback_module
         implicit none
 
         !> fraction completed
-        double precision,intent(in) :: frac
+        real(dp),intent(in) :: frac
         !> The size of the progress bar
         integer,intent(in) :: bar_size
 
@@ -227,12 +228,12 @@ module feedback_module
 
         integer :: p
 
-        double precision                          :: logZ       
-        double precision                          :: varlogZ  
-        double precision, dimension(RTI%ncluster) :: logZp      
-        double precision, dimension(RTI%ncluster) :: varlogZp 
-        double precision, dimension(RTI%ncluster_dead) :: logZp_dead      
-        double precision, dimension(RTI%ncluster_dead) :: varlogZp_dead 
+        real(dp)                          :: logZ       
+        real(dp)                          :: varlogZ  
+        real(dp), dimension(RTI%ncluster) :: logZp      
+        real(dp), dimension(RTI%ncluster) :: varlogZp 
+        real(dp), dimension(RTI%ncluster_dead) :: logZp_dead      
+        real(dp), dimension(RTI%ncluster_dead) :: varlogZp_dead 
 
         integer, dimension(RTI%ncluster+RTI%ncluster_dead) :: ordering
 
@@ -316,7 +317,7 @@ module feedback_module
         !! # error(log(evidence))
         !! # ndead
         !! # number of likelihood calls
-        double precision, dimension(4) :: output_info
+        real(dp), dimension(4) :: output_info
         !> The degree of feedback required
         integer, intent(in) :: feedback 
 

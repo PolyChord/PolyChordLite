@@ -1,4 +1,5 @@
 module chordal_module
+    use utils_module, only: dp
     implicit none
 
     contains
@@ -10,15 +11,17 @@ module chordal_module
         implicit none
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in), dimension(:)  :: theta
-                double precision, intent(out), dimension(:) :: phi
-                double precision :: loglikelihood
+                import :: dp
+                real(dp), intent(in), dimension(:)  :: theta
+                real(dp), intent(out), dimension(:) :: phi
+                real(dp) :: loglikelihood
             end function
         end interface
         interface
             function prior(cube) result(theta)
-                double precision, intent(in), dimension(:) :: cube
-                double precision, dimension(size(cube))    :: theta
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
             end function
         end interface
 
@@ -26,13 +29,13 @@ module chordal_module
         type(program_settings), intent(in) :: settings
 
         !> The seed point
-        double precision, intent(in), dimension(settings%nTotal)   :: seed_point
+        real(dp), intent(in), dimension(settings%nTotal)   :: seed_point
 
         !> The loglikelihood contour to sample on
-        double precision, intent(in)   :: logL
+        real(dp), intent(in)   :: logL
 
         !> The directions of the chords
-        double precision, intent(in), dimension(settings%nDims,settings%nDims) :: cholesky
+        real(dp), intent(in), dimension(settings%nDims,settings%nDims) :: cholesky
 
         !> The number of babies within each grade to produce
         integer, dimension(:), intent(in) :: num_repeats
@@ -43,19 +46,19 @@ module chordal_module
 
         !> The newly generated point, plus the loglikelihood bound that
         !! generated it
-        double precision,    dimension(settings%nTotal,sum(num_repeats))   :: baby_points
+        real(dp),    dimension(settings%nTotal,sum(num_repeats))   :: baby_points
 
 
         ! ------- Local Variables -------
-        double precision,    dimension(settings%nDims)   :: nhat
-        double precision,    dimension(settings%nDims,sum(num_repeats))   :: nhats
+        real(dp),    dimension(settings%nDims)   :: nhat
+        real(dp),    dimension(settings%nDims,sum(num_repeats))   :: nhats
         integer,   dimension(sum(num_repeats))   :: speeds ! The speed of each nhat
 
-        double precision, dimension(settings%nTotal)   :: previous_point
+        real(dp), dimension(settings%nTotal)   :: previous_point
 
         integer :: i_babies
 
-        double precision :: w
+        real(dp) :: w
 
         ! Start the baby point at the seed point
         previous_point = seed_point
@@ -96,7 +99,7 @@ module chordal_module
 
         integer, dimension(:), intent(in) :: num_repeats !> The number of babies within each grade to produce
         integer,  intent(out), dimension(sum(num_repeats))   :: speeds !> The speed of each nhat
-        double precision,    dimension(settings%nDims,sum(num_repeats))   :: nhats
+        real(dp),    dimension(settings%nDims,sum(num_repeats))   :: nhats
 
 
         integer :: i_grade
@@ -165,41 +168,43 @@ module chordal_module
         implicit none
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
-                double precision :: loglikelihood
+                import :: dp
+                real(dp), intent(in),  dimension(:) :: theta
+                real(dp), intent(out),  dimension(:) :: phi
+                real(dp) :: loglikelihood
             end function
         end interface
         interface
             function prior(cube) result(theta)
-                double precision, intent(in), dimension(:) :: cube
-                double precision, dimension(size(cube))    :: theta
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
             end function
         end interface
 
         !> program settings
         type(program_settings), intent(in) :: S
         !> The Loglikelihood bound
-        double precision, intent(in)                           :: logL
+        real(dp), intent(in)                           :: logL
         !> The direction to search for the root in
-        double precision, intent(in),    dimension(S%nDims)   :: nhat
+        real(dp), intent(in),    dimension(S%nDims)   :: nhat
         !> The start point
-        double precision, intent(in),    dimension(S%nTotal)   :: x0
+        real(dp), intent(in),    dimension(S%nTotal)   :: x0
         !> The initial width
-        double precision, intent(in) :: w
+        real(dp), intent(in) :: w
         !> The number of likelihood calls
         integer, intent(inout) :: n
 
         ! The output finish point
-        double precision,    dimension(S%nTotal)   :: baby_point
+        real(dp),    dimension(S%nTotal)   :: baby_point
 
         ! The upper bound
-        double precision,    dimension(S%nTotal)   :: R
+        real(dp),    dimension(S%nTotal)   :: R
         ! The lower bound
-        double precision,    dimension(S%nTotal)   :: L
+        real(dp),    dimension(S%nTotal)   :: L
 
 
-        double precision :: temp_random
+        real(dp) :: temp_random
 
         integer :: i_step
 
@@ -239,15 +244,15 @@ module chordal_module
         recursive function find_positive_within(L,R) result(x1)
             implicit none
             !> The upper bound
-            double precision, intent(inout), dimension(S%nTotal)   :: R
+            real(dp), intent(inout), dimension(S%nTotal)   :: R
             !> The lower bound
-            double precision, intent(inout), dimension(S%nTotal)   :: L
+            real(dp), intent(inout), dimension(S%nTotal)   :: L
 
             ! The output finish point
-            double precision,    dimension(S%nTotal)   :: x1
+            real(dp),    dimension(S%nTotal)   :: x1
 
-            double precision :: x0Rd
-            double precision :: x0Ld
+            real(dp) :: x0Rd
+            real(dp) :: x0Ld
 
             i_step=i_step+1
             if (i_step>100) then

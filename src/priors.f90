@@ -1,4 +1,5 @@
 module priors_module
+    use utils_module, only: dp
     implicit none
 
     integer, parameter :: unknown_type        = 0
@@ -13,7 +14,7 @@ module priors_module
         integer, dimension(:), allocatable :: hypercube_indices
         integer, dimension(:), allocatable :: physical_indices
 
-        double precision, dimension(:), allocatable :: parameters
+        real(dp), dimension(:), allocatable :: parameters
 
     end type prior
 
@@ -27,13 +28,13 @@ module priors_module
     function uniform_htp(hypercube_coords,parameters) result(physical_coords)
         implicit none
         !> The hypercube coordinates to be transformed
-        double precision, intent(in), dimension(:) :: hypercube_coords
+        real(dp), intent(in), dimension(:) :: hypercube_coords
 
         !> The parameters of the transformation
-        double precision, intent(in), dimension(:) :: parameters
+        real(dp), intent(in), dimension(:) :: parameters
 
         !> The transformed coordinates
-        double precision, dimension(size(hypercube_coords)) :: physical_coords
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
 
         ! This is a fairly simple transformation, each parameter is transformed as
         ! hypercube_coord -> min + hypercube_coord * (max-min)
@@ -47,13 +48,13 @@ module priors_module
     function uniform_pth(physical_coords,parameters) result(hypercube_coords)
         implicit none
         !> The physical coordinates to be transformed
-        double precision, intent(in), dimension(:) :: physical_coords
+        real(dp), intent(in), dimension(:) :: physical_coords
 
         !> The parameters of the transformation
-        double precision, intent(in), dimension(:) :: parameters
+        real(dp), intent(in), dimension(:) :: parameters
 
         !> The transformed coordinates
-        double precision, dimension(size(physical_coords)) :: hypercube_coords
+        real(dp), dimension(size(physical_coords)) :: hypercube_coords
 
         hypercube_coords = (physical_coords - parameters(1::2)) / (parameters(2::2) - parameters(1::2) )
 
@@ -66,13 +67,13 @@ module priors_module
         use utils_module, only: inv_normal_cdf
         implicit none
         !> The hypercube coordinates to be transformed
-        double precision, intent(in), dimension(:) :: hypercube_coords
+        real(dp), intent(in), dimension(:) :: hypercube_coords
 
         !> The parameters of the transformation
-        double precision, intent(in), dimension(:) :: parameters
+        real(dp), intent(in), dimension(:) :: parameters
 
         !> The transformed coordinates
-        double precision, dimension(size(hypercube_coords)) :: physical_coords
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
 
         ! Transform via the inverse normal cumulative distribution function
         physical_coords = inv_normal_cdf(hypercube_coords)
@@ -86,13 +87,13 @@ module priors_module
         use utils_module, only: normal_cdf
         implicit none
         !> The physical coordinates to be transformed
-        double precision, intent(in), dimension(:) :: physical_coords
+        real(dp), intent(in), dimension(:) :: physical_coords
 
         !> The parameters of the transformation
-        double precision, intent(in), dimension(:) :: parameters
+        real(dp), intent(in), dimension(:) :: parameters
 
         !> The transformed coordinates
-        double precision, dimension(size(physical_coords)) :: hypercube_coords
+        real(dp), dimension(size(physical_coords)) :: hypercube_coords
 
         integer :: npars 
 
@@ -117,13 +118,13 @@ module priors_module
     function log_uniform_htp(hypercube_coords,parameters) result(physical_coords)
         implicit none
         !> The hypercube coordinates to be transformed
-        double precision, intent(in), dimension(:) :: hypercube_coords
+        real(dp), intent(in), dimension(:) :: hypercube_coords
 
         !> The parameters of the transformation
-        double precision, intent(in), dimension(:) :: parameters
+        real(dp), intent(in), dimension(:) :: parameters
 
         !> The transformed coordinates
-        double precision, dimension(size(hypercube_coords)) :: physical_coords
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
 
         ! hypercube_coord -> min * (max/min)**hypercube_coord
         ! Lower half of the parameters array are the minimums
@@ -135,13 +136,13 @@ module priors_module
     function log_uniform_pth(physical_coords,parameters) result(hypercube_coords)
         implicit none
         !> The physical coordinates to be transformed
-        double precision, intent(in), dimension(:) :: physical_coords
+        real(dp), intent(in), dimension(:) :: physical_coords
 
         !> The parameters of the transformation
-        double precision, intent(in), dimension(:) :: parameters
+        real(dp), intent(in), dimension(:) :: parameters
 
         !> The transformed coordinates
-        double precision, dimension(size(physical_coords)) :: hypercube_coords
+        real(dp), dimension(size(physical_coords)) :: hypercube_coords
 
         ! hypercube_coord -> min * (max/min)**hypercube_coord
         ! Lower half of the parameters array are the minimums
@@ -191,13 +192,13 @@ module priors_module
         implicit none
 
         !> The hypercube coordinates to be transformed
-        double precision, intent(in), dimension(:) :: hypercube_coords
+        real(dp), intent(in), dimension(:) :: hypercube_coords
 
         !> The parameters of the transformation
-        double precision, intent(in), dimension(:) :: parameters
+        real(dp), intent(in), dimension(:) :: parameters
 
         !> The transformed coordinates
-        double precision, dimension(size(hypercube_coords)) :: physical_coords
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
 
         integer n_prior ! the dimension
 
@@ -224,13 +225,13 @@ module priors_module
         implicit none
 
         !> The physical coordinates to be transformed
-        double precision, intent(in), dimension(:) :: physical_coords
+        real(dp), intent(in), dimension(:) :: physical_coords
 
         !> The parameters of the transformation
-        double precision, intent(in), dimension(:) :: parameters
+        real(dp), intent(in), dimension(:) :: parameters
 
         !> The transformed coordinates
-        double precision, dimension(size(physical_coords)) :: hypercube_coords
+        real(dp), dimension(size(physical_coords)) :: hypercube_coords
 
         integer n_prior ! the dimension
         integer i_prior ! the dimension
@@ -260,9 +261,9 @@ module priors_module
     function hypercube_to_physical(hypercube_coords,priors) result(physical_coords)
         implicit none
         type(prior), dimension(:), intent(in) :: priors
-        double precision, intent(in), dimension(:) :: hypercube_coords
+        real(dp), intent(in), dimension(:) :: hypercube_coords
 
-        double precision, dimension(size(hypercube_coords)) :: physical_coords
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
 
         integer :: i
 
@@ -290,9 +291,9 @@ module priors_module
     function physical_to_hypercube(physical_coords,priors) result(hypercube_coords)
         implicit none
         type(prior), dimension(:), intent(in) :: priors
-        double precision, intent(in), dimension(:) :: physical_coords
+        real(dp), intent(in), dimension(:) :: physical_coords
 
-        double precision, dimension(size(physical_coords)) :: hypercube_coords
+        real(dp), dimension(size(physical_coords)) :: hypercube_coords
 
         integer :: i
 
@@ -324,7 +325,7 @@ module priors_module
         implicit none
         type(prior), dimension(:), intent(in) :: priors
 
-        double precision :: log_volume
+        real(dp) :: log_volume
         integer :: i
 
         log_volume = 0

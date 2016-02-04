@@ -1,4 +1,5 @@
 module params_module
+    use utils_module, only: dp
     use utils_module, only: STR_LENGTH
     implicit none
 
@@ -11,7 +12,7 @@ module params_module
         logical                   :: sub_cluster ! sub_clustering?
 
         ! Parameters in the prior
-        double precision, dimension(:), allocatable :: prior_params
+        real(dp), dimension(:), allocatable :: prior_params
     end type param_type
 
     contains
@@ -27,7 +28,7 @@ module params_module
         logical,optional,intent(in) :: sub_cluster ! sub clustering?
 
         ! Parameters in the prior
-        double precision, dimension(:),intent(in) :: prior_params
+        real(dp), dimension(:),intent(in) :: prior_params
 
 
         write(param%paramname,'(A)') paramname
@@ -58,8 +59,8 @@ module params_module
         logical         ,intent(in),optional :: sub_cluster ! sub cluster on this?
 
         ! Parameters in the prior
-        double precision, dimension(:),intent(in),optional :: prior_params 
-        double precision, dimension(0) :: blank_params 
+        real(dp), dimension(:),intent(in),optional :: prior_params 
+        real(dp), dimension(0) :: blank_params 
 
         ! expand parameter array
         type(param_type), dimension(:),allocatable :: temp_params

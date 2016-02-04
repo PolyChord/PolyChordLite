@@ -1,6 +1,7 @@
 !> This module encodes the type 'program_settings' which contains all of the
 !! details required to perform a nested sampling run.
 module settings_module
+    use utils_module, only: dp
     use utils_module,   only: STR_LENGTH
     implicit none
 
@@ -17,7 +18,7 @@ module settings_module
 
         integer :: feedback = 1 !> The degree of feedback to provide
 
-        double precision :: precision_criterion = 1d-3 !> The stopping criterion
+        real(dp) :: precision_criterion = 1d-3 !> The stopping criterion
 
         !> The maximum number of dead points/samples
         !!
@@ -28,7 +29,7 @@ module settings_module
         !! inter-chain points)
         !!
         !! set to <=0 to use all of them
-        double precision :: boost_posterior = 5d0
+        real(dp) :: boost_posterior = 5d0
 
         logical :: posteriors = .false.        !> Whether to calculate weighted posteriors
         logical :: equals     = .true.         !> Whether to calculate equally weighted posteriors
@@ -46,7 +47,7 @@ module settings_module
         integer :: update_files = 500 !> How often to update the resume file
 
         integer, allocatable,dimension(:) :: grade_dims          !> The number of parameters in each grade
-        double precision, allocatable,dimension(:) :: grade_frac !> The fraction of time spent in each grade
+        real(dp), allocatable,dimension(:) :: grade_frac !> The fraction of time spent in each grade
 
 
 

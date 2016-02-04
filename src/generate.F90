@@ -3,6 +3,7 @@
 !! * GenerateSeed
 !! * GenerateLivePoints
 module generate_module
+    use utils_module, only: dp
 
 
     implicit none
@@ -31,11 +32,11 @@ module generate_module
 
 
         ! The seed point to be produced
-        double precision, dimension(settings%nTotal) :: seed_point
+        real(dp), dimension(settings%nTotal) :: seed_point
 
         integer :: seed_choice
 
-        double precision, dimension(RTI%ncluster) :: probs
+        real(dp), dimension(RTI%ncluster) :: probs
 
         ! 0) Calculate an array proportional to the volumes
         probs = RTI%logXp                 ! prob_p = log( X_p )
@@ -77,15 +78,17 @@ module generate_module
 
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in), dimension(:)  :: theta
-                double precision, intent(out), dimension(:) :: phi
-                double precision :: loglikelihood
+                import :: dp
+                real(dp), intent(in), dimension(:)  :: theta
+                real(dp), intent(out), dimension(:) :: phi
+                real(dp) :: loglikelihood
             end function
         end interface
         interface
             function prior(cube) result(theta)
-                double precision, intent(in), dimension(:) :: cube
-                double precision, dimension(size(cube))    :: theta
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
             end function
         end interface
 
@@ -102,15 +105,15 @@ module generate_module
         integer             :: slave_id         !  Slave identifier to signal who to throw back to
 #endif
 
-        double precision, dimension(settings%nTotal) :: live_point ! Temporary live point array
+        real(dp), dimension(settings%nTotal) :: live_point ! Temporary live point array
 
 
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
         integer :: nlike ! number of likelihood calls
 
-        double precision :: time0,time1,total_time
-        double precision,dimension(size(settings%grade_dims)) :: speed
+        real(dp) :: time0,time1,total_time
+        real(dp),dimension(size(settings%grade_dims)) :: speed
 
 
         ! Initialise number of likelihood calls to zero here
@@ -297,15 +300,17 @@ module generate_module
 
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
-                double precision :: loglikelihood
+                import :: dp
+                real(dp), intent(in),  dimension(:) :: theta
+                real(dp), intent(out),  dimension(:) :: phi
+                real(dp) :: loglikelihood
             end function
         end interface
         interface
             function prior(cube) result(theta)
-                double precision, intent(in), dimension(:) :: cube
-                double precision, dimension(size(cube))    :: theta
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
             end function
         end interface
 
@@ -316,7 +321,7 @@ module generate_module
         ! The run time info (very important, see src/run_time_info.f90)
         type(run_time_info) :: RTI
 
-        double precision,dimension(size(settings%grade_dims)) :: speed
+        real(dp),dimension(size(settings%grade_dims)) :: speed
 
         type(mpi_bundle), intent(in) :: mpi_information
 
@@ -325,9 +330,9 @@ module generate_module
         integer :: nlike
         integer :: h0,h1
 
-        double precision :: time0,time1,total_time
+        real(dp) :: time0,time1,total_time
 
-        double precision, dimension(settings%nTotal) :: live_point ! Temporary live point array
+        real(dp), dimension(settings%nTotal) :: live_point ! Temporary live point array
 
         nlike=0
 

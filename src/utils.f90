@@ -1,19 +1,19 @@
 module utils_module
-
     implicit none
+    integer, parameter :: dp = kind(1.d0)
 
     !> The effective value of \f$ log(0) \f$
-    double precision, parameter :: logzero = -sqrt(huge(0d0))
+    real(dp), parameter :: logzero = -sqrt(huge(0d0))
     !> The effective value of \f$ log(\inf) \f$
-    double precision, parameter :: loginf = +sqrt(huge(0d0))
+    real(dp), parameter :: loginf = +sqrt(huge(0d0))
 
     !> The maximum character length
     integer, parameter :: STR_LENGTH = 300
 
-    !> \f$ 2\pi \f$ in double precision
-    double precision, parameter :: TwoPi = 8d0*atan(1d0)
-    !> \f$ \log(2\pi) \f$ in double precision
-    double precision, parameter :: logTwoPi = log(8d0*atan(1d0))
+    !> \f$ 2\pi \f$ in real(dp)
+    real(dp), parameter :: TwoPi = 8d0*atan(1d0)
+    !> \f$ \log(2\pi) \f$ in real(dp)
+    real(dp), parameter :: logTwoPi = log(8d0*atan(1d0))
 
     !> The default writing formats
     integer, parameter :: fmt_len = 200
@@ -67,7 +67,7 @@ module utils_module
 
     ! All series used to approximate F are computed with relative
     ! tolerance:
-    double precision eps
+    real(dp) eps
     parameter( eps = 1d-15 )
     ! which means that we neglect all terms smaller than eps times the
     ! current sum
@@ -116,7 +116,7 @@ module utils_module
     !! of fortran that minloc must return a length 1 array
     function minpos(a)
         implicit none
-        double precision, intent(in), dimension(:) :: a
+        real(dp), intent(in), dimension(:) :: a
         integer :: minpos
         integer :: minpos_vec(1)
 
@@ -148,11 +148,11 @@ module utils_module
     function distance(a,b)
         implicit none
         !> First vector
-        double precision, dimension(:) :: a
+        real(dp), dimension(:) :: a
         !> Second vector
-        double precision, dimension(:) :: b
+        real(dp), dimension(:) :: b
 
-        double precision :: distance
+        real(dp) :: distance
 
         distance = sqrt(distance2(a,b))
 
@@ -164,11 +164,11 @@ module utils_module
     function distance2(a,b)
         implicit none
         !> First vector
-        double precision, dimension(:) :: a
+        real(dp), dimension(:) :: a
         !> Second vector
-        double precision, dimension(:) :: b
+        real(dp), dimension(:) :: b
 
-        double precision :: distance2
+        real(dp) :: distance2
 
         distance2 = dot_product(a-b,a-b) 
 
@@ -177,8 +177,8 @@ module utils_module
     function loggamma(n)
         use iso_c_binding
         implicit none
-        double precision            :: loggamma
-        double precision,intent(in) :: n
+        real(dp)            :: loggamma
+        real(dp),intent(in) :: n
         real(c_double) :: c_n
         interface 
             function lgamma (y) bind(c)
@@ -202,13 +202,13 @@ module utils_module
     !!
     function MP(a,b,live_data)
         implicit none
-        double precision, dimension(:)   :: a
-        double precision, dimension(:)   :: b
-        double precision, dimension(:,:) :: live_data
+        real(dp), dimension(:)   :: a
+        real(dp), dimension(:)   :: b
+        real(dp), dimension(:,:) :: live_data
 
-        double precision :: MP
+        real(dp) :: MP
 
-        double precision :: dab2
+        real(dp) :: dab2
 
         integer i
 
@@ -226,13 +226,13 @@ module utils_module
 
     function MP2(seed,baby,live_data)
         implicit none
-        double precision, dimension(:)   :: seed
-        double precision, dimension(:)   :: baby
-        double precision, dimension(:,:) :: live_data
+        real(dp), dimension(:)   :: seed
+        real(dp), dimension(:)   :: baby
+        real(dp), dimension(:,:) :: live_data
 
-        double precision :: MP2
+        real(dp) :: MP2
 
-        double precision :: dab2
+        real(dp) :: dab2
 
         integer i
 
@@ -254,9 +254,9 @@ module utils_module
     function mod2(a)
         implicit none
         !> First vector
-        double precision, dimension(:) :: a
+        real(dp), dimension(:) :: a
 
-        double precision :: mod2
+        real(dp) :: mod2
 
         mod2 = dot_product(a,a)
 
@@ -266,9 +266,9 @@ module utils_module
     !> Double comparison
     function dbleq(a,b)
         implicit none
-        double precision :: a,b
+        real(dp) :: a,b
         logical :: dbleq
-        double precision, parameter :: eps = 1d-7
+        real(dp), parameter :: eps = 1d-7
 
         dbleq =  abs(a-b) < eps * max(abs(a),abs(b)) 
 
@@ -282,7 +282,7 @@ module utils_module
         !> dimensionality of the identity matrix
         integer,intent(in) :: nDims
         !> The identity matrix to be returned
-        double precision, dimension(nDims,nDims) :: identity_matrix
+        real(dp), dimension(nDims,nDims) :: identity_matrix
 
         integer :: i_dims ! iterator over dimensions
 
@@ -298,9 +298,9 @@ module utils_module
     function trace(a)
         implicit none
         !> The identity matrix to be returned
-        double precision, dimension(:,:),intent(in) :: a
+        real(dp), dimension(:,:),intent(in) :: a
 
-        double precision :: trace
+        real(dp) :: trace
 
         integer :: i ! iterator over dimensions
 
@@ -348,10 +348,10 @@ module utils_module
     function logsumexp(vector)
         implicit none
         !> vector of log(w
-        double precision, dimension(:),intent(in) :: vector
+        real(dp), dimension(:),intent(in) :: vector
 
-        double precision :: logsumexp
-        double precision :: maximumlog
+        real(dp) :: logsumexp
+        real(dp) :: maximumlog
 
         maximumlog = maxval(vector)
         logsumexp  =  maximumlog + log(sum(exp(vector - maximumlog)))
@@ -361,9 +361,9 @@ module utils_module
 
     function logaddexp(loga,logb)
         implicit none
-        double precision :: loga
-        double precision :: logb
-        double precision :: logaddexp
+        real(dp) :: loga
+        real(dp) :: logb
+        real(dp) :: logaddexp
 
         if (loga>logb) then
             logaddexp = loga + log(exp(logb-loga) + 1)
@@ -375,9 +375,9 @@ module utils_module
 
     function logsubexp(loga,logb)
         implicit none
-        double precision :: loga
-        double precision :: logb
-        double precision :: logsubexp
+        real(dp) :: loga
+        real(dp) :: logb
+        real(dp) :: logsubexp
 
         if(loga>logb) then
             logsubexp = loga + log(1-exp(logb-loga))
@@ -390,9 +390,9 @@ module utils_module
     !> This function increases loga by logb (and by log c if present)
     subroutine logincexp(loga,logb,logc)
         implicit none
-        double precision,intent(inout)       :: loga
-        double precision,intent(in)          :: logb
-        double precision,intent(in),optional :: logc
+        real(dp),intent(inout)       :: loga
+        real(dp),intent(in)          :: logb
+        real(dp),intent(in),optional :: logc
 
         if (loga>logb) then
             loga = loga + log(exp(logb-loga) + 1)
@@ -415,8 +415,8 @@ module utils_module
     !!
     function sort_doubles(a) result(k)
         implicit none
-        double precision,intent(in), dimension(:) :: a
-        double precision, dimension(size(a)) :: b
+        real(dp),intent(in), dimension(:) :: a
+        real(dp), dimension(size(a)) :: b
         integer, dimension(size(a)) :: i
         integer, dimension(size(a)) :: k
 
@@ -435,7 +435,7 @@ module utils_module
     end function sort_doubles
 
     recursive subroutine quicksort(A,Ai)
-        double precision, intent(inout), dimension(:) :: A
+        real(dp), intent(inout), dimension(:) :: A
         integer, intent(inout), dimension(:) :: Ai
         integer :: iq
 
@@ -447,13 +447,13 @@ module utils_module
     end subroutine quicksort
 
     subroutine Partition(A,Ai,marker)
-        double precision, intent(inout), dimension(:) :: A
+        real(dp), intent(inout), dimension(:) :: A
         integer, intent(inout), dimension(:) :: Ai
         integer, intent(out) :: marker
         integer :: i, j
-        double precision :: temp
+        real(dp) :: temp
         integer :: tempi
-        double precision :: x      ! pivot point
+        real(dp) :: x      ! pivot point
         x = A(1)
         i= 0
         j= size(A) + 1
@@ -498,10 +498,10 @@ module utils_module
     !!
     function Hypergeometric1F1(a,b,z)
         implicit none
-        double precision, intent(in)  :: a,b,z
-        double precision              :: Hypergeometric1F1
+        real(dp), intent(in)  :: a,b,z
+        real(dp)              :: Hypergeometric1F1
         integer n
-        double precision change
+        real(dp) change
 
         ! This computes the hypergeometric 1F1 function using a
         ! truncated power series, stopping when the relative change
@@ -529,10 +529,10 @@ module utils_module
     !> Hypergeometric function 
     function Hypergeometric2F1(a,b,c,z)
         implicit none
-        double precision, intent(in)  :: a,b,c,z
-        double precision              :: Hypergeometric2F1
+        real(dp), intent(in)  :: a,b,c,z
+        real(dp)              :: Hypergeometric2F1
         integer n
-        double precision change
+        real(dp) change
 
         ! This computes the hypergeometric 2F1 function using a
         ! truncated power series, stopping when the relative change
@@ -562,9 +562,9 @@ module utils_module
     ! http://en.wikipedia.org/wiki/Pochhammer_symbol
 
     implicit none
-    double precision, intent(in)  :: x
+    real(dp), intent(in)  :: x
     integer,          intent(in)  :: n
-    double precision              :: xn
+    real(dp)              :: xn
 
     if (n<=0) then
         xn = 1
@@ -578,7 +578,7 @@ module utils_module
         ! This function outputs true if change is outside of the
         ! tolerance epsilon from current_sum
         implicit none
-        double precision, intent(in) :: change,current_sum
+        real(dp), intent(in) :: change,current_sum
         logical abovetol
 
         if (current_sum <= 0d0) then
@@ -592,8 +592,8 @@ module utils_module
 
     function calc_cholesky(a) result(L)
         implicit none
-        double precision, intent(in),dimension(:,:) :: a
-        double precision, dimension(size(a,1),size(a,2)) :: L
+        real(dp), intent(in),dimension(:,:) :: a
+        real(dp), dimension(size(a,1),size(a,2)) :: L
         integer :: i,j
 
         ! Set it all to zero to begin with
@@ -622,12 +622,12 @@ module utils_module
 
     function calc_covmat(lives,phantoms) result(covmat)
         implicit none
-        double precision, intent(in), dimension(:,:) :: lives
-        double precision, intent(in), dimension(:,:) :: phantoms
+        real(dp), intent(in), dimension(:,:) :: lives
+        real(dp), intent(in), dimension(:,:) :: phantoms
 
-        double precision, dimension(size(lives,1),size(lives,1)) :: covmat
+        real(dp), dimension(size(lives,1),size(lives,1)) :: covmat
 
-        double precision, dimension(size(lives,1)) :: mean
+        real(dp), dimension(size(lives,1)) :: mean
 
         integer :: nDims,nlive,nphantom
 
@@ -660,9 +660,9 @@ module utils_module
     !! instrisic functions
     function calc_similarity_matrix(data_array) result(similarity_matrix)
 
-        double precision, intent(in), dimension(:,:) :: data_array
+        real(dp), intent(in), dimension(:,:) :: data_array
 
-        double precision, dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
+        real(dp), dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
 
         integer :: i
 
@@ -726,8 +726,8 @@ module utils_module
     function Vn(nDims)
         implicit none
         integer,intent(in) :: nDims
-        double precision :: Vn
-        double precision, parameter :: sqrtpi = sqrt(4d0*atan(1d0))
+        real(dp) :: Vn
+        real(dp), parameter :: sqrtpi = sqrt(4d0*atan(1d0))
         Vn = sqrtpi**nDims /gamma(1d0+nDims/2d0)
     end function Vn
 
@@ -738,9 +738,9 @@ module utils_module
 
     function normal_cdf(x)
         implicit none
-        double precision, intent(in),dimension(:) :: x
-        double precision,dimension(size(x)) :: normal_cdf
-        double precision, parameter :: sqrt2 = sqrt(2d0)
+        real(dp), intent(in),dimension(:) :: x
+        real(dp),dimension(size(x)) :: normal_cdf
+        real(dp), parameter :: sqrt2 = sqrt(2d0)
 
         normal_cdf = 0.5d0 * ( 1d0 + erf(x/sqrt2))
 
@@ -748,8 +748,8 @@ module utils_module
 
     function inv_normal_cdf(x)
         implicit none
-        double precision, intent(in),dimension(:) :: x
-        double precision,dimension(size(x)) :: inv_normal_cdf
+        real(dp), intent(in),dimension(:) :: x
+        real(dp),dimension(size(x)) :: inv_normal_cdf
         integer :: i
 
         inv_normal_cdf = [( r8_normal_01_cdf_inverse(x(i)), i=1,size(x) )]
@@ -985,17 +985,17 @@ module utils_module
     function log_gauss(theta,mean,invcovmat,logdetcovmat)
         implicit none
         !> The input vector
-        double precision, intent(in), dimension(:) :: theta
+        real(dp), intent(in), dimension(:) :: theta
         !> The mean
-        double precision, intent(in), dimension(:) :: mean
+        real(dp), intent(in), dimension(:) :: mean
         !> The precomputed inverse covariance matrix
-        double precision, intent(in), dimension(:,:) :: invcovmat
+        real(dp), intent(in), dimension(:,:) :: invcovmat
         !> The precomputed logarithm of the determinant
-        double precision, intent(in) :: logdetcovmat
+        real(dp), intent(in) :: logdetcovmat
 
 
         ! The output
-        double precision :: log_gauss
+        real(dp) :: log_gauss
 
         ! Gaussian normalisation
         log_gauss = - ( size(theta) * logTwoPi + logdetcovmat )/2d0 
@@ -1010,7 +1010,7 @@ module utils_module
         use mpi,only: MPI_Wtime
 #endif
         implicit none
-        double precision :: time
+        real(dp) :: time
 
 #ifdef MPI
         time = MPI_Wtime()

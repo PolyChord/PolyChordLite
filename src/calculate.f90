@@ -1,4 +1,5 @@
 module calculate_module
+    use utils_module, only: dp
     implicit none
     contains
 
@@ -8,26 +9,28 @@ module calculate_module
         implicit none
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in),   dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
-                double precision :: loglikelihood
+                import :: dp
+                real(dp), intent(in),   dimension(:) :: theta
+                real(dp), intent(out),  dimension(:) :: phi
+                real(dp) :: loglikelihood
             end function
         end interface
         interface
             function prior(cube) result(theta)
-                double precision, intent(in), dimension(:) :: cube
-                double precision, dimension(size(cube))    :: theta
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
             end function
         end interface
 
         type(program_settings), intent(in) :: settings
-        double precision, intent(inout) , dimension(:) :: point
+        real(dp), intent(inout) , dimension(:) :: point
         integer, intent(inout) :: nlike
 
-        double precision,dimension(settings%nDims)    :: cube   ! Hypercube coordinate
-        double precision,dimension(settings%nDims)    :: theta  ! Physical parameters
-        double precision,dimension(settings%nDerived) :: phi    ! derived parameters
-        double precision                              :: logL
+        real(dp),dimension(settings%nDims)    :: cube   ! Hypercube coordinate
+        real(dp),dimension(settings%nDims)    :: theta  ! Physical parameters
+        real(dp),dimension(settings%nDerived) :: phi    ! derived parameters
+        real(dp)                              :: logL
 
         cube = point(settings%h0:settings%h1)
 
@@ -54,11 +57,11 @@ module calculate_module
         implicit none
 
         type(program_settings), intent(in) :: settings
-        double precision, dimension(settings%nTotal),intent(in) :: point
-        double precision,intent(in) :: logweight
-        double precision,intent(in) :: evidence
-        double precision,intent(in) :: volume
-        double precision, dimension(settings%nposterior) :: posterior_point
+        real(dp), dimension(settings%nTotal),intent(in) :: point
+        real(dp),intent(in) :: logweight
+        real(dp),intent(in) :: evidence
+        real(dp),intent(in) :: volume
+        real(dp), dimension(settings%nposterior) :: posterior_point
 
 
         ! Volume
@@ -91,9 +94,9 @@ module calculate_module
     !! instrisic functions
     function calculate_similarity_matrix(data_array) result(similarity_matrix)
 
-        double precision, intent(in), dimension(:,:) :: data_array
+        real(dp), intent(in), dimension(:,:) :: data_array
 
-        double precision, dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
+        real(dp), dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
 
         integer :: i
 

@@ -1,11 +1,12 @@
 module loglikelihood_module
+    use utils_module, only: dp
 
 
-    double precision, parameter :: sigma = 0.1  ! width of peak
+    real(dp), parameter :: sigma = 0.1  ! width of peak
 
-    double precision, allocatable, dimension(:,:)  :: invcovmat    ! inverse covariance matrix
-    double precision, allocatable, dimension(:)    :: mu           ! Mean
-    double precision                               :: logdetcovmat ! log(det(covariance matrix))
+    real(dp), allocatable, dimension(:,:)  :: invcovmat    ! inverse covariance matrix
+    real(dp), allocatable, dimension(:)    :: mu           ! Mean
+    real(dp)                               :: logdetcovmat ! log(det(covariance matrix))
 
     contains
     !> Random Correlated gaussian loglikelihood
@@ -17,11 +18,11 @@ module loglikelihood_module
         use utils_module, only: log_gauss
         implicit none
         !> Input parameters
-        double precision, intent(in), dimension(:)   :: theta
+        real(dp), intent(in), dimension(:)   :: theta
         !> Output derived parameters
-        double precision, intent(out),  dimension(:) :: phi
+        real(dp), intent(out),  dimension(:) :: phi
 
-        double precision :: loglikelihood
+        real(dp) :: loglikelihood
 
         ! Compute log likelihood
         loglikelihood = log_gauss(theta,mu,invcovmat,logdetcovmat)

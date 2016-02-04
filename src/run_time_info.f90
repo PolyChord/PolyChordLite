@@ -1,4 +1,5 @@
 module run_time_module
+    use utils_module, only: dp
     implicit none
 
     !> The run time information.
@@ -38,67 +39,67 @@ module run_time_module
         integer                            :: nequals_global
 
         !> Live points
-        double precision, allocatable, dimension(:,:,:) :: live
+        real(dp), allocatable, dimension(:,:,:) :: live
         !> Phantom points
-        double precision, allocatable, dimension(:,:,:) :: phantom
+        real(dp), allocatable, dimension(:,:,:) :: phantom
         !> Posterior stack
-        double precision, allocatable, dimension(:,:,:) :: posterior_stack
+        real(dp), allocatable, dimension(:,:,:) :: posterior_stack
         !> The number of posterior points in each cluster in the posterior stack
         integer, allocatable, dimension(:) :: nposterior_stack
 
 
         !> weighted posterior points
-        double precision, allocatable, dimension(:,:,:) :: posterior
-        double precision, allocatable, dimension(:,:,:) :: posterior_dead
-        double precision, allocatable, dimension(:,:)   :: posterior_global
+        real(dp), allocatable, dimension(:,:,:) :: posterior
+        real(dp), allocatable, dimension(:,:,:) :: posterior_dead
+        real(dp), allocatable, dimension(:,:)   :: posterior_global
 
         !> Equally weighted posterior points
-        double precision, allocatable, dimension(:,:,:) :: equals
-        double precision, allocatable, dimension(:,:,:) :: equals_dead
-        double precision, allocatable, dimension(:,:)   :: equals_global
+        real(dp), allocatable, dimension(:,:,:) :: equals
+        real(dp), allocatable, dimension(:,:,:) :: equals_dead
+        real(dp), allocatable, dimension(:,:)   :: equals_global
 
         !> Pure nested sampling points
-        double precision, allocatable, dimension(:,:)   :: dead
+        real(dp), allocatable, dimension(:,:)   :: dead
 
         !> Covariance Matrices
-        double precision, allocatable, dimension(:,:,:) :: covmat
+        real(dp), allocatable, dimension(:,:,:) :: covmat
         !> Cholesky decompositions
-        double precision, allocatable, dimension(:,:,:) :: cholesky
+        real(dp), allocatable, dimension(:,:,:) :: cholesky
 
 
         !> Global evidence estimate
-        double precision :: logZ
+        real(dp) :: logZ
         !> Global evidence^2 estimate
-        double precision :: logZ2
+        real(dp) :: logZ2
 
 
         !> Local volume estimate
-        double precision, allocatable, dimension(:)   :: logXp
+        real(dp), allocatable, dimension(:)   :: logXp
         !> global evidence volume cross correlation
-        double precision, allocatable, dimension(:)   :: logZXp
+        real(dp), allocatable, dimension(:)   :: logZXp
         !> Local evidence estimate
-        double precision, allocatable, dimension(:)   :: logZp
-        double precision, allocatable, dimension(:)   :: logZp_dead
+        real(dp), allocatable, dimension(:)   :: logZp
+        real(dp), allocatable, dimension(:)   :: logZp_dead
         !> Local evidence^2 estimate 
-        double precision, allocatable, dimension(:)   :: logZp2
-        double precision, allocatable, dimension(:)   :: logZp2_dead
+        real(dp), allocatable, dimension(:)   :: logZp2
+        real(dp), allocatable, dimension(:)   :: logZp2_dead
         !> local evidence volume cross correlation
-        double precision, allocatable, dimension(:)   :: logZpXp
+        real(dp), allocatable, dimension(:)   :: logZpXp
         !> local volume cross correlation
-        double precision, allocatable, dimension(:,:) :: logXpXq
+        real(dp), allocatable, dimension(:,:) :: logXpXq
 
         !> Minimum loglikelihoods
-        double precision, allocatable, dimension(:) :: logLp
+        real(dp), allocatable, dimension(:) :: logLp
         !> The minimum loglikelihood point within each cluster
         integer,allocatable, dimension(:)           :: i
 
         !> Maximum weight
-        double precision, allocatable, dimension(:) :: maxlogweight
-        double precision, allocatable, dimension(:) :: maxlogweight_dead
-        double precision                            :: maxlogweight_global
+        real(dp), allocatable, dimension(:) :: maxlogweight
+        real(dp), allocatable, dimension(:) :: maxlogweight_dead
+        real(dp)                            :: maxlogweight_global
 
         !> what to thin the posterior by
-        double precision :: thin_posterior
+        real(dp) :: thin_posterior
 
     end type run_time_info
 
@@ -213,19 +214,19 @@ module run_time_module
         integer :: p
 
         ! The loglikelihood to update
-        double precision :: logL
+        real(dp) :: logL
 
         ! The logweight of the deleted point
-        double precision :: logweight
+        real(dp) :: logweight
 
         ! Iterator
         integer :: q
 
         ! Temporary variables for notational ease
-        double precision,parameter :: log2 = log(2d0)
-        double precision :: lognp
-        double precision :: lognp1
-        double precision :: lognp2
+        real(dp),parameter :: log2 = log(2d0)
+        real(dp) :: lognp
+        real(dp) :: lognp1
+        real(dp) :: lognp2
 
         logL  = RTI%logLp(p)
 
@@ -326,30 +327,30 @@ module run_time_module
         integer, dimension(num_new_clusters) :: new_target
         integer                              :: num_old_clusters
 
-        double precision, dimension(size(RTI%live,1),RTI%nlive(p))     :: old_live
+        real(dp), dimension(size(RTI%live,1),RTI%nlive(p))     :: old_live
         integer :: old_nlive
-        double precision, dimension(size(RTI%phantom,1),size(RTI%phantom,2),size(RTI%phantom,3)) :: old_phantom
+        real(dp), dimension(size(RTI%phantom,1),size(RTI%phantom,2),size(RTI%phantom,3)) :: old_phantom
         integer, dimension(size(RTI%nphantom)) :: old_nphantom
 
-        double precision, dimension(size(RTI%posterior,1),RTI%nposterior(p)) :: old_posterior
+        real(dp), dimension(size(RTI%posterior,1),RTI%nposterior(p)) :: old_posterior
         integer :: old_nposterior
 
-        double precision, dimension(size(RTI%equals,1),RTI%nequals(p)) :: old_equals
+        real(dp), dimension(size(RTI%equals,1),RTI%nequals(p)) :: old_equals
         integer :: old_nequals
 
-        double precision :: old_maxlogweight
+        real(dp) :: old_maxlogweight
 
-        double precision, dimension(num_new_clusters) :: logni
-        double precision, dimension(num_new_clusters) :: logni1
-        double precision :: logn
-        double precision :: logn1
-        double precision :: logXp
-        double precision :: logZp
-        double precision :: logZp2
-        double precision, dimension(RTI%ncluster-1) :: logXpXq
-        double precision :: logXp2
-        double precision :: logZXp
-        double precision :: logZpXp
+        real(dp), dimension(num_new_clusters) :: logni
+        real(dp), dimension(num_new_clusters) :: logni1
+        real(dp) :: logn
+        real(dp) :: logn1
+        real(dp) :: logXp
+        real(dp) :: logZp
+        real(dp) :: logZp2
+        real(dp), dimension(RTI%ncluster-1) :: logXpXq
+        real(dp) :: logXp2
+        real(dp) :: logZXp
+        real(dp) :: logZpXp
 
         ! 1) Save the old points as necessary
         old_live  = RTI%live(:,:RTI%nlive(p),p)                 ! Save the old live points
@@ -601,7 +602,7 @@ module run_time_module
         type(run_time_info),intent(inout) :: RTI        !> Run time information
 
         integer :: i_cluster ! cluster iterator
-        double precision, dimension(settings%nDims) :: mean ! The mean of a given cluster
+        real(dp), dimension(settings%nDims) :: mean ! The mean of a given cluster
 
         ! For each cluster:
         do i_cluster = 1,RTI%ncluster
@@ -648,12 +649,12 @@ module run_time_module
         implicit none
 
         type(run_time_info),intent(in)                                  :: RTI        !> Run time information
-        double precision, intent(out)                                   :: logZ       !>
-        double precision, intent(out)                                   :: varlogZ  !>
-        double precision, intent(out), dimension(RTI%ncluster),optional :: logZp      !>
-        double precision, intent(out), dimension(RTI%ncluster),optional :: varlogZp !>
-        double precision, intent(out), dimension(RTI%ncluster_dead),optional :: logZp_dead      !>
-        double precision, intent(out), dimension(RTI%ncluster_dead),optional :: varlogZp_dead !>
+        real(dp), intent(out)                                   :: logZ       !>
+        real(dp), intent(out)                                   :: varlogZ  !>
+        real(dp), intent(out), dimension(RTI%ncluster),optional :: logZp      !>
+        real(dp), intent(out), dimension(RTI%ncluster),optional :: varlogZp !>
+        real(dp), intent(out), dimension(RTI%ncluster_dead),optional :: logZp_dead      !>
+        real(dp), intent(out), dimension(RTI%ncluster_dead),optional :: varlogZp_dead !>
 
         logZ       = max(logzero,2*RTI%logZ - 0.5*RTI%logZ2)
         varlogZ    = RTI%logZ2 - 2*RTI%logZ
@@ -683,7 +684,7 @@ module run_time_module
         type(program_settings), intent(in) :: settings !> Program settings
         type(run_time_info),intent(inout)  :: RTI      !> Run time information
 
-        double precision ::live_logZ ! Amount of evidence remaining in the live points
+        real(dp) ::live_logZ ! Amount of evidence remaining in the live points
 
         integer :: i_cluster ! cluster iterator
 
@@ -719,14 +720,14 @@ module run_time_module
         type(run_time_info),intent(inout)  :: RTI      !> Run time information
         integer,intent(in) :: cluster_add              !> Cluster to add to
         !> New-born baby points, created by slice sampling routine
-        double precision,intent(in),dimension(:,:),allocatable :: baby_points
+        real(dp),intent(in),dimension(:,:),allocatable :: baby_points
 
         logical :: replaced ! Have we successfully replaced a point?
 
         ! live point, last of the baby points
-        double precision,dimension(settings%nTotal) :: point
+        real(dp),dimension(settings%nTotal) :: point
 
-        double precision :: logL ! loglikelihood bound
+        real(dp) :: logL ! loglikelihood bound
 
         integer :: i_baby ! point iterator
         
@@ -778,9 +779,9 @@ module run_time_module
         type(program_settings), intent(in) :: settings !> Program settings
         type(run_time_info),intent(inout)  :: RTI      !> Run time information
 
-        double precision,dimension(settings%nTotal)     :: deleted_point   ! point we have just deleted
-        double precision,dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
-        double precision                                :: logweight       ! The log weighting of this point
+        real(dp),dimension(settings%nTotal)     :: deleted_point   ! point we have just deleted
+        real(dp),dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
+        real(dp)                                :: logweight       ! The log weighting of this point
         integer                                     :: cluster_del     ! cluster to delete from
 
         cluster_del   = minpos(RTI%logLp)                                                ! find the cluster we're deleting from
@@ -809,8 +810,8 @@ module run_time_module
         type(program_settings), intent(in) :: settings !> Program settings
         type(run_time_info),intent(inout)  :: RTI      !> Run time information
 
-        double precision,dimension(settings%nTotal) :: deleted_point   ! point we have just deleted
-        double precision,dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
+        real(dp),dimension(settings%nTotal) :: deleted_point   ! point we have just deleted
+        real(dp),dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
         
         integer :: i_cluster  ! cluster iterator
         integer :: i_phantom  ! phantom iterator
@@ -899,15 +900,15 @@ module run_time_module
         type(program_settings), intent(in) :: settings
         type(run_time_info), intent(in) :: RTI
 
-        double precision, dimension(settings%nTotal),intent(in)   :: point
+        real(dp), dimension(settings%nTotal),intent(in)   :: point
 
         integer :: cluster
 
         integer :: i_cluster
         integer :: i_live
 
-        double precision :: temp_distance2
-        double precision :: closest_distance2
+        real(dp) :: temp_distance2
+        real(dp) :: closest_distance2
 
         if( RTI%ncluster == 1) then
             cluster=1
@@ -944,7 +945,7 @@ module run_time_module
         type(run_time_info),intent(inout) :: RTI
 
 
-        double precision, dimension(settings%np) :: posterior_point
+        real(dp), dimension(settings%np) :: posterior_point
 
         integer :: i_post
         integer :: i_cluster

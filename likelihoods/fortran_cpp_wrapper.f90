@@ -1,4 +1,5 @@
 module loglikelihood_module
+    use utils_module, only: dp
 
     interface 
         function cpp_loglikelihood(theta,nDims,phi,nDerived) bind(c)
@@ -25,11 +26,11 @@ module loglikelihood_module
         use iso_c_binding
         implicit none
         !> Input parameters
-        double precision, intent(in), dimension(:)   :: theta
+        real(dp), intent(in), dimension(:)   :: theta
         !> Output derived parameters
-        double precision, intent(out),  dimension(:) :: phi
+        real(dp), intent(out),  dimension(:) :: phi
 
-        double precision :: loglikelihood
+        real(dp) :: loglikelihood
 
         real (c_double),dimension(size(theta)) :: c_theta
         integer (c_int)                        :: nDims

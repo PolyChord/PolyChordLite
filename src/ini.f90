@@ -1,4 +1,5 @@
 module ini_module
+    use utils_module, only: dp
 
 
   implicit none
@@ -188,10 +189,10 @@ contains
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
-        double precision,intent(in),optional :: dflt
+        real(dp),intent(in),optional :: dflt
 
         character(len=STR_LENGTH) :: string  ! string following keyword
-        double precision :: get_double  ! double following keyword
+        real(dp) :: get_double  ! double following keyword
 
         string = get_string(file_name,key_word)
         if(trim(string)/='') then
@@ -209,7 +210,7 @@ contains
         use array_module,  only: reallocate
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
-        double precision, intent(out), allocatable, dimension(:) :: doubles
+        real(dp), intent(out), allocatable, dimension(:) :: doubles
 
         character(len=STR_LENGTH) :: string  ! string following keyword
 
@@ -308,7 +309,7 @@ contains
         character(len=STR_LENGTH)                :: prior_type_str  ! prior type string
         integer                                  :: prior_type      ! prior type integer
         integer                                  :: prior_block     ! prior block
-        double precision,allocatable,dimension(:):: prior_params    ! prior parameters
+        real(dp),allocatable,dimension(:):: prior_params    ! prior parameters
 
         integer                                  :: sub_cluster     ! whether or not to do sub clustering on this parameter
         character(1),parameter                   :: sc='*'          ! indicator for sub clustering
@@ -410,8 +411,8 @@ contains
         use utils_module,  only: STR_LENGTH
         implicit none
         character(len=STR_LENGTH),intent(inout)               :: line_buffer ! Line buffer
-        double precision,allocatable,dimension(:),intent(out) :: prior_params      ! prior parameters
-        double precision,allocatable,dimension(:)             :: temp_params       ! prior parameters
+        real(dp),allocatable,dimension(:),intent(out) :: prior_params      ! prior parameters
+        real(dp),allocatable,dimension(:)             :: temp_params       ! prior parameters
 
         integer :: i
 
