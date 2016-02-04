@@ -3,23 +3,24 @@ module chordal_module
 
     contains
 
-    function SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike,num_repeats)  result(baby_points)
-        use priors_module, only: prior
+    function SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)  result(baby_points)
         use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,random_real
 
         implicit none
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
+                double precision, intent(in), dimension(:)  :: theta
+                double precision, intent(out), dimension(:) :: phi
                 double precision :: loglikelihood
             end function
         end interface
-
-        ! ------- Inputs -------
-        !> The prior information
-        type(prior), dimension(:), intent(in) :: priors
+        interface
+            function prior(cube) result(theta)
+                double precision, intent(in), dimension(:) :: cube
+                double precision, dimension(size(cube))    :: theta
+            end function
+        end interface
 
         !> program settings (mostly useful to pass on the number of live points)
         type(program_settings), intent(in) :: settings
@@ -78,7 +79,7 @@ module chordal_module
             w = w * 3d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
 
             ! Generate a new random point along the chord defined by the previous point and nhat
-            baby_points(:,i_babies) = slice_sample(loglikelihood,priors,logL, nhat, previous_point, w, settings,nlike(speeds(i_babies)))
+            baby_points(:,i_babies) = slice_sample(loglikelihood,prior,logL, nhat, previous_point, w, settings,nlike(speeds(i_babies)))
 
             ! Save this for the next loop
             previous_point = baby_points(:,i_babies)
@@ -156,9 +157,8 @@ module chordal_module
     !!
     !! Each seed point x0 contains an initial estimate of the width w.
     !!
-    function slice_sample(loglikelihood,priors,logL,nhat,x0,w,S,n) result(baby_point)
+    function slice_sample(loglikelihood,prior,logL,nhat,x0,w,S,n) result(baby_point)
         use settings_module, only: program_settings
-        use priors_module, only: prior
         use utils_module,  only: logzero, distance
         use random_module, only: random_real
         use calculate_module, only: calculate_point
@@ -170,9 +170,13 @@ module chordal_module
                 double precision :: loglikelihood
             end function
         end interface
+        interface
+            function prior(cube) result(theta)
+                double precision, intent(in), dimension(:) :: cube
+                double precision, dimension(size(cube))    :: theta
+            end function
+        end interface
 
-        !> The prior information
-        type(prior), dimension(:), intent(in) :: priors
         !> program settings
         type(program_settings), intent(in) :: S
         !> The Loglikelihood bound
@@ -205,15 +209,15 @@ module chordal_module
         R(S%h0:S%h1) = x0(S%h0:S%h1) + (1-temp_random) * w * nhat 
 
         ! Calculate initial likelihoods
-        call calculate_point(loglikelihood,priors,R,S,n)
-        call calculate_point(loglikelihood,priors,L,S,n)
+        call calculate_point(loglikelihood,prior,R,S,n)
+        call calculate_point(loglikelihood,prior,L,S,n)
 
         ! expand R until it's outside the likelihood region
         i_step=0
         do while( R(S%l0) >= logL .and. R(S%l0) > logzero )
             i_step=i_step+1
             R(S%h0:S%h1) = x0(S%h0:S%h1) + nhat * w * i_step
-            call calculate_point(loglikelihood,priors,R,S,n)
+            call calculate_point(loglikelihood,prior,R,S,n)
         end do
         if(i_step>100) write(*,'(" too many R steps (",I10,")")') i_step
 
@@ -222,7 +226,7 @@ module chordal_module
         do while(L(S%l0) >= logL      .and. L(S%l0) > logzero )
             i_step=i_step+1
             L(S%h0:S%h1) = x0(S%h0:S%h1) - nhat * w * i_step
-            call calculate_point(loglikelihood,priors,L,S,n)
+            call calculate_point(loglikelihood,prior,L,S,n)
         end do
         if(i_step>100) write(*,'(" too many L steps (",I10,")")') i_step
 
@@ -261,7 +265,7 @@ module chordal_module
             x1(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 
 
             ! calculate the likelihood 
-            call calculate_point(loglikelihood,priors,x1,S,n)
+            call calculate_point(loglikelihood,prior,x1,S,n)
 
             ! If we're not within the likelihood bound then we need to sample further
             if( x1(S%l0) < logL .or. x1(S%l0) <= logzero ) then

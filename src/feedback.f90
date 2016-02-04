@@ -308,9 +308,8 @@ module feedback_module
 
 
     !> Nicely formatted final output statement
-    subroutine write_final_results(output_info,feedback,priors)
+    subroutine write_final_results(output_info,feedback)
         use utils_module,    only: stdout_unit,title_fb
-        use priors_module,   only: prior,prior_log_volume
         implicit none
         !> Output of the program.
         !! # log(evidence)
@@ -320,15 +319,12 @@ module feedback_module
         double precision, dimension(4) :: output_info
         !> The degree of feedback required
         integer, intent(in) :: feedback 
-        !> The prior information
-        type(prior), dimension(:), intent(in) :: priors
 
         if (feedback>=title_fb) then
             write(stdout_unit,'(A42)')                                        ' ________________________________________ '
             write(stdout_unit,'(A42)')                                        '|                                        |'
             write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') nint(output_info(3))
             write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1),sqrt(abs(output_info(2)))
-            write(stdout_unit,'("| check  = ", F12.5, " +/- ", F12.5,  " |")') output_info(1)+prior_log_volume(priors),sqrt(abs(output_info(2)))
             write(stdout_unit,'(A42)')                                        '|________________________________________|'
         endif
     end subroutine write_final_results

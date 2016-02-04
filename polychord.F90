@@ -1,4 +1,4 @@
-!-lstdc++> This is the main driving routine of the nested sampling algorithm
+!> This is the main driving routine of the nested sampling algorithm
 program PolyChord
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
@@ -24,8 +24,7 @@ program PolyChord
     ! 2) var(log(evidence))
     ! 3) ndead
     ! 4) number of likelihood calls
-    ! 5) log(evidence) + log(prior volume)
-    double precision, dimension(5)            :: output_info
+    double precision, dimension(4)            :: output_info
 
     type(program_settings)                    :: settings  ! The program settings 
     type(prior), dimension(:),allocatable     :: priors    ! The details of the priors
@@ -147,9 +146,9 @@ program PolyChord
     ! ======= (2) Perform Nested Sampling =======
     ! Call the nested sampling algorithm on our chosen likelihood and priors
 #ifdef MPI
-    output_info = NestedSampling(loglikelihood,priors,settings,MPI_COMM_WORLD) 
+    output_info = NestedSampling(loglikelihood,prior_wrapper,settings,MPI_COMM_WORLD) 
 #else
-    output_info = NestedSampling(loglikelihood,priors,settings,0) 
+    output_info = NestedSampling(loglikelihood,prior_wrapper,settings,0) 
 #endif
 
 
@@ -159,6 +158,13 @@ program PolyChord
 #ifdef MPI
     call finalise_mpi
 #endif
+contains
+    function prior_wrapper(cube) result(theta)
+        implicit none
+        double precision, intent(in), dimension(:) :: cube
+        double precision, dimension(size(cube))    :: theta
+        theta = hypercube_to_physical(cube,priors)
+    end function prior_wrapper
 
 
 end program PolyChord

@@ -2,37 +2,48 @@ module calculate_module
     implicit none
     contains
 
-    subroutine calculate_point(loglikelihood,priors,point,settings,nlike)
-        use priors_module, only: prior, hypercube_to_physical
+    subroutine calculate_point(loglikelihood,prior,point,settings,nlike)
         use settings_module, only: program_settings
         use utils_module, only: logzero
         implicit none
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in),  dimension(:) :: theta
+                double precision, intent(in),   dimension(:) :: theta
                 double precision, intent(out),  dimension(:) :: phi
                 double precision :: loglikelihood
             end function
         end interface
+        interface
+            function prior(cube) result(theta)
+                double precision, intent(in), dimension(:) :: cube
+                double precision, dimension(size(cube))    :: theta
+            end function
+        end interface
 
-        type(prior), dimension(:), intent(in) :: priors
         type(program_settings), intent(in) :: settings
         double precision, intent(inout) , dimension(:) :: point
         integer, intent(inout) :: nlike
 
-        if ( any(point(settings%h0:settings%h1)<0d0) .or. any(point(settings%h0:settings%h1)>1d0) )  then
-            point(settings%p0:settings%p1) = 0
-            point(settings%l0) = logzero
+        double precision,dimension(settings%nDims)    :: cube   ! Hypercube coordinate
+        double precision,dimension(settings%nDims)    :: theta  ! Physical parameters
+        double precision,dimension(settings%nDerived) :: phi    ! derived parameters
+        double precision                              :: logL
+
+        cube = point(settings%h0:settings%h1)
+
+        if ( any(cube<0d0) .or. any(cube>1d0) )  then
+            theta = 0
+            logL  = logzero
         else
-            ! Transform the the hypercube coordinates to the physical coordinates
-            point(settings%p0:settings%p1) = hypercube_to_physical( point(settings%h0:settings%h1),priors )
-
-            ! Calculate the likelihood and store it in the last index
-            point(settings%l0) = loglikelihood( point(settings%p0:settings%p1), point(settings%d0:settings%d1))
-
-            ! accumulate the number of likelihood calls that we've made
-            if(point(settings%l0)>logzero) nlike = nlike+1
+            theta = prior(cube)
+            logL  = loglikelihood(theta,phi)
         end if
+
+        if(logL>logzero) nlike = nlike+1
+
+        point(settings%p0:settings%p1) = theta
+        point(settings%d0:settings%d1) = phi
+        point(settings%l0) = logL
 
     end subroutine calculate_point
 

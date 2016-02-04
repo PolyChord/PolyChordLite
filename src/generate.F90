@@ -57,8 +57,7 @@ module generate_module
 
 
     !> Generate an initial set of live points distributed uniformly in the unit hypercube in parallel
-    subroutine GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_information)
-        use priors_module,    only: prior
+    subroutine GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
         use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len,minpos,time
@@ -78,14 +77,18 @@ module generate_module
 
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
+                double precision, intent(in), dimension(:)  :: theta
+                double precision, intent(out), dimension(:) :: phi
                 double precision :: loglikelihood
             end function
         end interface
+        interface
+            function prior(cube) result(theta)
+                double precision, intent(in), dimension(:) :: cube
+                double precision, dimension(size(cube))    :: theta
+            end function
+        end interface
 
-        !> The prior information
-        type(prior), dimension(:), intent(in) :: priors
 
         !> Program settings
         type(program_settings), intent(in) :: settings
@@ -142,7 +145,7 @@ module generate_module
 
                 ! Compute physical coordinates, likelihoods and derived parameters
                 time0 = time()
-                call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+                call calculate_point( loglikelihood, prior, live_point, settings, nlike)
                 time1 = time()
 
                 ! If its valid, and we need more points, add it to the array
@@ -218,7 +221,7 @@ module generate_module
         
                     live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
                     time0 = time()
-                    call calculate_point( loglikelihood, priors, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
+                    call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     time1 = time()
                     if(live_point(settings%l0)>logzero) total_time = total_time + time1-time0
                     call throw_point(live_point,mpi_information)                                    ! Send it to the root node
@@ -240,7 +243,7 @@ module generate_module
         ! ----------------------------------------------- !
         ! Find the average time taken
         speed(1) = total_time/settings%nlive
-        call time_speeds(loglikelihood,priors,settings,RTI,speed,mpi_information) 
+        call time_speeds(loglikelihood,prior,settings,RTI,speed,mpi_information) 
 
 
 
@@ -277,8 +280,7 @@ module generate_module
 
 
 
-    subroutine time_speeds(loglikelihood,priors,settings,RTI,speed,mpi_information)
-        use priors_module,    only: prior
+    subroutine time_speeds(loglikelihood,prior,settings,RTI,speed,mpi_information)
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
         use random_module,   only: random_reals
@@ -300,9 +302,13 @@ module generate_module
                 double precision :: loglikelihood
             end function
         end interface
+        interface
+            function prior(cube) result(theta)
+                double precision, intent(in), dimension(:) :: cube
+                double precision, dimension(size(cube))    :: theta
+            end function
+        end interface
 
-        !> The prior information
-        type(prior), dimension(:), intent(in) :: priors
 
         !> Program settings
         type(program_settings), intent(in) :: settings
@@ -328,7 +334,7 @@ module generate_module
         ! Calculate a slow likelihood
         do 
             live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
-            call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+            call calculate_point( loglikelihood, prior, live_point, settings, nlike)
             if (live_point(settings%l0)> logzero) exit
         end do
 
@@ -350,7 +356,7 @@ module generate_module
                 live_point(h0:h1) = random_reals(h1-h0+1)
 
                 time0 = time()
-                call calculate_point( loglikelihood, priors, live_point, settings, nlike)
+                call calculate_point( loglikelihood, prior, live_point, settings, nlike)
                 time1 = time()
 
                 if(live_point(settings%l0)>logzero) then

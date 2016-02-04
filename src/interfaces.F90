@@ -6,9 +6,9 @@ module interfaces_module
 
     contains
 
-subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, &
-    boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, &
-    write_dead, update_files, nDims, nDerived, base_dir, file_root, grade_dims, grade_frac)
+subroutine simple_interface(loglikelihood_input, prior_input, nlive, num_repeats, do_clustering, feedback, precision_criterion, &
+        max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, &
+        write_stats, write_live, write_dead, update_files, nDims, nDerived, base_dir, file_root, grade_dims, grade_frac)
 
     use ini_module,               only: read_params,initialise_program,default_params
     use params_module,            only: add_parameter,param_type
@@ -22,13 +22,20 @@ subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_cluste
     implicit none
 
     interface
-        function loglikelihood_wrapper(theta,phi,nDims,nDerived)
+        function loglikelihood_input(theta,nDims,phi,nDerived)
             integer, intent(in) :: nDims
             integer, intent(in) :: nDerived
             double precision, intent(in),  dimension(nDims) :: theta
             double precision, intent(out),  dimension(nDerived) :: phi
-            double precision :: loglikelihood_wrapper
-        end function
+            double precision :: loglikelihood_input
+        end function loglikelihood_input
+    end interface
+    interface
+        function prior_input(cube,nDims) result(theta)
+            integer, intent(in) :: nDims
+            double precision, intent(in),  dimension(nDims) :: cube
+            double precision,  dimension(nDims) :: theta
+        end function prior_input
     end interface
 
     integer, intent(in)          :: nlive
@@ -57,11 +64,7 @@ subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_cluste
     integer, intent(in), dimension(:) :: grade_dims
     double precision, intent(in), dimension(:) :: grade_frac
 
-
-
-
-
-    double precision, dimension(5) :: output_info
+    double precision, dimension(4) :: output_info
 
     type(program_settings)    :: settings  ! The program settings 
     type(prior), dimension(:),allocatable     :: priors    ! The details of the priors
@@ -69,11 +72,6 @@ subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_cluste
     type(param_type),dimension(:),allocatable :: params         ! Parameter array
     type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
 
-    ! Temporary variables for initialising loglikelihoods
-    double precision :: loglike
-
-    double precision, dimension(nDims)    :: theta0
-    double precision, dimension(nDerived) :: phi0
 
     ! Basic initialisation
     call initialise_random()
@@ -111,15 +109,21 @@ subroutine simple_interface(loglikelihood_wrapper, nlive, num_repeats, do_cluste
 
     call initialise_program(settings,priors,params,derived_params)
 
-    output_info = NestedSampling(loglikelihood,priors,settings,0) 
+    output_info = NestedSampling(loglikelihood_wrapper,prior_wrapper,settings,0) 
 
     contains
-        function loglikelihood(theta,phi)
+        function loglikelihood_wrapper(theta,phi)
             double precision, intent(in),  dimension(:) :: theta
             double precision, intent(out),  dimension(:) :: phi
-            double precision :: loglikelihood
-            loglikelihood = loglikelihood_wrapper(theta,phi,size(theta),size(phi))
-        end function
+            double precision :: loglikelihood_wrapper
+            loglikelihood_wrapper = loglikelihood_input(theta,size(theta),phi,size(phi))
+        end function loglikelihood_wrapper
+        function prior_wrapper(cube) result(theta)
+            implicit none
+            double precision, intent(in), dimension(:) :: cube
+            double precision, dimension(size(cube))    :: theta
+            theta = prior_input(cube,size(cube))
+        end function prior_wrapper
 
 end subroutine simple_interface
 

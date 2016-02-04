@@ -12,8 +12,7 @@ module nested_sampling_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    function NestedSampling(loglikelihood,priors,settings,mpi_communicator) result(output_info)
-        use priors_module,     only: prior,prior_log_volume
+    function NestedSampling(loglikelihood,prior,settings,mpi_communicator) result(output_info)
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero,cyc,normal_fb,stdout_unit,time
         use read_write_module
@@ -29,17 +28,19 @@ module nested_sampling_module
         ! Program Inputs
         ! ==============      
 
-        !> The loglikelihood function
         interface
             function loglikelihood(theta,phi)
-                double precision, intent(in),  dimension(:) :: theta
-                double precision, intent(out),  dimension(:) :: phi
+                double precision, intent(in), dimension(:)  :: theta
+                double precision, intent(out), dimension(:) :: phi
                 double precision :: loglikelihood
             end function
         end interface
-
-        !> Prior information
-        type(prior), dimension(:), intent(in) :: priors
+        interface
+            function prior(cube) result(theta)
+                double precision, intent(in), dimension(:) :: cube
+                double precision, dimension(size(cube))    :: theta
+            end function
+        end interface
 
         !> Program settings
         type(program_settings), intent(in) :: settings
@@ -54,7 +55,7 @@ module nested_sampling_module
         ! 3) ndead
         ! 4) number of likelihood calls
         ! 5) log(evidence) + log(prior volume)
-        double precision, dimension(5) :: output_info
+        double precision, dimension(4) :: output_info
 
 
 
@@ -156,7 +157,7 @@ module nested_sampling_module
             if(is_root(mpi_information).and.settings%write_resume) call delete_files(settings) 
 
             ! Intialise the run by setting all of the relevant run time info, and generating live points
-            call GenerateLivePoints(loglikelihood,priors,settings,RTI,mpi_information)
+            call GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
 
             ! Write a resume file (as the generation of live points can be intensive)
             if(is_root(mpi_information).and.settings%write_resume) call write_resume_file(settings,RTI) 
@@ -206,7 +207,7 @@ module nested_sampling_module
                     ! -----------
 
                     ! Generate a new set of points within the likelihood bound of the late point
-                    baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike,num_repeats)
+                    baby_points = SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)
 #ifdef MPI
                 else
                     ! Parallel mode
@@ -317,10 +318,9 @@ module nested_sampling_module
             call calculate_logZ_estimate(RTI,output_info(1),output_info(2))
             output_info(3) = RTI%ndead
             output_info(4) = RTI%nlike(1)
-            output_info(5) = output_info(1)+prior_log_volume(priors)
 
             ! ------------------------------------------------------------ !
-            call write_final_results(output_info,settings%feedback,priors) !
+            call write_final_results(output_info,settings%feedback)        !
             ! ------------------------------------------------------------ !
 
 
@@ -384,7 +384,7 @@ module nested_sampling_module
             do while(catch_seed(seed_point,cholesky,logL,slave_epoch,mpi_information))
                 time0 = time()
                 ! 2) Generate a new set of baby points
-                baby_points = SliceSampling(loglikelihood,priors,settings,logL,seed_point,cholesky,nlike,num_repeats)
+                baby_points = SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)
 
 
                 wait_time = wait_time + time0-time1
