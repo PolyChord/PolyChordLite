@@ -1,9 +1,10 @@
 import pypolychord
+import numpy
 
 
 def run_polychord(loglikelihood, nDims, 
-                  prior=None,
-                  nDerived=1,
+                  prior,
+                  nDerived=0,
                   nlive=50,
                   num_repeats=None,
                   do_clustering=True,
@@ -30,15 +31,14 @@ def run_polychord(loglikelihood, nDims,
     if num_repeats is None:
         num_repeats = nDims*5
 
-    # Include prior information if required
-    if prior is not None:
+    def loglike(cube, nderived, ndims):
+        theta = prior(cube)
 
-        def loglike(cube, nderived, ndims):
-            theta = prior(cube)
-            return loglikelihood(theta,nderived,ndims)
+        logL,phi = loglikelihood(theta,nDerived,ndims)
 
-    else :
-        loglike = loglikelihood
+        return logL,numpy.concatenate((theta,phi)) 
 
-    pypolychord.interfaces_module.simple_interface(loglike, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, nDims, nDerived, base_dir, file_root, grade_dims, grade_frac)
+
+
+    pypolychord.interfaces_module.simple_interface(loglike, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, nDims, nDerived+nDims, base_dir, file_root, grade_dims, grade_frac)
 
