@@ -2,29 +2,17 @@
 program PolyChord
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
-    use ini_module,               only: read_params,initialise_program
+    use ini_module,               only: read_params
     use params_module,            only: add_parameter,param_type
     use priors_module
-    use settings_module,          only: program_settings,initialise_settings
-    use random_module,            only: initialise_random
-    use nested_sampling_module,   only: NestedSampling
+    use settings_module,          only: program_settings
+    use interfaces_module,        only: run_polychord
     use utils_module,             only: STR_LENGTH
     use abort_module,             only: halt_program
     use loglikelihood_module,     only: loglikelihood, setup_loglikelihood
-#ifdef MPI
-    use mpi_module,               only: initialise_mpi, finalise_mpi
-    use mpi,                      only: MPI_COMM_WORLD
-#endif
 
     ! ~~~~~~~ Local Variable Declaration ~~~~~~~
     implicit none
-
-    ! Output of the program
-    ! 1) mean(log(evidence))
-    ! 2) var(log(evidence))
-    ! 3) ndead
-    ! 4) number of likelihood calls
-    double precision, dimension(4)            :: output_info
 
     type(program_settings)                    :: settings  ! The program settings 
     type(prior), dimension(:),allocatable     :: priors    ! The details of the priors
@@ -33,30 +21,7 @@ program PolyChord
     type(param_type),dimension(:),allocatable :: params         ! Parameter array
     type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
 
-
-
-
-    ! ======= (1) Initialisation =======
-    ! We need to initialise:
-    ! a) mpi threads
-    ! b) random number generator
-    ! c) priors & settings
-    ! d) loglikelihood
-
-    ! ------- (1a) Initialise MPI threads -------------------
-#ifdef MPI
-    call initialise_mpi
-#endif
-
-    ! ------- (1b) Initialise random number generator -------
-    ! Initialise the random number generator with the system time
-    ! (Provide an argument to this if you want to set a specific seed
-    ! leave argumentless if you want to use the system time)
-    call initialise_random()
-
-
-
-    ! ------- (1c) Define the parameters of the loglikelihood and the system settings -------
+    ! -------  Define the parameters of the loglikelihood and the system settings -------
     ! The most convenient way to do this is via a .ini file. See examples
     ! provided for more details. The .ini file should be passed as a command
     ! line argument to PolyChord
@@ -65,7 +30,7 @@ program PolyChord
     !
     if(iargc()==1) then
 
-        ! ------ (1ci) read from .ini file ------
+        ! ------ read from .ini file ------
         ! Put the command line provided file name into input_file
         call getarg(1,input_file) 
 
@@ -74,7 +39,7 @@ program PolyChord
 
     else if (iargc()==0) then
 
-        ! ------ (1cii) manual setup ------
+        ! ------ manual setup ------
         ! Here we initialise the array params with all of the details we need
         allocate(params(0),derived_params(0))
         ! The argument to add_parameter are:
@@ -99,6 +64,8 @@ program PolyChord
         call add_parameter(derived_params,'logVolume','\log X')
 
         ! Now initialise the rest of the system settings
+        settings%nDims         = size(params)
+        settings%nDerived      = size(derived_params)
         settings%nlive         = 500
         settings%num_repeats   = 16
         settings%do_clustering = .false.
@@ -126,45 +93,17 @@ program PolyChord
         call halt_program('PolyChord should be called with at most one argument, the input file')
     end if
 
-    ! Initialise the program
-    call initialise_program(settings,priors,params,derived_params)
+    call create_priors(priors,params,settings)
 
+    call run_polychord(loglikelihood,prior_wrapper, setup_loglikelihood, settings) 
 
-
-
-    ! ------- (1d) Define the parameters of the loglikelihood and the system settings -------
-#ifdef MPI
-    call setup_loglikelihood(settings,MPI_COMM_WORLD)
-#else
-    call setup_loglikelihood(settings,0)
-#endif
-
-
-
-
-
-    ! ======= (2) Perform Nested Sampling =======
-    ! Call the nested sampling algorithm on our chosen likelihood and priors
-#ifdef MPI
-    output_info = NestedSampling(loglikelihood,prior_wrapper,settings,MPI_COMM_WORLD) 
-#else
-    output_info = NestedSampling(loglikelihood,prior_wrapper,settings,0) 
-#endif
-
-
-    ! ======= (3) De-initialise =======
-
-    ! Finish off all of the threads
-#ifdef MPI
-    call finalise_mpi
-#endif
 contains
+
     function prior_wrapper(cube) result(theta)
         implicit none
         double precision, intent(in), dimension(:) :: cube
         double precision, dimension(size(cube))    :: theta
         theta = hypercube_to_physical(cube,priors)
     end function prior_wrapper
-
 
 end program PolyChord
