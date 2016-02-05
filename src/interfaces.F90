@@ -167,6 +167,124 @@ contains
     end subroutine run_polychord_no_prior_no_setup
 
 
+    subroutine simple_c_interface(c_loglikelihood_ptr, nlive, num_repeats, do_clustering, feedback, &
+        precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, &
+            write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, nDims, nDerived ) &
+            bind(c,name='doo_be_doo')
+
+        use iso_c_binding
+        use utils_module,             only: STR_LENGTH
+        use ini_module,               only: default_params
+        use params_module,            only: param_type
+        use settings_module,          only: program_settings,initialise_settings
+        use random_module,            only: initialise_random
+        use nested_sampling_module,   only: NestedSampling
+        use read_write_module,        only: write_paramnames_file
+
+        ! ~~~~~~~ Local Variable Declaration ~~~~~~~
+        implicit none
+
+        interface
+            function c_loglikelihood(theta,nDims,phi,nDerived) bind(c)
+                use iso_c_binding
+                import :: dp
+                integer(c_int), intent(in), value :: nDims
+                integer(c_int), intent(in), value :: nDerived
+                real(c_double), intent(in),  dimension(nDims) :: theta
+                real(c_double), intent(out),  dimension(nDerived) :: phi
+                real(c_double) :: c_loglikelihood
+            end function c_loglikelihood
+        end interface
+
+        type(c_funptr), intent(in), value   :: c_loglikelihood_ptr
+        integer(c_int), intent(in), value   :: nlive
+        integer(c_int), intent(in), value   :: num_repeats
+        logical(c_bool), intent(in), value  :: do_clustering
+        integer(c_int), intent(in), value   :: feedback
+        real(c_double), intent(in), value   :: precision_criterion
+        integer(c_int), intent(in), value   :: max_ndead
+        real(c_double), intent(in), value   :: boost_posterior
+        logical(c_bool), intent(in), value  :: posteriors
+        logical(c_bool), intent(in), value  :: equals
+        logical(c_bool), intent(in), value  :: cluster_posteriors
+        logical(c_bool), intent(in), value  :: write_resume
+        logical(c_bool), intent(in), value  :: write_paramnames
+        logical(c_bool), intent(in), value  :: read_resume
+        logical(c_bool), intent(in), value  :: write_stats
+        logical(c_bool), intent(in), value  :: write_live
+        logical(c_bool), intent(in), value  :: write_dead
+        integer(c_int), intent(in), value   :: update_files
+        integer(c_int), intent(in), value   :: nDims
+        integer(c_int), intent(in), value   :: nDerived
+
+        !character(STR_LENGTH,kind=c_char), intent(in)     :: base_dir
+        !character(STR_LENGTH,kind=c_char), intent(in)     :: file_root
+
+        type(program_settings)    :: settings  ! The program settings 
+
+        type(param_type),dimension(:),allocatable :: params         ! Parameter array
+        type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
+
+        procedure(c_loglikelihood), pointer :: f_loglikelihood
+
+
+        settings%nlive               = nlive                
+        settings%num_repeats         = num_repeats          
+        settings%do_clustering       = do_clustering        
+        settings%feedback            = feedback             
+        settings%precision_criterion = precision_criterion  
+        settings%max_ndead           = max_ndead            
+        settings%boost_posterior     = boost_posterior      
+        settings%posteriors          = posteriors           
+        settings%equals              = equals               
+        settings%cluster_posteriors  = cluster_posteriors   
+        settings%write_resume        = write_resume         
+        settings%write_paramnames    = write_paramnames     
+        settings%read_resume         = read_resume          
+        settings%write_stats         = write_stats          
+        settings%write_live          = write_live           
+        settings%write_dead          = write_dead           
+        settings%update_files        = update_files         
+        settings%nDims               = nDims
+        settings%nDerived            = nDerived
+
+        settings%base_dir            = 'chains'
+        settings%file_root           = 'c_test'
+
+        if(settings%write_paramnames) then
+            params = default_params(settings%nDims,'theta','\theta')
+            derived_params = default_params(settings%nDerived,'phi','\phi')
+            call write_paramnames_file(settings,params,derived_params)
+        end if
+
+        call c_f_procpointer(c_loglikelihood_ptr, f_loglikelihood)
+
+        call run_polychord(loglikelihood,settings) 
+
+    contains
+        function loglikelihood(theta,phi)
+            implicit none
+            real(dp), intent(in),  dimension(:) :: theta
+            real(dp), intent(out),  dimension(:) :: phi
+            real(dp) :: loglikelihood
+
+            real (c_double),dimension(size(theta)) :: c_theta
+            integer (c_int)                        :: c_nDims
+            real (c_double),dimension(size(phi))   :: c_phi
+            integer (c_int)                        :: c_nDerived
+            real (c_double)                        :: c_loglike
+
+            c_nDims = size(theta)
+            c_nDerived = size(phi)
+            c_theta = theta
+            c_phi = theta
+            c_loglike = f_loglikelihood(c_theta,c_nDims,c_phi,c_nDerived)
+            loglikelihood = c_loglike
+
+        end function loglikelihood
+
+
+    end subroutine simple_c_interface
 
 
     subroutine simple_interface(loglikelihood_input, prior_input, nlive, num_repeats, do_clustering, feedback, &

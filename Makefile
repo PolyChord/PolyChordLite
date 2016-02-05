@@ -211,6 +211,12 @@ $(EXAMPLES) $(PROGRAMS): %: libchord.a lib%.a  polychord.o
 polychord.o: polychord.F90
 	$(FC) $(FCFLAGS) $(INC) -c $< $(EXT_LIBS)  
 
+# Rule for building main file
+c_polychord: libchord.a c_polychord.o src/interfaces.o
+	$(CC) $(CCFLAGS) -o $(BIN_DIR)/$@ $(INC) c_polychord.o src/interfaces.o $(LIBCHORD)  $(EXT_LIBS)  -lgfortran
+
+c_polychord.o: c_polychord.cpp
+	$(CC) $(CCFLAGS) $(INC) -c $< $(EXT_LIBS)  
 
 
 clean:
