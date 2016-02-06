@@ -10,11 +10,13 @@ program demo_gaussian
     type(program_settings)                    :: settings  ! The program settings 
 
     ! Initialise the system settings
-    settings%nDims         = 50
+    settings%nDims         = 20
     settings%nDerived      = 1
     settings%nlive         = 500
-    settings%num_repeats   = 16
+    settings%num_repeats   = settings%nDims*5
     settings%do_clustering = .false.
+
+    settings%precision_criterion = 1d-3
 
     settings%base_dir      = 'chains'
     settings%file_root     = 'demo_gaussian'
@@ -24,7 +26,7 @@ program demo_gaussian
     settings%write_live    = .true.
     settings%write_stats   = .false.
 
-    settings%equals        = .true.
+    settings%equals        = .false.
     settings%posteriors    = .false.
     settings%cluster_posteriors = .false.
 
@@ -32,11 +34,6 @@ program demo_gaussian
     settings%update_files  = settings%nlive
 
     settings%boost_posterior= 5.0_dp
-
-    allocate(settings%grade_dims(1)) 
-    settings%grade_dims=[1d0]
-    allocate(settings%grade_frac(1)) 
-    settings%grade_frac=[1d0]
 
     call run_polychord(loglikelihood, prior, settings) 
 
@@ -61,12 +58,12 @@ contains
 
         radius_squared = sum((theta-mu)*(theta-mu))
 
-        loglikelihood = -log(2*pi*sigma*sigma)*nDims/2
+        loglikelihood = -log(2*pi*sigma*sigma)*nDims/2.0
         loglikelihood = loglikelihood - radius_squared/2/sigma/sigma
 
         phi(1) = radius_squared
 
-    end function
+    end function loglikelihood
 
     function prior(cube) result(theta)
         implicit none
@@ -78,7 +75,7 @@ contains
 
         theta = xmin + cube*(xmax-xmin)
 
-    end function
+    end function prior
 
 
 end program demo_gaussian

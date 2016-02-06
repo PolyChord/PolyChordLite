@@ -34,7 +34,7 @@ module calculate_module
 
         cube = point(settings%h0:settings%h1)
 
-        if ( any(cube<0d0) .or. any(cube>1d0) )  then
+        if ( any(cube<0) .or. any(cube>1) )  then
             theta = 0
             logL  = logzero
         else

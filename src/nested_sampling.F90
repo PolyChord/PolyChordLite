@@ -188,7 +188,7 @@ module nested_sampling_module
             ! -------------------------------------------- !
 
             ! Definitely need more samples than this
-            need_more_samples = .true.
+            need_more_samples = RTI%ndead<settings%max_ndead .or. settings%max_ndead<0
 
             do while ( need_more_samples )
 
@@ -249,7 +249,7 @@ module nested_sampling_module
 
                         ! Update the resume files every settings%update_resume iterations,
                         ! or at the end of the run
-                        if( cyc(RTI%ndead,settings%update_files) ) then
+                        if( cyc(RTI%ndead,settings%update_files) .and. settings%update_files > 0 ) then
                             if(settings%write_resume)                  call write_resume_file(settings,RTI)
                             if(settings%write_live)                    call write_phys_live_points(settings,RTI)
                             if(settings%write_dead)                    call write_dead_points(settings,RTI)   
@@ -300,10 +300,10 @@ module nested_sampling_module
             ! Clean up the remaining live points
             if(settings%write_resume)                  call write_resume_file(settings,RTI)
 
-           do while(RTI%ncluster > 0)
-               call delete_outermost_point(settings,RTI)
-               temp_logical = delete_cluster(settings,RTI)
-           end do
+            do while(RTI%ncluster > 0)
+                call delete_outermost_point(settings,RTI)
+                temp_logical = delete_cluster(settings,RTI)
+            end do
 
             call update_posteriors(settings,RTI) 
             if(settings%write_live)                    call write_phys_live_points(settings,RTI)

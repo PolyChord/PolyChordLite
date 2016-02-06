@@ -12,13 +12,13 @@ module settings_module
     !> Type to contain all of the parameters involved in a nested sampling run
     Type :: program_settings
 
-        integer :: nlive =500 !> The number of live points
-        integer :: num_repeats !> The number of slow chords to draw
-        logical :: do_clustering = .false.  !> Whether to do clustering or not
+        integer :: nlive = 500                  !> The number of live points
+        integer :: num_repeats = -1             !> The number of slow chords to draw
+        logical :: do_clustering = .false.      !> Whether to do clustering or not
 
-        integer :: feedback = 1 !> The degree of feedback to provide
+        integer :: feedback = 1                 !> The degree of feedback to provide
 
-        real(dp) :: precision_criterion = 1d-3 !> The stopping criterion
+        real(dp) :: precision_criterion = 1d-3  !> The stopping criterion
 
         !> The maximum number of dead points/samples
         !!
@@ -29,22 +29,22 @@ module settings_module
         !! inter-chain points)
         !!
         !! set to <=0 to use all of them
-        real(dp) :: boost_posterior = 5d0
+        real(dp) :: boost_posterior = 0d0
 
-        logical :: posteriors = .false.        !> Whether to calculate weighted posteriors
-        logical :: equals     = .true.         !> Whether to calculate equally weighted posteriors
-        logical :: cluster_posteriors = .false.!> Whether to calculate clustered posteriors
+        logical :: posteriors = .false.         !> Whether to calculate weighted posteriors
+        logical :: equals     = .true.          !> Whether to calculate equally weighted posteriors
+        logical :: cluster_posteriors = .false. !> Whether to calculate clustered posteriors
 
 
         
-        logical :: write_resume = .false. !> Whether or not to write resume files
+        logical :: write_resume = .false.     !> Whether or not to write resume files
         logical :: write_paramnames = .false. !> Whether or not to write paramnames file
-        logical :: read_resume = .false.  !> Whether or not to resume from file
-        logical :: write_stats = .true.   !> Whether or not to write stats file
-        logical :: write_live = .false.   !> Whether or not to write phys_live points
-        logical :: write_dead = .false.   !> Whether or not to write dead points
+        logical :: read_resume = .false.      !> Whether or not to resume from file
+        logical :: write_stats = .true.       !> Whether or not to write stats file
+        logical :: write_live = .false.       !> Whether or not to write phys_live points
+        logical :: write_dead = .false.       !> Whether or not to write dead points
 
-        integer :: update_files = 500 !> How often to update the resume file
+        integer :: update_files = -1          !> How often to update the resume file
 
         integer, allocatable,dimension(:) :: grade_dims          !> The number of parameters in each grade
         real(dp), allocatable,dimension(:) :: grade_frac !> The fraction of time spent in each grade
@@ -135,6 +135,7 @@ module settings_module
     !! store things
     !!
     subroutine initialise_settings(settings)
+        use abort_module, only: halt_program
         implicit none
         type(program_settings), intent(inout) :: settings
 
@@ -188,6 +189,18 @@ module settings_module
         settings%p_d1 = settings%p_p1+settings%nDerived
 
         settings%np   = settings%p_d1
+
+        if( settings%num_repeats < 1 ) call halt_program("You need to set num_repeats. Suggestion: 5*nDims")
+
+        if(.not. allocated(settings%grade_dims)) then
+            allocate(settings%grade_dims(1))
+            settings%grade_dims = [settings%nDims]
+        end if
+
+        if(.not. allocated(settings%grade_frac)) then
+            allocate(settings%grade_frac(1))
+            settings%grade_frac = [1.0d0]
+        end if
 
     end subroutine initialise_settings
 
