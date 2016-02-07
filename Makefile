@@ -84,11 +84,11 @@ LIBSTDCPP = -lstdc++
 
 
 # Export all of the necessary variables
-export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS EXAMPLE_LIKELIHOODS IPO 
+export DEBUG COMPILER_TYPE FCFLAGS MPI AR FC CC CCFLAGS EXAMPLE_LIKELIHOODS  
 
 
 # "make" builds all
-all: demo_gaussian
+all: cpp_polychord
 
 
 # Rule for building polychord static library
@@ -97,13 +97,18 @@ libchord.a:
 
 # Rule for example programs
 demo_gaussian: libchord.a polychord.o 
-	$(FC) $(FCFLAGS) -o $(BIN_DIR)/$@ polychord.o $(LIBCHORD) 
+	$(LINKER) polychord.o -o $(BIN_DIR)/$@ $(LIBCHORD) 
+
+cpp_polychord: libchord.a cpp_polychord.o 
+	$(LINKER) cpp_polychord.o -o $(BIN_DIR)/$@ $(LIBCHORD) $(LIBSTDCPP)
 
 # Rule for building fortran files
 %.o: %.F90 
 	$(FC) $(FCFLAGS) -I$(POLYCHORD_DIR) -c $< 
-%.o: %.cpp
+%.o: %.f90 
 	$(FC) $(FCFLAGS) -I$(POLYCHORD_DIR) -c $< 
+%.o: %.cpp
+	$(CC) $(CCFLAGS) -I$(POLYCHORD_DIR) -c $< 
 
 
 clean:

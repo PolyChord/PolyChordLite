@@ -170,7 +170,7 @@ contains
     subroutine simple_c_interface(c_loglikelihood_ptr, nlive, num_repeats, do_clustering, feedback, &
         precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, &
             write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, nDims, nDerived ) &
-            bind(c,name='doo_be_doo')
+            bind(c,name='polychord_simple_c_interface')
 
         use iso_c_binding
         use utils_module,             only: STR_LENGTH
@@ -185,9 +185,8 @@ contains
         implicit none
 
         interface
-            function c_loglikelihood(theta,nDims,phi,nDerived) bind(c)
+            function c_loglikelihood(theta,nDims,phi,nDerived)
                 use iso_c_binding
-                import :: dp
                 integer(c_int), intent(in), value :: nDims
                 integer(c_int), intent(in), value :: nDerived
                 real(c_double), intent(in),  dimension(nDims) :: theta
@@ -277,7 +276,7 @@ contains
             c_nDims = size(theta)
             c_nDerived = size(phi)
             c_theta = theta
-            c_phi = theta
+            c_phi = phi
             c_loglike = f_loglikelihood(c_theta,c_nDims,c_phi,c_nDerived)
             loglikelihood = c_loglike
 
