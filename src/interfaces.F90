@@ -169,11 +169,12 @@ contains
 
     subroutine simple_c_interface(c_loglikelihood_ptr, nlive, num_repeats, do_clustering, feedback, &
         precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, &
-            write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, nDims, nDerived ) &
+            write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, nDims, nDerived, &
+            base_dir, file_root) &
             bind(c,name='polychord_simple_c_interface')
 
         use iso_c_binding
-        use utils_module,             only: STR_LENGTH
+        use utils_module,             only: STR_LENGTH, convert_c_string
         use ini_module,               only: default_params
         use params_module,            only: param_type
         use settings_module,          only: program_settings,initialise_settings
@@ -215,9 +216,8 @@ contains
         integer(c_int), intent(in), value   :: update_files
         integer(c_int), intent(in), value   :: nDims
         integer(c_int), intent(in), value   :: nDerived
-
-        !character(STR_LENGTH,kind=c_char), intent(in)     :: base_dir
-        !character(STR_LENGTH,kind=c_char), intent(in)     :: file_root
+        character(len=1,kind=c_char), intent(in), dimension(STR_LENGTH) :: base_dir
+        character(len=1,kind=c_char), intent(in), dimension(STR_LENGTH) :: file_root
 
         type(program_settings)    :: settings  ! The program settings 
 
@@ -247,8 +247,8 @@ contains
         settings%nDims               = nDims
         settings%nDerived            = nDerived
 
-        settings%base_dir            = 'chains'
-        settings%file_root           = 'c_test'
+        settings%base_dir            = convert_c_string(base_dir)
+        settings%file_root           = convert_c_string(file_root) 
 
         if(settings%write_paramnames) then
             params = default_params(settings%nDims,'theta','\theta')

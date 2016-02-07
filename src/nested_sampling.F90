@@ -15,7 +15,7 @@ module nested_sampling_module
     !> Main subroutine for computing a generic nested sampling algorithm
     function NestedSampling(loglikelihood,prior,settings,mpi_communicator) result(output_info)
         use settings_module,   only: program_settings
-        use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,logzero,cyc,normal_fb,stdout_unit,time
+        use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,cyc,time
         use read_write_module
         use feedback_module
         use run_time_module,   only: run_time_info,replace_point,calculate_logZ_estimate,calculate_covmats,delete_cluster,update_posteriors,delete_outermost_point
@@ -23,6 +23,9 @@ module nested_sampling_module
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: do_clustering
         use generate_module,   only: GenerateSeed,GenerateLivePoints
+#ifdef MPI
+        use utils_module, only: logzero,normal_fb,stdout_unit
+#endif
 
         implicit none
 

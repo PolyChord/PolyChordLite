@@ -105,7 +105,7 @@ contains
         do i=1,nDims
             write(i_string, '(I20)') i
             paramname = trim(adjustl(root))//trim(adjustl(i_string))
-            latex_paramname = trim(adjustl(root))//'_{'//trim(adjustl(i_string))//'}'
+            latex_paramname = trim(adjustl(latex))//'_{'//trim(adjustl(i_string))//'}'
             call add_parameter(default_params,trim(adjustl(paramname)),trim(adjustl(latex_paramname)),1,uniform_type,1,[ 0d0 , 1d0 ])
         end do
 

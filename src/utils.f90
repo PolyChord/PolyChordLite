@@ -756,6 +756,21 @@ module utils_module
 
     end function inv_normal_cdf
 
+    function convert_c_string(c_string) result(string)
+        use iso_c_binding
+        implicit none
+        character(len=1,kind=c_char), intent(in), dimension(:) :: c_string
+        character(len=size(c_string)) :: string
+
+        integer :: i
+
+        string = ' '
+        do i=1,len(string)
+            if( c_string(i) == c_null_char ) exit
+            string(i:i) = c_string(i)
+        end do
+
+    end function convert_c_string
 
     ! This was downloaded from:
     ! http://people.sc.fsu.edu/~jburkardt/f_src/asa241/asa241.f90
