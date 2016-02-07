@@ -96,13 +96,13 @@ libchord.a:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.a
 
 # Rule for example programs
-demo_gaussian: libchord.a demo_gaussian.o 
-	$(FC) $(FCFLAGS) -o $(BIN_DIR)/$@ demo_gaussian.o $(LIBCHORD) 
+demo_gaussian: libchord.a polychord.o 
+	$(FC) $(FCFLAGS) -o $(BIN_DIR)/$@ polychord.o $(LIBCHORD) 
 
 # Rule for building fortran files
 %.o: %.F90 
 	$(FC) $(FCFLAGS) -I$(POLYCHORD_DIR) -c $< 
-%.o: %.f90 
+%.o: %.cpp
 	$(FC) $(FCFLAGS) -I$(POLYCHORD_DIR) -c $< 
 
 
