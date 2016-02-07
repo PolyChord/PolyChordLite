@@ -6,63 +6,35 @@ SIMPLE_EXAMPLES = polychord_simple polychord_simple_C
 #PROGRAMS = my_likelihood my_cpp_likelihood 
 
 # Whether to use MPI
-MPI=
+MPI=1
 
 # Whether to compile in debugging mode
-DEBUG=1
+DEBUG=
+export MPI DEBUG
 
-# ============ MPI settings ================
+# We can autodetect the compiler type on unix systems via the shell.
+# if you want to override this then just run make with
+# make COMPILER_TYPE=<your type>
+# where <your time> is gnu or intel
+ifeq "$(shell which ifort >/dev/null; echo $$?)" "0" 
+COMPILER_TYPE=intel
+else ifeq "$(shell which gfortran >/dev/null; echo $$?)" "0"
+COMPILER_TYPE=gnu
+endif
+
+ifeq ($(COMPILER_TYPE),intel)
+include Makefile_intel
+else ifeq ($(COMPILER_TYPE),gnu) 
+include Makefile_gnu
+endif
+
+
+
 ifdef MPI
-# Using MPI
-# ---------
-# Set a define flag for MPI
 FFLAGS += -DMPI
 CXXFLAGS += -DMPI
-# Choose the mpi wrapper
-FC = mpif90
-CXX = mpicc
-LD = mpif90
-else
-FC = gfortran
-CXX = g++
-LD = gfortran
 endif
 
-
-# Archive tool
-AR = ar r
-
-
-# default flags
-# --------------
-# free-line-length-none : turn of line length limitation (why is this not a default??)
-# cpp  					: perform preprocessing
-# fPIC                  : for compiling a shared object library
-FFLAGS += -ffree-line-length-none -cpp -fPIC
-CXXFLAGS += -std=c++11
-
-ifdef DEBUG
-# Debugging mode
-# --------------
-# g             : enable gnu debugger compatibility
-# O0            : no optimisation
-# Wall          : all warnings
-# Wextra        : even more warnings
-# pedantic      : check for language features not part of f95 standard
-# implicit-none : specify no implicit typing
-# backtrace     : produce backtrace of error
-# fpe-trap      : search for floating point exceptions (dividing by zero etc)
-# fbounds-check : check array indices
-FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
-#
-CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
-else
-# Optimised mode
-# --------------
-# Ofast : maximum optimisation
-FFLAGS += -Ofast
-CXXFLAGS += -Ofast
-endif
 
 # Where polychord is stored
 POLYCHORD_DIR = ./src

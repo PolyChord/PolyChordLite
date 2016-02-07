@@ -1,9 +1,9 @@
-PolyChord v 1.4
+PolyChord v 1.9
 Will Handley, Mike Hobson & Anthony Lasenby
 wh260@mrao.cam.ac.uk
 arXiv:1502.01856
 arXiv:1506.00171
-Released June 2015
+Released February 2016
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PolyChord Licence
@@ -71,17 +71,12 @@ $ ./bin/rastrigin ini/rastrigin.ini
 
 This runs the rastrigin 'bunch of grapes' loglikelihood.
 
-Examples currently provided are:
-gaussian twin_gaussian random_gaussian half_gaussian rastrigin himmelblau rosenbrock eggbox
-
 In general, binary executables are stored in the directory ./bin, and ini files are
 stored in the directory ./ini.
 
-
-
-
 To run your own likelihood, it should either be written in fortran, C++, or be callable
 from C++ or fortran.
+
 
 Fortran likelihoods
 -------------------

@@ -1,0 +1,45 @@
+ifdef MPI
+FC = mpif90
+CXX = mpicc
+LD = mpif90
+else
+FC = gfortran
+CXX = g++
+LD = gfortran
+endif
+
+
+# Archive tool
+AR = ar r
+
+
+# default flags
+# --------------
+# free-line-length-none : turn of line length limitation (why is this not a default??)
+# cpp  					: perform preprocessing
+# fPIC                  : for compiling a shared object library
+FFLAGS += -ffree-line-length-none -cpp -fPIC
+CXXFLAGS += -std=c++11 -fPIC
+
+ifdef DEBUG
+# Debugging mode
+# --------------
+# g             : enable gnu debugger compatibility
+# O0            : no optimisation
+# Wall          : all warnings
+# Wextra        : even more warnings
+# pedantic      : check for language features not part of f95 standard
+# implicit-none : specify no implicit typing
+# backtrace     : produce backtrace of error
+# fpe-trap      : search for floating point exceptions (dividing by zero etc)
+# fbounds-check : check array indices
+FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
+#
+CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
+else
+# Optimised mode
+# --------------
+# Ofast : maximum optimisation
+FFLAGS += -Ofast
+CXXFLAGS += -Ofast
+endif
