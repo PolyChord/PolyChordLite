@@ -1,5 +1,5 @@
 # List of available example likelihoods
-#EXAMPLES = gaussian pyramidal rastrigin twin_gaussian random_gaussian himmelblau rosenbrock eggbox half_gaussian fitting gaussian_shell gaussian_shells
+EXAMPLES = gaussian pyramidal rastrigin twin_gaussian random_gaussian himmelblau rosenbrock eggbox half_gaussian fitting gaussian_shell gaussian_shells
 SIMPLE_EXAMPLES = polychord_simple polychord_simple_C
 
 # Your likelihood programs
@@ -75,43 +75,55 @@ BIN_DIR = ./bin
 
 # Library flags
 LDFLAGS += -L$(POLYCHORD_DIR)
+LDFLAGS += -L$(EXAMPLES_DIR)
 LDLIBS += -lchord 
 LDLIBS += -lstdc++
 
 # likelihood libraries, this is created by changing X to libX.a
-#EXAMPLE_LIKELIHOODS = $(patsubst %,lib%.a,$(EXAMPLES))
-#PROGRAM_LIKELIHOODS = $(patsubst %,lib%.a,$(PROGRAMS))
+EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))
 
 
 # Export all of the necessary variables
-export DEBUG MPI AR FC CXX CXXFLAGS FFLAGS 
+export DEBUG MPI AR FC CXX CXXFLAGS FFLAGS EXAMPLE_LIBRARIES
 
 
 # "make" builds all
 all: $(SIMPLE_EXAMPLES)
 
+examples: $(EXAMPLES)
+
 # Rule for building polychord static library
 libchord.a:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.a
 
+# Rule for building likelihood libraries
+$(EXAMPLE_LIBRARIES): libchord.a
+	$(MAKE) -C $(EXAMPLES_DIR) $@
+
 # Rule for example programs
+$(EXAMPLES): %: libchord.a lib%.a polychord_examples.o
+	$(LD) polychord_examples.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
+
+# Rule for simple example programs
 $(SIMPLE_EXAMPLES): %: libchord.a %.o 
 	$(LD) $@.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS)
 
 # Rule for building fortran files
 %.o: %.F90 
-	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -c $< 
+	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -I$(EXAMPLES_DIR) -c $< 
 %.o: %.f90 
-	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -c $< 
+	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -I$(EXAMPLES_DIR) -c $< 
 # Rule for building c++ files
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -c $< 
+	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(EXAMPLES_DIR) -c $< 
 
 
 clean:
 	rm -f *.o *.mod *.MOD
 	$(MAKE) -C $(POLYCHORD_DIR) clean
+	$(MAKE) -C $(EXAMPLES_DIR) clean
 	
 veryclean: clean
 	rm -f *~ 
 	$(MAKE) -C $(POLYCHORD_DIR) veryclean
+	$(MAKE) -C $(EXAMPLES_DIR) veryclean

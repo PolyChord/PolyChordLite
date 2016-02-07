@@ -226,7 +226,6 @@ contains
 
         procedure(c_loglikelihood), pointer :: f_loglikelihood
 
-
         settings%nlive               = nlive                
         settings%num_repeats         = num_repeats          
         settings%do_clustering       = do_clustering        
