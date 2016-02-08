@@ -55,7 +55,8 @@ EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))
 
 
 # Export all of the necessary variables
-export DEBUG MPI AR FC CXX CXXFLAGS FFLAGS EXAMPLE_LIBRARIES
+export DEBUG MPI AR FC CXX CXXFLAGS FFLAGS 
+export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES
 
 
 # "make" builds all
@@ -93,8 +94,10 @@ clean:
 	rm -f *.o *.mod *.MOD
 	$(MAKE) -C $(POLYCHORD_DIR) clean
 	$(MAKE) -C $(EXAMPLES_DIR) clean
+	$(MAKE) -C $(BIN_DIR) clean
 	
 veryclean: clean
 	rm -f *~ 
 	$(MAKE) -C $(POLYCHORD_DIR) veryclean
 	$(MAKE) -C $(EXAMPLES_DIR) veryclean
+	$(MAKE) -C $(BIN_DIR) veryclean
