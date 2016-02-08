@@ -1,12 +1,27 @@
-IPO = -ipo
-HOST = -xHost
+ifdef MPI
+FC = mpif90
+CXX = mpicc
+LD = mpif90
+else
+FC = ifort
+CXX = icpc
+LD = ifort
+endif
+
+ 
+# Archive tool
+AR = ar r
+
 
 # default flags
 # --------------
 # fpp  : perform preprocessing
 # fpic : shared object libraries
-FCFLAGS += -fpp -fpic
-CCFLAGS += -fpp -fpic
+FFLAGS += -fpp -fpic
+CXXFLAGS += -fpic
+# nofor_main : essential for linking c++ and fortran
+LDFLAGS += -nofor-main
+LDLIBS += -cxxlib
 
 ifdef DEBUG
 # Debugging mode
@@ -21,9 +36,9 @@ ifdef DEBUG
 # gen-interfaces : generate an interface block for each routine
 # warn-interfaces: warn on these interface blocks
 # fpe0           : halts program if dividing by zero, etc
-FCFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces
-# check-uninit   : check for uninitialised variables
-CCFLAGS += -g -O0 -traceback -ftrapuv -debug all 
+FFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces
+CXXFLAGS += -g -O0 -traceback -Wcheck -Wremarks -Wall -Weffc++ -ftrapuv -debug all
+LDFLAGS += -g
 else
 # Optimised mode
 # --------------
@@ -35,11 +50,14 @@ else
 #   w            : turn off all warnings
 #   vec-report0  : disables printing of vectorizer diagnostic information
 #   opt-report0  : disables printing of optimization reports
-FCFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0 
-CCFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0
-ifdef IPO
+IPO = -ipo
+FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0 
+CXXFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0
 
+ifdef IPO
 # Archive tool for compiling with ipo.
 AR = xiar r
-LINKLIB = ld -shared
+endif
+
+endif
 

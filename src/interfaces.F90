@@ -186,7 +186,7 @@ contains
         implicit none
 
         interface
-            function c_loglikelihood(theta,nDims,phi,nDerived)
+            function c_loglikelihood(theta,nDims,phi,nDerived) bind(c)
                 use iso_c_binding
                 integer(c_int), intent(in), value :: nDims
                 integer(c_int), intent(in), value :: nDerived

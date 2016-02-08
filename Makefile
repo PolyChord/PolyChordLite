@@ -3,7 +3,7 @@ EXAMPLES = gaussian pyramidal rastrigin twin_gaussian random_gaussian himmelblau
 SIMPLE_EXAMPLES = polychord_simple polychord_simple_C
 
 # Your likelihood programs
-#PROGRAMS = my_likelihood my_cpp_likelihood 
+PROGRAMS = my_likelihood my_cpp_likelihood 
 
 # Whether to use MPI
 MPI=1
@@ -49,7 +49,6 @@ BIN_DIR = ./bin
 LDFLAGS += -L$(POLYCHORD_DIR)
 LDFLAGS += -L$(EXAMPLES_DIR)
 LDLIBS += -lchord 
-LDLIBS += -lstdc++
 
 # likelihood libraries, this is created by changing X to libX.a
 EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))

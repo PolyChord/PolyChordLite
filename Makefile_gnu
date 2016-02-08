@@ -12,7 +12,6 @@ endif
 # Archive tool
 AR = ar r
 
-
 # default flags
 # --------------
 # free-line-length-none : turn of line length limitation (why is this not a default??)
@@ -20,6 +19,8 @@ AR = ar r
 # fPIC                  : for compiling a shared object library
 FFLAGS += -ffree-line-length-none -cpp -fPIC
 CXXFLAGS += -std=c++11 -fPIC
+
+LDLIBS += -lstdc++
 
 ifdef DEBUG
 # Debugging mode
