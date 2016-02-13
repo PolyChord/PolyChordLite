@@ -43,7 +43,8 @@ program PolyChord
 
     call create_priors(priors,params,settings)
 
-    call run_polychord(loglikelihood,prior_wrapper, setup_loglikelihood, settings) 
+    call setup_loglikelihood(settings)
+    call run_polychord(loglikelihood,prior_wrapper, settings) 
 
 contains
 

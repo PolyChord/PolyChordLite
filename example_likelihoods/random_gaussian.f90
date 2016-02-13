@@ -31,18 +31,16 @@ module loglikelihood_module
 
 
 
-    subroutine setup_loglikelihood(settings,mpi_communicator)
+    subroutine setup_loglikelihood(settings)
 #ifdef MPI
-        use mpi
+        use mpi_module
 #endif
         use settings_module,   only: program_settings
         use random_module,     only: random_inverse_covmat
         implicit none
         type(program_settings), intent(in) :: settings
-        integer,intent(in) :: mpi_communicator
 
         integer :: nDims
-        integer :: mpierror
 
         ! Get the dimensionality from settings
         nDims = settings%nDims
@@ -54,6 +52,7 @@ module loglikelihood_module
         mu = 0.5d0
 
         ! Generate a random covariance matrix, its inverse and logdet on the root node
+        call initialise_mpi
         call random_inverse_covmat(invcovmat,logdetcovmat,sigma,nDims)
 
 #ifdef MPI

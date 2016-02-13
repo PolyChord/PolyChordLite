@@ -55,11 +55,10 @@ module loglikelihood_module
 
     end function loglikelihood
 
-    subroutine setup_loglikelihood(settings,mpi_communicator)
+    subroutine setup_loglikelihood(settings)
         use settings_module,   only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings
-        integer,intent(in) :: mpi_communicator
 
     end subroutine setup_loglikelihood
 
