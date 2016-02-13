@@ -1,6 +1,7 @@
 #include "interfaces.h"
 #include <iostream>
 
+// Constructor for settings struct
 Settings::Settings(int _nDims,int _nDerived): 
     nDims               {_nDims},
     nDerived            {_nDerived},
@@ -25,8 +26,15 @@ Settings::Settings(int _nDims,int _nDerived):
     file_root           {"test"}
 {}
 
-void run_polychord( double (*c_loglikelihood_ptr)(double*,int,double*,int), Settings s)
+
+
+
+void run_polychord( 
+        double (*c_loglikelihood_ptr)(double*,int,double*,int), 
+        void (*c_prior_ptr)(double*,double*,int), 
+        Settings s)
 {
+    // Ridiculous gubbins for passing strings between C and FORTRAN
     char * base_dir = new char[s.base_dir.size()+1];
     std::copy(s.base_dir.begin(),s.base_dir.end(),base_dir);
     base_dir[s.base_dir.size()] = '\0';
@@ -35,8 +43,11 @@ void run_polychord( double (*c_loglikelihood_ptr)(double*,int,double*,int), Sett
     std::copy(s.file_root.begin(),s.file_root.end(),file_root);
     file_root[s.file_root.size()] = '\0';
 
-    polychord_simple_c_interface( 
+
+
+    polychord_c_interface( 
             c_loglikelihood_ptr, 
+            c_prior_ptr, 
             s.nlive, 
             s.num_repeats,
             s.do_clustering,
@@ -59,6 +70,18 @@ void run_polychord( double (*c_loglikelihood_ptr)(double*,int,double*,int), Sett
             base_dir,
             file_root);
 
+
+
     delete[] base_dir;
     delete[] file_root;
 }
+
+void default_prior(double* cube, double* theta, int nDims)
+{
+    for(int i=0;i<nDims;i++) theta[i] = cube[i]; 
+}
+
+void run_polychord( double (*loglikelihood)(double*,int,double*,int), Settings S) 
+{
+    run_polychord(loglikelihood,default_prior,S);
+} 

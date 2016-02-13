@@ -2,7 +2,7 @@
 #define INTERFACES_H
 #include <string>
 
-extern "C" void polychord_simple_c_interface( double (*)(double*,int,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*); 
+extern "C" void polychord_c_interface( double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*); 
  
 
 struct Settings
@@ -32,9 +32,12 @@ struct Settings
     Settings(int _nDims,int _nDerived);
 };
 
+void run_polychord( double (*loglikelihood)(double*,int,double*,int), void (*prior)(double*,double*,int), Settings);
+void run_polychord( double (*loglikelihood)(double*,int,double*,int), Settings);  
+
+void default_prior(double*,double*,int); 
 
 
-void run_polychord( double (*c_loglikelihood_ptr)(double*,int,double*,int), Settings s);
 
 
 #endif
