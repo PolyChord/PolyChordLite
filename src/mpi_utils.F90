@@ -152,8 +152,17 @@ module mpi_module
     !> Procedure to initialise mpi
     subroutine initialise_mpi()
         implicit none
+        logical :: flag
 
-        call MPI_INIT(mpierror)
+
+        ! Check for any current initilisation
+        call MPI_Initialized(flag,mpierror)
+
+        if( .not. flag ) then
+            call MPI_INIT(mpierror)
+        else
+            write(*,'("PolyChord: MPI is already initilised, not initialising")')
+        end if
 
     end subroutine initialise_mpi
 
