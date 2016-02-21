@@ -2,4 +2,4 @@
 clean:
 
 veryclean:
-	rm $(EXAMPLES) $(SIMPLE_EXAMPLES)
+	$(RM) $(EXAMPLES) $(SIMPLE_EXAMPLES)

@@ -23,7 +23,7 @@ $(EXAMPLE_LIBRARIES): lib%.a: %.o
 .PHONY: clean veryclean
 
 clean:
-	rm -f *.o *.mod *.MOD
+	$(RM) *.o *.mod *.MOD
 
 veryclean: clean
-	rm -f *~ *.a
+	$(RM) *~ *.a

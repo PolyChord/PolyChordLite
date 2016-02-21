@@ -38,9 +38,7 @@ $(EXAMPLE_LIKELIHOODS): lib%.a: $(EXAMPLES_DIR)/%.o
 .PHONY: clean veryclean
 
 clean:
-	rm -f *.o *.mod *.MOD
-	cd $(EXAMPLES_DIR) && rm -f *.o *.mod *.MOD
+	$(RM) *.o *.mod *.MOD
 
 veryclean: clean
-	rm -f *~ *.a
-	cd $(EXAMPLES_DIR) && rm -f *~ *.a 
+	$(RM) *~ *.a

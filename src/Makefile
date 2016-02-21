@@ -25,7 +25,7 @@ libchord.a: $(OBJECTS)
 .PHONY: clean veryclean
 
 clean:
-	rm -f *.o *.mod *.MOD
+	$(RM) *.o *.mod *.MOD
 
 veryclean: clean
-	rm -f *~ *.a *.so
+	$(RM) *~ *.a *.so

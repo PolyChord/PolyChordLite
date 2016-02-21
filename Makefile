@@ -35,6 +35,8 @@ FFLAGS += -DMPI
 CXXFLAGS += -DMPI
 endif
 
+# Remove command
+RM = rm -f
 
 # Where polychord is stored
 POLYCHORD_DIR = ./src
@@ -55,7 +57,7 @@ EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))
 
 
 # Export all of the necessary variables
-export DEBUG MPI AR FC CXX CXXFLAGS FFLAGS 
+export DEBUG MPI AR FC CXX CXXFLAGS FFLAGS RM
 export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES
 
 
@@ -91,13 +93,13 @@ $(SIMPLE_EXAMPLES): %: libchord.a %.o
 
 
 clean:
-	rm -f *.o *.mod *.MOD
+	$(RM) *.o *.mod *.MOD
 	$(MAKE) -C $(POLYCHORD_DIR) clean
 	$(MAKE) -C $(EXAMPLES_DIR) clean
 	$(MAKE) -C $(BIN_DIR) clean
 	
 veryclean: clean
-	rm -f *~ 
+	$(RM) *~ 
 	$(MAKE) -C $(POLYCHORD_DIR) veryclean
 	$(MAKE) -C $(EXAMPLES_DIR) veryclean
 	$(MAKE) -C $(BIN_DIR) veryclean
