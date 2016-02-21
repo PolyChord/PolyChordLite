@@ -7,6 +7,7 @@ const double sigma = 0.1;
 const double norm = log(2*pi*sigma*sigma)/2;
 
 double loglikelihood(double* theta, int ndims, double* phi, int nderived);
+void prior(double* cube, double* theta, int ndims);
 
 int main()
 {
@@ -17,7 +18,7 @@ int main()
 
     settings.file_root = "c_test";
 
-    run_polychord(loglikelihood, settings) ;
+    run_polychord(loglikelihood, prior, settings) ;
 }
 
 
@@ -34,4 +35,9 @@ double loglikelihood(double* theta, int ndims, double* phi, int nderived)
     phi[0] = radius_squared;
 
     return logl;
+}
+
+void prior(double* cube, double* theta, int ndims)
+{
+    for( int i=0; i<ndims; i++) theta[i] = cube[i];
 }
