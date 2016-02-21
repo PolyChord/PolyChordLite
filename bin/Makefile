@@ -1,3 +1,4 @@
+.PHONY: clean veryclean
 
 clean:
 

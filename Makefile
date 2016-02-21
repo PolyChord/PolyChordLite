@@ -39,26 +39,35 @@ endif
 RM = rm -f
 
 # Where polychord is stored
-POLYCHORD_DIR = ./src
+POLYCHORD_DIR = $(PWD)/src
 # Where likelihoods are stored
-LIKELIHOOD_DIR = ./likelihoods
+LIKELIHOOD_DIR = $(PWD)/likelihoods
 # Where likelihood examples are stored
-EXAMPLES_DIR = ./example_likelihoods 
+EXAMPLES_DIR = $(PWD)/example_likelihoods 
 # Where binaries are stored
-BIN_DIR = ./bin
+BIN_DIR = $(PWD)/bin
 
 # Library flags
 LDFLAGS += -L$(POLYCHORD_DIR)
 LDFLAGS += -L$(EXAMPLES_DIR)
+LDFLAGS += -L$(LIKELIHOOD_DIR)
 LDLIBS += -lchord 
 
-# likelihood libraries, this is created by changing X to libX.a
+INCFLAGS += -I$(POLYCHORD_DIR) 
+INCFLAGS += -I$(EXAMPLES_DIR)
+INCFLAGS += -I$(LIKELIHOOD_DIR)
+
+# example likelihood libraries, this is created by changing X to libX.a
 EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))
+
+# likelihood libraries, this is created by changing X to libX.a
+PROGRAM_LIBRARIES = $(patsubst %,lib%.a,$(PROGRAMS))
 
 
 # Export all of the necessary variables
 export DEBUG MPI AR FC CXX CXXFLAGS FFLAGS RM
 export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES
+export POLYCHORD_DIR
 
 
 # "make" builds all
@@ -70,36 +79,47 @@ examples: $(EXAMPLES)
 libchord.a:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.a
 
-# Rule for building likelihood libraries
+# Rule for building example likelihood libraries
 $(EXAMPLE_LIBRARIES): libchord.a
 	$(MAKE) -C $(EXAMPLES_DIR) $@
+
+# Rule for building likelihood libraries
+$(PROGRAM_LIBRARIES): libchord.a
+	$(MAKE) -C $(LIKELIHOOD_DIR) $@
 
 # Rule for example programs
 $(EXAMPLES): %: libchord.a lib%.a polychord_examples.o
 	$(LD) polychord_examples.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
 
+$(PROGRAMS): %: libchord.a lib%.a polychord.o 
+	$(LD) polychord.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
+
 # Rule for simple example programs
 $(SIMPLE_EXAMPLES): %: libchord.a %.o 
 	$(LD) $@.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS)
 
+
 # Rule for building fortran files
 %.o: %.F90 
-	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -I$(EXAMPLES_DIR) -c $< 
+	$(FC) $(FFLAGS) $(INCFLAGS) -c $< 
 %.o: %.f90 
-	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -I$(EXAMPLES_DIR) -c $< 
+	$(FC) $(FFLAGS) $(INCFLAGS) -c $< 
 # Rule for building c++ files
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(EXAMPLES_DIR) -c $< 
+	$(CXX) $(CXXFLAGS) $(INCFLAGS) -c $< 
 
+.PHONY: clean veryclean
 
 clean:
 	$(RM) *.o *.mod *.MOD
 	$(MAKE) -C $(POLYCHORD_DIR) clean
 	$(MAKE) -C $(EXAMPLES_DIR) clean
+	$(MAKE) -C $(LIKELIHOOD_DIR) clean
 	$(MAKE) -C $(BIN_DIR) clean
 	
 veryclean: clean
 	$(RM) *~ 
 	$(MAKE) -C $(POLYCHORD_DIR) veryclean
 	$(MAKE) -C $(EXAMPLES_DIR) veryclean
+	$(MAKE) -C $(LIKELIHOOD_DIR) veryclean
 	$(MAKE) -C $(BIN_DIR) veryclean

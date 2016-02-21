@@ -15,7 +15,7 @@ module loglikelihood_module
 
     contains
 
-    !> Main loglikelihood function
+    !> loglikelihood function
     !!
     !! Either write your likelihood code directly into this function, or call an
     !! external library from it. This should return the logarithm of the
@@ -50,12 +50,25 @@ module loglikelihood_module
 
     end function loglikelihood
 
+    !> Prior function
+    !!
+    function prior(cube) result(theta)
+        implicit none
+        real(dp), intent(in),  dimension(:) :: cube  !> Hypercube parameters
+        real(dp), dimension(size(cube))     :: theta !> Input parameters
+
+        !============================================================
+        ! insert prior code here
+        !
+        !
+        !============================================================
+
+
+
+    end function prior
 
 
     !> Setup of the loglikelihood
-    !!
-    !! This is called before nested sampling, but after the priors and settings
-    !! have been set up.
     !!
     !! This is the time at which you should load any files that the likelihoods
     !! need, and do any initial calculations.
@@ -64,14 +77,12 @@ module loglikelihood_module
     !! (at the top of the file).
     !!
     !! All MPI threads will call this function simultaneously, but you may need
-    !! to use mpi utilities to synchronise them. This should be done through the
-    !! integer mpi_communicator (which is normally MPI_COMM_WORLD).
+    !! to use mpi utilities to synchronise them.
     !!
-    subroutine setup_loglikelihood(settings,mpi_communicator)
+    subroutine setup_loglikelihood(settings)
         use settings_module,   only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings
-        integer,intent(in) :: mpi_communicator
 
         !============================================================
         ! insert likelihood setup here
