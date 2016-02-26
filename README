@@ -132,7 +132,7 @@ are chosen
 Run time statistics
 
 [root].resume
---------------------------------------
+-------------
 Files for resuming a stopped run. Semi-human readable.
 This is produced if settings%write_resume=.true.
 This is used if settings%read_resume=.true.

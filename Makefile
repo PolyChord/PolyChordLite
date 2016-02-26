@@ -65,13 +65,14 @@ PROGRAM_LIBRARIES = $(patsubst %,lib%.a,$(PROGRAMS))
 
 
 # Export all of the necessary variables
-export DEBUG MPI AR FC CXX CXXFLAGS FFLAGS RM
+export DEBUG MPI AR ARFLAGS FC CXX CXXFLAGS FFLAGS RM
 export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES
 export POLYCHORD_DIR
 
 
 # "make" builds all
-all: $(SIMPLE_EXAMPLES)
+all: my_likelihood
+#all: $(SIMPLE_EXAMPLES) $(EXAMPLES) $(PROGRAMS)
 
 examples: $(EXAMPLES)
 

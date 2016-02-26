@@ -1,10 +1,10 @@
 # rule for building the default likelihood
 libmy_likelihood.a: my_likelihood.o
-	$(AR) $@ $^ 
+	$(AR) $(ARFLAGS) $@ $^ 
 
 # rule for building the c++ wrapper
 libmy_cpp_likelihood.a: my_cpp_likelihood.o fortran_cpp_wrapper.o
-	$(AR) $@ $^ 
+	$(AR) $(ARFLAGS) $@ $^ 
 
 
 

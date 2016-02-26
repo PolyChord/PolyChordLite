@@ -10,7 +10,8 @@ endif
 
 
 # Archive tool
-AR = ar r
+AR = ar 
+ARFLAGS = rv
 
 # default flags
 # --------------

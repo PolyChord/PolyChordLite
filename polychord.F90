@@ -1,4 +1,4 @@
-program demo_gaussian
+program PolyChord
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
     use utils_module,             only: dp
@@ -40,4 +40,4 @@ program demo_gaussian
     call run_polychord(loglikelihood, prior, settings) 
 
 
-end program demo_gaussian
+end program PolyChord

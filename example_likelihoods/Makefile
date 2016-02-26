@@ -4,7 +4,7 @@ INC = -I../src/
 # general rule for building each of the examples
 # build the library lib<example name>.a  by archiving examples/<example name>.o using AR
 $(EXAMPLE_LIBRARIES): lib%.a: %.o
-	$(AR) $@ $^ 
+	$(AR) $(ARFLAGS) $@ $^ 
 
 
 
