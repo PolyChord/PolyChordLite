@@ -1,15 +1,17 @@
 #include <Python.h>
 #include "interfaces.h"
+#include <iostream>
 
 double default_loglikelihood(double* theta, int nDims, double* phi, int nDerived)
 {
-    return 0.0;
+    double logL = 0.0;
+    for(int i=0;i<nDims;i++) logL -= theta[i]*theta[i];
+    return logL;
 };
 
 void default_prior(double* cube, double* theta, int nDims)
 {
-    int i;
-    for(i=0;i<nDims;i++) theta[i] = cube[i]; 
+    for(int i=0;i<nDims;i++) theta[i] = cube[i]; 
 };
 
 

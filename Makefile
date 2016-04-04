@@ -99,6 +99,9 @@ $(PROGRAMS): %: libchord.a lib%.a polychord.o
 $(SIMPLE_EXAMPLES): %: libchord.a %.o 
 	$(LD) $@.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS)
 
+PyPolyChord: libchord.a
+	python setup.py build_ext --inplace
+
 
 # Rule for building fortran files
 %.o: %.F90 
@@ -120,6 +123,7 @@ clean:
 	
 veryclean: clean
 	$(RM) *~ 
+	$(RM) _PyPolyChord.so
 	$(MAKE) -C $(POLYCHORD_DIR) veryclean
 	$(MAKE) -C $(EXAMPLES_DIR) veryclean
 	$(MAKE) -C $(LIKELIHOOD_DIR) veryclean

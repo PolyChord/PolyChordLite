@@ -1,14 +1,17 @@
+import os
 from numpy.distutils.core import setup, Extension
 
-base = '/home/wh260/PolyChord/'
+
+base = os.path.dirname(os.path.abspath(__file__))
+
 
 pypolychord_module = Extension(
         name='_PyPolyChord',
         language="c++",
-        include_dirs = [base + 'src/'],
-        library_dirs = [base + 'src/'],
+        include_dirs = [base + '/src/'],
+        library_dirs = [base + '/src/'],
         libraries = ['chord','gfortran'],
-        sources=[base + '_PyPolyChord.cpp']
+        sources=[base + '/_PyPolyChord.cpp']
         )
 
 setup(
