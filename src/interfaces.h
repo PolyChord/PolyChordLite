@@ -3,7 +3,6 @@
 #include <string>
 
 extern "C" void polychord_c_interface( double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*); 
- 
 
 struct Settings
 {
@@ -35,6 +34,7 @@ struct Settings
 void run_polychord( double (*loglikelihood)(double*,int,double*,int), void (*prior)(double*,double*,int), Settings);
 void run_polychord( double (*loglikelihood)(double*,int,double*,int), Settings);  
 
+double default_loglikelihood(double*,int,double*,int); 
 void default_prior(double*,double*,int); 
 
 

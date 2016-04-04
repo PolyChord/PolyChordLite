@@ -71,7 +71,7 @@ export POLYCHORD_DIR
 
 
 # "make" builds all
-all: my_likelihood
+all: gaussian
 #all: $(SIMPLE_EXAMPLES) $(EXAMPLES) $(PROGRAMS)
 
 examples: $(EXAMPLES)

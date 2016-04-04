@@ -76,6 +76,11 @@ void run_polychord(
     delete[] file_root;
 }
 
+double default_loglikelihood(double* theta, int nDims, double* phi, int nDerived)
+{
+    return 0.0;
+}
+
 void default_prior(double* cube, double* theta, int nDims)
 {
     for(int i=0;i<nDims;i++) theta[i] = cube[i]; 
