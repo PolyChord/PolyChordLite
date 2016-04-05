@@ -60,14 +60,14 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     int write_live;
     int write_dead;
     int update_files;
+    char* base_dir;
+    char* file_root;
 
 
     /* Parse the input tuple */
-    if (!PyArg_ParseTuple(args, "iiiiiididiiiiiiiiii", &nDims, &nDerived, &nlive, &num_repeats, &do_clustering, &feedback, &precision_criterion, &max_ndead, &boost_posterior, &posteriors, &equals, &cluster_posteriors, &write_resume, &write_paramnames, &read_resume, &write_stats, &write_live, &write_dead, &update_files))
+    if (!PyArg_ParseTuple(args, "iiiiiididiiiiiiiiiiss", &nDims, &nDerived, &nlive, &num_repeats, &do_clustering, &feedback, &precision_criterion, &max_ndead, &boost_posterior, &posteriors, &equals, &cluster_posteriors, &write_resume, &write_paramnames, &read_resume, &write_stats, &write_live, &write_dead, &update_files, &base_dir, &file_root))
         return NULL;
 
-    char * base_dir = "chains";
-    char * file_root = "PyPolyChord_test";
 
     polychord_c_interface( 
             default_loglikelihood, 

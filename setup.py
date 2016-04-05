@@ -1,5 +1,5 @@
 import os
-from numpy.distutils.core import setup, Extension
+from distutils.core import setup, Extension
 
 
 base = os.path.dirname(os.path.abspath(__file__))
