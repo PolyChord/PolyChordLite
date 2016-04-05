@@ -1,9 +1,11 @@
 ifdef MPI
 FC = mpif90
-CXX = mpicc
+CC = mpicc
+CXX = mpic++
 LD = mpif90
 else
 FC = gfortran
+cc = gcc
 CXX = g++
 LD = gfortran
 endif

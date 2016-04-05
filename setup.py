@@ -1,17 +1,12 @@
-import os
 from distutils.core import setup, Extension
-
-
-base = os.path.dirname(os.path.abspath(__file__))
-
 
 pypolychord_module = Extension(
         name='_PyPolyChord',
         language="c++",
-        include_dirs = [base + '/src/'],
-        library_dirs = [base + '/src/'],
+        include_dirs = ['src/'],
+        library_dirs = ['src/'],
         libraries = ['chord','gfortran'],
-        sources=[base + '/_PyPolyChord.cpp']
+        sources=['_PyPolyChord.cpp']
         )
 
 setup(
