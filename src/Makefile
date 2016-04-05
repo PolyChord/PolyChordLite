@@ -13,6 +13,9 @@ include makefile.dep
 libchord.a: $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^
 
+libchord.so: $(OBJECTS)
+	$(LD) -shared  $^ -o $@
+
 # General rule for building object file (.o)  from fortran files (.f90/.F90)
 %.o: %.f90
 	$(FC) $(FFLAGS) -c $<

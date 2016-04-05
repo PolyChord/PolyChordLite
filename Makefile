@@ -65,7 +65,7 @@ PROGRAM_LIBRARIES = $(patsubst %,lib%.a,$(PROGRAMS))
 
 
 # Export all of the necessary variables
-export DEBUG MPI AR ARFLAGS FC CXX CXXFLAGS FFLAGS RM
+export DEBUG MPI AR ARFLAGS FC CXX CXXFLAGS FFLAGS RM LD
 export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES
 export POLYCHORD_DIR
 
@@ -79,6 +79,9 @@ examples: $(EXAMPLES)
 # Rule for building polychord static library
 libchord.a:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.a
+
+libchord.so:
+	$(MAKE) -C $(POLYCHORD_DIR) libchord.so
 
 # Rule for building example likelihood libraries
 $(EXAMPLE_LIBRARIES): libchord.a
@@ -99,8 +102,11 @@ $(PROGRAMS): %: libchord.a lib%.a polychord.o
 $(SIMPLE_EXAMPLES): %: libchord.a %.o 
 	$(LD) $@.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS)
 
-PyPolyChord: libchord.a
-	python setup.py build_ext --inplace
+PyPolyChord: _PyPolyChord.o libchord.so
+	$(LD) -shared _PyPolyChord.o -o _PyPolyChord.so  $(LDFLAGS) $(LDLIBS) 
+
+_PyPolyChord.o: 
+	$(CXX) $(CXXFLAGS) -Isrc/ -I/usr/include/python2.7 -c _PyPolyChord.cpp -o _PyPolyChord.o
 
 
 # Rule for building fortran files

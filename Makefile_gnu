@@ -24,6 +24,7 @@ ARFLAGS = rv
 # fPIC                  : for compiling a shared object library
 FFLAGS += -ffree-line-length-none -cpp -fPIC
 CXXFLAGS += -std=c++11 -fPIC
+CFLAGS += -std=c++11 -fPIC
 
 LDLIBS += -lstdc++
 
@@ -42,10 +43,12 @@ ifdef DEBUG
 FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
 #
 CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
+CFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
 else
 # Optimised mode
 # --------------
 # Ofast : maximum optimisation
 FFLAGS += -Ofast
 CXXFLAGS += -Ofast
+CXFLAGS += -Ofast
 endif
