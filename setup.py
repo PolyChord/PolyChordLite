@@ -7,11 +7,10 @@ print MPI.COMM_WORLD.Get_size()
 
 pypolychord_module = Extension(
         name='_PyPolyChord',
-        language="c++",
-        include_dirs = ['src/'],
-        library_dirs = ['src/'],
+        include_dirs = ['./src/'],
+        library_dirs = ['./src/'],
         libraries = ['chord','gfortran'],
-        sources=['_PyPolyChord.cpp']
+        sources=['_PyPolyChord.c']
         )
 
 setup(

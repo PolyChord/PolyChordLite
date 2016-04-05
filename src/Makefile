@@ -3,7 +3,7 @@
 FOBJECTS = $(patsubst %.F90,%.o,$(patsubst %.f90,%.o,$(wildcard *90)))
 CXXOBJECTS = $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 
-OBJECTS = $(FOBJECTS) $(CXXOBJECTS)
+OBJECTS = $(FOBJECTS) #$(CXXOBJECTS)
 
 # include the dependencies
 include makefile.dep

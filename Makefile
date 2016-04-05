@@ -104,11 +104,14 @@ $(PROGRAMS): %: libchord.a lib%.a polychord.o
 $(SIMPLE_EXAMPLES): %: libchord.a %.o 
 	$(LD) $@.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS)
 
-PyPolyChord: _PyPolyChord.o libchord.so
-	$(LD) -shared _PyPolyChord.o -o _PyPolyChord.so  $(LDFLAGS) $(LDLIBS) 
+PyPolyChord: libchord.so
+	python setup.py build_ext --inplace
 
-_PyPolyChord.o: 
-	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(PYTHON_INC) -c _PyPolyChord.cpp -o _PyPolyChord.o
+#PyPolyChord: _PyPolyChord.o libchord.so
+#	$(LD) -shared _PyPolyChord.o -o _PyPolyChord.so  $(LDFLAGS) $(LDLIBS) 
+#
+#_PyPolyChord.o: 
+#	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(PYTHON_INC) -c _PyPolyChord.cpp -o _PyPolyChord.o
 
 
 # Rule for building fortran files
