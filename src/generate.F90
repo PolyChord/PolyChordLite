@@ -129,7 +129,7 @@ module generate_module
             write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
 
             ! Open the live points file to sequentially add live points
-            open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
+            if(settings%write_live) open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
 
             ! Allocate the run time arrays, and set the default values for the variables
             call initialise_run_time_info(settings,RTI)
@@ -260,7 +260,7 @@ module generate_module
             RTI%logLp = RTI%live(settings%l0,RTI%i(1),1)  ! Store the value of the minimum loglikelihood 
 
             ! Close the file
-            close(write_phys_unit)
+            if(settings%write_live) close(write_phys_unit)
 
             if(.not. allocated(RTI%num_repeats) ) allocate(RTI%num_repeats(size(settings%grade_dims)))
             RTI%num_repeats(1) = settings%num_repeats
