@@ -63,6 +63,8 @@ EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))
 # likelihood libraries, this is created by changing X to libX.a
 PROGRAM_LIBRARIES = $(patsubst %,lib%.a,$(PROGRAMS))
 
+# Location of python libraries
+PYTHON_INC = /usr/include/python2.7
 
 # Export all of the necessary variables
 export DEBUG MPI AR ARFLAGS FC CXX CXXFLAGS FFLAGS RM LD
@@ -106,7 +108,7 @@ PyPolyChord: _PyPolyChord.o libchord.so
 	$(LD) -shared _PyPolyChord.o -o _PyPolyChord.so  $(LDFLAGS) $(LDLIBS) 
 
 _PyPolyChord.o: 
-	$(CXX) $(CXXFLAGS) -Isrc/ -I/usr/include/python2.7 -c _PyPolyChord.cpp -o _PyPolyChord.o
+	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(PYTHON_INC) -c _PyPolyChord.cpp -o _PyPolyChord.o
 
 
 # Rule for building fortran files
