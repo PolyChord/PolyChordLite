@@ -1,7 +1,39 @@
 #!/usr/bin/python
-from numpy import pi,log,sqrt
+try:
+    import PyPolyChord._PyPolyChord
+except ImportError as e:
+    if e.message == 'No module named _PyPolyChord':
+        print('')
+        print('   Could not load Python Extension _PyPolyChord.so')
+        print('')
+        print('   You have to build it first with:')
+        print('')
+        print('   $   make PyPolyChord')                  
+        print('')
+        print('   In the base PolyChord directory.')
 
-import _PyPolyChord
+    elif e.message == 'libchord.so: cannot open shared object file: No such file or directory':
+        print('')
+        print('   Could not load PolyChord library "libchord.so"')
+        print('')
+        print('   You have to build it first,')
+        print('   and point the LD_LIBRARY_PATH environment variable to it:')
+        print('')
+        print('   /-- BASH: --------------------------------------------\\')
+        print('   |                                                     |')
+        print('   |$   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/lib |')
+        print('   |                                                     |')
+        print('   +-- CSH: ---------------------------------------------+')
+        print('   |                                                     |')
+        print('   |$   setenv LD_LIBRARY_PATH $LD_LIBRARY_PATH:$PWD/lib |')
+        print('   |                                                     |')
+        print('   \\-----------------------------------------------------/')
+        print('')
+    else:
+        raise e
+
+    import sys
+    sys.exit(1)
 
 nDims = 5
 nDerived = 1
@@ -25,6 +57,7 @@ update_files = nlive
 base_dir = 'chains'
 file_root = 'PyPolyChord_test'
 
+from numpy import pi,log,sqrt
 def gaussian(theta,phi):
     sigma = 0.1
     nDims = len(theta)
@@ -43,4 +76,4 @@ def prior(cube):
     theta = cube
     return theta
 
-_PyPolyChord.run(gaussian, prior, nDims, nDerived, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, base_dir, file_root)
+PyPolyChord._PyPolyChord.run(gaussian, prior, nDims, nDerived, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, base_dir, file_root)

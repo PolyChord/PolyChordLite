@@ -1,9 +1,9 @@
-PolyChord v 1.9
+PolyChord v 1.10
 Will Handley, Mike Hobson & Anthony Lasenby
 wh260@mrao.cam.ac.uk
 arXiv:1502.01856
 arXiv:1506.00171
-Released February 2016
+Released April 2016
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PolyChord Licence
@@ -21,7 +21,7 @@ in their publications.
 MPI Support
 ===========
 
-The code is MPI compatible. To disable the MPI parallelization, 
+The code is MPI compatible with openMPI. To disable the MPI parallelization, 
 set MPI=0 in ./Makefile
 
 

@@ -39,18 +39,22 @@ endif
 RM = rm -f
 
 # Where polychord is stored
-POLYCHORD_DIR = $(PWD)/src
+POLYCHORD_DIR = $(PWD)/src_polychord
+# Where pypolychord is stored
+PYPOLYCHORD_DIR = $(PWD)/PyPolyChord
+# Where the C interface is stored
+C_INTERFACE_DIR = $(PWD)/src_C_interfaces
 # Where likelihoods are stored
 LIKELIHOOD_DIR = $(PWD)/likelihoods
 # Where likelihood examples are stored
 EXAMPLES_DIR = $(PWD)/example_likelihoods 
 # Where binaries are stored
 BIN_DIR = $(PWD)/bin
+# Where libraries are stored
+LIB_DIR = $(PWD)/lib
 
 # Library flags
-LDFLAGS += -L$(POLYCHORD_DIR)
-LDFLAGS += -L$(EXAMPLES_DIR)
-LDFLAGS += -L$(LIKELIHOOD_DIR)
+LDFLAGS += -L$(LIB_DIR)
 LDLIBS += -lchord 
 
 INCFLAGS += -I$(POLYCHORD_DIR) 
@@ -63,18 +67,16 @@ EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))
 # likelihood libraries, this is created by changing X to libX.a
 PROGRAM_LIBRARIES = $(patsubst %,lib%.a,$(PROGRAMS))
 
-# Location of python libraries
-PYTHON_INC = /usr/include/python2.7
-
 # Export all of the necessary variables
-export DEBUG MPI AR ARFLAGS FC CXX CXXFLAGS FFLAGS RM LD
+export DEBUG MPI 
+export CC CXX FC LD RM AR
+export CFLAGS CXXFLAGS FFLAGS
 export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES
-export POLYCHORD_DIR
+export POLYCHORD_DIR C_INTERFACE_DIR LIB_DIR PYPOLYCHORD_DIR
 
 
 # "make" builds all
 all: gaussian
-#all: $(SIMPLE_EXAMPLES) $(EXAMPLES) $(PROGRAMS)
 
 examples: $(EXAMPLES)
 
@@ -82,8 +84,10 @@ examples: $(EXAMPLES)
 libchord.a:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.a
 
+# Rule for building polychord shared library
 libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.so
+
 
 # Rule for building example likelihood libraries
 $(EXAMPLE_LIBRARIES): libchord.a
@@ -105,14 +109,7 @@ $(SIMPLE_EXAMPLES): %: libchord.a %.o
 	$(LD) $@.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS)
 
 PyPolyChord: libchord.so
-	python setup.py build_ext --inplace
-
-#PyPolyChord: _PyPolyChord.o libchord.so
-#	$(LD) -shared _PyPolyChord.o -o _PyPolyChord.so  $(LDFLAGS) $(LDLIBS) 
-#
-#_PyPolyChord.o: 
-#	$(CC) $(CFLAGS) -I$(POLYCHORD_DIR) -I$(PYTHON_INC) -c _PyPolyChord.c -o _PyPolyChord.o
-
+	$(MAKE) -C $(PYPOLYCHORD_DIR) PyPolyChord
 
 # Rule for building fortran files
 %.o: %.F90 
@@ -122,20 +119,26 @@ PyPolyChord: libchord.so
 # Rule for building c++ files
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCFLAGS) -c $< 
+# Rule for building c files
+%.o: %.c
+	$(CC) $(CFLAGS) $(INCFLAGS) -c $< 
 
 .PHONY: clean veryclean
 
 clean:
 	$(RM) *.o *.mod *.MOD
 	$(MAKE) -C $(POLYCHORD_DIR) clean
+	$(MAKE) -C $(PYPOLYCHORD_DIR) clean
 	$(MAKE) -C $(EXAMPLES_DIR) clean
 	$(MAKE) -C $(LIKELIHOOD_DIR) clean
 	$(MAKE) -C $(BIN_DIR) clean
+	$(MAKE) -C $(LIB_DIR) clean
 	
 veryclean: clean
 	$(RM) *~ 
-	$(RM) _PyPolyChord.so
 	$(MAKE) -C $(POLYCHORD_DIR) veryclean
+	$(MAKE) -C $(PYPOLYCHORD_DIR) veryclean
 	$(MAKE) -C $(EXAMPLES_DIR) veryclean
 	$(MAKE) -C $(LIKELIHOOD_DIR) veryclean
 	$(MAKE) -C $(BIN_DIR) veryclean
+	$(MAKE) -C $(LIB_DIR) veryclean

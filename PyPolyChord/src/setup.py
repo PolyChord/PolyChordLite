@@ -1,14 +1,12 @@
-import mpi4py
-from mpi4py import MPI
-
+import os
 from distutils.core import setup, Extension
 
-print MPI.COMM_WORLD.Get_size()
+lib_dir = os.environ['LIB_DIR']
 
 pypolychord_module = Extension(
-        name='_PyPolyChord',
-        include_dirs = ['./src/'],
-        library_dirs = ['./src/'],
+        name= '_PyPolyChord',
+        include_dirs = ['src'],
+        library_dirs = [lib_dir],
         libraries = ['chord','gfortran'],
         sources=['_PyPolyChord.c']
         )

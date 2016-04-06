@@ -1,9 +1,8 @@
 # Object files:
 # find all files ending in 90, and change .f90 and .F90 to .o, 
 FOBJECTS = $(patsubst %.F90,%.o,$(patsubst %.f90,%.o,$(wildcard *90)))
-CXXOBJECTS = $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 
-OBJECTS = $(FOBJECTS) #$(CXXOBJECTS)
+OBJECTS = $(FOBJECTS)
 
 # include the dependencies
 include makefile.dep
@@ -11,18 +10,16 @@ include makefile.dep
 # The polychord library depends on the objects
 # we should make all the objects and the archive them with AR
 libchord.a: $(OBJECTS)
-	$(AR) $(ARFLAGS) $@ $^
+	$(AR) $(LIB_DIR)/$@ $^
 
 libchord.so: $(OBJECTS)
-	$(LD) -shared  $^ -o $@
+	$(LD) -shared  $^ -o $(LIB_DIR)/$@
 
 # General rule for building object file (.o)  from fortran files (.f90/.F90)
 %.o: %.f90
 	$(FC) $(FFLAGS) -c $<
 %.o: %.F90
 	$(FC) $(FFLAGS) -c $<
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $<
 
 # Utility targets
 .PHONY: clean veryclean

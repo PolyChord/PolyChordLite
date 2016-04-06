@@ -14,8 +14,7 @@ endif
 
 
 # Archive tool
-AR = ar 
-ARFLAGS = rv
+AR = ar rv
 
 # default flags
 # --------------
