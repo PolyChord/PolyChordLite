@@ -39,11 +39,11 @@ endif
 RM = rm -f
 
 # Where polychord is stored
-POLYCHORD_DIR = $(PWD)/src_polychord
+POLYCHORD_DIR = $(PWD)/src/polychord
 # Where pypolychord is stored
 PYPOLYCHORD_DIR = $(PWD)/PyPolyChord
 # Where the C interface is stored
-C_INTERFACE_DIR = $(PWD)/src_C_interfaces
+C_INTERFACE_DIR = $(PWD)/src/C_interface
 # Where likelihoods are stored
 LIKELIHOOD_DIR = $(PWD)/likelihoods
 # Where likelihood examples are stored
@@ -68,10 +68,9 @@ EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))
 PROGRAM_LIBRARIES = $(patsubst %,lib%.a,$(PROGRAMS))
 
 # Export all of the necessary variables
-export DEBUG MPI 
 export CC CXX FC LD RM AR
 export CFLAGS CXXFLAGS FFLAGS
-export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES
+export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES PROGRAMS
 export POLYCHORD_DIR C_INTERFACE_DIR LIB_DIR PYPOLYCHORD_DIR
 
 

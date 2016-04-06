@@ -11,6 +11,7 @@ except ImportError as e:
         print('   $   make PyPolyChord')                  
         print('')
         print('   In the base PolyChord directory.')
+        print('')
 
     elif e.message == 'libchord.so: cannot open shared object file: No such file or directory':
         print('')
@@ -34,6 +35,29 @@ except ImportError as e:
 
     import sys
     sys.exit(1)
+
+print('/.===============================================================================.\\')
+print('||                                                                               ||')
+print('||    IMPORTANT: PyPolyChord settings                                            ||')
+print('||    -------------------------------                                            ||')
+print('||                                                                               ||')
+print('||    If you get MPI errors, try setting LD_PRELOAD to your mpi installation     ||')
+print('||                                                                               ||')
+print('||   /-- BASH: --------------------------------------------------------\\         ||')
+print('||   |                                                                 |         ||')
+print('||   |$   export LD_PRELOAD=$LD_PRELOAD:/usr/lib/openmpi/lib/libmpi.so |         ||')
+print('||   |                                                                 |         ||')
+print('||   +-- CSH: ---------------------------------------------------------+         ||')
+print('||   |                                                                 |         ||')
+print('||   |$   setenv LD_PRELOAD $LD_PRELOAD:/usr/lib/openmpi/lib/libmpi.so |         ||')
+print('||   |                                                                 |         ||')
+print('||   \\--------------------------------------------------------------- /          ||')
+print('||                                                                               ||')
+print('||   Where /usr/lib/openmpi/lib/libmpi.so should be replaced with the            ||')
+print('||   appropriate loctaion of libmpi.so on your system.                           ||')
+print('||                                                                               ||')
+print('\\.===============================================================================./  ')
+print('')
 
 nDims = 5
 nDerived = 1
@@ -76,4 +100,7 @@ def prior(cube):
     theta = cube
     return theta
 
-PyPolyChord._PyPolyChord.run(gaussian, prior, nDims, nDerived, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, base_dir, file_root)
+try:
+    PyPolyChord._PyPolyChord.run(gaussian, prior, nDims, nDerived, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, base_dir, file_root)
+except:
+    print("Oh Dear!")

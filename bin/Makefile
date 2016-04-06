@@ -3,4 +3,4 @@
 clean:
 
 veryclean:
-	$(RM) $(EXAMPLES) $(SIMPLE_EXAMPLES)
+	$(RM) $(EXAMPLES) $(SIMPLE_EXAMPLES) $(PROGRAMS)
