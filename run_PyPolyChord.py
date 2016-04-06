@@ -3,7 +3,7 @@ from numpy import pi,log,sqrt
 import PyPolyChord.PyPolyChord as PolyChord
 
 
-def gaussian(theta,phi):
+def gaussian(theta):
     sigma = 0.1
     nDims = len(theta)
 
@@ -13,9 +13,9 @@ def gaussian(theta,phi):
 
     logL = -log(2*pi*sigma*sigma)*nDims/2.0
     logL += -r2/2/sigma/sigma
-    phi[0] = sqrt(r2)
+    phi = [sqrt(r2)]
 
-    return logL
+    return logL, phi
 
 nDims = 5
 nDerived = 1

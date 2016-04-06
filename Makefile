@@ -5,6 +5,18 @@ SIMPLE_EXAMPLES = polychord_simple polychord_simple_C
 # Your likelihood programs
 PROGRAMS = my_likelihood my_cpp_likelihood 
 
+# Directories
+DRIVERS_DIR = $(PWD)/src/drivers
+POLYCHORD_DIR = $(PWD)/src/polychord
+PYPOLYCHORD_DIR = $(PWD)/PyPolyChord
+C_INTERFACE_DIR = $(PWD)/src/C_interface
+LIKELIHOOD_DIR = $(PWD)/likelihoods
+EXAMPLES_DIR = $(PWD)/example_likelihoods
+BIN_DIR = $(PWD)/bin
+LIB_DIR = $(PWD)/lib
+export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR C_INTERFACE_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
+
+
 # Whether to use MPI
 MPI=1
 
@@ -38,28 +50,9 @@ endif
 # Remove command
 RM = rm -f
 
-# Where polychord is stored
-POLYCHORD_DIR = $(PWD)/src/polychord
-# Where pypolychord is stored
-PYPOLYCHORD_DIR = $(PWD)/PyPolyChord
-# Where the C interface is stored
-C_INTERFACE_DIR = $(PWD)/src/C_interface
-# Where likelihoods are stored
-LIKELIHOOD_DIR = $(PWD)/likelihoods
-# Where likelihood examples are stored
-EXAMPLES_DIR = $(PWD)/example_likelihoods 
-# Where binaries are stored
-BIN_DIR = $(PWD)/bin
-# Where libraries are stored
-LIB_DIR = $(PWD)/lib
-
 # Library flags
 LDFLAGS += -L$(LIB_DIR)
 LDLIBS += -lchord 
-
-INCFLAGS += -I$(POLYCHORD_DIR) 
-INCFLAGS += -I$(EXAMPLES_DIR)
-INCFLAGS += -I$(LIKELIHOOD_DIR)
 
 # example likelihood libraries, this is created by changing X to libX.a
 EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))
@@ -71,56 +64,49 @@ PROGRAM_LIBRARIES = $(patsubst %,lib%.a,$(PROGRAMS))
 export CC CXX FC LD RM AR
 export CFLAGS CXXFLAGS FFLAGS
 export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES PROGRAMS
-export POLYCHORD_DIR C_INTERFACE_DIR LIB_DIR PYPOLYCHORD_DIR
 
 
-# "make" builds all
+# make shortcuts
 all: gaussian
-
 examples: $(EXAMPLES)
 
-# Rule for building polychord static library
+
+# PolyChord
+# ---------
+# static library
 libchord.a:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.a
-
-# Rule for building polychord shared library
+# shared library
 libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) libchord.so
 
+# Examples
+# --------
+$(EXAMPLES): %: libchord.a lib%.a polychord_examples.o
+	$(LD) $(DRIVERS_DIR)/polychord_examples.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
 
-# Rule for building example likelihood libraries
 $(EXAMPLE_LIBRARIES): libchord.a
 	$(MAKE) -C $(EXAMPLES_DIR) $@
 
-# Rule for building likelihood libraries
+polychord_examples.o:
+	$(MAKE) -C $(DRIVERS_DIR) $@
+
+# User Likelihoods
+# ----------------
+$(PROGRAMS): %: libchord.a lib%.a polychord.o 
+	$(LD) $(DRIVERS_DIR)/polychord.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
+
 $(PROGRAM_LIBRARIES): libchord.a
 	$(MAKE) -C $(LIKELIHOOD_DIR) $@
 
-# Rule for example programs
-$(EXAMPLES): %: libchord.a lib%.a polychord_examples.o
-	$(LD) polychord_examples.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
+polychord.o:
+	$(MAKE) -C $(DRIVERS_DIR) $@
 
-$(PROGRAMS): %: libchord.a lib%.a polychord.o 
-	$(LD) polychord.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
-
-# Rule for simple example programs
-$(SIMPLE_EXAMPLES): %: libchord.a %.o 
-	$(LD) $@.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS)
-
+# PyPolyChord
+# -----------
 PyPolyChord: libchord.so
 	$(MAKE) -C $(PYPOLYCHORD_DIR) PyPolyChord
 
-# Rule for building fortran files
-%.o: %.F90 
-	$(FC) $(FFLAGS) $(INCFLAGS) -c $< 
-%.o: %.f90 
-	$(FC) $(FFLAGS) $(INCFLAGS) -c $< 
-# Rule for building c++ files
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(INCFLAGS) -c $< 
-# Rule for building c files
-%.o: %.c
-	$(CC) $(CFLAGS) $(INCFLAGS) -c $< 
 
 .PHONY: clean veryclean
 
@@ -132,6 +118,7 @@ clean:
 	$(MAKE) -C $(LIKELIHOOD_DIR) clean
 	$(MAKE) -C $(BIN_DIR) clean
 	$(MAKE) -C $(LIB_DIR) clean
+	$(MAKE) -C $(DRIVERS_DIR) clean
 	
 veryclean: clean
 	$(RM) *~ 
@@ -141,3 +128,4 @@ veryclean: clean
 	$(MAKE) -C $(LIKELIHOOD_DIR) veryclean
 	$(MAKE) -C $(BIN_DIR) veryclean
 	$(MAKE) -C $(LIB_DIR) veryclean
+	$(MAKE) -C $(DRIVERS_DIR) veryclean

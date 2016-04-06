@@ -53,20 +53,18 @@ double loglikelihood(double* theta, int nDims, double* phi, int nDerived)
     PyObject* list_theta = PyList_New(nDims);
     list_C2Py(theta,list_theta);
 
-    /* Create a python version of phi */
-    PyObject* list_phi = PyList_New(nDerived);
-    list_C2Py(phi,list_phi);
-
     /* Compute the likelihood and phi from theta  */
-    PyObject* pylogL = PyObject_CallFunctionObjArgs(python_loglikelihood,list_theta,list_phi,NULL);
+    PyObject* answer = PyObject_CallFunctionObjArgs(python_loglikelihood,list_theta,NULL);
 
     /* Convert the python answer back to a C double */
-    double logL = PyFloat_AsDouble(pylogL);
+    double logL = PyFloat_AsDouble( PyTuple_GetItem(answer,0));
+    list_Py2C(PyTuple_GetItem(answer,1),phi);
+    printf("%e\n",phi[0]);
+
 
     /* Garbage collect */
     Py_DECREF(list_theta);
-    Py_DECREF(list_phi);
-    Py_DECREF(pylogL);
+    Py_DECREF(answer);
 
     return logL;
 }
