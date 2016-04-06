@@ -111,7 +111,7 @@ PyPolyChord: libchord.so
 #	$(LD) -shared _PyPolyChord.o -o _PyPolyChord.so  $(LDFLAGS) $(LDLIBS) 
 #
 #_PyPolyChord.o: 
-#	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(PYTHON_INC) -c _PyPolyChord.cpp -o _PyPolyChord.o
+#	$(CC) $(CFLAGS) -I$(POLYCHORD_DIR) -I$(PYTHON_INC) -c _PyPolyChord.c -o _PyPolyChord.o
 
 
 # Rule for building fortran files
