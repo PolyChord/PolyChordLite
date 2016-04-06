@@ -24,7 +24,7 @@ ARFLAGS = rv
 # fPIC                  : for compiling a shared object library
 FFLAGS += -ffree-line-length-none -cpp -fPIC
 CXXFLAGS += -std=c++11 -fPIC
-CFLAGS += -std=c++11 -fPIC
+CFLAGS += -fPIC
 
 LDLIBS += -lstdc++
 

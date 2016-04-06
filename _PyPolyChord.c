@@ -95,6 +95,7 @@ void prior(double* cube, double* theta, int nDims)
 static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
 {
     /* Inputs to PolyChord in the order that they are passed to python */
+    /* Parse the input tuple */
     int i=0;
     python_loglikelihood = PyTuple_GetItem(args,i++);
     python_prior          = PyTuple_GetItem(args,i++);
@@ -120,8 +121,6 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     int update_files           = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++)); 
     char* base_dir             =          PyString_AsString(PyTuple_GetItem(args,i++));
     char* file_root            =          PyString_AsString(PyTuple_GetItem(args,i++));
-
-    /* Parse the input tuple */
 
 
     /* Run PolyChord */
