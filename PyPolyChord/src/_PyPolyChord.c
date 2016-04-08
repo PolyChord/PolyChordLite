@@ -59,8 +59,6 @@ double loglikelihood(double* theta, int nDims, double* phi, int nDerived)
     /* Convert the python answer back to a C double */
     double logL = PyFloat_AsDouble( PyTuple_GetItem(answer,0));
     list_Py2C(PyTuple_GetItem(answer,1),phi);
-    printf("%e\n",phi[0]);
-
 
     /* Garbage collect */
     Py_DECREF(list_theta);

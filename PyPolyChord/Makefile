@@ -1,7 +1,7 @@
 SRC=src
 
-PyPolyChord:
-	$(MAKE) -C $(SRC) PyPolyChord
+$(PYPOLYCHORD_DIR)/_PyPolyChord.so: $(PYPOLYCHORD_DIR)/src/_PyPolyChord.c
+	$(MAKE) -C $(SRC) $@
 
 clean:
 	$(MAKE) -C $(SRC) clean

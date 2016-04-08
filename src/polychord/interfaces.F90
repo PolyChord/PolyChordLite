@@ -210,8 +210,8 @@ contains
             c_nDims = size(theta)
             c_nDerived = size(phi)
             c_theta = theta
-            c_phi = phi
             c_loglike = f_loglikelihood_ptr(c_theta,c_nDims,c_phi,c_nDerived)
+            phi = c_phi
             loglikelihood = c_loglike
 
         end function loglikelihood

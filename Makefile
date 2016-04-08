@@ -66,6 +66,7 @@ all: gaussian
 examples: $(EXAMPLES)
 $(EXAMPLES): % : $(BIN_DIR)/%
 $(PROGRAMS): % : $(BIN_DIR)/%
+PyPolyChord: % : $(PYPOLYCHORD_DIR)/_PyPolyChord.so
 
 # PolyChord
 # ---------
@@ -101,8 +102,8 @@ $(patsubst %_likelihood,$(DRIVERS_DIR)/polychord_%.o,$(PROGRAMS)):
 
 # PyPolyChord
 # -----------
-PyPolyChord: $(LIB_DIR)/libchord.so
-	$(MAKE) -C $(PYPOLYCHORD_DIR) PyPolyChord
+$(PYPOLYCHORD_DIR)/_PyPolyChord.so: $(LIB_DIR)/libchord.so $(PYPOLYCHORD_DIR)/src/_PyPolyChord.c
+	$(MAKE) -C $(PYPOLYCHORD_DIR) $@
 
 CLEANDIRS = $(POLYCHORD_DIR) $(PYPOLYCHORD_DIR) $(LIKELIHOOD_DIR) $(BIN_DIR) $(LIB_DIR) $(DRIVERS_DIR) 
 .PHONY: clean veryclean $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS)) 
