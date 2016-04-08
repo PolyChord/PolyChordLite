@@ -50,7 +50,12 @@ double cpp_loglikelihood (double theta[], int& nDims, double phi[], int& nDerive
     //
     //
     //============================================================
+    double r2 = 0.0;
+    for(int i=0;i<nDims;i++)
+        r2+=theta[i]*theta[i];
     
+    logL -= r2/0.002;
+    phi[0] = r2;
     return logL;
 
 }
@@ -72,6 +77,8 @@ void cpp_prior (double cube[], double theta[], int& nDims)
     //
     //
     //============================================================
+    for(int i=0;i<nDims;i++)
+        theta[i] = cube[i];
 
 }
 

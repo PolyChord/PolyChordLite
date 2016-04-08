@@ -54,39 +54,34 @@ RM = rm -f
 LDFLAGS += -L$(LIB_DIR)
 LDLIBS += -lchord 
 
-# example likelihood libraries, this is created by changing X to libX.a
-EXAMPLE_LIBRARIES = $(patsubst %,$(LIB_DIR)/lib%.a,$(EXAMPLES))
-
-# likelihood libraries, this is created by changing X to libX.a
-PROGRAM_LIBRARIES = $(patsubst %,$(LIB_DIR)/lib%.a,$(PROGRAMS))
 
 # Export all of the necessary variables
 export CC CXX FC LD RM AR
 export CFLAGS CXXFLAGS FFLAGS
-export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES PROGRAMS
+export EXAMPLES PROGRAMS
 
 
 # make shortcuts
 all: gaussian
 examples: $(EXAMPLES)
-
-.PHONY: $(EXAMPLES)
+$(EXAMPLES): % : $(BIN_DIR)/%
+$(PROGRAMS): % : $(BIN_DIR)/%
 
 # PolyChord
 # ---------
 # static library
 $(LIB_DIR)/libchord.a:
-	$(MAKE) -C $(POLYCHORD_DIR) $(LIB_DIR)/libchord.a
+	$(MAKE) -C $(POLYCHORD_DIR) $@
 # shared library
 $(LIB_DIR)/libchord.so:
-	$(MAKE) -C $(POLYCHORD_DIR) $(LIB_DIR)/libchord.so
+	$(MAKE) -C $(POLYCHORD_DIR) $@
 
 # Examples
 # --------
-$(EXAMPLES): %: $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%.a $(DRIVERS_DIR)/polychord_examples.o
-	$(LD) $(DRIVERS_DIR)/polychord_examples.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
+$(patsubst %,$(BIN_DIR)/%,$(EXAMPLES)): $(BIN_DIR)/%: $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%.a $(DRIVERS_DIR)/polychord_examples.o
+	$(LD) $(DRIVERS_DIR)/polychord_examples.o -o $@ $(LDFLAGS) $(LDLIBS) -l$*
 
-$(EXAMPLE_LIBRARIES): $(LIB_DIR)/libchord.a
+$(patsubst %,$(LIB_DIR)/lib%.a,$(EXAMPLES)): $(LIB_DIR)/libchord.a
 	$(MAKE) -C $(EXAMPLES_DIR) $@
 
 $(DRIVERS_DIR)/polychord_examples.o:
@@ -94,17 +89,13 @@ $(DRIVERS_DIR)/polychord_examples.o:
 
 # User Likelihoods
 # ----------------
-fortran_likelihood CC_likelihood: %_likelihood:  $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%_likelihood.a %_polychord
-	$(LD) $(DRIVERS_DIR)/polychord.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
+$(patsubst %,$(BIN_DIR)/%,$(PROGRAMS)): $(BIN_DIR)/%_likelihood : $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%_likelihood.a $(DRIVERS_DIR)/polychord_%.o 
+	$(LD) $(DRIVERS_DIR)/polychord_$*.o  -o $@ $(LDFLAGS) $(LDLIBS) -l$*_likelihood
 
-$(LIB_DIR)/libfortran_likelihood.a: $(LIB_DIR)/libchord.a
-	$(MAKE) -C $(LIKELIHOOD_DIR)/fortran $@
+$(patsubst %,$(LIB_DIR)/lib%.a,$(PROGRAMS)): $(LIB_DIR)/lib%_likelihood.a: $(LIB_DIR)/libchord.a
+	$(MAKE) -C $(LIKELIHOOD_DIR)/$* $@
 
-$(LIB_DIR)/libCC_likelihood.a: $(LIB_DIR)/libchord.a
-	$(MAKE) -C $(LIKELIHOOD_DIR)/CC $@
-
-.PHONY: fortran_polychord CC_polychord
-fortran_polychord CC_polychord:
+$(patsubst %_likelihood,$(DRIVERS_DIR)/polychord_%.o,$(PROGRAMS)):
 	$(MAKE) -C $(DRIVERS_DIR) $@
 
 
@@ -113,25 +104,16 @@ fortran_polychord CC_polychord:
 PyPolyChord: $(LIB_DIR)/libchord.so
 	$(MAKE) -C $(PYPOLYCHORD_DIR) PyPolyChord
 
+CLEANDIRS = $(POLYCHORD_DIR) $(PYPOLYCHORD_DIR) $(LIKELIHOOD_DIR) $(BIN_DIR) $(LIB_DIR) $(DRIVERS_DIR) 
+.PHONY: clean veryclean $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS)) 
 
-.PHONY: clean veryclean
-
-clean:
+clean: $(addsuffix clean,$(CLEANDIRS))
 	$(RM) *.o *.mod *.MOD
-	$(MAKE) -C $(POLYCHORD_DIR) clean
-	$(MAKE) -C $(PYPOLYCHORD_DIR) clean
-	$(MAKE) -C $(EXAMPLES_DIR) clean
-	$(MAKE) -C $(LIKELIHOOD_DIR) clean
-	$(MAKE) -C $(BIN_DIR) clean
-	$(MAKE) -C $(LIB_DIR) clean
-	$(MAKE) -C $(DRIVERS_DIR) clean
-	
-veryclean: clean
+$(addsuffix clean,$(CLEANDIRS)): %clean: 
+	$(MAKE) -C $* clean
+
+veryclean: clean $(addsuffix veryclean,$(CLEANDIRS))  
 	$(RM) *~ 
-	$(MAKE) -C $(POLYCHORD_DIR) veryclean
-	$(MAKE) -C $(PYPOLYCHORD_DIR) veryclean
-	$(MAKE) -C $(EXAMPLES_DIR) veryclean
-	$(MAKE) -C $(LIKELIHOOD_DIR) veryclean
-	$(MAKE) -C $(BIN_DIR) veryclean
-	$(MAKE) -C $(LIB_DIR) veryclean
-	$(MAKE) -C $(DRIVERS_DIR) veryclean
+$(addsuffix veryclean,$(CLEANDIRS))  : %veryclean: 
+	$(MAKE) -C $* veryclean
+	
