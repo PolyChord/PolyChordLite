@@ -3,4 +3,4 @@
 clean:
 
 veryclean:
-	$(RM) *.a *.o
+	$(RM) *.a *.o *.so

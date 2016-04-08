@@ -1,4 +1,4 @@
-# include "my_cpp_likelihood.hpp"
+# include "CC_likelihood.hpp"
 
 // This module is where your likelihood code should be placed.
 //
@@ -43,13 +43,35 @@
 // 
 double cpp_loglikelihood (double theta[], int& nDims, double phi[], int& nDerived)
 {
+    double logL=0.0;
+
     //============================================================
     // insert likelihood code here
     //
     //
     //============================================================
     
-    return 0.0;
+    return logL;
+
+}
+
+// Prior function
+//
+// Either write your prior code directly into this function, or call an
+// external library from it. This should transform a coordinate in the unit hypercube
+// stored in cube (of size nDims) to a coordinate in the physical system stored in theta
+//
+// This function is called from likelihoods/fortran_cpp_wrapper.f90
+// If you would like to adjust the signature of this call, then you should adjust it there,
+// as well as in likelihoods/my_cpp_likelihood.hpp
+// 
+void cpp_prior (double cube[], double theta[], int& nDims)
+{
+    //============================================================
+    // insert prior code here
+    //
+    //
+    //============================================================
 
 }
 

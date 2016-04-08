@@ -1,17 +1,17 @@
 # List of available example likelihoods
 EXAMPLES = gaussian pyramidal rastrigin twin_gaussian random_gaussian himmelblau rosenbrock eggbox half_gaussian fitting gaussian_shell gaussian_shells
-SIMPLE_EXAMPLES = polychord_simple polychord_simple_C
 
 # Your likelihood programs
-PROGRAMS = my_likelihood my_cpp_likelihood 
+PROGRAMS = fortran_likelihood CC_likelihood 
 
 # Directories
-DRIVERS_DIR = $(PWD)/src/drivers
-POLYCHORD_DIR = $(PWD)/src/polychord
+SRC_DIR = $(PWD)/src
+DRIVERS_DIR = $(SRC_DIR)/drivers
+POLYCHORD_DIR = $(SRC_DIR)/polychord
+C_INTERFACE_DIR = $(SRC_DIR)/C_interface
 PYPOLYCHORD_DIR = $(PWD)/PyPolyChord
-C_INTERFACE_DIR = $(PWD)/src/C_interface
 LIKELIHOOD_DIR = $(PWD)/likelihoods
-EXAMPLES_DIR = $(PWD)/example_likelihoods
+EXAMPLES_DIR = $(LIKELIHOOD_DIR)/examples
 BIN_DIR = $(PWD)/bin
 LIB_DIR = $(PWD)/lib
 export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR C_INTERFACE_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
@@ -55,10 +55,10 @@ LDFLAGS += -L$(LIB_DIR)
 LDLIBS += -lchord 
 
 # example likelihood libraries, this is created by changing X to libX.a
-EXAMPLE_LIBRARIES = $(patsubst %,lib%.a,$(EXAMPLES))
+EXAMPLE_LIBRARIES = $(patsubst %,$(LIB_DIR)/lib%.a,$(EXAMPLES))
 
 # likelihood libraries, this is created by changing X to libX.a
-PROGRAM_LIBRARIES = $(patsubst %,lib%.a,$(PROGRAMS))
+PROGRAM_LIBRARIES = $(patsubst %,$(LIB_DIR)/lib%.a,$(PROGRAMS))
 
 # Export all of the necessary variables
 export CC CXX FC LD RM AR
@@ -70,41 +70,47 @@ export EXAMPLES EXAMPLE_LIBRARIES SIMPLE_EXAMPLES PROGRAMS
 all: gaussian
 examples: $(EXAMPLES)
 
+.PHONY: $(EXAMPLES)
 
 # PolyChord
 # ---------
 # static library
-libchord.a:
-	$(MAKE) -C $(POLYCHORD_DIR) libchord.a
+$(LIB_DIR)/libchord.a:
+	$(MAKE) -C $(POLYCHORD_DIR) $(LIB_DIR)/libchord.a
 # shared library
-libchord.so:
-	$(MAKE) -C $(POLYCHORD_DIR) libchord.so
+$(LIB_DIR)/libchord.so:
+	$(MAKE) -C $(POLYCHORD_DIR) $(LIB_DIR)/libchord.so
 
 # Examples
 # --------
-$(EXAMPLES): %: libchord.a lib%.a polychord_examples.o
+$(EXAMPLES): %: $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%.a $(DRIVERS_DIR)/polychord_examples.o
 	$(LD) $(DRIVERS_DIR)/polychord_examples.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
 
-$(EXAMPLE_LIBRARIES): libchord.a
+$(EXAMPLE_LIBRARIES): $(LIB_DIR)/libchord.a
 	$(MAKE) -C $(EXAMPLES_DIR) $@
 
-polychord_examples.o:
+$(DRIVERS_DIR)/polychord_examples.o:
 	$(MAKE) -C $(DRIVERS_DIR) $@
 
 # User Likelihoods
 # ----------------
-$(PROGRAMS): %: libchord.a lib%.a polychord.o 
+fortran_likelihood CC_likelihood: %_likelihood:  $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%_likelihood.a %_polychord
 	$(LD) $(DRIVERS_DIR)/polychord.o -o $(BIN_DIR)/$@ $(LDFLAGS) $(LDLIBS) -l$@
 
-$(PROGRAM_LIBRARIES): libchord.a
-	$(MAKE) -C $(LIKELIHOOD_DIR) $@
+$(LIB_DIR)/libfortran_likelihood.a: $(LIB_DIR)/libchord.a
+	$(MAKE) -C $(LIKELIHOOD_DIR)/fortran $@
 
-polychord.o:
+$(LIB_DIR)/libCC_likelihood.a: $(LIB_DIR)/libchord.a
+	$(MAKE) -C $(LIKELIHOOD_DIR)/CC $@
+
+.PHONY: fortran_polychord CC_polychord
+fortran_polychord CC_polychord:
 	$(MAKE) -C $(DRIVERS_DIR) $@
+
 
 # PyPolyChord
 # -----------
-PyPolyChord: libchord.so
+PyPolyChord: $(LIB_DIR)/libchord.so
 	$(MAKE) -C $(PYPOLYCHORD_DIR) PyPolyChord
 
 

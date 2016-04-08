@@ -25,6 +25,7 @@ program PolyChord
     settings%write_resume  = .false.
     settings%read_resume   = .false.
     settings%write_live    = .true.
+    settings%write_dead    = .false.
     settings%write_stats   = .false.
 
     settings%equals        = .false.

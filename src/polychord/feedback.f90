@@ -259,12 +259,12 @@ module feedback_module
             write(stdout_unit,fmt_posterior)  RTI%nposterior
             write(stdout_unit,fmt_equals)  RTI%nequals
             write(stdout_unit,fmt_tail)
-            write(stdout_unit,'("ncluster   =",  I8," /",I8           )') RTI%ncluster, RTI%ncluster+RTI%ncluster_dead
-            write(stdout_unit,'("ndead      =",  I8                   )') RTI%ndead
-            write(stdout_unit,'("nposterior =",  I8                   )') RTI%nposterior_global
-            write(stdout_unit,'("nequals    =",  I8                   )') RTI%nequals_global
+            write(stdout_unit,'("ncluster   =",  I20," /",I20          )') RTI%ncluster, RTI%ncluster+RTI%ncluster_dead
+            write(stdout_unit,'("ndead      =",  I20                   )') RTI%ndead
+            write(stdout_unit,'("nposterior =",  I20                   )') RTI%nposterior_global
+            write(stdout_unit,'("nequals    =",  I20                   )') RTI%nequals_global
 
-            write(fmt_nlike,'("(""nlike      ="",",I0,"I8)")') size(nlikesum)
+            write(fmt_nlike,'("(""nlike      ="",",I0,"I20)")') size(nlikesum)
             write(stdout_unit,fmt_nlike) RTI%nlike
 
             write(fmt_nlike,'(  "(""<nlike>    ="","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)

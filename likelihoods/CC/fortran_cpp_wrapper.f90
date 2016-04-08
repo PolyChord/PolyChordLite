@@ -14,6 +14,16 @@ module loglikelihood_module
     end interface
 
     interface 
+        subroutine cpp_prior(cube,theta,nDims) bind(c)
+            use iso_c_binding
+            implicit none
+            integer (c_int),intent(in)                      :: nDims
+            real (c_double),dimension(nDims),intent(in)     :: cube
+            real (c_double),dimension(nDims),intent(out)    :: theta
+        end subroutine cpp_prior
+    end interface
+
+    interface 
         subroutine cpp_loglikelihood_setup() bind(c)
             use iso_c_binding
             implicit none
@@ -55,11 +65,38 @@ module loglikelihood_module
 
     end function loglikelihood
 
-    subroutine setup_loglikelihood(settings,mpi_communicator)
+
+    function prior(cube) result(theta)
+        use iso_c_binding
+        implicit none
+        !> Input parameters
+        real(dp), intent(in), dimension(:)   :: cube
+        !> Output derived parameters
+        real(dp),  dimension(size(cube)) :: theta
+
+        real(dp) :: loglikelihood
+
+        real (c_double),dimension(size(cube))  :: c_cube
+        real (c_double),dimension(size(theta)) :: c_theta
+        integer (c_int)                        :: nDims
+
+        ! convert inputs to c
+        c_cube   = cube
+
+        ! Get the sizes of the arrays
+        nDims     = size(cube)
+
+        ! Call the c loglikelihood function
+        call cpp_prior(c_cube,c_theta,nDims)
+
+        theta = c_theta
+
+    end function prior
+
+    subroutine setup_loglikelihood(settings)
         use settings_module,   only: program_settings
         implicit none
         type(program_settings), intent(in) :: settings
-        integer,intent(in) :: mpi_communicator
 
         call cpp_loglikelihood_setup
 
