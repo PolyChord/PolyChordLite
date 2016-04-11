@@ -8,13 +8,12 @@ PROGRAMS = polychord_fortran polychord_CC
 SRC_DIR = $(PWD)/src
 DRIVERS_DIR = $(SRC_DIR)/drivers
 POLYCHORD_DIR = $(SRC_DIR)/polychord
-C_INTERFACE_DIR = $(SRC_DIR)/C_interface
 PYPOLYCHORD_DIR = $(PWD)/PyPolyChord
 LIKELIHOOD_DIR = $(PWD)/likelihoods
 EXAMPLES_DIR = $(LIKELIHOOD_DIR)/examples
 BIN_DIR = $(PWD)/bin
 LIB_DIR = $(PWD)/lib
-export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR C_INTERFACE_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
+export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
 
 
 # Whether to use MPI
@@ -91,7 +90,7 @@ $(DRIVERS_DIR)/polychord_examples.o:
 # User Likelihoods
 # ----------------
 $(patsubst %,$(BIN_DIR)/%,$(PROGRAMS)): $(BIN_DIR)/polychord_% : $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%_likelihood.a $(DRIVERS_DIR)/polychord_%.o 
-	$(LD) $(DRIVERS_DIR)/polychord_$*.o  -o $@ $(LDFLAGS) $(LDLIBS) -l$*_likelihood
+	$(LD) $(DRIVERS_DIR)/polychord_$*.o  -o $@ $(LDFLAGS) -l$*_likelihood $(LDLIBS) 
 
 $(patsubst polychord_%,$(LIB_DIR)/lib%_likelihood.a,$(PROGRAMS)): $(LIB_DIR)/lib%_likelihood.a: $(LIB_DIR)/libchord.a
 	$(MAKE) -C $(LIKELIHOOD_DIR)/$* $@

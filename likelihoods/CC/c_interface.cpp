@@ -1,4 +1,5 @@
 #include "interfaces.hpp"
+#include "interfaces.h"
 #include <iostream>
 
 // Constructor for settings struct

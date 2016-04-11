@@ -1,5 +1,5 @@
 
-$(DRIVERS_DIR)/polychord_examples.o: polychord_examples.F90
+$(DRIVERS_DIR)/polychord_examples.o: polychord_examples.f90
 	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -I$(EXAMPLES_DIR) -c $< 
 
 $(DRIVERS_DIR)/polychord_CC.o: polychord_CC.cpp

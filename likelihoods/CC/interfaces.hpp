@@ -1,7 +1,6 @@
 #ifndef INTERFACES_HPP
 #define INTERFACES_HPP
 #include <string>
-#include "interfaces.h"
 
 struct Settings
 {
