@@ -110,7 +110,6 @@ If you have an additional suggestions to make the c++ wrapper more easy to use,
 please email Will (wh260@mrao.cam.ac.uk).
 
 
-
 Manual Setup
 ------------
 In some cases, it is desirable to have a more automated setup than that
@@ -166,6 +165,15 @@ settings%write_phys_live=.true.
 This file contains npars+ndims+1 columns, indicating the physical
 parameters, derived parameters and the log-likelihood. This is useful
 for monitoring a run as it progresses. 
+
+[root]_dead.txt
+--------------------
+Points that have been killed off. This is produced if
+settings%write_dead=.true.
+This file contains npars+ndims+1 columns, indicating the loglikelihood,
+physical parameters, derived parameters and the log-likelihood. This is useful
+for monitoring a run as it progresses, and for performing alternative
+calculations and checks on evidence and posterior computations
 
 [root].paramnames
 ------------

@@ -1,6 +1,5 @@
 #include <Python.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 extern void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*); 
 
@@ -94,7 +93,7 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     /* Parse the input tuple */
     int i=0;
     python_loglikelihood = PyTuple_GetItem(args,i++);
-    python_prior          = PyTuple_GetItem(args,i++);
+    python_prior         = PyTuple_GetItem(args,i++);
 
     int nDims                  = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++));
     int nDerived               = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++)); 
