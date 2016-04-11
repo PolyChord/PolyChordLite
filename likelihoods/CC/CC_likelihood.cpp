@@ -50,12 +50,7 @@ double loglikelihood (double theta[], int nDims, double phi[], int nDerived)
     //
     //
     //============================================================
-    double r2 = 0.0;
-    for(int i=0;i<nDims;i++)
-        r2+=theta[i]*theta[i];
     
-    logL -= r2/0.002;
-    phi[0] = r2;
     return logL;
 
 }
