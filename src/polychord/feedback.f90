@@ -259,7 +259,7 @@ module feedback_module
             write(stdout_unit,fmt_posterior)  RTI%nposterior
             write(stdout_unit,fmt_equals)  RTI%nequals
             write(stdout_unit,fmt_tail)
-            write(stdout_unit,'("ncluster   =",  I20," /",I20          )') RTI%ncluster, RTI%ncluster+RTI%ncluster_dead
+            write(stdout_unit,'("ncluster   =",  I8," /",I8            )') RTI%ncluster, RTI%ncluster+RTI%ncluster_dead
             write(stdout_unit,'("ndead      =",  I20                   )') RTI%ndead
             write(stdout_unit,'("nposterior =",  I20                   )') RTI%nposterior_global
             write(stdout_unit,'("nequals    =",  I20                   )') RTI%nequals_global
@@ -267,14 +267,16 @@ module feedback_module
             write(fmt_nlike,'("(""nlike      ="",",I0,"I20)")') size(nlikesum)
             write(stdout_unit,fmt_nlike) RTI%nlike
 
-            write(fmt_nlike,'(  "(""<nlike>    ="","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
+            write(fmt_nlike,'(  "(""<nlike>    ="","  ,I0,   "F15.2,""   (""",I0,"F15.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
             write(stdout_unit,fmt_nlike) dble(nlikesum)/dble(settings%nlive),dble(nlikesum)/dble(RTI%num_repeats*settings%nlive)
 
 
             call calculate_logZ_estimate(RTI,logZ,varlogZ,logZp,varlogZp,logZp_dead,varlogZp_dead)            
 
-            if(RTI%logZ>logzero) then
-                write(stdout_unit,'("log(Z)     = ", F8.2, " +/- ", F5.2)') logZ,sqrt(abs(varlogZ))
+            if(abs(logZ) < 1e9) then
+                write(stdout_unit,'("log(Z)     = ", F15.2, " +/- ", F5.2)') logZ,sqrt(abs(varlogZ))
+            else
+                write(stdout_unit,'("log(Z_)    = ?")')
             end if
 
             ordering = sort_doubles([-RTI%logZp,-RTI%logZp_dead])
@@ -283,15 +285,15 @@ module feedback_module
 
                 if(ordering(p)<=RTI%ncluster) then
 
-                    if(RTI%logZp(ordering(p))>logzero) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2, " (still evaluating)")') p, logZp(ordering(p)),sqrt(abs(varlogZp(ordering(p))))
+                    if(abs(logZp(ordering(p)))<1e9) then
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F15.2, " +/- ", F5.2, " (still evaluating)")') p, logZp(ordering(p)),sqrt(abs(varlogZp(ordering(p))))
                     else
                         write(stdout_unit,'("log(Z_",I2,")  = ? (still evaluating)")') p
                     end if
 
                 else
-                    if(RTI%logZp_dead(ordering(p)-RTI%ncluster)>logzero) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F8.2, " +/- ", F5.2)') p, logZp_dead(ordering(p)-RTI%ncluster),sqrt(abs(varlogZp_dead(ordering(p)-RTI%ncluster)))
+                    if(abs(logZp_dead(ordering(p)-RTI%ncluster))<1e9) then
+                        write(stdout_unit,'("log(Z_",I2,")  = ", F15.2, " +/- ", F5.2)') p, logZp_dead(ordering(p)-RTI%ncluster),sqrt(abs(varlogZp_dead(ordering(p)-RTI%ncluster)))
                     else
                         write(stdout_unit,'("log(Z_",I2,")  = ?")') p
                     end if
@@ -322,11 +324,11 @@ module feedback_module
         integer, intent(in) :: feedback 
 
         if (feedback>=title_fb) then
-            write(stdout_unit,'(A42)')                                        ' ________________________________________ '
-            write(stdout_unit,'(A42)')                                        '|                                        |'
-            write(stdout_unit,'("| ndead  = ", I12, "                  |"  )') nint(output_info(3))
-            write(stdout_unit,'("| log(Z) = ", F12.5, " +/- ", F12.5,  " |")') output_info(1),sqrt(abs(output_info(2)))
-            write(stdout_unit,'(A42)')                                        '|________________________________________|'
+            write(stdout_unit,'(A54)')                                        ' ____________________________________________________ '
+            write(stdout_unit,'(A54)')                                        '|                                                    |'
+            write(stdout_unit,'("| ndead  = ", I12, "                              |"  )') nint(output_info(3))
+            write(stdout_unit,'("| log(Z) = ", F18.5, " +/- ", F18.5,  " |")') output_info(1),sqrt(abs(output_info(2)))
+            write(stdout_unit,'(A54)')                                        '|____________________________________________________|'
         endif
     end subroutine write_final_results
 
