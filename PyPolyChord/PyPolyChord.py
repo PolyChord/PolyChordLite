@@ -170,10 +170,11 @@ def run_nested_sampling(loglikelihood, nDims, nDerived,
         Alternative termination criterion. Stop after max_ndead iterations.
         Set negative to ignore (default).
 
-    boost_posterior : float in [0.0,1.0]
+    boost_posterior : float
         (Default: 0.0)
-        Increase the number of posterior samples produced. Number indicates the
-        fraction of phantom points to include as posterior samples.
+        Increase the number of posterior samples produced.  This can be set
+        arbitrarily high, but you won't be able to boost by more than
+        num_repeats
         Warning: in high dimensions PolyChord produces _a lot_ of posterior
         samples. You probably don't need to change this
 

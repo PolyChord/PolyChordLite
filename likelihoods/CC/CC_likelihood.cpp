@@ -41,7 +41,7 @@
 // If you would like to adjust the signature of this call, then you should adjust it there,
 // as well as in likelihoods/my_cpp_likelihood.hpp
 // 
-double cpp_loglikelihood (double theta[], int& nDims, double phi[], int& nDerived)
+double loglikelihood (double theta[], int nDims, double phi[], int nDerived)
 {
     double logL=0.0;
 
@@ -70,7 +70,7 @@ double cpp_loglikelihood (double theta[], int& nDims, double phi[], int& nDerive
 // If you would like to adjust the signature of this call, then you should adjust it there,
 // as well as in likelihoods/my_cpp_likelihood.hpp
 // 
-void cpp_prior (double cube[], double theta[], int& nDims)
+void prior (double cube[], double theta[], int nDims)
 {
     //============================================================
     // insert prior code here
@@ -103,7 +103,7 @@ void cpp_prior (double cube[], double theta[], int& nDims)
 // If you would like to adjust the signature of this call, then you should adjust it there,
 // as well as in likelihoods/my_cpp_likelihood.hpp
 //
-void cpp_loglikelihood_setup ()
+void setup_loglikelihood()
 {
     //============================================================
     // insert likelihood setup here

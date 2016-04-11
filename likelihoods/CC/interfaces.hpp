@@ -27,7 +27,7 @@ struct Settings
     std::string base_dir;
     std::string file_root;
 
-    Settings(int _nDims,int _nDerived);
+    Settings(int _nDims=0,int _nDerived=0);
 };
 
 void run_polychord( double (*loglikelihood)(double*,int,double*,int), void (*prior)(double*,double*,int), Settings);

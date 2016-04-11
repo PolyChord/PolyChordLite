@@ -1,14 +1,8 @@
 # rule for building the c++ wrapper
-$(LIB_DIR)/libCC_likelihood.a: CC_likelihood.o fortran_cpp_wrapper.o
+$(LIB_DIR)/libCC_likelihood.a: CC_likelihood.o c_interface.o
 	$(AR) $@ $^ 
 
 
-
-# General rule for building object file (.o)  from fortran files (.f90, .F90)
-%.o: %.f90
-	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -c $< -o $@
-%.o: %.F90
-	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -c $< -o $@
 # General rule for building object file (.o)  from c++ files (.cpp)
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(C_INTERFACE_DIR) -c $<

@@ -2,7 +2,7 @@
 EXAMPLES = gaussian pyramidal rastrigin twin_gaussian random_gaussian himmelblau rosenbrock eggbox half_gaussian fitting gaussian_shell gaussian_shells
 
 # Your likelihood programs
-PROGRAMS = fortran_likelihood CC_likelihood 
+PROGRAMS = polychord_fortran polychord_CC
 
 # Directories
 SRC_DIR = $(PWD)/src
@@ -90,13 +90,13 @@ $(DRIVERS_DIR)/polychord_examples.o:
 
 # User Likelihoods
 # ----------------
-$(patsubst %,$(BIN_DIR)/%,$(PROGRAMS)): $(BIN_DIR)/%_likelihood : $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%_likelihood.a $(DRIVERS_DIR)/polychord_%.o 
+$(patsubst %,$(BIN_DIR)/%,$(PROGRAMS)): $(BIN_DIR)/polychord_% : $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%_likelihood.a $(DRIVERS_DIR)/polychord_%.o 
 	$(LD) $(DRIVERS_DIR)/polychord_$*.o  -o $@ $(LDFLAGS) $(LDLIBS) -l$*_likelihood
 
-$(patsubst %,$(LIB_DIR)/lib%.a,$(PROGRAMS)): $(LIB_DIR)/lib%_likelihood.a: $(LIB_DIR)/libchord.a
+$(patsubst polychord_%,$(LIB_DIR)/lib%_likelihood.a,$(PROGRAMS)): $(LIB_DIR)/lib%_likelihood.a: $(LIB_DIR)/libchord.a
 	$(MAKE) -C $(LIKELIHOOD_DIR)/$* $@
 
-$(patsubst %_likelihood,$(DRIVERS_DIR)/polychord_%.o,$(PROGRAMS)):
+$(patsubst %,$(DRIVERS_DIR)/%.o,$(PROGRAMS)):
 	$(MAKE) -C $(DRIVERS_DIR) $@
 
 
