@@ -74,48 +74,83 @@ This runs the rastrigin 'bunch of grapes' loglikelihood.
 In general, binary executables are stored in the directory ./bin, and ini files are
 stored in the directory ./ini.
 
-To run your own likelihood, it should either be written in fortran, C++, or be callable
-from C++ or fortran.
+You can create new likelihoods by modelling them on the ones in
+likelihoods/examples, and triggering them with their own ini files
+
+Alternatively you can take a more "MultiNest" like approach, and manually
+generate the prior transformations. PolyChord's settings are then modified in
+the driver files src/drivers.
 
 
 Fortran likelihoods
 -------------------
-You should place your likelihood code in the function loglikelihood,
-contained in ./likelihoods/my_likelihood.f90. Any setup required (such as reading 
-in input files) should be conducted in the function loglikelihood_setup,
-found in ./likelihoods/my_likelihood.f90.
-In most cases, this will likely just be a call to your own pre-written library.
+You should place your likelihood code in the function loglikelihood and your
+prior code in the function prior, contained in:
+
+./likelihoods/fortran/likelihood.f90 
+
+Any setup required (such as reading in input files) should be conducted in the
+function setup_loglikelihood. In most cases, this will likely just be a call
+to your own pre-written library.
+
+You should then alter the polychord run-time settings within the driver file:
+
+./src/drivers/polychord_fortran.f90
 
 Your code can be compiled and run with the commands:
-$  make my_likelihood
-$  ./bin/my_likelihood ini/my_likelihood.ini
-where the input file ini/my_likelihood should be modified accordingly
+$  make polychord_fortran
+$  ./bin/polychord_fortran
 
-Examples can be found in ./likelihoods/examples
 
-C++ likelihoods
----------------
+
+C++/C likelihoods
+-----------------
 You should place your likelihood code in the function cpp_loglikelihood,
-contained in ./likelihoods/my_cpp_likelihood.cpp. Any setup required (such as reading 
-in input files) should be conducted in the function cpp_loglikelihood_setup,
-found in ./likelihoods/my_cpp_likelihood.f90.
-In most cases, this will likely just be a call to your own pre-written library.
+contained in 
+
+./likelihoods/CC/likelihood.cpp
+
+Any setup required (such as reading in input files) should be conducted in the
+function setup_loglikelihood.  In most cases, this will likely just be a call
+to your own pre-written library.
+
+You should then alter the polychord run-time settings within the driver file:
+
+./src/drivers/polychord_fortran.cpp
 
 Your code can be compiled and run with the commands:
-$  make my_cpp_likelihood
-$  ./bin/my_cpp_likelihood ini/my_cpp_likelihood.ini
-where the input file ini/my_likelihood should be modified accordingly
+$  make polychord_CC
+$  ./bin/polychord_CC 
 
 If you have an additional suggestions to make the c++ wrapper more easy to use, 
 please email Will (wh260@mrao.cam.ac.uk).
 
 
-Manual Setup
-------------
-In some cases, it is desirable to have a more automated setup than that
-provided by the input files. The general process for this can be found in 
-./polychord.F90 in section (1cii)
 
+Python likelihoods (PyPolyChord)
+--------------------------------
+Being python, this interface is much more self-explanatory. You need to compile
+the library with
+$  make PyPolyChord
+
+You then need to point python to the library folder ./lib by adding it to
+LD_LIBRARY PATH. For example, in bash:
+$  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/lib
+
+You may then need to also amend LD_PRELOAD with your mpi library. This is only
+necessary on some systems, and only then if you wish to run it with MPI.  Find
+out where your mpi library is kept, and then add it to LD_PRELOAD. For
+examples, in bash on Ubuntu 14.04:
+$  export LD_PRELOAD=/usr/lib/openmpi/lib/libmpi.so:$LD_PRELOAD
+
+
+You can then check that this works by running:
+$  python run_PyPolyChord.py
+
+If so, the rest of the interface is relatively painless. Follow the example in
+run_PyPolyChord.py, and consult the docstring if you need help:
+>   import PyPolyChord.PyPolyChord as PPC
+>   help(PPC.run_nested_sampling)
 
 
 
