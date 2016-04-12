@@ -1,4 +1,3 @@
-#!/usr/bin/python
 from numpy import pi,log,sqrt
 import PyPolyChord.PyPolyChord as PolyChord
 

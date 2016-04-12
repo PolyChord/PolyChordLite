@@ -147,6 +147,9 @@ $  export LD_PRELOAD=/usr/lib/openmpi/lib/libmpi.so:$LD_PRELOAD
 You can then check that this works by running:
 $  python run_PyPolyChord.py
 
+or in MPI:
+$  mpirun -np 4 python run_PyPolyChord.py
+
 If so, the rest of the interface is relatively painless. Follow the example in
 run_PyPolyChord.py, and consult the docstring if you need help:
 >   import PyPolyChord.PyPolyChord as PPC
