@@ -7,5 +7,5 @@ clean:
 	$(MAKE) -C $(SRC) clean
 
 veryclean:
-	$(RM) _PyPolyChord.so
+	$(RM) _PyPolyChord.so *.pyc
 	$(MAKE) -C $(SRC) veryclean
