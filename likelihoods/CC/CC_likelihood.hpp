@@ -1,8 +1,8 @@
 #ifndef CC_likelihood_HPP
 #define CC_likelihood_HPP
-extern "C" {
-    double loglikelihood (double theta[], int nDims, double phi[], int nDerived);
-    void prior (double cube[], double theta[], int nDims);
-    void setup_loglikelihood();
-}
+
+double loglikelihood (double theta[], int nDims, double phi[], int nDerived);
+void prior (double cube[], double theta[], int nDims);
+void setup_loglikelihood();
+
 #endif
