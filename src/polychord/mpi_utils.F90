@@ -286,7 +286,7 @@ module mpi_module
         call MPI_BCAST(            & 
             integers,              &!broadcast buffer
             size(integers),        &!size of buffer
-            MPI_INT,               &!type of element sent
+            MPI_INTEGER,               &!type of element sent
             mpi_information%root,         &!root doing the sending
             mpi_information%communicator, &!handle
             mpierror               &!error flag
@@ -398,7 +398,7 @@ module mpi_module
         call MPI_RECV(            &! 
             nlike,                &! 
             size(nlike),          &! 
-            MPI_INT,              &! 
+            MPI_INTEGER,              &! 
             slave_id,             &! 
             tag_run_nlike,        &! 
             mpi_information%communicator,&! 
@@ -409,7 +409,7 @@ module mpi_module
         call MPI_RECV(            &! 
             epoch,                &! 
             1,                    &! 
-            MPI_INT,              &! 
+            MPI_INTEGER,              &! 
             slave_id,             &! 
             tag_run_epoch_babies, &! 
             mpi_information%communicator,&! 
@@ -440,7 +440,7 @@ module mpi_module
         call MPI_SEND(         &!  
             nlike,             &!  
             size(nlike),       &!  
-            MPI_INT,           &!  
+            MPI_INTEGER,           &!  
             mpi_information%root,              &!  
             tag_run_nlike,     &!  
             mpi_information%communicator,  &!  
@@ -449,7 +449,7 @@ module mpi_module
         call MPI_SEND(         &!  
             epoch,             &!  
             1,                 &!  
-            MPI_INT,           &!  
+            MPI_INTEGER,           &!  
             mpi_information%root,              &!  
             tag_run_epoch_babies,&!  
             mpi_information%communicator,  &!  
@@ -522,7 +522,7 @@ module mpi_module
         call MPI_RECV(            &! 
             epoch,                &! 
             1,                    &! 
-            MPI_INT,              &! 
+            MPI_INTEGER,              &! 
             mpi_information%root, &! 
             tag_run_epoch_seed,   &! 
             mpi_information%communicator,&! 
@@ -585,7 +585,7 @@ module mpi_module
         call MPI_SEND(         &!  
             epoch,             &!  
             1,                 &!  
-            MPI_INT,           &!  
+            MPI_INTEGER,           &!  
             slave_id,          &!  
             tag_run_epoch_seed,&!  
             mpi_information%communicator,  &!  
@@ -621,7 +621,7 @@ module mpi_module
         call MPI_SEND(         &
             empty_buffer,      &! not sending anything
             0,                 &! size of nothing
-            MPI_INT,           &! sending no integers
+            MPI_INTEGER,           &! sending no integers
             slave_id,          &! process id to send to
             tag_gen_request,   &! continuation tag
             mpi_information%communicator,  &! mpi handle
@@ -645,7 +645,7 @@ module mpi_module
         call MPI_SEND(         &
             empty_buffer,      &! not sending anything
             0,                 &! size of nothing
-            MPI_INT,           &! sending no integers
+            MPI_INTEGER,           &! sending no integers
             slave_id,          &! process id to send to
             tag_gen_stop,      &! continuation tag
             mpi_information%communicator,  &! mpi handle
@@ -670,7 +670,7 @@ module mpi_module
         call MPI_RECV(       &!
             empty_buffer,    &!
             0,               &!
-            MPI_INT,         &!
+            MPI_INTEGER,         &!
             mpi_information%root,            &!
             MPI_ANY_TAG,     &!
             mpi_information%communicator,&!
