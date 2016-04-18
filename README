@@ -22,7 +22,8 @@ MPI Support
 ===========
 
 The code is MPI compatible with openMPI. To disable the MPI parallelization, 
-set MPI=0 in ./Makefile
+set MPI= in ./Makefile, or compile with
+make MPI= <target>
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
