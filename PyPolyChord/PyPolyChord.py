@@ -59,18 +59,12 @@ def mpi_notification():
     print('\\.===============================================================================./  ')
     print('')
 
+def default_prior(cube):
+    theta = cube
+    return theta 
 
 
-def run_nested_sampling(loglikelihood, nDims, nDerived,
-                        prior=None, nlive=None, num_repeats=None,
-                        do_clustering=True, feedback=1,
-                        precision_criterion=0.001, max_ndead=-1,
-                        boost_posterior=0.0, posteriors=True, equals=True,
-                        cluster_posteriors=True, write_resume=True,
-                        write_paramnames=False, read_resume=True,
-                        write_stats=True, write_live=True, write_dead=True,
-                        update_files=None, base_dir='chains', 
-                        file_root='test'):
+def run_nested_sampling(loglikelihood, nDims, nDerived, **kwargs):
     """
     Runs PolyChord.
 
@@ -224,6 +218,18 @@ def run_nested_sampling(loglikelihood, nDims, nDerived,
         (Default: 'test')
         Root name of the files produced.
 
+    nGrade : int
+        (Default: 1)
+        Number of parameter speeds.
+
+    grade_frac : List[float]
+        (Default: 1)
+        The amount of time to spend in each speed.
+
+    grade_dims : List[int]
+        (Default: 1)
+        The number of parameters within each speed.
+
     Returns
     -------
     None. (in Python)
@@ -265,24 +271,35 @@ def run_nested_sampling(loglikelihood, nDims, nDerived,
 
     """
 
-    # Assign defaults
-    if prior is None:
-        def prior(cube):
-            theta = cube
-            return theta
+    prior = kwargs.pop('prior', default_prior)
+    nlive = kwargs.pop('nlive', nDims*25)
+    num_repeats = kwargs.pop('num_repeats', nDims*5)
+    do_clustering = kwargs.pop('do_clustering', True)
+    feedback = kwargs.pop('feedback', 1)
+    precision_criterion = kwargs.pop('precision_criterion', 0.001)
+    max_ndead = kwargs.pop('max_ndead', -1)
+    boost_posterior = kwargs.pop('boost_posterior', 0.0)
+    posteriors = kwargs.pop('posteriors', True)
+    equals = kwargs.pop('equals', True)
+    cluster_posteriors = kwargs.pop('cluster_posteriors', True)
+    write_resume = kwargs.pop('write_resume', True)
+    write_paramnames = kwargs.pop('write_paramnames', False)
+    read_resume = kwargs.pop('read_resume', True)
+    write_stats = kwargs.pop('write_stats', True)
+    write_live = kwargs.pop('write_live', True)
+    write_dead = kwargs.pop('write_dead', True)
+    update_files = kwargs.pop('update_files', nlive)
+    base_dir = kwargs.pop('base_dir', 'chains')
+    file_root = kwargs.pop('file_root', 'test')
+    nGrade = kwargs.pop('nGrade', 1)
+    grade_frac = kwargs.pop('grade_frac', [1.0])
+    grade_dims = kwargs.pop('grade_dims', [nDims])
 
-
-    if nlive is None:
-        nlive = nDims*25
-
-    if num_repeats is None:
-        num_repeats = nDims*5
-
-    if update_files is None:
-        update_files = nlive
+    if kwargs:
+        raise TypeError('Unexpected **kwargs in Contours constructor: %r' % kwargs)
 
     # Run polychord from module library
-    _PyPolyChord.run(loglikelihood, prior, nDims, nDerived, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, base_dir, file_root)
+    _PyPolyChord.run(loglikelihood, prior, nDims, nDerived, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, base_dir, file_root, nGrade, grade_frac, grade_dims)
 
     return None
 

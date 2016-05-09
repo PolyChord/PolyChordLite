@@ -1,7 +1,7 @@
 #include <Python.h>
 #include <stdbool.h>
 
-extern void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*); 
+extern void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int* ); 
 
 
 /* Docstrings */
@@ -117,6 +117,21 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     char* base_dir             =          PyString_AsString(PyTuple_GetItem(args,i++));
     char* file_root            =          PyString_AsString(PyTuple_GetItem(args,i++));
 
+    int nGrade                 = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++));
+    double grade_frac[nGrade];
+    PyObject * py_grade_frac = PyTuple_GetItem(args,i++);
+    int grade_dims[nGrade];
+    PyObject * py_grade_dims = PyTuple_GetItem(args,i++);
+
+    int j;
+    for(j=0; j<nGrade; j++)
+    {
+        grade_frac[j] = (double) PyFloat_AsDouble( PyList_GET_ITEM(py_grade_frac,j) );
+        grade_dims[j] = (int) PyInt_AsLong( PyList_GET_ITEM(py_grade_dims,j) );
+    }
+
+
+
 
     /* Run PolyChord */
     polychord_c_interface( 
@@ -142,7 +157,10 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
             nDims,
             nDerived,
             base_dir,
-            file_root
+            file_root,
+            nGrade,
+            grade_frac,
+            grade_dims
             );
 
     /* Return None */

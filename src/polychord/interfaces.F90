@@ -94,7 +94,7 @@ contains
     subroutine polychord_c_interface(c_loglikelihood_ptr, c_prior_ptr, nlive, num_repeats, do_clustering, feedback, &
         precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, &
             write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, nDims, nDerived, &
-            base_dir, file_root) &
+            base_dir, file_root, nGrade, grade_frac, grade_dims) &
             bind(c,name='polychord_c_interface')
 
         use iso_c_binding
@@ -152,6 +152,10 @@ contains
         character(len=1,kind=c_char), intent(in), dimension(STR_LENGTH) :: base_dir
         character(len=1,kind=c_char), intent(in), dimension(STR_LENGTH) :: file_root
 
+        integer(c_int), intent(in), value             :: nGrade
+        real(c_double), intent(in), dimension(nGrade) :: grade_frac
+        integer(c_int), intent(in), dimension(nGrade) :: grade_dims
+
         type(program_settings)    :: settings  ! The program settings 
 
         type(param_type),dimension(:),allocatable :: params         ! Parameter array
@@ -159,6 +163,8 @@ contains
 
         procedure(c_loglikelihood), pointer :: f_loglikelihood_ptr
         procedure(c_prior), pointer         :: f_prior_ptr
+
+        integer :: i_grade
 
         settings%nlive               = nlive                
         settings%num_repeats         = num_repeats          
@@ -182,6 +188,15 @@ contains
 
         settings%base_dir            = convert_c_string(base_dir)
         settings%file_root           = convert_c_string(file_root) 
+
+        allocate(settings%grade_frac(nGrade),settings%grade_dims(nGrade))
+        settings%grade_frac = grade_frac
+        settings%grade_dims = grade_dims
+        write(*,*) '------------------------------'
+        do i_grade=1,nGrade
+            write(*,*) grade_dims(i_grade)
+        end do
+        write(*,*) '------------------------------'
 
         if(settings%write_paramnames) then
             params = default_params(settings%nDims,'theta','\theta')
