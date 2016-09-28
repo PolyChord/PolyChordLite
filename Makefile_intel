@@ -15,11 +15,13 @@ AR = ar rv
 
 # default flags
 # --------------
-# fpp  : perform preprocessing
-# fpic : shared object libraries
-FFLAGS += -fpp -fpic
+# fpp                    : perform preprocessing
+# fpic                   : shared object libraries
+# assume noold_maxminloc : in intel v16 compilers, they changed the default behavior of minloc (ffs). 
+# 						   this flag is necessary to ensure consistent behavior across compilers
+FFLAGS += -fpp -fpic -assume noold_maxminloc
 CXXFLAGS += -fpic
-# nofor_main : essential for linking c++ and fortran
+# nofor_main 	         : essential for linking c++ and fortran
 LDFLAGS += -nofor-main
 LDLIBS += -cxxlib
 
