@@ -44,6 +44,10 @@ void run_polychord(
     std::copy(s.file_root.begin(),s.file_root.end(),file_root);
     file_root[s.file_root.size()] = '\0';
 
+    int ngrade = 1;
+    double grade_frac[ngrade] = {1.0};
+    int grade_dims[ngrade] = {s.nDims};
+
 
 
     polychord_c_interface( 
@@ -69,7 +73,10 @@ void run_polychord(
             s.nDims,
             s.nDerived,
             base_dir,
-            file_root);
+            file_root,
+            ngrade,
+            grade_frac,
+            grade_dims);
 
 
 

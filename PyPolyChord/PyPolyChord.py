@@ -218,10 +218,6 @@ def run_nested_sampling(loglikelihood, nDims, nDerived, **kwargs):
         (Default: 'test')
         Root name of the files produced.
 
-    nGrade : int
-        (Default: 1)
-        Number of parameter speeds.
-
     grade_frac : List[float]
         (Default: 1)
         The amount of time to spend in each speed.
@@ -291,15 +287,21 @@ def run_nested_sampling(loglikelihood, nDims, nDerived, **kwargs):
     update_files = kwargs.pop('update_files', nlive)
     base_dir = kwargs.pop('base_dir', 'chains')
     file_root = kwargs.pop('file_root', 'test')
-    nGrade = kwargs.pop('nGrade', 1)
-    grade_frac = kwargs.pop('grade_frac', [1.0])
     grade_dims = kwargs.pop('grade_dims', [nDims])
+    grade_frac = kwargs.pop('grade_frac', [1.0]*len(grade_dims))
 
     if kwargs:
         raise TypeError('Unexpected **kwargs in Contours constructor: %r' % kwargs)
 
+    if len(grade_frac) != len(grade_dims):
+        raise ValueError('grade_dims and grade_frac must be the same length')
+
+    if sum(grade_dims) != nDims:
+        raise ValueError('grade_dims must sum to the total dimensionality: sum(' + str(grade_dims) + ') /= %i' % nDims)
+
+
     # Run polychord from module library
-    _PyPolyChord.run(loglikelihood, prior, nDims, nDerived, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, base_dir, file_root, nGrade, grade_frac, grade_dims)
+    _PyPolyChord.run(loglikelihood, prior, nDims, nDerived, nlive, num_repeats, do_clustering, feedback, precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, base_dir, file_root, grade_frac, grade_dims)
 
     return None
 

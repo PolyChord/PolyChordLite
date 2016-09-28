@@ -1,5 +1,6 @@
 #include <Python.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 extern void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int* ); 
 
@@ -117,11 +118,12 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     char* base_dir             =          PyString_AsString(PyTuple_GetItem(args,i++));
     char* file_root            =          PyString_AsString(PyTuple_GetItem(args,i++));
 
-    int nGrade                 = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++));
-    double grade_frac[nGrade];
     PyObject * py_grade_frac = PyTuple_GetItem(args,i++);
-    int grade_dims[nGrade];
     PyObject * py_grade_dims = PyTuple_GetItem(args,i++);
+    int nGrade = (int) PyList_Size(py_grade_frac);
+    double grade_frac[nGrade];
+    int grade_dims[nGrade];
+    printf("%i\n", nGrade);
 
     int j;
     for(j=0; j<nGrade; j++)

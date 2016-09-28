@@ -192,11 +192,6 @@ contains
         allocate(settings%grade_frac(nGrade),settings%grade_dims(nGrade))
         settings%grade_frac = grade_frac
         settings%grade_dims = grade_dims
-        write(*,*) '------------------------------'
-        do i_grade=1,nGrade
-            write(*,*) grade_dims(i_grade)
-        end do
-        write(*,*) '------------------------------'
 
         if(settings%write_paramnames) then
             params = default_params(settings%nDims,'theta','\theta')
