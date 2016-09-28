@@ -46,7 +46,7 @@ contains
 #ifdef MPI
         call initialise_mpi
 #endif
-        call initialise_random()
+        call initialise_random(1)
         settings = settings_in
         call initialise_settings(settings)   
 #ifdef MPI

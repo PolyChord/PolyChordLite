@@ -92,7 +92,7 @@ module random_module
 
     function basic_random(seed)
         implicit none
-        real :: basic_random
+        real(dp) :: basic_random
         integer :: seed
         integer :: oldseed = 0
         integer, parameter :: c1 = 19423

@@ -7,7 +7,7 @@ program PolyChord
     use priors_module
     use settings_module,          only: program_settings
     use interfaces_module,        only: run_polychord
-    use utils_module,             only: STR_LENGTH
+    use utils_module,             only: STR_LENGTH, dp
     use abort_module,             only: halt_program
     use loglikelihood_module,     only: loglikelihood, setup_loglikelihood
 
@@ -50,8 +50,8 @@ contains
 
     function prior_wrapper(cube) result(theta)
         implicit none
-        double precision, intent(in), dimension(:) :: cube
-        double precision, dimension(size(cube))    :: theta
+        real(dp), intent(in), dimension(:) :: cube
+        real(dp), dimension(size(cube))    :: theta
         theta = hypercube_to_physical(cube,priors)
     end function prior_wrapper
 
