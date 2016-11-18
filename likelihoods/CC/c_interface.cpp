@@ -45,8 +45,10 @@ void run_polychord(
     file_root[s.file_root.size()] = '\0';
 
     int ngrade = 1;
-    double grade_frac[ngrade] = {1.0};
-    int grade_dims[ngrade] = {s.nDims};
+    double grade_frac[ngrade];
+    grade_frac[0] = 1.0;
+    int grade_dims[ngrade];
+    grade_frac[0] = s.nDims;
 
 
 
