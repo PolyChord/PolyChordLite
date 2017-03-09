@@ -1,10 +1,13 @@
 from numpy import pi,log,sqrt
+import matplotlib.pyplot as plt
+import getdist.plots
 import PyPolyChord.PyPolyChord as PolyChord
+from PyPolyChord.settings import PolyChordSettings
 
 nDims = 5
 nDerived = 0
 
-def gaussian(theta):
+def likelihood(theta):
 
     phi = [0.0] *nDerived
 
@@ -21,4 +24,17 @@ def gaussian(theta):
     return logL, phi
 
 PolyChord.mpi_notification()
-PolyChord.run_nested_sampling(gaussian, nDims, nDerived, file_root='gaussian')
+
+settings = PolyChordSettings(nDims, nDerived)
+settings.file_root = 'gaussian'
+settings.do_clustering = True
+
+output = PolyChord.run_polychord(likelihood, nDims, nDerived, settings)
+
+posterior = output.posterior
+#posterior1 = output.cluster_posterior(1)
+#posterior2 = output.cluster_posterior(2)
+#
+g = getdist.plots.getSubplotPlotter()
+g.triangle_plot(posterior,filled=True)
+plt.show()
