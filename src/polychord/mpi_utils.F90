@@ -7,6 +7,7 @@ module mpi_module
     implicit none
 
     integer :: mpierror
+    logical :: finalize
 
     integer, parameter :: tag_gen_point=1
     integer, parameter :: tag_gen_request=2
@@ -160,8 +161,10 @@ module mpi_module
 
         if( .not. flag ) then
             call MPI_INIT(mpierror)
+            finalize = .true.
         else
-            write(*,'("PolyChord: MPI is already initilised, not initialising")')
+            write(*,'("PolyChord: MPI is already initilised, not initialising, and will not finalize")')
+            finalize = .false.
         end if
 
     end subroutine initialise_mpi
@@ -170,7 +173,7 @@ module mpi_module
     subroutine finalise_mpi()
         implicit none
 
-        call MPI_FINALIZE(mpierror)
+        if(finalize) call MPI_FINALIZE(mpierror)
 
     end subroutine finalise_mpi
 

@@ -123,7 +123,6 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     int nGrade = (int) PyList_Size(py_grade_frac);
     double grade_frac[nGrade];
     int grade_dims[nGrade];
-    printf("%i\n", nGrade);
 
     int j;
     for(j=0; j<nGrade; j++)
