@@ -1,7 +1,5 @@
 #!/usr/bin/env python2
 from numpy import pi, log, sqrt
-import matplotlib.pyplot as plt
-import getdist.plots
 import PyPolyChord.PyPolyChord as PolyChord
 from PyPolyChord.settings import PolyChordSettings
 from PyPolyChord.priors import UniformPrior
@@ -48,7 +46,12 @@ paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)
 
-posterior = output.posterior
-g = getdist.plots.getSubplotPlotter()
-g.triangle_plot(posterior, filled=True)
-plt.show()
+try:
+    import getdist.plots
+    import matplotlib.pyplot as plt
+    posterior = output.posterior
+    g = getdist.plots.getSubplotPlotter()
+    g.triangle_plot(posterior, filled=True)
+    plt.show()
+except ImportError:
+    print("Install matplotlib and getdist for plotting examples")

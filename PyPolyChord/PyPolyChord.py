@@ -1,4 +1,5 @@
 from output import PolyChordOutput
+import numpy
 
 try:
     import _PyPolyChord
@@ -174,6 +175,26 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior)
         Final output evidence statistics
 
     """
+
+    # Test likelihood
+    print("testing prior...")
+    x = list(numpy.random.rand(nDims))
+    theta = prior(x)
+    if not isinstance(theta,list):
+        raise TypeError("Return from prior must be a list")
+    elif not all(isinstance(item,float) for item in theta):
+        raise TypeError("Return from prior must be a list of floats")
+    ret = loglikelihood(theta)
+    if not isinstance(ret,tuple):
+        raise TypeError("Return from likelihood must be a tuple of (<likelihood value>, <derived parameters>)")
+    elif not len(ret) == 2:
+        raise TypeError("Return from likelihood must be a tuple of (<likelihood value>, <derived parameters>)")
+    elif not isinstance(ret[0],float):
+        raise TypeError("Likelihood value (first of tuple returned from loglikelihood) must be a float")
+    elif not isinstance(ret[1],list):
+        raise TypeError("Derived parameters (second of tuple returned from loglikelihood) must be a list")
+    elif not all(isinstance(item,float) for item in ret[1]):
+        raise TypeError("Derived parameters (second of tuple returned from loglikelihood) must be a list of floats")
 
     # Run polychord from module library
     _PyPolyChord.run(loglikelihood,
