@@ -1,10 +1,11 @@
-from output import PolyChordOutput
+from .output import PolyChordOutput
 import numpy
 
 try:
-    import _PyPolyChord
+    from . import _PyPolyChord
 except ImportError as e:
-    if e.message == 'No module named _PyPolyChord':
+    print(ImportError)
+    if str(e) == 'No module named _PyPolyChord':
         print('')
         print('   Could not load Python Extension _PyPolyChord.so')
         print('')
@@ -15,7 +16,7 @@ except ImportError as e:
         print('   In the base PolyChord directory.')
         print('')
 
-    elif e.message == 'libchord.so: cannot open shared object file: No such file or directory':
+    elif str(e) == 'libchord.so: cannot open shared object file: No such file or directory':
         print('')
         print('   Could not load PolyChord library "libchord.so"')
         print('')

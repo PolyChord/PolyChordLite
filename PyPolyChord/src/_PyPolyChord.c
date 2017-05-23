@@ -2,6 +2,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#if PY_MAJOR_VERSION >=3
+#define PYTHON3
+#endif
+
 extern void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int* ); 
 
 
@@ -22,12 +26,29 @@ static PyMethodDef module_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
+#ifdef PYTHON3
+static struct PyModuleDef cModPyDem =
+{
+    PyModuleDef_HEAD_INIT,
+    "_PyPolyChord", /* name of module */
+    module_docstring,          /* module documentation, may be NULL */
+    -1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+    module_methods
+};
+#endif
 
 /* Initialize the module */
+#ifdef PYTHON3
+PyMODINIT_FUNC PyInit__PyPolyChord(void)
+{
+    return PyModule_Create(&cModPyDem);
+}
+#else
 PyMODINIT_FUNC init_PyPolyChord(void)
 {
     Py_InitModule3("_PyPolyChord", module_methods, module_docstring);
 }
+#endif
 
 
 /* Convert from C array to Python list */
@@ -96,14 +117,14 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     python_loglikelihood = PyTuple_GetItem(args,i++);
     python_prior         = PyTuple_GetItem(args,i++);
 
-    int nDims                  = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++));
-    int nDerived               = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++)); 
-    int nlive                  = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++));  
-    int num_repeats            = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++));
+    int nDims                  = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));
+    int nDerived               = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++)); 
+    int nlive                  = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));  
+    int num_repeats            = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));
     bool do_clustering         = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    int feedback               = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++));
+    int feedback               = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));
     double precision_criterion = (double) PyFloat_AsDouble( PyTuple_GetItem(args,i++));
-    int max_ndead              = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++));
+    int max_ndead              = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));
     double boost_posterior     = (double) PyFloat_AsDouble( PyTuple_GetItem(args,i++));
     bool posteriors            = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
     bool equals                = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
@@ -114,9 +135,14 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     bool write_stats           = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
     bool write_live            = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
     bool write_dead            = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    int update_files           = (int)    PyInt_AsLong(     PyTuple_GetItem(args,i++)); 
+    int update_files           = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++)); 
+#ifdef PYTHON3
+    char* base_dir             =          _PyUnicode_AsString(PyTuple_GetItem(args,i++));
+    char* file_root            =          _PyUnicode_AsString(PyTuple_GetItem(args,i++));
+#else
     char* base_dir             =          PyString_AsString(PyTuple_GetItem(args,i++));
     char* file_root            =          PyString_AsString(PyTuple_GetItem(args,i++));
+#endif
 
     PyObject * py_grade_frac = PyTuple_GetItem(args,i++);
     PyObject * py_grade_dims = PyTuple_GetItem(args,i++);
@@ -128,7 +154,7 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     for(j=0; j<nGrade; j++)
     {
         grade_frac[j] = (double) PyFloat_AsDouble( PyList_GET_ITEM(py_grade_frac,j) );
-        grade_dims[j] = (int) PyInt_AsLong( PyList_GET_ITEM(py_grade_dims,j) );
+        grade_dims[j] = (int) PyLong_AsLong( PyList_GET_ITEM(py_grade_dims,j) );
     }
 
 

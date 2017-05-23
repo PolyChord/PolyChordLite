@@ -15,6 +15,8 @@ BIN_DIR = $(PWD)/bin
 LIB_DIR = $(PWD)/lib
 export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
 
+# Python version
+PYTHON = python3
 
 # Whether to use MPI
 MPI=1
@@ -58,6 +60,7 @@ LDLIBS += -lchord
 export CC CXX FC LD RM AR
 export CFLAGS CXXFLAGS FFLAGS
 export EXAMPLES PROGRAMS
+export PYTHON
 
 
 # make shortcuts
