@@ -1,4 +1,8 @@
-import getdist.mcsamples
+try:
+    import getdist.mcsamples
+except ImportError:
+    print("Warning: Install getdist for easier treatment of outputs")
+
 import re
 import os
 
