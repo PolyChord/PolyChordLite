@@ -1,8 +1,8 @@
-from .output import PolyChordOutput
+from PyPolyChord.output import PolyChordOutput
 import numpy
 
 try:
-    from . import _PyPolyChord
+    from PyPolyChord import _PyPolyChord
 except ImportError as e:
     print(ImportError)
     if str(e) == 'No module named _PyPolyChord':

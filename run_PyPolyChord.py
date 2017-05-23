@@ -1,5 +1,5 @@
 from numpy import pi, log, sqrt
-import PyPolyChord.PyPolyChord as PolyChord
+import PyPolyChord.PyPolyChord_wrapper as PolyChord
 from PyPolyChord.settings import PolyChordSettings
 from PyPolyChord.priors import UniformPrior
 
