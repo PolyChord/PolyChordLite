@@ -49,7 +49,7 @@ CXXFLAGS += -DMPI
 endif
 
 # Remove command
-RM = rm -f
+RM = rm -rf
 
 # Library flags
 LDFLAGS += -L$(LIB_DIR)
