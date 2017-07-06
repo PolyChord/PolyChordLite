@@ -8,7 +8,6 @@ PROGRAMS = polychord_fortran polychord_CC
 SRC_DIR = $(PWD)/src
 DRIVERS_DIR = $(SRC_DIR)/drivers
 POLYCHORD_DIR = $(SRC_DIR)/polychord
-PYPOLYCHORD_DIR = $(PWD)/PyPolyChord
 LIKELIHOOD_DIR = $(PWD)/likelihoods
 EXAMPLES_DIR = $(LIKELIHOOD_DIR)/examples
 BIN_DIR = $(PWD)/bin
@@ -68,7 +67,6 @@ all: gaussian
 examples: $(EXAMPLES)
 $(EXAMPLES): % : $(BIN_DIR)/%
 $(PROGRAMS): % : $(BIN_DIR)/%
-PyPolyChord: % : $(PYPOLYCHORD_DIR)/_PyPolyChord.so
 
 # PolyChord
 # ---------
@@ -102,11 +100,6 @@ $(patsubst %,$(DRIVERS_DIR)/%.o,$(PROGRAMS)):
 	$(MAKE) -C $(DRIVERS_DIR) $@
 
 
-# PyPolyChord
-# -----------
-$(PYPOLYCHORD_DIR)/_PyPolyChord.so: $(LIB_DIR)/libchord.so $(PYPOLYCHORD_DIR)/src/_PyPolyChord.c
-	$(MAKE) -C $(PYPOLYCHORD_DIR) $@
-
 CLEANDIRS = $(POLYCHORD_DIR) $(PYPOLYCHORD_DIR) $(LIKELIHOOD_DIR) $(BIN_DIR) $(LIB_DIR) $(DRIVERS_DIR) 
 .PHONY: clean veryclean $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS)) 
 
@@ -116,7 +109,7 @@ $(addsuffix clean,$(CLEANDIRS)): %clean:
 	$(MAKE) -C $* clean
 
 veryclean: clean $(addsuffix veryclean,$(CLEANDIRS))  
-	$(RM) *~ 
+	$(RM) *~ build dist PyPolyChord.egg-info
 $(addsuffix veryclean,$(CLEANDIRS))  : %veryclean: 
 	$(MAKE) -C $* veryclean
 	
