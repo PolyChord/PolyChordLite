@@ -1,7 +1,7 @@
 ifdef MPI
-FC = mpiifort
-CC = mpiicc
-CXX = mpiicpc
+FC = mpifort
+CC = mpicc
+CXX = mpicpc
 else
 FC = ifort
 CXX = icpc
@@ -11,7 +11,7 @@ endif
 CPP = $(CC)
 LD = $(FC)
 LDSHARED = $(LD) -shared
- 
+
 # Archive tool
 AR = ar rv
 
@@ -20,7 +20,7 @@ AR = ar rv
 # --------------
 # fpp                    : perform preprocessing
 # fpic                   : shared object libraries
-# assume noold_maxminloc : in intel v16 compilers, they changed the default behavior of minloc (ffs). 
+# assume noold_maxminloc : in intel v16 compilers, they changed the default behavior of minloc (ffs).
 # 						   this flag is necessary to ensure consistent behavior across compilers
 FFLAGS += -fpp -fpic -assume noold_maxminloc
 CXXFLAGS += -fpic
@@ -56,7 +56,7 @@ else
 #   vec-report0  : disables printing of vectorizer diagnostic information
 #   opt-report0  : disables printing of optimization reports
 IPO = -ipo
-FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0 
+FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0
 CXXFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0
 
 ifdef IPO
@@ -65,4 +65,3 @@ AR = xiar rv
 endif
 
 endif
-

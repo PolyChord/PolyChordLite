@@ -166,7 +166,11 @@ module nested_sampling_module
             call GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
 
             ! Write a resume file (as the generation of live points can be intensive)
-            if(is_root(mpi_information).and.settings%write_resume) call write_resume_file(settings,RTI) 
+            if(is_root(mpi_information).and.settings%write_resume) then
+                call write_resume_file(settings,RTI) 
+                call rename_files(settings,RTI)
+            end if
+
 
         end if 
 
@@ -301,7 +305,7 @@ module nested_sampling_module
             end do ! End of main loop body
 
             ! Clean up the remaining live points
-            if(settings%write_resume)                  call write_resume_file(settings,RTI)
+            if(settings%write_resume) call write_resume_file(settings,RTI)
 
             do while(RTI%ncluster > 0)
                 call delete_outermost_point(settings,RTI)
