@@ -53,7 +53,7 @@ LDLIBS += -lchord
 
 
 # Export all of the necessary variables
-export CC CXX FC LD RM AR
+export CC CXX FC LD LDSHARED RM AR 
 export CFLAGS CXXFLAGS FFLAGS
 export EXAMPLES PROGRAMS
 export PYTHON
@@ -77,7 +77,7 @@ $(LIB_DIR)/libchord.so:
 environment: $(LIB_DIR)/libchord.so
 	$(shell touch PyPolyChord/.ld_library_path.sh; echo 'export LD_LIBRARY_PATH=$(LIB_DIR)/:$$LD_LIBRARY_PATH' > PyPolyChord/.ld_library_path.sh)
 ifdef MPI
-	$(shell touch PyPolyChord/.ld_preload.sh; ldd $(LIB_DIR)/libchord.so | grep libmpi.so | awk '{print "export LD_PRELOAD="$$1":$$LD_PRELOAD"}' > PyPolyChord/.ld_preload.sh)
+	$(shell touch PyPolyChord/.ld_preload.sh; ldd $(LIB_DIR)/libchord.so | grep -o '/.*libmpi.so[^/]* ' | awk '{print "export LD_PRELOAD="$$1":$$LD_PRELOAD"}' > PyPolyChord/.ld_preload.sh)
 endif
 
 PyPolyChord: environment $(LIB_DIR)/libchord.so

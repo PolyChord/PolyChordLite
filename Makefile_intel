@@ -1,13 +1,16 @@
 ifdef MPI
-FC = mpif90
-CXX = mpicc
-LD = mpif90
+FC = mpiifort
+CC = mpiicc
+CXX = mpiicpc
 else
 FC = ifort
 CXX = icpc
-LD = ifort
+CC = icc
 endif
 
+CPP = $(CC)
+LD = $(FC)
+LDSHARED = $(LD) -shared
  
 # Archive tool
 AR = ar rv
