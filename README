@@ -153,8 +153,11 @@ $  mpirun -np 4 python run_PyPolyChord.py
 
 If so, the rest of the interface is relatively painless. Follow the example in
 run_PyPolyChord.py, and consult the docstring if you need help:
->   import PyPolyChord.PyPolyChord as PPC
->   help(PPC.run_nested_sampling)
+>   import PyPolyChord as PPC
+>   from PyPolyChord.settings import PolyChordSettings
+>
+>   help(PPC.run_polychord)
+>   help(PolyChordSettings)
 
 
 

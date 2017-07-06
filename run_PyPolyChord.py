@@ -1,5 +1,5 @@
 from numpy import pi, log, sqrt
-import PyPolyChord.PyPolyChord as PolyChord
+import PyPolyChord
 from PyPolyChord.settings import PolyChordSettings
 from PyPolyChord.priors import UniformPrior
 
@@ -33,14 +33,11 @@ def prior(hypercube):
 
     return theta
 
-
-PolyChord.mpi_notification()
-
 settings = PolyChordSettings(nDims, nDerived)
 settings.file_root = 'gaussian'
 settings.do_clustering = True
 
-output = PolyChord.run_polychord(likelihood, nDims, nDerived, settings, prior)
+output = PyPolyChord.run_polychord(likelihood, nDims, nDerived, settings, prior)
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)

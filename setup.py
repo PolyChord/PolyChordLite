@@ -23,5 +23,6 @@ setup(name='PyPolyChord',
       install_requires=['numpy'],
       extras_require={'plotting':'getdist'},
       ext_modules=[pypolychord_module],
+      data_files=[('PyPolyChord',['PyPolyChord/.ld_library_path.sh','PyPolyChord/.ld_preload.sh'])],
       zip_safe=False)
 

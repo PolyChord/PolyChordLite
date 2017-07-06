@@ -1,3 +1,5 @@
+import os
+
 class PolyChordSettings:
     """
     PolyChord settings
@@ -144,5 +146,8 @@ class PolyChordSettings:
         if sum(self.grade_dims) != nDims:
             raise ValueError('grade_dims must sum to the total dimensionality: sum(' + str(self.grade_dims) + ') /= %i' % nDims)
 
+    @property
+    def cluster_dir(self):
+        return os.path.join(self.base_dir,'clusters')
 
 
