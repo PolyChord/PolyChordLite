@@ -1,7 +1,7 @@
 try:
     import getdist.mcsamples
 except ImportError:
-    pass
+    print("Warning: Install getdist for easier treatment of outputs")
 import re
 import os
 
@@ -86,7 +86,6 @@ class PolyChordOutput:
     @property
     def posterior(self):
         return getdist.mcsamples.loadMCSamples(self.root)
-            
         
     def cluster_posterior(self, i):
         return getdist.mcsamples.loadMCSamples(self.cluster_root(i))
