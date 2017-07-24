@@ -50,6 +50,8 @@ module settings_module
         real(dp), allocatable,dimension(:) :: grade_frac !> The fraction of time spent in each grade
 
 
+        real(dp), allocatable,dimension(:) :: seed_point
+        logical :: generate_from_seed
 
 
         character(STR_LENGTH) :: base_dir='chains' !> The directory to put outputs in

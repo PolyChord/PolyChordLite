@@ -22,7 +22,7 @@ module nested_sampling_module
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: do_clustering
-        use generate_module,   only: GenerateSeed,GenerateLivePoints
+        use generate_module,   only: GenerateSeed,GenerateLivePoints,GenerateLivePointsFromSeed
 #ifdef MPI
         use utils_module, only: logzero,normal_fb,stdout_unit
 #endif
@@ -163,7 +163,11 @@ module nested_sampling_module
             if(is_root(mpi_information).and.settings%write_resume) call delete_files(settings) 
 
             ! Intialise the run by setting all of the relevant run time info, and generating live points
-            call GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
+            if (settings%generate_from_seed) then
+                call GenerateLivePointsFromSeed(loglikelihood,prior,settings,RTI,mpi_information)
+            else
+                call GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
+            end if
 
             ! Write a resume file (as the generation of live points can be intensive)
             if(is_root(mpi_information).and.settings%write_resume) then
@@ -305,7 +309,7 @@ module nested_sampling_module
             end do ! End of main loop body
 
             ! Clean up the remaining live points
-            if(settings%write_resume) call write_resume_file(settings,RTI)
+            if(settings%write_resume)                  call write_resume_file(settings,RTI)
 
             do while(RTI%ncluster > 0)
                 call delete_outermost_point(settings,RTI)

@@ -3,9 +3,9 @@ module utils_module
     integer, parameter :: dp = kind(1.d0)
 
     !> The effective value of \f$ log(0) \f$
-    real(dp), parameter :: logzero = -sqrt(huge(0d0))
+    real(dp), parameter :: logzero = -1d30
     !> The effective value of \f$ log(\inf) \f$
-    real(dp), parameter :: loginf = +sqrt(huge(0d0))
+    real(dp), parameter :: loginf = +1d30
 
     !> The maximum character length
     integer, parameter :: STR_LENGTH = 300

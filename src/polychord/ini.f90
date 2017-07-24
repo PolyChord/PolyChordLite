@@ -65,6 +65,7 @@ contains
         settings%read_resume        = get_logical(file_name,'resume',.false.)
         settings%write_live         = get_logical(file_name,'write_live',.false.)
         settings%write_dead         = get_logical(file_name,'write_dead',.false.)
+        settings%generate_from_seed = get_logical(file_name,'generate_from_seed',.false.)
 
         settings%equals             = get_logical(file_name,'equally_weighted_posteriors',.false.)
         settings%posteriors         = get_logical(file_name,'weighted_posteriors',.false.)
