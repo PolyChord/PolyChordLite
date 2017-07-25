@@ -111,6 +111,7 @@ module generate_module
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
         integer :: nlike ! number of likelihood calls
+        integer :: nprior
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -136,12 +137,17 @@ module generate_module
 
         end if
 
+        if (settings%nprior <= 0) then
+            nprior = settings%nlive
+        else
+            nprior = settings%nprior
+        end if
 
         total_time=0
         if(linear_mode(mpi_information)) then
             !===================== LINEAR MODE =========================
 
-            do while(RTI%nlive(1)<settings%nlive)
+            do while(RTI%nlive(1)<nprior)
 
                 ! Generate a random coordinate
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
@@ -158,7 +164,7 @@ module generate_module
                     call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
                     !-------------------------------------------------------------------------------!
-                    call write_generating_live_points(settings%feedback,RTI%nlive(1),settings%nlive)
+                    call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
                     !-------------------------------------------------------------------------------!
 
                     if(settings%write_live) then
@@ -188,12 +194,12 @@ module generate_module
                     slave_id = catch_point(live_point,mpi_information)
 
                     ! If its valid, and we need more points, add it to the array
-                    if(live_point(settings%l0)>logzero .and. RTI%nlive(1)<settings%nlive) then
+                    if(live_point(settings%l0)>logzero .and. RTI%nlive(1)<nprior) then
 
                         call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
                         !-------------------------------------------------------------------------------!
-                        call write_generating_live_points(settings%feedback,RTI%nlive(1),settings%nlive)
+                        call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
                         !-------------------------------------------------------------------------------!
 
                         if(settings%write_live) then
@@ -205,7 +211,7 @@ module generate_module
                     end if
 
 
-                    if(RTI%nlive(1)<settings%nlive) then
+                    if(RTI%nlive(1)<nprior) then
                         call request_point(mpi_information,slave_id)  ! If we still need more points, send a signal to have another go
                     else
                         call no_more_points(mpi_information,slave_id) ! Otherwise, send a signal to stop
@@ -245,7 +251,7 @@ module generate_module
         if(is_root(mpi_information)) call write_finished_generating(settings%feedback)  
         ! ----------------------------------------------- !
         ! Find the average time taken
-        speed(1) = total_time/settings%nlive
+        speed(1) = total_time/nprior
         call time_speeds(loglikelihood,prior,settings,RTI,speed,mpi_information) 
 
 
@@ -391,7 +397,6 @@ module generate_module
 
     subroutine GenerateLivePointsFromSeed(loglikelihood,prior,settings,RTI,mpi_information)
         use settings_module,  only: program_settings
-        use random_module,   only: random_axis
         use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len,minpos,time,stdout_unit
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
@@ -442,6 +447,7 @@ module generate_module
 
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
+        integer :: nprior
 
         real(dp) :: time0,time1
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -474,28 +480,31 @@ module generate_module
 
         end if
 
+        if (settings%nprior <= 0) then
+            nprior = settings%nlive
+        else
+            nprior = settings%nprior
+        end if
 
         if(linear_mode(mpi_information)) then
             !===================== LINEAR MODE =========================
 
-            do while(RTI%nlive(1)<settings%nlive)
+            do while(RTI%nlive(1)<nprior)
                 live_point = settings%seed_point
-                do i_repeat = 1,5
-                    do i_dim=1,settings%nDims
-                        i_grade = grade(i_dim)
-                        nhat = 0d0
-                        nhat(i_dim) = 1d0
+                do i_repeat = 1,settings%nprior_repeat
+                    i_dim = 1+mod(i_repeat,settings%nDims)
+                    i_grade = grade(i_dim)
+                    nhat = 0d0
+                    nhat(i_dim) = 1d0
 
-                        time0 = time()
-                        live_point = slice_sample(loglikelihood,prior,logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
-                        time1 = time()
-                        times(i_grade) = times(i_grade) + time1 - time0
-                        
-                    end do
+                    time0 = time()
+                    live_point = slice_sample(loglikelihood,prior,logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
+                    time1 = time()
+                    times(i_grade) = times(i_grade) + time1 - time0
                 end do
 
                 call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
-                call write_generating_live_points(settings%feedback,RTI%nlive(1),settings%nlive)
+                call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
                 if(settings%write_live) then
                     ! Write the live points to the live_points file
                     write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
@@ -519,12 +528,12 @@ module generate_module
                     slave_id = catch_point(live_point,mpi_information)
 
                     ! If its valid, and we need more points, add it to the array
-                    if(RTI%nlive(1)<settings%nlive) then
+                    if(RTI%nlive(1)<nprior) then
 
                         call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
                         !-------------------------------------------------------------------------------!
-                        call write_generating_live_points(settings%feedback,RTI%nlive(1),settings%nlive)
+                        call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
                         !-------------------------------------------------------------------------------!
 
                         if(settings%write_live) then
@@ -536,7 +545,7 @@ module generate_module
                     end if
 
 
-                    if(RTI%nlive(1)<settings%nlive) then
+                    if(RTI%nlive(1)<nprior) then
                         call request_point(mpi_information,slave_id)  ! If we still need more points, send a signal to have another go
                     else
                         call no_more_points(mpi_information,slave_id) ! Otherwise, send a signal to stop

@@ -663,6 +663,36 @@ module read_write_module
 
     end subroutine write_dead_points
 
+    subroutine write_prior_file(settings,RTI)
+        use utils_module, only: DB_FMT,fmt_len,write_prior_unit
+        use settings_module, only: program_settings 
+        use run_time_module, only: run_time_info 
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        type(run_time_info),    intent(in) :: RTI
+
+        integer i_prior
+
+        character(len=fmt_len) :: fmt_dbl
+
+        ! Initialise the formats
+        write(fmt_dbl,'("(",I0,A,")")') settings%np,DB_FMT 
+
+        ! Open a new file for appending to
+        open(write_prior_unit,file=trim(prior_file(settings)), action='write')
+
+        do i_prior=1,RTI%nlive(1)
+            write(write_prior_unit,fmt_dbl) &
+                1d0,&
+                -2*RTI%live(settings%l0,i_prior,1), &
+                RTI%live(settings%p0:settings%d1,i_prior,1)
+        end do
+
+        close(write_prior_unit)
+
+
+    end subroutine write_prior_file
 
     subroutine write_stats_file(settings,RTI,nlikesum)
         use utils_module, only: DB_FMT,fmt_len,write_stats_unit,logsubexp
@@ -875,6 +905,17 @@ module read_write_module
         end if
 
     end function phys_live_file
+
+    function prior_file(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_prior.txt'
+
+    end function prior_file
 
     function dead_file(settings) result(file_name)
         use settings_module, only: program_settings

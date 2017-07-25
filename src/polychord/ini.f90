@@ -65,7 +65,11 @@ contains
         settings%read_resume        = get_logical(file_name,'resume',.false.)
         settings%write_live         = get_logical(file_name,'write_live',.false.)
         settings%write_dead         = get_logical(file_name,'write_dead',.false.)
+
+        settings%write_prior        = get_logical(file_name,'write_prior',.false.)
         settings%generate_from_seed = get_logical(file_name,'generate_from_seed',.false.)
+        settings%nprior             = get_integer(file_name,'nprior',-1)
+        settings%nprior_repeat      = get_integer(file_name,'nprior_repeat',-1)
 
         settings%equals             = get_logical(file_name,'equally_weighted_posteriors',.false.)
         settings%posteriors         = get_logical(file_name,'weighted_posteriors',.false.)
@@ -76,6 +80,8 @@ contains
 
         settings%boost_posterior    = get_double(file_name,'boost_posterior',0d0)
         settings%precision_criterion= get_double(file_name,'precision_criterion',1d-3)
+
+        call get_doubles(file_name,'seed_point',settings%seed_point)
 
         call get_doubles(file_name,'grade_frac',settings%grade_frac)
 

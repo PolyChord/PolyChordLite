@@ -51,7 +51,10 @@ module settings_module
 
 
         real(dp), allocatable,dimension(:) :: seed_point
-        logical :: generate_from_seed
+        logical :: generate_from_seed = .false.
+        integer :: nprior = -1
+        integer :: nprior_repeat = -1
+        logical :: write_prior = .false.
 
 
         character(STR_LENGTH) :: base_dir='chains' !> The directory to put outputs in

@@ -38,6 +38,7 @@ generate.o : \
 	random_utils.o \
 	run_time_info.o \
 	settings.o \
+	chordal_sampling.o \
 	utils.o 
 
 ini.o : \

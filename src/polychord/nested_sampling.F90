@@ -168,6 +168,13 @@ module nested_sampling_module
             else
                 call GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
             end if
+            if(is_root(mpi_information).and.settings%write_prior) then
+                call write_prior_file(settings,RTI) 
+            end if
+
+            do while(is_root(mpi_information) .and. RTI%nlive(1) > settings%nlive )
+                call delete_outermost_point(settings,RTI)
+            end do
 
             ! Write a resume file (as the generation of live points can be intensive)
             if(is_root(mpi_information).and.settings%write_resume) then

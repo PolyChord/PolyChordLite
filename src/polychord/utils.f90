@@ -65,6 +65,9 @@ module utils_module
     !> unit for paramnames file
     integer, parameter :: paramnames_unit = 22
 
+    !> unit for paramnames file
+    integer, parameter :: write_prior_unit = 23
+
     ! All series used to approximate F are computed with relative
     ! tolerance:
     real(dp) eps
