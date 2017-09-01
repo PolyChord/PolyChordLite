@@ -1,7 +1,5 @@
 #include <Python.h>
-#include <stdio.h>
 #include <stdexcept>
-#include <iostream>
 
 #if PY_MAJOR_VERSION >=3
 #define PYTHON3
@@ -201,8 +199,6 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     PyObject* py_grade_dims, *py_grade_frac;
         
 
-    std::cout << PyLong_AsLong(PyTuple_GetItem(args,2)) << std::endl;
-    std::cout << nDims << " " << nDerived << std::endl;
     if (!PyArg_ParseTuple(args,
                 "OOiiiiiiididiiiiiiiiiiissO!O!:run",
                 &temp_logl,
@@ -237,7 +233,6 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
                 )
             )
         return NULL;
-    std::cout << nDims << " " << nDerived << std::endl;
     
     int nGrade = PyList_Size(py_grade_frac);
     double grade_frac[nGrade];
