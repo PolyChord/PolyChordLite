@@ -1,7 +1,7 @@
 #include <Python.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdexcept>
+#include <iostream>
 
 #if PY_MAJOR_VERSION >=3
 #define PYTHON3
@@ -56,8 +56,8 @@ PyMODINIT_FUNC init_PyPolyChord(void)
 
 
 /* Convert from C array to Python list */
-PyObject* list_C2Py(double* array, int nDims) {
-    PyObject* list = PyList_New(nDims);
+PyObject* list_C2Py(double* array, int n) {
+    PyObject* list = PyList_New(n);
     for (int i=0; i<PyList_Size(list); i++) 
         PyList_SET_ITEM(list, i, PyFloat_FromDouble(array[i]));
     return list;
@@ -72,6 +72,22 @@ void list_Py2C(PyObject* list, double* array) {
         if (obj==NULL) throw PythonException();
         if(!PyFloat_Check(obj)) throw PythonException();
         array[i] = PyFloat_AsDouble(obj);
+    }
+}
+void list_Py2C(PyObject* list, int* array) {
+    int i;
+    for (i=0; i<PyList_Size(list); i++) 
+    {
+        PyObject *obj = PyList_GET_ITEM(list, i);
+        if (obj==NULL) throw PythonException();
+#ifdef PYTHON3
+        if(!PyLong_Check(obj)) throw PythonException();
+        array[i] = PyLong_AsLong(obj);
+#else
+        if(PyInt_Check(obj)) array[i] = PyInt_AsLong(obj); 
+        else if(PyLong_Check(obj)) array[i] = PyInt_AsLong(obj); 
+        else throw PythonException();
+#endif
     }
 }
 
@@ -114,7 +130,7 @@ double loglikelihood(double* theta, int nDims, double* phi, int nDerived)
     else if(PyList_Size(py_derived) != nDerived)
     {
         Py_DECREF(list_theta); Py_DECREF(answer);
-        PyErr_SetString(PyExc_TypeError,"Derived parameters must have length nDerived (element 1 of loglikelihood return)");
+        PyErr_SetString(PyExc_ValueError,"Derived parameters must have length nDerived (element 1 of loglikelihood return)");
         throw PythonException();
     }
 
@@ -150,7 +166,7 @@ void prior(double* cube, double* theta, int nDims)
     else if(PyList_Size(list_theta) != nDims)
     {
         Py_DECREF(list_theta); Py_DECREF(list_cube);
-        PyErr_SetString(PyExc_TypeError,"Physical parameters must have length nDims (return from prior)");
+        PyErr_SetString(PyExc_ValueError,"Physical parameters must have length nDims (return from prior)");
         throw PythonException();
     }
 
@@ -171,54 +187,95 @@ void prior(double* cube, double* theta, int nDims)
 /* Function to run PyPolyChord */
 static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
 {
-    /* Inputs to PolyChord in the order that they are passed to python */
-    /* Parse the input tuple */
-    int i=0;
-    python_loglikelihood = PyTuple_GetItem(args,i++);
-    python_prior         = PyTuple_GetItem(args,i++);
 
-    int nDims                  = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));
-    int nDerived               = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++)); 
-    int nlive                  = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));  
-    int num_repeats            = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));
-    bool do_clustering         = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    int feedback               = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));
-    double precision_criterion = (double) PyFloat_AsDouble( PyTuple_GetItem(args,i++));
-    int max_ndead              = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++));
-    double boost_posterior     = (double) PyFloat_AsDouble( PyTuple_GetItem(args,i++));
-    bool posteriors            = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    bool equals                = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    bool cluster_posteriors    = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    bool write_resume          = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    bool write_paramnames      = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    bool read_resume           = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    bool write_stats           = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    bool write_live            = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    bool write_dead            = (bool)   PyObject_IsTrue(  PyTuple_GetItem(args,i++));
-    int update_files           = (int)    PyLong_AsLong(     PyTuple_GetItem(args,i++)); 
-#ifdef PYTHON3
-    char* base_dir             =          _PyUnicode_AsString(PyTuple_GetItem(args,i++));
-    char* file_root            =          _PyUnicode_AsString(PyTuple_GetItem(args,i++));
-#else
-    char* base_dir             =          PyString_AsString(PyTuple_GetItem(args,i++));
-    char* file_root            =          PyString_AsString(PyTuple_GetItem(args,i++));
-#endif
+    PyObject *temp_logl, *temp_prior;
+    int nDims, nDerived, nlive, num_repeats;
+    int do_clustering;
+    int feedback;
+    double precision_criterion;
+    int max_ndead;
+    double boost_posterior;
+    int posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead;
+    int update_files;
+    char* base_dir, *file_root;
+    PyObject* py_grade_dims, *py_grade_frac;
+        
 
-    PyObject * py_grade_frac = PyTuple_GetItem(args,i++);
-    PyObject * py_grade_dims = PyTuple_GetItem(args,i++);
-    int nGrade = (int) PyList_Size(py_grade_frac);
+    std::cout << PyLong_AsLong(PyTuple_GetItem(args,2)) << std::endl;
+    std::cout << nDims << " " << nDerived << std::endl;
+    if (!PyArg_ParseTuple(args,
+                "OOiiiiiididiiiiiiiiiissO!O!:run",
+                &temp_logl,
+                &temp_prior,
+                &nDims,
+                &nDerived,
+                &nlive,
+                &num_repeats,
+                &do_clustering,
+                &feedback,
+                &precision_criterion,
+                &max_ndead,
+                &boost_posterior,
+                &posteriors,
+                &equals,
+                &cluster_posteriors,
+                &write_resume,
+                &write_paramnames,
+                &read_resume,
+                &write_stats,
+                &write_live,
+                &write_dead,
+                &update_files,
+                &base_dir,
+                &file_root,
+                &PyList_Type,
+                &py_grade_frac,
+                &PyList_Type,
+                &py_grade_dims
+                )
+            )
+        return NULL;
+    std::cout << nDims << " " << nDerived << std::endl;
+    
+    int nGrade = PyList_Size(py_grade_frac);
     double grade_frac[nGrade];
     int grade_dims[nGrade];
+    Py_INCREF(py_grade_frac); Py_INCREF(py_grade_dims);
 
     int j;
     for(j=0; j<nGrade; j++)
     {
-        grade_frac[j] = (double) PyFloat_AsDouble( PyList_GET_ITEM(py_grade_frac,j) );
-        grade_dims[j] = (int) PyLong_AsLong( PyList_GET_ITEM(py_grade_dims,j) );
+        try{ list_Py2C(py_grade_frac,grade_frac); }
+        catch (PythonException& e){
+            Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
+            PyErr_SetString(PyExc_TypeError,"grade_frac must be a list of doubles");
+            return NULL;
+        }
+        try{ list_Py2C(py_grade_dims,grade_dims); }
+        catch (PythonException& e){
+            Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
+            PyErr_SetString(PyExc_TypeError,"grade_dims must be a list of integers");
+            return NULL;
+        }
+    }
+    if (PyList_Size(py_grade_frac) != PyList_Size(py_grade_dims)){
+        Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
+        PyErr_SetString(PyExc_ValueError,"grade_dims and grade_frac must have the same size");
+        return NULL;
+    }
+    int tot = 0; for (int i=0;i<nGrade;i++) tot += grade_dims[i];
+    if (tot != nDims) {
+        PyErr_SetString(PyExc_ValueError,"grade_dims must sum to nDims");
+        return NULL;
     }
 
+    Py_XINCREF(temp_logl);
+    Py_XDECREF(python_loglikelihood);
+    python_loglikelihood = temp_logl;
 
-
+    Py_XINCREF(temp_prior);
+    Py_XDECREF(python_prior);
+    python_prior = temp_prior;
 
     /* Run PolyChord */
     try{
@@ -252,9 +309,9 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
             );
     }
     catch (PythonException& e)
-    {
-        Py_DECREF(python_loglikelihood);
-        return NULL;
+    { 
+        Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);
+        return NULL; 
     }
 
     /* Return None */

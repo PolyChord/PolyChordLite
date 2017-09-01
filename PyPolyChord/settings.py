@@ -140,9 +140,6 @@ class PolyChordSettings:
         if kwargs:
             raise TypeError('Unexpected **kwargs in Contours constructor: %r' % kwargs)
 
-        if len(self.grade_frac) != len(self.grade_dims):
-            raise ValueError('grade_dims and grade_frac must be the same length')
-
         if sum(self.grade_dims) != nDims:
             raise ValueError('grade_dims must sum to the total dimensionality: sum(' + str(self.grade_dims) + ') /= %i' % nDims)
 
