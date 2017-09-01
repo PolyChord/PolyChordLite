@@ -7,7 +7,7 @@
 #define PYTHON3
 #endif
 
-extern void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int* ); 
+extern "C" void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int* ); 
 
 /* Exception */
 class PythonException : std::exception {};
@@ -56,17 +56,23 @@ PyMODINIT_FUNC init_PyPolyChord(void)
 
 
 /* Convert from C array to Python list */
-void list_C2Py(double* array, PyObject* list) {
-    int i;
-    for (i=0; i<PyList_Size(list); i++) 
+PyObject* list_C2Py(double* array, int nDims) {
+    PyObject* list = PyList_New(nDims);
+    for (int i=0; i<PyList_Size(list); i++) 
         PyList_SET_ITEM(list, i, PyFloat_FromDouble(array[i]));
+    return list;
 }
 
 /* Convert from Python list to C array */
 void list_Py2C(PyObject* list, double* array) {
     int i;
     for (i=0; i<PyList_Size(list); i++) 
-        array[i] = PyFloat_AsDouble(PyList_GET_ITEM(list, i));
+    {
+        PyObject *obj = PyList_GET_ITEM(list, i);
+        if (obj==NULL) throw PythonException();
+        if(!PyFloat_Check(obj)) throw PythonException();
+        array[i] = PyFloat_AsDouble(obj);
+    }
 }
 
 /* Callback to the likelihood and prior */
@@ -75,8 +81,8 @@ static PyObject *python_loglikelihood = NULL;
 double loglikelihood(double* theta, int nDims, double* phi, int nDerived)
 {
     /* Create a python version of theta */
-    PyObject* list_theta = PyList_New(nDims);
-    list_C2Py(theta,list_theta);
+    PyObject *list_theta = list_C2Py(theta,nDims);
+    if (list_theta==NULL) throw PythonException();
 
     /* Compute the likelihood and phi from theta  */
     PyObject* answer = PyObject_CallFunctionObjArgs(python_loglikelihood,list_theta,NULL);
@@ -85,9 +91,37 @@ double loglikelihood(double* theta, int nDims, double* phi, int nDerived)
         throw PythonException();
     }
 
-    /* Convert the python answer back to a C double */
+    if (!PyTuple_Check(answer) or PyTuple_Size(answer) != 2){
+        Py_DECREF(list_theta); Py_DECREF(answer);
+        PyErr_SetString(PyExc_TypeError,"Return from loglikelihood must be a tuple of (loglikelihood, [derived parameters])");
+        throw PythonException();
+    }
+    
+    PyObject *py_logL = PyTuple_GetItem(answer,0);
+    if (!PyFloat_Check(py_logL)){
+        Py_DECREF(list_theta); Py_DECREF(answer);
+        PyErr_SetString(PyExc_TypeError,"loglikelihood must be a float (element 0 of loglikelihood return)");
+        throw PythonException();
+    }
     double logL = PyFloat_AsDouble( PyTuple_GetItem(answer,0));
-    list_Py2C(PyTuple_GetItem(answer,1),phi);
+
+    PyObject *py_derived = PyTuple_GetItem(answer,1);
+    if (!PyList_Check(py_derived)){
+        Py_DECREF(list_theta); Py_DECREF(answer);
+        PyErr_SetString(PyExc_TypeError,"Derived parameters must be a list (element 1 of loglikelihood return)");
+        throw PythonException();
+    } 
+    else if(PyList_Size(py_derived) != nDerived)
+    {
+        Py_DECREF(list_theta); Py_DECREF(answer);
+        PyErr_SetString(PyExc_TypeError,"Derived parameters must have length nDerived (element 1 of loglikelihood return)");
+        throw PythonException();
+    }
+
+    try{ list_Py2C(PyTuple_GetItem(answer,1),phi); }
+    catch (PythonException& e) {
+        PyErr_SetString(PyExc_TypeError,"Derived parameters must be a list of floats (element 1 of loglikelihood return)");
+        throw PythonException(); }
 
     /* Garbage collect */
     Py_DECREF(list_theta);
@@ -101,14 +135,32 @@ static PyObject *python_prior = NULL;
 void prior(double* cube, double* theta, int nDims)
 {
     /* create a python version of cube */
-    PyObject* list_cube = PyList_New(nDims);
-    list_C2Py(cube,list_cube);
+    PyObject* list_cube = list_C2Py(cube,nDims);
+    if (list_cube==NULL) throw PythonException();
 
     /* Compute theta from the prior */
     PyObject* list_theta = PyObject_CallFunctionObjArgs(python_prior,list_cube,NULL);
+    if (list_theta==NULL) {Py_DECREF(list_cube); throw PythonException();}
+
+    if (!PyList_Check(list_theta)){
+        Py_DECREF(list_theta); Py_DECREF(list_cube);
+        PyErr_SetString(PyExc_TypeError,"Physical parameters must be a list (return from prior)");
+        throw PythonException();
+    } 
+    else if(PyList_Size(list_theta) != nDims)
+    {
+        Py_DECREF(list_theta); Py_DECREF(list_cube);
+        PyErr_SetString(PyExc_TypeError,"Physical parameters must have length nDims (return from prior)");
+        throw PythonException();
+    }
 
     /* Convert the python answer back to a C array */
-    list_Py2C(list_theta,theta);
+    try{ list_Py2C(list_theta,theta); }
+    catch (PythonException& e){
+        Py_DECREF(list_theta); Py_DECREF(list_cube);
+        PyErr_SetString(PyExc_TypeError,"Physical parameters must be a list of floats (return from prior)");
+        throw PythonException(); 
+    }
 
     /* Garbage collect */
     Py_DECREF(list_cube);
@@ -206,7 +258,6 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     }
 
     /* Return None */
-    Py_DECREF(python_loglikelihood);
     Py_RETURN_NONE;
 }
 

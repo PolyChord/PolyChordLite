@@ -146,26 +146,6 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior)
 
     """
 
-    # Test likelihood
-    print("testing prior...")
-    x = list(numpy.random.rand(nDims))
-    theta = prior(x)
-    if not isinstance(theta,list):
-        raise TypeError("Return from prior %s must be a list" % theta)
-    elif not all(isinstance(item,float) for item in theta):
-        raise TypeError("Return from prior %s must be a list of floats" % theta)
-    ret = loglikelihood(theta)
-    if not isinstance(ret,tuple):
-        raise TypeError("Return from likelihood %s must be a tuple of (<likelihood value>, <derived parameters>)" % ret)
-    elif not len(ret) == 2:
-        raise TypeError("Return from likelihood %s must be a tuple of (<likelihood value>, <derived parameters>)" % ret)
-    elif not isinstance(ret[0],float):
-        raise TypeError("Likelihood value %s must be a float" % ret[0])
-    elif not isinstance(ret[1],list):
-        raise TypeError("Derived parameters %s must be a list" % ret[1])
-    elif not all(isinstance(item,float) for item in ret[1]):
-        raise TypeError("Derived parameters: %s  must be a list of floats." % ret[1])
-
     if not os.path.exists(settings.base_dir):
         os.makedirs(settings.base_dir)
 
