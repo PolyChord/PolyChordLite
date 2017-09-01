@@ -9,7 +9,7 @@ pypolychord_module = Extension(
         name= '_PyPolyChord',
         library_dirs = [os.path.join(os.getcwd(),'lib')],
         libraries = ['chord','gfortran'],
-        sources=[os.path.join(os.getcwd(),'PyPolyChord/_PyPolyChord.c')]
+        sources=[os.path.join(os.getcwd(),'PyPolyChord/_PyPolyChord.cpp')]
         )
 
 setup(name='PyPolyChord',

@@ -1,12 +1,16 @@
 #include <Python.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdexcept>
 
 #if PY_MAJOR_VERSION >=3
 #define PYTHON3
 #endif
 
 extern void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int* ); 
+
+/* Exception */
+class PythonException : std::exception {};
 
 
 /* Docstrings */
@@ -76,6 +80,10 @@ double loglikelihood(double* theta, int nDims, double* phi, int nDerived)
 
     /* Compute the likelihood and phi from theta  */
     PyObject* answer = PyObject_CallFunctionObjArgs(python_loglikelihood,list_theta,NULL);
+    if (answer==NULL){
+        Py_DECREF(list_theta);
+        throw PythonException();
+    }
 
     /* Convert the python answer back to a C double */
     double logL = PyFloat_AsDouble( PyTuple_GetItem(answer,0));
@@ -161,6 +169,7 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
 
 
     /* Run PolyChord */
+    try{
     polychord_c_interface( 
             loglikelihood, 
             prior, 
@@ -189,10 +198,15 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
             grade_frac,
             grade_dims
             );
+    }
+    catch (PythonException& e)
+    {
+        Py_DECREF(python_loglikelihood);
+        return NULL;
+    }
 
     /* Return None */
-    PyObject *ret = Py_None;
-    Py_INCREF(Py_None);
-    return ret;
+    Py_DECREF(python_loglikelihood);
+    Py_RETURN_NONE;
 }
 
