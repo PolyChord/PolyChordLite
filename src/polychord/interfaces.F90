@@ -91,9 +91,9 @@ contains
 
 
 
-    subroutine polychord_c_interface(c_loglikelihood_ptr, c_prior_ptr, nlive, num_repeats, do_clustering, feedback, &
+    subroutine polychord_c_interface(c_loglikelihood_ptr, c_prior_ptr, nlive, num_repeats, nprior, do_clustering, feedback, &
         precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, &
-            write_paramnames, read_resume, write_stats, write_live, write_dead, update_files, nDims, nDerived, &
+            write_paramnames, read_resume, write_stats, write_live, write_dead, write_prior, update_files, nDims, nDerived, &
             base_dir, file_root, nGrade, grade_frac, grade_dims) &
             bind(c,name='polychord_c_interface')
 
@@ -132,6 +132,7 @@ contains
         type(c_funptr), intent(in), value   :: c_prior_ptr
         integer(c_int), intent(in), value   :: nlive
         integer(c_int), intent(in), value   :: num_repeats
+        integer(c_int), intent(in), value   :: nprior
         logical(c_bool), intent(in), value  :: do_clustering
         integer(c_int), intent(in), value   :: feedback
         real(c_double), intent(in), value   :: precision_criterion
@@ -146,6 +147,7 @@ contains
         logical(c_bool), intent(in), value  :: write_stats
         logical(c_bool), intent(in), value  :: write_live
         logical(c_bool), intent(in), value  :: write_dead
+        logical(c_bool), intent(in), value  :: write_prior
         integer(c_int), intent(in), value   :: update_files
         integer(c_int), intent(in), value   :: nDims
         integer(c_int), intent(in), value   :: nDerived
@@ -168,6 +170,7 @@ contains
 
         settings%nlive               = nlive                
         settings%num_repeats         = num_repeats          
+        settings%nprior              = nprior
         settings%do_clustering       = do_clustering        
         settings%feedback            = feedback             
         settings%precision_criterion = precision_criterion  
@@ -182,6 +185,7 @@ contains
         settings%write_stats         = write_stats          
         settings%write_live          = write_live           
         settings%write_dead          = write_dead           
+        settings%write_prior         = write_prior
         settings%update_files        = update_files         
         settings%nDims               = nDims
         settings%nDerived            = nDerived

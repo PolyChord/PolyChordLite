@@ -31,6 +31,10 @@ class PolyChordSettings:
         * for reliable evidences need num_repeats ~ O(5*nDims).
         * for reliable posteriors need num_repeats ~ O(nDims)
 
+    nprior : int
+        (Default: nlive)
+        The number of prior samples to draw before starting compression.
+
     do_clustering : boolean
         (Default: True)
         Whether or not to use clustering at run time.
@@ -92,6 +96,10 @@ class PolyChordSettings:
         (Default: True)
         Write a dead points file.
 
+    write_dead : boolean
+        (Default: True)
+        Write a prior points file.
+
     update_files : int
         (Default: nlive)
         How often to update the files in <base_dir>.
@@ -117,6 +125,7 @@ class PolyChordSettings:
         self.nlive = nDims * 25
         self.nlive = kwargs.pop('nlive', nDims*25)
         self.num_repeats = kwargs.pop('num_repeats', nDims*5)
+        self.nprior = kwargs.pop('nprior', -1)
         self.do_clustering = kwargs.pop('do_clustering', True)
         self.feedback = kwargs.pop('feedback', 1)
         self.precision_criterion = kwargs.pop('precision_criterion', 0.001)
@@ -131,6 +140,7 @@ class PolyChordSettings:
         self.write_stats = kwargs.pop('write_stats', True)
         self.write_live = kwargs.pop('write_live', True)
         self.write_dead = kwargs.pop('write_dead', True)
+        self.write_prior = kwargs.pop('write_prior', True)
         self.update_files = kwargs.pop('update_files', self.nlive)
         self.base_dir = kwargs.pop('base_dir', 'chains')
         self.file_root = kwargs.pop('file_root', 'test')

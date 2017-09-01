@@ -7,7 +7,7 @@
 #define PYTHON3
 #endif
 
-extern "C" void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int* ); 
+extern "C" void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int* ); 
 
 /* Exception */
 class PythonException : std::exception {};
@@ -189,13 +189,13 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
 {
 
     PyObject *temp_logl, *temp_prior;
-    int nDims, nDerived, nlive, num_repeats;
+    int nDims, nDerived, nlive, num_repeats, nprior;
     int do_clustering;
     int feedback;
     double precision_criterion;
     int max_ndead;
     double boost_posterior;
-    int posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead;
+    int posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, write_prior;
     int update_files;
     char* base_dir, *file_root;
     PyObject* py_grade_dims, *py_grade_frac;
@@ -204,13 +204,14 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     std::cout << PyLong_AsLong(PyTuple_GetItem(args,2)) << std::endl;
     std::cout << nDims << " " << nDerived << std::endl;
     if (!PyArg_ParseTuple(args,
-                "OOiiiiiididiiiiiiiiiissO!O!:run",
+                "OOiiiiiiididiiiiiiiiiiissO!O!:run",
                 &temp_logl,
                 &temp_prior,
                 &nDims,
                 &nDerived,
                 &nlive,
                 &num_repeats,
+                &nprior,
                 &do_clustering,
                 &feedback,
                 &precision_criterion,
@@ -225,6 +226,7 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
                 &write_stats,
                 &write_live,
                 &write_dead,
+                &write_prior,
                 &update_files,
                 &base_dir,
                 &file_root,
@@ -284,6 +286,7 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
             prior, 
             nlive, 
             num_repeats,
+            nprior,
             do_clustering,
             feedback,
             precision_criterion,
@@ -298,6 +301,7 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
             write_stats,
             write_live,
             write_dead,
+            write_prior,
             update_files, 
             nDims,
             nDerived,

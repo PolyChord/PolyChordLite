@@ -8,6 +8,7 @@ struct Settings
     int nDerived;
     int nlive;
     int num_repeats;
+    int nprior;
     bool do_clustering;
     int feedback;
     double precision_criterion;
@@ -22,6 +23,7 @@ struct Settings
     bool write_stats;
     bool write_live;
     bool write_dead;
+    bool write_prior;
     int update_files;
     std::string base_dir;
     std::string file_root;
