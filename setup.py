@@ -13,8 +13,8 @@ pypolychord_module = Extension(
         )
 
 setup(name='PyPolyChord',
-      version='1.11',
-      description='Python interface to PolyChord 1.11',
+      version='1.12',
+      description='Python interface to PolyChord 1.12',
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
       author='Will Handley',
       author_email='wh260@cam.ac.uk',
@@ -25,4 +25,3 @@ setup(name='PyPolyChord',
       ext_modules=[pypolychord_module],
       data_files=[('PyPolyChord',['PyPolyChord/.ld_library_path.sh','PyPolyChord/.ld_preload.sh'])],
       zip_safe=False)
-
