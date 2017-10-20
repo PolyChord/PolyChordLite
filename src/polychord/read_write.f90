@@ -710,10 +710,11 @@ module read_write_module
         real(dp), dimension(RTI%ncluster) :: varlogZp 
         real(dp), dimension(RTI%ncluster_dead) :: logZp_dead      
         real(dp), dimension(RTI%ncluster_dead) :: varlogZp_dead 
+        real(dp), dimension(settings%nDims+settings%nDerived) :: mu,sig
 
-        integer :: p
+        integer :: p, i_dims
 
-        character(len=fmt_len) :: fmt_Z,fmt_nlike
+        character(len=fmt_len) :: fmt_Z,fmt_nlike,fmt_stats
 
         open(write_stats_unit,file=trim(stats_file(settings)), action='write') 
 
@@ -764,10 +765,72 @@ module read_write_module
         write(fmt_nlike,'(  "("" <nlike>:    "","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
         write(write_stats_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_files),dble(nlikesum)/dble(RTI%num_repeats*settings%update_files)
 
+        if (settings%posteriors) then
+            write(fmt_Z,'("(I3,", A, ","" +/- "",", A, ")")') DB_FMT,DB_FMT
+            write(write_stats_unit,'("")')
+            write(write_stats_unit,'("")')
+            write(write_stats_unit, '("Dim No.       Mean        Sigma")')
+            mu = mean(RTI,settings)
+            sig = sqrt(variance(RTI,settings))
+            do i_dims=1,settings%nDims
+                write(write_stats_unit,fmt_Z) i_dims, mu(i_dims), sig(i_dims)
+            end do
+        end if
+
 
         close(write_stats_unit)
 
     end subroutine write_stats_file
+
+    function mean(RTI,settings) result(mu)
+        use settings_module, only: program_settings
+        use run_time_module, only: run_time_info
+        implicit none
+        type(run_time_info),    intent(in) :: RTI
+        type(program_settings), intent(in) :: settings
+
+        integer i
+        real(dp), dimension(settings%nDims+settings%nDerived) :: mu,x
+        real(dp) :: wsum, w
+        mu = 0
+
+        do i=1,RTI%nposterior_global
+            x = RTI%posterior_global(settings%pos_p0:settings%pos_d1,i)
+            w = RTI%posterior_global(settings%pos_w,i) 
+            wsum = wsum + w
+            mu = mu + (w/wsum)*(x-mu)
+        end do
+        
+
+    end function mean
+
+    function variance(RTI,settings) result(var)
+        use settings_module, only: program_settings
+        use run_time_module, only: run_time_info
+        implicit none
+        type(run_time_info),    intent(in) :: RTI
+        type(program_settings), intent(in) :: settings
+
+        integer i
+        real(dp), dimension(settings%nDims+settings%nDerived) :: mu,mu_old,x,var,S
+        real(dp) :: w, wsum
+        mu = 0
+
+        do i=1,RTI%nposterior_global
+            x = RTI%posterior_global(settings%pos_p0:settings%pos_d1,i)
+            w = RTI%posterior_global(settings%pos_w,i) 
+            mu_old = mu
+            wsum = wsum + w
+            mu = mu_old + (w/wsum)*(x-mu_old)
+            S = S + w * (x-mu_old)*(x-mu)
+        end do
+        if (RTI%nposterior_global <= 0) then
+            var = 0
+        else
+            var = S/wsum
+        end if
+
+    end function variance
 
 
     subroutine write_paramnames_file(settings,params,derived_params)
