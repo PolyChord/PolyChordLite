@@ -759,6 +759,7 @@ module run_time_module
 
                 replaced = .true.  ! Mark this as a replaced live point
                 call delete_outermost_point(settings,RTI)
+                point(settings%b0) = RTI%ndead                                                   ! Note the moment it is born at
                 call add_point(point,RTI%live,RTI%nlive,cluster_add)                             ! Add the new live point to the live points
                 call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
             else

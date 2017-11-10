@@ -634,7 +634,7 @@ module read_write_module
 
 
     subroutine write_dead_points(settings,RTI)
-        use utils_module, only: DB_FMT,fmt_len,write_dead_unit
+        use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_dead_unit
         use settings_module, only: program_settings 
         use run_time_module, only: run_time_info 
         implicit none
@@ -647,7 +647,7 @@ module read_write_module
         character(len=fmt_len) :: fmt_dbl
 
         ! Initialise the formats
-        write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
+        write(fmt_dbl,'("("A,",",A,",",I0,A,")")') DB_FMT, INT_FMT, settings%nDims+settings%nDerived+2, DB_FMT
 
         ! Open a new file for appending to
         open(write_dead_unit,file=trim(dead_file(settings)), action='write')
@@ -655,6 +655,7 @@ module read_write_module
         do i_dead=1,RTI%ndead
             write(write_dead_unit,fmt_dbl) &
                 RTI%dead(settings%l0,i_dead), &
+                nint(RTI%dead(settings%b0,i_dead)), &
                 RTI%dead(settings%p0:settings%d1,i_dead)
         end do
 

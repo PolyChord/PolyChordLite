@@ -90,6 +90,11 @@ module settings_module
         !! d0 indicates the starting index, d1 the finishing index
         integer :: d0,d1       
 
+        !> Birth index
+        !!
+        !! This is the moment that the point was born
+        integer :: b0          
+
         !> likelihood index
         !!
         !! This is the likelihood evaluated at the position of the live point
@@ -157,8 +162,11 @@ module settings_module
         settings%d0=settings%p1+1
         settings%d1=settings%d0+settings%nDerived-1  
 
+        ! birth index
+        settings%b0=settings%d1+1
+
         ! Loglikelihood index
-        settings%l0=settings%d1+1
+        settings%l0=settings%b0+1
 
         ! Total number of parameters
         settings%nTotal = settings%l0
