@@ -65,7 +65,12 @@ class PolyChordOutput:
             self.nequals = int(f.readline().split()[1])
             self.ndead = int(f.readline().split()[1])
             self.nlive = int(f.readline().split()[1])
-            self.nlike = int(f.readline().split()[1])
+            # Protect against ValueError when .stats file has ******* for nlike
+            # (occurs when nlike is too big).
+            try:
+                self.nlike = int(f.readline().split()[1])
+            except ValueError:
+                self.nlike = None
             line = f.readline()
             self.avnlike = float(line.split()[1])
             self.avnlikeslice = float(line.split()[3])
