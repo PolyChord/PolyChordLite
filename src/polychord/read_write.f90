@@ -715,7 +715,7 @@ module read_write_module
 
         integer :: p, i_dims
 
-        character(len=fmt_len) :: fmt_Z,fmt_nlike,fmt_stats
+        character(len=fmt_len) :: fmt_Z,fmt_nlike
 
         open(write_stats_unit,file=trim(stats_file(settings)), action='write') 
 

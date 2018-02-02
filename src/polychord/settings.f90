@@ -149,6 +149,7 @@ module settings_module
     !!
     subroutine initialise_settings(settings)
         use abort_module, only: halt_program
+        use utils_module, only: sort_doubles
         implicit none
         type(program_settings), intent(inout) :: settings
 
@@ -217,6 +218,11 @@ module settings_module
             allocate(settings%grade_frac(1))
             settings%grade_frac = [1.0d0]
         end if
+
+        settings%nlives = settings%nlives(sort_doubles(settings%loglikes))
+        settings%loglikes = settings%loglikes(sort_doubles(settings%loglikes))
+
+
 
     end subroutine initialise_settings
 

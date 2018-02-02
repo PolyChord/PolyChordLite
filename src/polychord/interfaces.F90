@@ -170,8 +170,6 @@ contains
         procedure(c_loglikelihood), pointer :: f_loglikelihood_ptr
         procedure(c_prior), pointer         :: f_prior_ptr
 
-        integer :: i_grade
-
         settings%nlive               = nlive                
         settings%num_repeats         = num_repeats          
         settings%nprior              = nprior
