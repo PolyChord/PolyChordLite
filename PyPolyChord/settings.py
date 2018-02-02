@@ -119,6 +119,10 @@ class PolyChordSettings:
     grade_dims : List[int]
         (Default: 1)
         The number of parameters within each speed.
+
+    nlives : dict {double:int}
+        (Default: {})
+        Mapping between loglike contours and nlive.
     """
     def __init__(self, nDims, nDerived, **kwargs):
 
@@ -146,6 +150,7 @@ class PolyChordSettings:
         self.file_root = kwargs.pop('file_root', 'test')
         self.grade_dims = kwargs.pop('grade_dims', [nDims])
         self.grade_frac = kwargs.pop('grade_frac', [1.0]*len(self.grade_dims))
+        self.nlives = kwargs.pop('nlives', {}) 
 
         if kwargs:
             raise TypeError('Unexpected **kwargs in Contours constructor: %r' % kwargs)

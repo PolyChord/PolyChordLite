@@ -138,6 +138,8 @@ module nested_sampling_module
         ! Rolling loglikelihood calculation
         nlikesum=0
 
+        write(*,*) settings%nlives
+        write(*,*) settings%loglikes
 
         !-------------------------------------------------------!
         if(is_root(mpi_information)) call write_opening_statement(settings) !

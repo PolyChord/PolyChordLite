@@ -135,6 +135,9 @@ module settings_module
         ! Sub clustering dimensions
         integer,dimension(:),allocatable :: sub_clustering_dimensions
 
+        integer,  dimension(:), allocatable :: nlives     !> The number of live points per contour
+        real(dp), dimension(:), allocatable :: loglikes   !> The contours for nlive_list
+
     end type program_settings
 
     contains

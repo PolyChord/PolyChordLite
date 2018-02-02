@@ -94,7 +94,7 @@ contains
     subroutine polychord_c_interface(c_loglikelihood_ptr, c_prior_ptr, nlive, num_repeats, nprior, do_clustering, feedback, &
         precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, &
             write_paramnames, read_resume, write_stats, write_live, write_dead, write_prior, update_files, nDims, nDerived, &
-            base_dir, file_root, nGrade, grade_frac, grade_dims) &
+            base_dir, file_root, nGrade, grade_frac, grade_dims, n_nlives, loglikes, nlives) &
             bind(c,name='polychord_c_interface')
 
         use iso_c_binding
@@ -158,6 +158,10 @@ contains
         real(c_double), intent(in), dimension(nGrade) :: grade_frac
         integer(c_int), intent(in), dimension(nGrade) :: grade_dims
 
+        integer(c_int), intent(in), value               :: n_nlives
+        real(c_double), intent(in), dimension(n_nlives) :: loglikes
+        integer(c_int), intent(in), dimension(n_nlives) :: nlives
+
         type(program_settings)    :: settings  ! The program settings 
 
         type(param_type),dimension(:),allocatable :: params         ! Parameter array
@@ -196,6 +200,10 @@ contains
         allocate(settings%grade_frac(nGrade),settings%grade_dims(nGrade))
         settings%grade_frac = grade_frac
         settings%grade_dims = grade_dims
+
+        allocate(settings%loglikes(n_nlives),settings%nlives(n_nlives))
+        settings%loglikes = loglikes
+        settings%nlives = nlives
 
         if(settings%write_paramnames) then
             params = default_params(settings%nDims,'theta','\theta')

@@ -1,11 +1,12 @@
 #include <Python.h>
 #include <stdexcept>
+#include <iostream>
 
 #if PY_MAJOR_VERSION >=3
 #define PYTHON3
 #endif
 
-extern "C" void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int* ); 
+extern "C" void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int*, int, double*, int*); 
 
 /* Exception */
 class PythonException : std::exception {};
@@ -86,6 +87,29 @@ void list_Py2C(PyObject* list, int* array) {
         else if(PyLong_Check(obj)) array[i] = PyInt_AsLong(obj); 
         else throw PythonException();
 #endif
+    }
+}
+
+void dict_Py2C(PyObject* dict, double* loglikes, int* nlives) {
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+    int i=0;
+    if (dict==NULL) throw PythonException();
+
+    while (PyDict_Next(dict, &pos, &key, &value)) {
+        if (key==NULL) throw PythonException();
+        if (value==NULL) throw PythonException();
+#ifdef PYTHON3
+        if(!PyLong_Check(value)) throw PythonException();
+        nlives[i] = PyLong_AsLong(value);
+#else
+        if(PyInt_Check(value)) nlives[i] = PyInt_AsLong(value); 
+        else if(PyLong_Check(value)) nlives[i] = PyInt_AsLong(value); 
+        else throw PythonException();
+#endif
+        if(PyFloat_Check(key)) loglikes[i] = PyFloat_AsDouble(key);
+        else throw PythonException();
+        i++;
     }
 }
 
@@ -196,11 +220,11 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     int posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, write_prior;
     int update_files;
     char* base_dir, *file_root;
-    PyObject* py_grade_dims, *py_grade_frac;
+    PyObject* py_grade_dims, *py_grade_frac, *py_nlives;
         
 
     if (!PyArg_ParseTuple(args,
-                "OOiiiiiiididiiiiiiiiiiissO!O!:run",
+                "OOiiiiiiididiiiiiiiiiiissO!O!O!:run",
                 &temp_logl,
                 &temp_prior,
                 &nDims,
@@ -229,7 +253,9 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
                 &PyList_Type,
                 &py_grade_frac,
                 &PyList_Type,
-                &py_grade_dims
+                &py_grade_dims,
+                &PyDict_Type,
+                &py_nlives
                 )
             )
         return NULL;
@@ -239,21 +265,22 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     int grade_dims[nGrade];
     Py_INCREF(py_grade_frac); Py_INCREF(py_grade_dims);
 
-    int j;
-    for(j=0; j<nGrade; j++)
-    {
-        try{ list_Py2C(py_grade_frac,grade_frac); }
-        catch (PythonException& e){
-            Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
-            PyErr_SetString(PyExc_TypeError,"grade_frac must be a list of doubles");
-            return NULL;
-        }
-        try{ list_Py2C(py_grade_dims,grade_dims); }
-        catch (PythonException& e){
-            Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
-            PyErr_SetString(PyExc_TypeError,"grade_dims must be a list of integers");
-            return NULL;
-        }
+    int n_nlives = PyDict_Size(py_nlives);
+    double loglikes[n_nlives];
+    int nlives[n_nlives];
+    Py_INCREF(py_nlives);
+
+    try{ list_Py2C(py_grade_frac,grade_frac); }
+    catch (PythonException& e){
+        Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
+        PyErr_SetString(PyExc_TypeError,"grade_frac must be a list of doubles");
+        return NULL;
+    }
+    try{ list_Py2C(py_grade_dims,grade_dims); }
+    catch (PythonException& e){
+        Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
+        PyErr_SetString(PyExc_TypeError,"grade_dims must be a list of integers");
+        return NULL;
     }
     if (PyList_Size(py_grade_frac) != PyList_Size(py_grade_dims)){
         Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
@@ -263,6 +290,12 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     int tot = 0; for (int i=0;i<nGrade;i++) tot += grade_dims[i];
     if (tot != nDims) {
         PyErr_SetString(PyExc_ValueError,"grade_dims must sum to nDims");
+        return NULL;
+    }
+    try{ dict_Py2C(py_nlives,loglikes,nlives); }
+    catch (PythonException& e){
+        Py_DECREF(py_nlives);
+        PyErr_SetString(PyExc_TypeError,"nlives must be a dict mapping floats to integers");
         return NULL;
     }
 
@@ -304,7 +337,10 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
             file_root,
             nGrade,
             grade_frac,
-            grade_dims
+            grade_dims,
+            n_nlives,
+            loglikes,
+            nlives
             );
     }
     catch (PythonException& e)

@@ -52,6 +52,9 @@ void run_polychord(
     int grade_dims[ngrade];
     grade_frac[0] = s.nDims;
 
+    int n_nlives = 0;
+    double loglikes[ngrade];
+    int nlives[ngrade];
 
 
     polychord_c_interface( 
@@ -82,7 +85,11 @@ void run_polychord(
             file_root,
             ngrade,
             grade_frac,
-            grade_dims);
+            grade_dims,
+            n_nlives,
+            loglikes,
+            nlives
+                );
 
 
 
