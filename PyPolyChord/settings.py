@@ -122,7 +122,11 @@ class PolyChordSettings:
 
     nlives : dict {double:int}
         (Default: {})
-        Mapping between loglike contours and nlive.
+        Variable number of live points option. This dictionary is a mapping
+        between loglike contours and nlive.
+        You should still set nlive to be a sensible number, as this indicates
+        how often to update the clustering, and to define the default value.
+
     """
     def __init__(self, nDims, nDerived, **kwargs):
 

@@ -269,8 +269,8 @@ module cluster_module
 
 
         ! Similarity matrix
-        real(dp),dimension(settings%nlive,settings%nlive) :: similarity_matrix
-        integer,dimension(settings%nlive) :: clusters
+        real(dp),dimension(sum(RTI%nlive),sum(RTI%nlive)) :: similarity_matrix
+        integer,dimension(sum(RTI%nlive)) :: clusters
 
         integer :: num_clusters
         integer :: num_old_clusters

@@ -396,7 +396,7 @@ module read_write_module
         call read_integers(RTI%i,'-',RTI%ncluster)
   
         ! Check to see if this is consistent with settings
-        if(settings%nlive/=sum(RTI%nlive)) call halt_program('resume error: nlive does not match')
+        !if(settings%nlive/=sum(RTI%nlive)) call halt_program('resume error: nlive does not match')
   
         call read_integers(RTI%nposterior_dead,'-',RTI%ncluster_dead)
         call read_integers(RTI%nequals_dead,'-',RTI%ncluster_dead)
@@ -758,7 +758,7 @@ module read_write_module
         write(write_stats_unit,'(" nposterior: ", I8                   )') RTI%nposterior_global
         write(write_stats_unit,'(" nequals:    ", I8                   )') RTI%nequals_global
         write(write_stats_unit,'(" ndead:      ", I8)') RTI%ndead
-        write(write_stats_unit,'(" nlive:      ", I8)') settings%nlive
+        write(write_stats_unit,'(" nlive:      ", I8)') sum(RTI%nlive)
 
         write(fmt_nlike,'("("" nlike:      "",",I0,"I8)")') size(nlikesum)
         write(write_stats_unit,fmt_nlike) RTI%nlike
