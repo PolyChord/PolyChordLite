@@ -26,3 +26,5 @@ core*
 *.egg-info
 build
 dist
+PyPolyChord/.ld_library_path.sh
+PyPolyChord/.ld_preload.sh
