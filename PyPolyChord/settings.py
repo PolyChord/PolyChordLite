@@ -119,6 +119,14 @@ class PolyChordSettings:
     grade_dims : List[int]
         (Default: 1)
         The number of parameters within each speed.
+
+    nlives : dict {double:int}
+        (Default: {})
+        Variable number of live points option. This dictionary is a mapping
+        between loglike contours and nlive.
+        You should still set nlive to be a sensible number, as this indicates
+        how often to update the clustering, and to define the default value.
+
     """
     def __init__(self, nDims, nDerived, **kwargs):
 
@@ -146,6 +154,7 @@ class PolyChordSettings:
         self.file_root = kwargs.pop('file_root', 'test')
         self.grade_dims = kwargs.pop('grade_dims', [nDims])
         self.grade_frac = kwargs.pop('grade_frac', [1.0]*len(self.grade_dims))
+        self.nlives = kwargs.pop('nlives', {}) 
 
         if kwargs:
             raise TypeError('Unexpected **kwargs in Contours constructor: %r' % kwargs)

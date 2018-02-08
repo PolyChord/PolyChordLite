@@ -135,6 +135,9 @@ module settings_module
         ! Sub clustering dimensions
         integer,dimension(:),allocatable :: sub_clustering_dimensions
 
+        integer,  dimension(:), allocatable :: nlives     !> The number of live points per contour
+        real(dp), dimension(:), allocatable :: loglikes   !> The contours for nlive_list
+
     end type program_settings
 
     contains
@@ -146,6 +149,7 @@ module settings_module
     !!
     subroutine initialise_settings(settings)
         use abort_module, only: halt_program
+        use utils_module, only: sort_doubles, logzero
         implicit none
         type(program_settings), intent(inout) :: settings
 
@@ -214,6 +218,17 @@ module settings_module
             allocate(settings%grade_frac(1))
             settings%grade_frac = [1.0d0]
         end if
+
+        if (.not. allocated(settings%nlives)) then
+            allocate(settings%nlives(1),settings%loglikes(1))
+            settings%nlives(1) = settings.nlive
+            settings%loglikes(1) = logzero
+        end if
+
+        settings%nlives = settings%nlives(sort_doubles(settings%loglikes))
+        settings%loglikes = settings%loglikes(sort_doubles(settings%loglikes))
+
+
 
     end subroutine initialise_settings
 

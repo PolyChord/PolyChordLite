@@ -730,6 +730,7 @@ module run_time_module
         real(dp) :: logL ! loglikelihood bound
 
         integer :: i_baby ! point iterator
+        integer :: i_nlive, nlive ! where in the nlives array to search
         
 
         ! The loglikelihood contour is defined by the cluster it belongs to
@@ -754,19 +755,24 @@ module run_time_module
         ! Now assign the live point
         point = baby_points(:,i_baby)
 
+        replaced = .false.
         if( point(settings%l0) > logL ) then ! (1)
             if( identify_cluster(settings,RTI,point) == cluster_add) then !(2)
 
-                replaced = .true.  ! Mark this as a replaced live point
-                call delete_outermost_point(settings,RTI)
+                i_nlive = maxloc(settings%loglikes,1,logL > settings%loglikes)
+                if (i_nlive==0) then
+                    nlive = settings%nlive
+                else
+                    nlive = settings%nlives(i_nlive)
+                end if
+                if (sum(RTI%nlive) >= nlive) then
+                    replaced = .true.  ! Mark this as a replaced live point
+                    call delete_outermost_point(settings,RTI)
+                end if
                 point(settings%b0) = RTI%ndead                                                   ! Note the moment it is born at
                 call add_point(point,RTI%live,RTI%nlive,cluster_add)                             ! Add the new live point to the live points
                 call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
-            else
-                replaced = .false.                                  ! We haven't killed of any points
             end if
-        else
-            replaced = .false.
         end if
 
     end function replace_point

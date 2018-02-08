@@ -179,6 +179,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior)
                      settings.base_dir,
                      settings.file_root,
                      settings.grade_frac,
-                     settings.grade_dims)
+                     settings.grade_dims,
+                     settings.nlives)
 
     return PolyChordOutput(settings.base_dir,settings.file_root)

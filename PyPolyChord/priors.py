@@ -1,4 +1,5 @@
 import numpy 
+import scipy.special
 
 
 class UniformPrior:
@@ -8,6 +9,14 @@ class UniformPrior:
 
     def __call__(self, x):
         return self.a + (self.b-self.a) * x
+
+class GaussianPrior:
+    def __init__(self, mu, sigma):
+        self.mu = mu
+        self.sigma = sigma
+
+    def __call__(self, x):
+        return self.mu + self.sigma * numpy.sqrt(2) * scipy.special.erfinv(2*x-1)
 
 
 class LogUniformPrior(UniformPrior):

@@ -56,8 +56,8 @@ else
 #   vec-report0  : disables printing of vectorizer diagnostic information
 #   opt-report0  : disables printing of optimization reports
 IPO = -ipo
-FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0
-CXXFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -opt-report0
+FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
+CXXFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
 
 ifdef IPO
 # Archive tool for compiling with ipo.
