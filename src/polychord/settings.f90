@@ -221,7 +221,7 @@ module settings_module
 
         if (.not. allocated(settings%nlives)) then
             allocate(settings%nlives(1),settings%loglikes(1))
-            settings%nlives(1) = settings.nlive
+            settings%nlives(1) = settings%nlive
             settings%loglikes(1) = logzero
         end if
 
