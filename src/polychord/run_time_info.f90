@@ -766,12 +766,14 @@ module run_time_module
                     nlive = settings%nlives(i_nlive)
                 end if
                 if (sum(RTI%nlive) >= nlive) then
-                    replaced = .true.  ! Mark this as a replaced live point
                     call delete_outermost_point(settings,RTI)
                 end if
-                point(settings%b0) = RTI%ndead                                                   ! Note the moment it is born at
-                call add_point(point,RTI%live,RTI%nlive,cluster_add)                             ! Add the new live point to the live points
-                call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
+                if (sum(RTI%nlive) < nlive) then
+                    point(settings%b0) = RTI%ndead                                                   ! Note the moment it is born at
+                    call add_point(point,RTI%live,RTI%nlive,cluster_add)                             ! Add the new live point to the live points
+                    call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
+                    replaced = .true.                                                                ! Mark this as a replaced live point
+                end if
             end if
         end if
 
