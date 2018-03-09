@@ -45,7 +45,7 @@ contains
         integer, optional :: seed
 
 #ifdef MPI
-        call initialise_mpi
+        call initialise_mpi(settings_in%feedback)
 #endif
         if (present(seed) .and. seed >= 0) then
             call initialise_random(seed)

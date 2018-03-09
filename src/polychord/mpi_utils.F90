@@ -1,5 +1,5 @@
 module mpi_module
-    use utils_module, only: dp
+    use utils_module, only: dp, normal_fb
 
 #ifdef MPI
     use mpi
@@ -151,8 +151,9 @@ module mpi_module
 
 #ifdef MPI
     !> Procedure to initialise mpi
-    subroutine initialise_mpi()
+    subroutine initialise_mpi(feedback)
         implicit none
+        integer, intent(in) :: feedback
         logical :: flag
 
 
@@ -163,7 +164,7 @@ module mpi_module
             call MPI_INIT(mpierror)
             finalize = .true.
         else
-            write(*,'("PolyChord: MPI is already initilised, not initialising, and will not finalize")')
+            if(feedback >= normal_fb) write(*,'("PolyChord: MPI is already initilised, not initialising, and will not finalize")')
             finalize = .false.
         end if
 
