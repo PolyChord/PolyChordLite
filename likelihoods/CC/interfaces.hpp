@@ -27,6 +27,7 @@ struct Settings
     int update_files;
     std::string base_dir;
     std::string file_root;
+    int seed;
 
     Settings(int _nDims=0,int _nDerived=0);
 };

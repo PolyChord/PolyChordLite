@@ -6,7 +6,7 @@
 #define PYTHON3
 #endif
 
-extern "C" void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int*, int, double*, int*); 
+extern "C" void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int*, int, double*, int*, int); 
 
 /* Exception */
 class PythonException : std::exception {};
@@ -221,10 +221,11 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     int update_files;
     char* base_dir, *file_root;
     PyObject* py_grade_dims, *py_grade_frac, *py_nlives;
+    int seed;
         
 
     if (!PyArg_ParseTuple(args,
-                "OOiiiiiiididiiiiiiiiiiissO!O!O!:run",
+                "OOiiiiiiididiiiiiiiiiiissO!O!O!i:run",
                 &temp_logl,
                 &temp_prior,
                 &nDims,
@@ -255,7 +256,8 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
                 &PyList_Type,
                 &py_grade_dims,
                 &PyDict_Type,
-                &py_nlives
+                &py_nlives,
+                &seed
                 )
             )
         return NULL;
@@ -340,7 +342,8 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
             grade_dims,
             n_nlives,
             loglikes,
-            nlives
+            nlives,
+            seed
             );
     }
     catch (PythonException& e)

@@ -26,7 +26,8 @@ Settings::Settings(int _nDims,int _nDerived):
     write_prior         {true},
     update_files        {nlive},
     base_dir            {"chains"},
-    file_root           {"test"}
+    file_root           {"test"},
+    seed                {-1}
 {}
 
 
@@ -55,7 +56,6 @@ void run_polychord(
     int n_nlives = 0;
     double loglikes[ngrade];
     int nlives[ngrade];
-
 
     polychord_c_interface( 
             c_loglikelihood_ptr, 
@@ -88,7 +88,8 @@ void run_polychord(
             grade_dims,
             n_nlives,
             loglikes,
-            nlives
+            nlives,
+            s.seed
                 );
 
 

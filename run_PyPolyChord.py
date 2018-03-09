@@ -36,7 +36,7 @@ def prior(hypercube):
 settings = PolyChordSettings(nDims, nDerived)
 settings.file_root = 'gaussian'
 settings.do_clustering = True
-settings.nlives = {-100.:200, 0.:300, 1.:400, 2.:300, 3.:200}
+#settings.nlives = {-100.:200, 0.:300, 1.:400, 2.:300, 3.:200}
 
 output = PyPolyChord.run_polychord(likelihood, nDims, nDerived, settings, prior)
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]

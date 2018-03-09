@@ -12,7 +12,7 @@ module interfaces_module
 contains
 
 
-    subroutine run_polychord_full(loglikelihood, prior, settings_in)
+    subroutine run_polychord_full(loglikelihood, prior, settings_in, seed)
         use settings_module,          only: program_settings,initialise_settings
         use random_module,            only: initialise_random
         use nested_sampling_module,   only: NestedSampling
@@ -42,11 +42,16 @@ contains
         type(program_settings)               :: settings 
 
         real(dp), dimension(4) :: output_info
+        integer, optional :: seed
 
 #ifdef MPI
         call initialise_mpi
 #endif
-        call initialise_random()
+        if (present(seed) .and. seed >= 0) then
+            call initialise_random(seed)
+        else
+            call initialise_random()
+        end if
         settings = settings_in
         call initialise_settings(settings)   
 #ifdef MPI
@@ -94,7 +99,7 @@ contains
     subroutine polychord_c_interface(c_loglikelihood_ptr, c_prior_ptr, nlive, num_repeats, nprior, do_clustering, feedback, &
         precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, &
             write_paramnames, read_resume, write_stats, write_live, write_dead, write_prior, update_files, nDims, nDerived, &
-            base_dir, file_root, nGrade, grade_frac, grade_dims, n_nlives, loglikes, nlives) &
+            base_dir, file_root, nGrade, grade_frac, grade_dims, n_nlives, loglikes, nlives, seed) &
             bind(c,name='polychord_c_interface')
 
         use iso_c_binding
@@ -161,6 +166,7 @@ contains
         integer(c_int), intent(in), value               :: n_nlives
         real(c_double), intent(in), dimension(n_nlives) :: loglikes
         integer(c_int), intent(in), dimension(n_nlives) :: nlives
+        integer(c_int), intent(in), value               :: seed
 
         type(program_settings)    :: settings  ! The program settings 
 
@@ -212,7 +218,7 @@ contains
         call c_f_procpointer(c_loglikelihood_ptr, f_loglikelihood_ptr)
         call c_f_procpointer(c_prior_ptr, f_prior_ptr)
 
-        call run_polychord(loglikelihood,prior,settings) 
+        call run_polychord(loglikelihood,prior,settings,seed) 
 
     contains
         function loglikelihood(theta,phi)
