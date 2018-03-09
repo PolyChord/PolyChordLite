@@ -586,7 +586,7 @@ module read_write_module
 
 
     subroutine write_phys_live_points(settings,RTI)
-        use utils_module, only: DB_FMT,fmt_len,write_phys_unit,write_phys_cluster_unit
+        use utils_module, only: DB_FMT,fmt_len,write_phys_unit,write_phys_cluster_unit, write_live_birth_unit
         use settings_module, only: program_settings 
         use run_time_module, only: run_time_info 
         implicit none
@@ -597,14 +597,16 @@ module read_write_module
         integer i_live
         integer i_cluster
 
-        character(len=fmt_len) :: fmt_dbl
+        character(len=fmt_len) :: fmt_dbl, fmt_dbl_1
 
         ! Initialise the formats
         write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
+        write(fmt_dbl_1,'("(",I0,A,")")') settings%nDims+settings%nDerived+2, DB_FMT
 
 
         ! Open a new file for appending to
         open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
+        open(write_live_birth_unit,file=trim(phys_live_birth_file(settings)), action='write')
 
         do i_cluster = 1,RTI%ncluster
 
@@ -614,6 +616,11 @@ module read_write_module
                 write(write_phys_unit,fmt_dbl) &
                     RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
                     RTI%live(settings%l0,i_live,i_cluster)
+
+                write(write_live_birth_unit,fmt_dbl_1) &
+                    RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
+                    RTI%live(settings%l0,i_live,i_cluster), &
+                    RTI%live(settings%b0,i_live,i_cluster)
 
                 if(settings%do_clustering) then
                     write(write_phys_cluster_unit,fmt_dbl) &
@@ -628,13 +635,14 @@ module read_write_module
         end do
 
         close(write_phys_unit)
+        close(write_live_birth_unit)
 
 
     end subroutine write_phys_live_points
 
 
     subroutine write_dead_points(settings,RTI)
-        use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_dead_unit
+        use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_dead_unit, write_dead_birth_unit
         use settings_module, only: program_settings 
         use run_time_module, only: run_time_info 
         implicit none
@@ -647,7 +655,7 @@ module read_write_module
         character(len=fmt_len) :: fmt_dbl
 
         ! Initialise the formats
-        write(fmt_dbl,'("("A,",",A,",",I0,A,")")') DB_FMT, INT_FMT, settings%nDims+settings%nDerived+2, DB_FMT
+        write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
 
         ! Open a new file for appending to
         open(write_dead_unit,file=trim(dead_file(settings)), action='write')
@@ -655,11 +663,20 @@ module read_write_module
         do i_dead=1,RTI%ndead
             write(write_dead_unit,fmt_dbl) &
                 RTI%dead(settings%l0,i_dead), &
-                nint(RTI%dead(settings%b0,i_dead)), &
                 RTI%dead(settings%p0:settings%d1,i_dead)
         end do
-
         close(write_dead_unit)
+
+        write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+2, DB_FMT
+
+        open(write_dead_birth_unit,file=trim(dead_birth_file(settings)), action='write')
+        do i_dead=1,RTI%ndead
+            write(write_dead_birth_unit,fmt_dbl) &
+                RTI%dead(settings%p0:settings%d1,i_dead), &
+                RTI%dead(settings%l0,i_dead), &
+                RTI%dead(settings%b0,i_dead)
+        end do
+        close(write_dead_birth_unit)
 
 
     end subroutine write_dead_points
@@ -970,6 +987,28 @@ module read_write_module
 
     end function phys_live_file
 
+
+    function phys_live_birth_file(settings,i) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+        integer,intent(in),optional :: i
+
+        character(STR_LENGTH) :: file_name
+
+        character(STR_LENGTH) :: cluster_num
+
+        if(present(i)) then
+            write(cluster_num,'(I5)') i
+            file_name = trim(cluster_dir(settings)) // '/' // trim(settings%file_root) &
+                // '_phys_live_' // trim(adjustl(cluster_num)) //'.txt'
+        else 
+            file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_phys_live-birth.txt'
+        end if
+
+    end function phys_live_birth_file
+
     function prior_file(settings) result(file_name)
         use settings_module, only: program_settings
         use utils_module,    only: STR_LENGTH
@@ -991,6 +1030,17 @@ module read_write_module
         file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_dead.txt'
 
     end function dead_file
+
+    function dead_birth_file(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_dead-birth.txt'
+
+    end function dead_birth_file
 
     function paramnames_file(settings) result(file_name)
         use settings_module, only: program_settings

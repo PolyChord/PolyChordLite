@@ -65,8 +65,14 @@ module utils_module
     !> unit for paramnames file
     integer, parameter :: paramnames_unit = 22
 
-    !> unit for paramnames file
+    !> unit for prior file
     integer, parameter :: write_prior_unit = 23
+
+    !> unit for writing dead birth file
+    integer, parameter :: write_dead_birth_unit = 24
+
+    !> unit for writing live birth file
+    integer, parameter :: write_live_birth_unit = 25
 
     ! All series used to approximate F are computed with relative
     ! tolerance:

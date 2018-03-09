@@ -156,6 +156,7 @@ module generate_module
                 time0 = time()
                 call calculate_point( loglikelihood, prior, live_point, settings, nlike)
                 time1 = time()
+                live_point(settings%b0) = logzero
 
                 ! If its valid, and we need more points, add it to the array
                 if(live_point(settings%l0)>logzero) then
@@ -232,6 +233,7 @@ module generate_module
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     time1 = time()
+                    live_point(settings%b0) = logzero
                     if(live_point(settings%l0)>logzero) total_time = total_time + time1-time0
                     call throw_point(live_point,mpi_information)                                    ! Send it to the root node
                     if(.not. more_points_needed(mpi_information)) exit                              ! If we've recieved a kill signal, then exit this loop
@@ -346,6 +348,7 @@ module generate_module
         do 
             live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
             call calculate_point( loglikelihood, prior, live_point, settings, nlike)
+            live_point(settings%b0) = logzero
             if (live_point(settings%l0)> logzero) exit
         end do
 
@@ -369,6 +372,7 @@ module generate_module
                 time0 = time()
                 call calculate_point( loglikelihood, prior, live_point, settings, nlike)
                 time1 = time()
+                live_point(settings%b0) = logzero
 
                 if(live_point(settings%l0)>logzero) then
                     total_time=total_time+time1-time0
