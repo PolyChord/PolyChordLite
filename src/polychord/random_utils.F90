@@ -24,6 +24,7 @@ module random_module
     !! @todo Write seed to log file
 
     subroutine initialise_random(seed_input)
+        use iso_fortran_env, only: int64
         implicit none
         !> Optional seed input.
         !! If this isn't included, then the system time is used
@@ -38,7 +39,7 @@ module random_module
 
         integer :: size_seed
         integer :: dt(8)
-        integer :: t
+        integer(int64) :: t
         integer :: i
 
 
@@ -79,31 +80,33 @@ module random_module
         call MPI_BCAST(t,1,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
 
         ! Augment the seed on each node by adding 1 to it
-        t = t+myrank
+        t = ieor(t, int(myrank, kind(t)))
 #endif
 
         ! set up the seeds for the better generator
-        seed = [ ( floor(basic_random(t)*huge(0)) , i=1,size_seed ) ]
+        do i=1,size_seed
+            seed(i) = basic_random(t)
+        end do
 
         ! Seed the better generator
         call random_seed(put=seed)
 
+        contains
+
+        function basic_random(s)
+          integer :: basic_random
+          integer(int64) :: s
+          if (s == 0) then
+             s = 104729
+          else
+             s = mod(s, 4294967296_int64)
+          end if
+          s = mod(s * 279470273_int64, 4294967291_int64)
+          basic_random = int(mod(s, int(huge(0), int64)), kind(0))
+        end function basic_random
+
     end subroutine initialise_random
 
-    function basic_random(seed)
-        implicit none
-        real(dp) :: basic_random
-        integer :: seed
-        integer :: oldseed = 0
-        integer, parameter :: c1 = 19423
-        integer, parameter :: c2 = 811
-        save oldseed
-
-        if (oldseed .eq. 0) oldseed = seed
-        oldseed = mod(c1 * oldseed, c2)
-        basic_random = 1.0 * oldseed / c2
-
-    end function basic_random
 
     ! ===========================================================================================
 

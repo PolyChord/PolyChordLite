@@ -337,6 +337,7 @@ module generate_module
         integer :: i_live
         integer :: nlike
         integer :: h0,h1
+        integer :: failed
 
         real(dp) :: time0,time1,total_time
 
@@ -366,6 +367,7 @@ module generate_module
                 flush(stdout_unit)
             end if
 
+            failed = 0
             do while( total_time/settings%grade_frac(i_speed)< speed(1)/settings%grade_frac(1) *settings%nlive / dble(mpi_information%nprocs ))
                 live_point(h0:h1) = random_reals(h1-h0+1)
 
@@ -377,6 +379,17 @@ module generate_module
                 if(live_point(settings%l0)>logzero) then
                     total_time=total_time+time1-time0
                     i_live=i_live+1
+                else
+                    failed = failed + 1
+                    if (failed > 10*(i_live+1)) then
+                        ! Do another slow likelihood calculation
+                        do 
+                            live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
+                            call calculate_point( loglikelihood, prior, live_point, settings, nlike)
+                            if (live_point(settings%l0)> logzero) exit
+                        end do
+                        failed = 0
+                    end if
                 end if
 
             end do
