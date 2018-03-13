@@ -17,7 +17,7 @@ module utils_module
 
     !> The default writing formats
     integer, parameter :: fmt_len = 200
-    character(7) :: DB_FMT='E17.8E3'
+    character(8) :: DB_FMT='E24.15E3'
     character(4) :: FLT_FMT='F8.2'
     character(3) :: INT_FMT='I12'
 

@@ -386,6 +386,7 @@ module generate_module
                         do 
                             live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
                             call calculate_point( loglikelihood, prior, live_point, settings, nlike)
+                            live_point(settings%b0) = logzero
                             if (live_point(settings%l0)> logzero) exit
                         end do
                         failed = 0

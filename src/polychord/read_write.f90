@@ -642,7 +642,7 @@ module read_write_module
 
 
     subroutine write_dead_points(settings,RTI)
-        use utils_module, only: DB_FMT,INT_FMT,fmt_len,write_dead_unit, write_dead_birth_unit
+        use utils_module, only: DB_FMT,fmt_len,write_dead_unit, write_dead_birth_unit
         use settings_module, only: program_settings 
         use run_time_module, only: run_time_info 
         implicit none
