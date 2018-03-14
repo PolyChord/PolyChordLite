@@ -282,6 +282,7 @@ module nested_sampling_module
                             master_epoch = master_epoch+1
 #endif
                         end if! Delete any clusters as necessary
+                        if (RTI%ncluster == 0) exit
 
                         ! update the clustering and covariance matrices every nlive iterations
                         if( cyc(RTI%ndead,settings%nlive) ) then
