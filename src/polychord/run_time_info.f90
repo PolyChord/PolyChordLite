@@ -710,7 +710,7 @@ module run_time_module
 
 
     function replace_point(settings,RTI,baby_points,cluster_add) result(replaced)
-        use utils_module, only: logsumexp,logincexp, logzero
+        use utils_module, only: logsumexp,logincexp
         use settings_module, only: program_settings
         use random_module, only: bernoulli_trial
         use array_module, only: add_point
@@ -735,7 +735,6 @@ module run_time_module
 
         ! The loglikelihood contour is defined by the cluster it belongs to
         logL = RTI%logLp(cluster_add)
-        logL0 = logzero
 
         ! Assign the phantom points to cluster_add, if they are:
         ! (1) Within the isolikelihood contour of the cluster.
@@ -768,6 +767,8 @@ module run_time_module
                 end if
                 if (sum(RTI%nlive) >= nlive) then
                     logL0 = delete_outermost_point(settings,RTI)
+                else
+                    logL0 = minval(RTI%logLp)
                 end if
                 if (sum(RTI%nlive) < nlive) then
                     point(settings%b0) = logL0                                                       ! Note the moment it is born at
