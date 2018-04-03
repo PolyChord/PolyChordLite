@@ -173,7 +173,7 @@ module nested_sampling_module
             end if
 
             do while(is_root(mpi_information) .and. RTI%nlive(1) > settings%nlive )
-                logL = delete_outermost_point(settings,RTI)
+                call delete_outermost_point(settings,RTI)
             end do
 
             ! Write a resume file (as the generation of live points can be intensive)
@@ -320,7 +320,7 @@ module nested_sampling_module
             if(settings%write_resume)                  call write_resume_file(settings,RTI)
 
             do while(RTI%ncluster > 0)
-                logL = delete_outermost_point(settings,RTI)
+                call delete_outermost_point(settings,RTI)
                 temp_logical = delete_cluster(settings,RTI)
             end do
 

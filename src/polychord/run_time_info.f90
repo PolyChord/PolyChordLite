@@ -727,14 +727,14 @@ module run_time_module
         ! live point, last of the baby points
         real(dp),dimension(settings%nTotal) :: point
 
-        real(dp) :: logL, logL0 ! loglikelihood bound
+        real(dp) :: logL ! loglikelihood bound
 
         integer :: i_baby ! point iterator
         integer :: i_nlive, nlive ! where in the nlives array to search
         
 
-        ! The loglikelihood contour is defined by the cluster it belongs to
-        logL = RTI%logLp(cluster_add)
+        ! The birth loglikelihood contour is defined globally
+        logL = minval(RTI%logLp)
 
         ! Assign the phantom points to cluster_add, if they are:
         ! (1) Within the isolikelihood contour of the cluster.
@@ -766,13 +766,11 @@ module run_time_module
                     nlive = settings%nlives(i_nlive)
                 end if
                 if (sum(RTI%nlive) >= max(nlive,1)) then
-                    logL0 = delete_outermost_point(settings,RTI)
+                    call delete_outermost_point(settings,RTI)
                     replaced = .true.                                                                ! Mark this as a replaced live point
-                else
-                    logL0 = minval(RTI%logLp)
                 end if
                 if (sum(RTI%nlive) < nlive) then
-                    point(settings%b0) = logL0                                                       ! Note the moment it is born at
+                    point(settings%b0) = logL                                                        ! Note the moment it is born at
                     call add_point(point,RTI%live,RTI%nlive,cluster_add)                             ! Add the new live point to the live points
                     call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
                 end if
@@ -781,7 +779,7 @@ module run_time_module
 
     end function replace_point
 
-    function delete_outermost_point(settings,RTI) result(logL)
+    subroutine delete_outermost_point(settings,RTI)
         use settings_module, only: program_settings
         use utils_module, only: logsumexp,logincexp,minpos
         use array_module, only: add_point,delete_point
@@ -793,7 +791,6 @@ module run_time_module
         real(dp),dimension(settings%nTotal)     :: deleted_point   ! point we have just deleted
         real(dp),dimension(settings%nposterior) :: posterior_point   ! temporary posterior point
         real(dp)                                :: logweight       ! The log weighting of this point
-        real(dp)                                :: logL            ! The logL contour of the deleted point
         integer                                     :: cluster_del     ! cluster to delete from
 
         cluster_del   = minpos(RTI%logLp)                                                ! find the cluster we're deleting from
@@ -807,9 +804,8 @@ module run_time_module
         call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,cluster_del )
         RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
         RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
-        logL = deleted_point(settings%l0)
 
-    end function delete_outermost_point 
+    end subroutine delete_outermost_point 
 
 
     subroutine clean_phantoms(settings,RTI)
