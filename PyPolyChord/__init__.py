@@ -175,7 +175,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior)
                      settings.write_live,
                      settings.write_dead,
                      settings.write_prior,
-                     settings.update_files,
+                     settings.compression_factor,
                      settings.base_dir,
                      settings.file_root,
                      settings.grade_frac,

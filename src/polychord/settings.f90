@@ -44,8 +44,6 @@ module settings_module
         logical :: write_live = .true.        !> Whether or not to write phys_live points
         logical :: write_dead = .true.        !> Whether or not to write dead points
 
-        integer :: update_files = -1          !> How often to update the resume file
-
         integer, allocatable,dimension(:) :: grade_dims          !> The number of parameters in each grade
         real(dp), allocatable,dimension(:) :: grade_frac !> The fraction of time spent in each grade
 
@@ -137,6 +135,8 @@ module settings_module
 
         integer,  dimension(:), allocatable :: nlives     !> The number of live points per contour
         real(dp), dimension(:), allocatable :: loglikes   !> The contours for nlive_list
+        
+        real(dp) :: compression_factor = exp(-1d0)
 
     end type program_settings
 

@@ -33,7 +33,6 @@ program PolyChord
     settings%cluster_posteriors = .false.
 
     settings%feedback      = 1
-    settings%update_files  = settings%nlive
 
     settings%boost_posterior= 5.0_dp
 

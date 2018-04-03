@@ -75,6 +75,8 @@ module run_time_module
 
         !> Local volume estimate
         real(dp), allocatable, dimension(:)   :: logXp
+        !> Volume at last update
+        real(dp)                              :: logX_last_update
         !> global evidence volume cross correlation
         real(dp), allocatable, dimension(:)   :: logZXp
         !> Local evidence estimate
@@ -168,6 +170,7 @@ module run_time_module
         ! All volumes set to 1
         RTI%logXp=0d0
         RTI%logXpXq=0d0
+        RTI%logX_last_update = 0d0
 
         !Initially no live points at all
         RTI%nlive=0
@@ -709,7 +712,7 @@ module run_time_module
 
 
 
-    function replace_point(settings,RTI,baby_points,cluster_add) result(replaced)
+    subroutine replace_point(settings,RTI,baby_points,cluster_add)
         use utils_module, only: logsumexp,logincexp
         use settings_module, only: program_settings
         use random_module, only: bernoulli_trial
@@ -777,7 +780,7 @@ module run_time_module
             end if
         end if
 
-    end function replace_point
+    end subroutine replace_point
 
     subroutine delete_outermost_point(settings,RTI)
         use settings_module, only: program_settings

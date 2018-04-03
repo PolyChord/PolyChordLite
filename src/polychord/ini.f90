@@ -76,10 +76,10 @@ contains
         settings%cluster_posteriors = get_logical(file_name,'posterior_clustering',.false.)
 
         settings%feedback           = get_integer(file_name,'feedback',1)
-        settings%update_files       = get_integer(file_name,'update_files',settings%nlive)
 
         settings%boost_posterior    = get_double(file_name,'boost_posterior',0d0)
         settings%precision_criterion= get_double(file_name,'precision_criterion',1d-3)
+        settings%compression_factor = get_double(file_name,'compression_factor',exp(-1d0))
 
         call get_doubles(file_name,'seed_point',settings%seed_point)
 

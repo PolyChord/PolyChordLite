@@ -6,7 +6,40 @@
 #define PYTHON3
 #endif
 
-extern "C" void polychord_c_interface(double (*)(double*,int,double*,int), void (*)(double*,double*,int), int, int, int, bool, int, double, int, double, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, int, int, int, char*, char*, int, double*, int*, int, double*, int*, int); 
+extern "C" void polychord_c_interface(
+        double (*)(double*,int,double*,int), 
+        void (*)(double*,double*,int), 
+        int,
+        int,
+        int,
+        bool,
+        int,
+        double,
+        int,
+        double,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        double,
+        int,
+        int,
+        char*,
+        char*,
+        int,
+        double*,
+        int*,
+        int,
+        double*,
+        int*,
+        int);
+
 
 /* Exception */
 class PythonException : std::exception {};
@@ -207,7 +240,7 @@ void prior(double* cube, double* theta, int nDims)
 
 
 /* Function to run PyPolyChord */
-static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
+static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
 {
 
     PyObject *temp_logl, *temp_prior;
@@ -218,14 +251,14 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
     int max_ndead;
     double boost_posterior;
     int posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, write_prior;
-    int update_files;
+    double compression_factor;
     char* base_dir, *file_root;
     PyObject* py_grade_dims, *py_grade_frac, *py_nlives;
     int seed;
         
 
     if (!PyArg_ParseTuple(args,
-                "OOiiiiiiididiiiiiiiiiiissO!O!O!i:run",
+                "OOiiiiiiididiiiiiiiiiidssO!O!O!i:run",
                 &temp_logl,
                 &temp_prior,
                 &nDims,
@@ -248,7 +281,7 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
                 &write_live,
                 &write_dead,
                 &write_prior,
-                &update_files,
+                &compression_factor,
                 &base_dir,
                 &file_root,
                 &PyList_Type,
@@ -332,7 +365,7 @@ static PyObject *run_PyPolyChord(PyObject *self, PyObject *args)
             write_live,
             write_dead,
             write_prior,
-            update_files, 
+            compression_factor, 
             nDims,
             nDerived,
             base_dir,

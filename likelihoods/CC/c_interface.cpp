@@ -24,7 +24,7 @@ Settings::Settings(int _nDims,int _nDerived):
     write_live          {false},
     write_dead          {false},
     write_prior         {true},
-    update_files        {nlive},
+    compression_factor  {0.36787944117144233},
     base_dir            {"chains"},
     file_root           {"test"},
     seed                {-1}
@@ -78,7 +78,7 @@ void run_polychord(
             s.write_live,
             s.write_dead,
             s.write_prior,
-            s.update_files,
+            s.compression_factor,
             s.nDims,
             s.nDerived,
             base_dir,

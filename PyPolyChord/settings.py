@@ -1,4 +1,5 @@
 import os
+import numpy
 
 class PolyChordSettings:
     """
@@ -100,9 +101,9 @@ class PolyChordSettings:
         (Default: True)
         Write a prior points file.
 
-    update_files : int
-        (Default: nlive)
-        How often to update the files in <base_dir>.
+    compression_factor : double
+        (Default: exp(-1))
+        How often to update the files and do clustering
 
     base_dir : string
         (Default: 'chains')
@@ -154,7 +155,7 @@ class PolyChordSettings:
         self.write_live = kwargs.pop('write_live', True)
         self.write_dead = kwargs.pop('write_dead', True)
         self.write_prior = kwargs.pop('write_prior', True)
-        self.update_files = kwargs.pop('update_files', self.nlive)
+        self.compression_factor = kwargs.pop('compression_factor', numpy.exp(-1))
         self.base_dir = kwargs.pop('base_dir', 'chains')
         self.file_root = kwargs.pop('file_root', 'test')
         self.grade_dims = kwargs.pop('grade_dims', [nDims])

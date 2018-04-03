@@ -95,13 +95,12 @@ module nested_sampling_module
 
         ! Logical Switches
         ! ----------------
-        logical :: need_more_samples
         logical :: temp_logical
+        logical :: update
 
         ! MPI process variable
         ! --------------------
         type(mpi_bundle) :: mpi_information
-
 
 
 #ifdef MPI
@@ -205,10 +204,7 @@ module nested_sampling_module
             call write_started_sampling(settings%feedback) !
             ! -------------------------------------------- !
 
-            ! Definitely need more samples than this
-            need_more_samples = RTI%ndead<settings%max_ndead .or. settings%max_ndead<0
-
-            do while ( need_more_samples )
+            do while ( more_samples_needed(settings,RTI)   )
 
 
                 ! 1) Generate a new live point
@@ -257,58 +253,55 @@ module nested_sampling_module
 #ifdef MPI
                 if( linear_mode(mpi_information) .or. master_epoch==slave_epoch ) then
 #endif
-                    if(replace_point(settings,RTI,baby_points,cluster_id) ) then
+                    call replace_point(settings,RTI,baby_points,cluster_id)
 
-                        ! Check to see if we need more samples
-                        need_more_samples = more_samples_needed(settings,RTI) 
+                    update = logsumexp(RTI%logXp) <= RTI%logX_last_update
+                    if (update) then
+                        RTI%logX_last_update = RTI%logX_last_update + log(settings%compression_factor)
 
-                        ! Update the posterior array every nlive iterations
-                        if( cyc(RTI%ndead,settings%nlive) ) call update_posteriors(settings,RTI) 
+                        ! Update the posterior array
+                        call update_posteriors(settings,RTI)  
 
-                        ! Update the resume files every settings%update_resume iterations,
-                        ! or at the end of the run
-                        if( cyc(RTI%ndead,settings%update_files) .and. settings%update_files > 0 ) then
-                            if(settings%write_resume)                  call write_resume_file(settings,RTI)
-                            if(settings%write_live)                    call write_phys_live_points(settings,RTI)
-                            if(settings%write_dead)                    call write_dead_points(settings,RTI)   
-                            if(settings%write_stats)                   call write_stats_file(settings,RTI,nlikesum)
-                            if(settings%equals.or.settings%posteriors) call write_posterior_file(settings,RTI)   
-                            call rename_files(settings,RTI)
-                        end if
+                        ! Update the resume files
+                        if(settings%write_resume)                  call write_resume_file(settings,RTI)
+                        if(settings%write_live)                    call write_phys_live_points(settings,RTI)
+                        if(settings%write_dead)                    call write_dead_points(settings,RTI)   
+                        if(settings%write_stats)                   call write_stats_file(settings,RTI,nlikesum)
+                        if(settings%equals.or.settings%posteriors) call write_posterior_file(settings,RTI)   
+                        call rename_files(settings,RTI)
 
+                    end if
 
-                        if(delete_cluster(settings,RTI)) then
+                    if(delete_cluster(settings,RTI)) then
 #ifdef MPI
-                            master_epoch = master_epoch+1
+                        master_epoch = master_epoch+1
 #endif
-                        end if! Delete any clusters as necessary
-                        if (RTI%ncluster == 0) exit
+                    end if! Delete any clusters as necessary
+                    if (RTI%ncluster == 0) exit
 
-                        ! update the clustering and covariance matrices every nlive iterations
-                        if( cyc(RTI%ndead,settings%nlive) ) then
-                            !--------------------------------------------!
-                            call write_intermediate_results(settings,RTI,nlikesum)
-                            nlikesum=0
-                            !--------------------------------------------!
-                            if(settings%do_clustering) then
+                    if(update) then
+                        !--------------------------------------------!
+                        call write_intermediate_results(settings,RTI,nlikesum)
+                        nlikesum=0
+                        !--------------------------------------------!
+                        if(settings%do_clustering) then
 
-                                ! If we want to cluster on sub dimensions, then do this first
-                                if(allocated(settings%sub_clustering_dimensions)) then
-                                    if( do_clustering(settings,RTI,settings%sub_clustering_dimensions) )  then
-#ifdef MPI
-                                        master_epoch = master_epoch+1
-#endif
-                                    end if
-                                end if
-
-                                if( do_clustering(settings,RTI) )  then
+                            ! If we want to cluster on sub dimensions, then do this first
+                            if(allocated(settings%sub_clustering_dimensions)) then
+                                if( do_clustering(settings,RTI,settings%sub_clustering_dimensions) )  then
 #ifdef MPI
                                     master_epoch = master_epoch+1
 #endif
                                 end if
                             end if
-                            call calculate_covmats(settings,RTI)
+
+                            if( do_clustering(settings,RTI) )  then
+#ifdef MPI
+                                master_epoch = master_epoch+1
+#endif
+                            end if
                         end if
+                        call calculate_covmats(settings,RTI)
                     end if
 #ifdef MPI
                 end if

@@ -228,6 +228,7 @@ module read_write_module
         call write_double(RTI%thin_posterior,        "=== posterior thin factor ===")                    
         call write_doubles(RTI%logLp,                "=== local loglikelihood bounds ===")                    
         call write_doubles(RTI%logXp,                "=== local volume -- log(<X_p>) ===")                    
+        call write_double(RTI%logX_last_update,      "=== last update volume ===")                    
         call write_doubles(RTI%logZXp,               "=== global evidence volume cross correlation -- log(<ZX_p>) ===")                    
         call write_doubles(RTI%logZp,                "=== local evidence -- log(<Z_p>) ===")                    
         call write_doubles(RTI%logZp2,               "=== local evidence^2 -- log(<Z_p^2>) ===")                    
@@ -406,6 +407,7 @@ module read_write_module
         
         call read_doubles(RTI%logLp,'-',RTI%ncluster)
         call read_doubles(RTI%logXp,'-',RTI%ncluster)
+        call read_double(RTI%logX_last_update,'-')
         call read_doubles(RTI%logZXp,'-',RTI%ncluster)
         call read_doubles(RTI%logZp,'-',RTI%ncluster)
         call read_doubles(RTI%logZp2,'-',RTI%ncluster)
@@ -729,6 +731,7 @@ module read_write_module
         real(dp), dimension(RTI%ncluster_dead) :: logZp_dead      
         real(dp), dimension(RTI%ncluster_dead) :: varlogZp_dead 
         real(dp), dimension(settings%nDims+settings%nDerived) :: mu,sig
+        real(dp), dimension(size(nlikesum)) :: update_files
 
         integer :: p, i_dims
 
@@ -781,7 +784,8 @@ module read_write_module
         write(write_stats_unit,fmt_nlike) RTI%nlike
 
         write(fmt_nlike,'(  "("" <nlike>:    "","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
-        write(write_stats_unit,fmt_nlike) dble(nlikesum)/dble(settings%update_files),dble(nlikesum)/dble(RTI%num_repeats*settings%update_files)
+        update_files = -RTI%nlive*log(settings%compression_factor)
+        write(write_stats_unit,fmt_nlike) dble(nlikesum)/update_files,dble(nlikesum)/dble(RTI%num_repeats*update_files)
 
         if (settings%posteriors) then
             write(fmt_Z,'("(I3,", A, ","" +/- "",", A, ")")') DB_FMT,DB_FMT

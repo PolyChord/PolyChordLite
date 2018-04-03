@@ -96,10 +96,39 @@ contains
 
 
 
-    subroutine polychord_c_interface(c_loglikelihood_ptr, c_prior_ptr, nlive, num_repeats, nprior, do_clustering, feedback, &
-        precision_criterion, max_ndead, boost_posterior, posteriors, equals, cluster_posteriors, write_resume, &
-            write_paramnames, read_resume, write_stats, write_live, write_dead, write_prior, update_files, nDims, nDerived, &
-            base_dir, file_root, nGrade, grade_frac, grade_dims, n_nlives, loglikes, nlives, seed) &
+    subroutine polychord_c_interface(&
+            c_loglikelihood_ptr,&
+            c_prior_ptr,&
+            nlive,&
+            num_repeats,&
+            nprior,&
+            do_clustering,&
+            feedback, &
+            precision_criterion,&
+            max_ndead,&
+            boost_posterior,&
+            posteriors,&
+            equals,&
+            cluster_posteriors,&
+            write_resume, &
+            write_paramnames,&
+            read_resume,&
+            write_stats,&
+            write_live,&
+            write_dead,&
+            write_prior,&
+            compression_factor,&
+            nDims,&
+            nDerived, &
+            base_dir,&
+            file_root,&
+            nGrade,&
+            grade_frac,&
+            grade_dims,&
+            n_nlives,&
+            loglikes,&
+            nlives,&
+            seed) &
             bind(c,name='polychord_c_interface')
 
         use iso_c_binding
@@ -153,7 +182,7 @@ contains
         logical(c_bool), intent(in), value  :: write_live
         logical(c_bool), intent(in), value  :: write_dead
         logical(c_bool), intent(in), value  :: write_prior
-        integer(c_int), intent(in), value   :: update_files
+        real(c_double),  intent(in), value  :: compression_factor
         integer(c_int), intent(in), value   :: nDims
         integer(c_int), intent(in), value   :: nDerived
         character(len=1,kind=c_char), intent(in), dimension(STR_LENGTH) :: base_dir
@@ -194,7 +223,7 @@ contains
         settings%write_live          = write_live           
         settings%write_dead          = write_dead           
         settings%write_prior         = write_prior
-        settings%update_files        = update_files         
+        settings%compression_factor  = compression_factor         
         settings%nDims               = nDims
         settings%nDerived            = nDerived
 

@@ -27,7 +27,7 @@ int main()
     settings.cluster_posteriors = false;
 
     settings.feedback      = 1;
-    settings.update_files  = settings.nlive;
+    settings.compression_factor  = 0.36787944117144233;
 
     settings.boost_posterior= 5.0;
 
