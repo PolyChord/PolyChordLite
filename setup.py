@@ -13,7 +13,7 @@ pypolychord_module = Extension(
         )
 
 setup(name='PyPolyChord',
-      version='1.12',
+      version='1.13',
       description='Python interface to PolyChord 1.12',
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
       author='Will Handley',
