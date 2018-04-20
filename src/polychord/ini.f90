@@ -85,6 +85,9 @@ contains
 
         call get_doubles(file_name,'grade_frac',settings%grade_frac)
 
+        call get_integers(file_name,'nlives',settings%nlives)
+        call get_doubles(file_name,'loglikes',settings%loglikes)
+
         call get_params(file_name,params,derived_params)  
 
         settings%nDims         = size(params)
@@ -242,6 +245,33 @@ contains
         end do
 
     end subroutine get_doubles
+
+    subroutine get_integers(file_name,key_word,integers)
+        use utils_module,  only: STR_LENGTH
+        use array_module,  only: reallocate
+        character(len=*),intent(in)  :: file_name !> The name of the file to search in
+        character(len=*),intent(in)  :: key_word  !> keyword to search for
+        integer, intent(out), allocatable, dimension(:) :: integers
+
+        character(len=STR_LENGTH) :: string  ! string following keyword
+
+        integer :: i
+
+        ! Allocate a zero size array
+        if(allocated(integers)) deallocate(integers)
+        allocate(integers(0))
+
+        ! Get the string
+        string = get_string(file_name,key_word)
+
+        do while( trim(string)/='' )
+            i=size(integers)+1
+            call reallocate(integers,i)
+            read(string,*) integers(i)
+            call next_element(string,' ')
+        end do
+
+    end subroutine get_integers
 
     function get_integer(file_name,key_word,dflt)
         use utils_module,  only: STR_LENGTH
