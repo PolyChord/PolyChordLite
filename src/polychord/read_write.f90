@@ -785,6 +785,7 @@ module read_write_module
 
         write(fmt_nlike,'(  "("" <nlike>:    "","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
         update_files = -RTI%nlive*log(settings%compression_factor)
+        where(update_files==0) update_files = huge(1)
         write(write_stats_unit,fmt_nlike) dble(nlikesum)/update_files,dble(nlikesum)/dble(RTI%num_repeats*update_files)
 
         if (settings%posteriors) then
