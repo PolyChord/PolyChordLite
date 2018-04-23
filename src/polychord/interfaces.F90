@@ -12,7 +12,7 @@ module interfaces_module
 contains
 
 
-    subroutine run_polychord_full(loglikelihood, prior, settings_in, seed)
+    subroutine run_polychord_full(loglikelihood, prior, settings_in)
         use settings_module,          only: program_settings,initialise_settings
         use random_module,            only: initialise_random
         use nested_sampling_module,   only: NestedSampling
@@ -42,13 +42,12 @@ contains
         type(program_settings)               :: settings 
 
         real(dp), dimension(4) :: output_info
-        integer, optional :: seed
 
 #ifdef MPI
         call initialise_mpi(settings_in%feedback)
 #endif
-        if (present(seed) .and. seed >= 0) then
-            call initialise_random(seed)
+        if (settings%seed >= 0) then
+            call initialise_random(settings%seed)
         else
             call initialise_random()
         end if
@@ -230,6 +229,8 @@ contains
         settings%base_dir            = convert_c_string(base_dir)
         settings%file_root           = convert_c_string(file_root) 
 
+        settings%seed                = seed
+
         allocate(settings%grade_frac(nGrade),settings%grade_dims(nGrade))
         settings%grade_frac = grade_frac
         settings%grade_dims = grade_dims
@@ -247,7 +248,7 @@ contains
         call c_f_procpointer(c_loglikelihood_ptr, f_loglikelihood_ptr)
         call c_f_procpointer(c_prior_ptr, f_prior_ptr)
 
-        call run_polychord(loglikelihood,prior,settings,seed) 
+        call run_polychord(loglikelihood,prior,settings) 
 
     contains
         function loglikelihood(theta,phi)
