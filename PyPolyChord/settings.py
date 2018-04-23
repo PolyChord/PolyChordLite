@@ -136,7 +136,6 @@ class PolyChordSettings:
     """
     def __init__(self, nDims, nDerived, **kwargs):
 
-        self.nlive = nDims * 25
         self.nlive = kwargs.pop('nlive', nDims*25)
         self.num_repeats = kwargs.pop('num_repeats', nDims*5)
         self.nprior = kwargs.pop('nprior', -1)
@@ -158,10 +157,10 @@ class PolyChordSettings:
         self.compression_factor = kwargs.pop('compression_factor', numpy.exp(-1))
         self.base_dir = kwargs.pop('base_dir', 'chains')
         self.file_root = kwargs.pop('file_root', 'test')
+        self.seed = kwargs.pop('seed', -1)  
         self.grade_dims = kwargs.pop('grade_dims', [nDims])
         self.grade_frac = kwargs.pop('grade_frac', [1.0]*len(self.grade_dims))
         self.nlives = kwargs.pop('nlives', {}) 
-        self.seed = kwargs.pop('seed', -1)  
 
         if kwargs:
             raise TypeError('Unexpected **kwargs in Contours constructor: %r' % kwargs)
