@@ -55,37 +55,32 @@ contains
 
         settings%nlive              = get_integer(file_name,'nlive')
         settings%num_repeats        = get_integer(file_name,'num_repeats')
+        settings%nprior             = get_integer(file_name,'nprior',-1)
         settings%do_clustering      = get_logical(file_name,'do_clustering',.false.)
-
+        settings%feedback           = get_integer(file_name,'feedback',1)
+        settings%precision_criterion= get_double(file_name,'precision_criterion',1d-3)
+        settings%max_ndead          = get_integer(file_name,'max_ndead',-1)
+        settings%boost_posterior    = get_double(file_name,'boost_posterior',0d0)
+        settings%posteriors         = get_logical(file_name,'posteriors',.false.)
+        settings%equals             = get_logical(file_name,'equals',.false.)
+        settings%cluster_posteriors = get_logical(file_name,'cluster_posteriors',.false.)
+        settings%write_resume       = get_logical(file_name,'write_resume',.false.)
+        settings%write_paramnames   = get_logical(file_name,'write_paramnames',.false.)
+        settings%read_resume        = get_logical(file_name,'read_resume',.false.)
+        settings%write_stats        = get_logical(file_name,'write_stats',.true.)
+        settings%write_live         = get_logical(file_name,'write_live',.false.)
+        settings%write_dead         = get_logical(file_name,'write_dead',.true.)
+        settings%write_prior        = get_logical(file_name,'write_prior',.false.)
+        settings%compression_factor = get_double(file_name,'compression_factor',exp(-1d0))
         settings%base_dir           = get_string(file_name,'base_dir','chains')
         settings%file_root          = get_string(file_name,'file_root','test')
+        ! settings%seed               = get_integer(file_name,'seed', -1)
 
-        settings%write_paramnames   = get_logical(file_name,'write_paramnames',.false.)
-        settings%write_resume       = get_logical(file_name,'write_resume',.false.)
-        settings%read_resume        = get_logical(file_name,'read_resume',.false.)
-        settings%write_live         = get_logical(file_name,'write_live',.false.)
-        settings%write_dead         = get_logical(file_name,'write_dead',.false.)
-
-        settings%write_prior        = get_logical(file_name,'write_prior',.false.)
         settings%generate_from_seed = get_logical(file_name,'generate_from_seed',.false.)
-        settings%nprior             = get_integer(file_name,'nprior',-1)
         settings%nprior_repeat      = get_integer(file_name,'nprior_repeat',-1)
-
-        settings%equals             = get_logical(file_name,'equals',.false.)
-        settings%posteriors         = get_logical(file_name,'posteriors',.false.)
-        settings%cluster_posteriors = get_logical(file_name,'cluster_posteriors',.false.)
-
-        settings%feedback           = get_integer(file_name,'feedback',1)
-        settings%max_ndead          = get_integer(file_name,'max_ndead',-1)
-
-        settings%boost_posterior    = get_double(file_name,'boost_posterior',0d0)
-        settings%precision_criterion= get_double(file_name,'precision_criterion',1d-3)
-        settings%compression_factor = get_double(file_name,'compression_factor',exp(-1d0))
-
         call get_doubles(file_name,'seed_point',settings%seed_point)
 
         call get_doubles(file_name,'grade_frac',settings%grade_frac)
-
         call get_integers(file_name,'nlives',settings%nlives)
         call get_doubles(file_name,'loglikes',settings%loglikes)
 
