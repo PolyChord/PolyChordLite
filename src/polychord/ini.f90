@@ -74,7 +74,7 @@ contains
         settings%compression_factor = get_double(file_name,'compression_factor',exp(-1d0))
         settings%base_dir           = get_string(file_name,'base_dir','chains')
         settings%file_root          = get_string(file_name,'file_root','test')
-        ! settings%seed               = get_integer(file_name,'seed', -1)
+        settings%seed               = get_integer(file_name,'seed', -1)
 
         settings%generate_from_seed = get_logical(file_name,'generate_from_seed',.false.)
         settings%nprior_repeat      = get_integer(file_name,'nprior_repeat',-1)

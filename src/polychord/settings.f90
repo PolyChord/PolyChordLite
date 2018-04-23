@@ -54,6 +54,8 @@ module settings_module
         integer :: nprior_repeat = -1
         logical :: write_prior = .false.
 
+        integer :: seed = -1
+
 
         character(STR_LENGTH) :: base_dir='chains' !> The directory to put outputs in
         character(STR_LENGTH) :: file_root='test'  !> The file root for outputs
