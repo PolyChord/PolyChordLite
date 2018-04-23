@@ -57,12 +57,12 @@ contains
         settings%num_repeats        = get_integer(file_name,'num_repeats')
         settings%do_clustering      = get_logical(file_name,'do_clustering',.false.)
 
-        settings%base_dir           = get_string(file_name,'base_directory','chains')
-        settings%file_root          = get_string(file_name,'rootname','test')
+        settings%base_dir           = get_string(file_name,'base_dir','chains')
+        settings%file_root          = get_string(file_name,'file_root','test')
 
         settings%write_paramnames   = get_logical(file_name,'write_paramnames',.false.)
         settings%write_resume       = get_logical(file_name,'write_resume',.false.)
-        settings%read_resume        = get_logical(file_name,'resume',.false.)
+        settings%read_resume        = get_logical(file_name,'read_resume',.false.)
         settings%write_live         = get_logical(file_name,'write_live',.false.)
         settings%write_dead         = get_logical(file_name,'write_dead',.false.)
 
@@ -71,9 +71,9 @@ contains
         settings%nprior             = get_integer(file_name,'nprior',-1)
         settings%nprior_repeat      = get_integer(file_name,'nprior_repeat',-1)
 
-        settings%equals             = get_logical(file_name,'equally_weighted_posteriors',.false.)
-        settings%posteriors         = get_logical(file_name,'weighted_posteriors',.false.)
-        settings%cluster_posteriors = get_logical(file_name,'posterior_clustering',.false.)
+        settings%equals             = get_logical(file_name,'equals',.false.)
+        settings%posteriors         = get_logical(file_name,'posteriors',.false.)
+        settings%cluster_posteriors = get_logical(file_name,'cluster_posteriors',.false.)
 
         settings%feedback           = get_integer(file_name,'feedback',1)
 
