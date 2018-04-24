@@ -46,8 +46,8 @@ contains
 #ifdef MPI
         call initialise_mpi(settings_in%feedback)
 #endif
-        if (settings%seed >= 0) then
-            call initialise_random(settings%seed)
+        if (settings_in%seed >= 0) then
+            call initialise_random(settings_in%seed)
         else
             call initialise_random()
         end if
