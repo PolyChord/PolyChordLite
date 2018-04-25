@@ -1,7 +1,7 @@
 ifdef MPI
-FC = mpifort
-CC = mpicc
-CXX = mpicpc
+FC = mpiifort
+CC = mpiicc
+CXX = mpiicpc
 else
 FC = ifort
 CXX = icpc
