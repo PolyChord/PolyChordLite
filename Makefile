@@ -75,8 +75,18 @@ $(LIB_DIR)/libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 
 PyPolyChord: $(LIB_DIR)/libchord.so
-	python3 setup.py install --user
-	python2 setup.py install --user
+	@echo '====================================================='
+	@echo ' now run:                                            '
+	@echo '                                                     '
+	@echo '    python3 setup.py install --user                  '
+	@echo '                                                     '
+	@echo ' or                                                  '
+	@echo '                                                     '
+	@echo '    python setup.py install --user                   '
+	@echo '                                                     '
+	@echo ' (The shared object and python compilation steps     '
+	@echo '  separated to avoid compiler clashes)               '
+	@echo '====================================================='
 
 
 

@@ -4,22 +4,32 @@ import pkg_resources
 import sys
 import os
 import resource
-resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
 try:
     import _PyPolyChord
 except ImportError as e:
-    print(ImportError)
     if str(e) == 'libchord.so: cannot open shared object file: No such file or directory':
         print('PolyChord: Could not find libchord.so')
         print('           Did you move/remove your polychord library?')
         print('           Go back to your PolyChord directory and run: ')
         print('')
-        print('           $  make PyPolyChord')
+        print('           $  make')
+        print('           $  python setup.py install --user ')
         print('')
         sys.exit(1)
     else:
         raise e
 
+try:
+    resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+except ValueError:
+    print("Could not unlimit stack size automatically. ")
+    print('')
+    print("If you get a segfault, you need to unlimit the stack size manually:")
+    print("e.g:")
+    print('   $ ulimit -s unlimited ')
+    print('or')
+    print('   $ ulimit -s 65532 ')
+    print(' (on OSX, you may need to put this in your .bashrc or equivalent) ')
 
 
 #if ld_preload and 'libmpi.so' not in sys_ld_preload:
