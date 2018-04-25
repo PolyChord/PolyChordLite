@@ -15,7 +15,11 @@ LIB_DIR = $(PWD)/lib
 export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
 
 # Whether to use MPI
+ifeq "$(shell uname)" "Linux"
 MPI=1
+else
+MPI= 
+endif
 
 # Whether to compile in debugging mode
 DEBUG=
@@ -75,18 +79,22 @@ $(LIB_DIR)/libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 
 PyPolyChord: $(LIB_DIR)/libchord.so
-	@echo '====================================================='
-	@echo ' now run:                                            '
-	@echo '                                                     '
-	@echo '    python3 setup.py install --user                  '
-	@echo '                                                     '
-	@echo ' or                                                  '
-	@echo '                                                     '
-	@echo '    python setup.py install --user                   '
-	@echo '                                                     '
-	@echo ' (The shared object and python compilation steps     '
-	@echo '  separated to avoid compiler clashes)               '
-	@echo '====================================================='
+	@echo '======================================================================================='
+	@echo ' now run:                                                                              '
+	@echo '                                                                                       '
+	@echo '    python3 setup.py install --user                                                    '
+	@echo '                                                                                       '
+	@echo ' or                                                                                    '
+	@echo '                                                                                       '
+	@echo '    python setup.py install --user                                                     '
+	@echo '                                                                                       '
+	@echo ' (The shared object and python compilation steps                                       '
+	@echo '  separated to avoid compiler clashes)                                                 '
+	@echo '                                                                                       '
+	@echo ' OSX users may need to specify their C compilers to not be clang, e.g:                 '
+	@echo '                                                                                       '
+	@echo '    CC=/usr/local/bin/gcc-6 CXX=/usr/local/bin/g++-6  python3 setup.py install --user  '
+	@echo '======================================================================================='
 
 
 

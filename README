@@ -139,6 +139,10 @@ object compilation
 $  make
 $  python setup.py install --user
 
+OSX users may need to specify their C compilers to not be clang, e.g:
+                                                                     
+$ CC=/usr/local/bin/gcc-6 CXX=/usr/local/bin/g++-6  python3 setup.py install --user
+
 You can then import PyPolyChord from anywhere with the lines:
 import PyPolyChord
 
