@@ -3,36 +3,32 @@ import numpy
 import pkg_resources
 import sys
 import os
-
-ld_library_path = pkg_resources.resource_string(__name__,'.ld_library_path.sh').decode('utf-8') 
-ld_preload = pkg_resources.resource_string(__name__,'.ld_preload.sh').decode('utf-8') 
-
+import resource
+resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
 try:
     import _PyPolyChord
 except ImportError as e:
     print(ImportError)
     if str(e) == 'libchord.so: cannot open shared object file: No such file or directory':
-        print('PolyChord: You need to configure your LD_LIBRARY_PATH')
-        print('           to point to your PolyChord installation.')
-        print('           e.g. add this to your .bashrc: ')
+        print('PolyChord: Could not find libchord.so')
+        print('           Did you move/remove your polychord library?')
+        print('           Go back to your PolyChord directory and run: ')
         print('')
-        print(ld_library_path)
+        print('           $  make PyPolyChord')
+        print('')
         sys.exit(1)
     else:
         raise e
 
-try:
-    sys_ld_preload = os.environ['LD_PRELOAD']
-except KeyError:
-    sys_ld_preload = ''
 
-if ld_preload and 'libmpi.so' not in sys_ld_preload:
-    print('PolyChord: You need to configure your LD_PRELOAD')
-    print('           to point to your mpi installation.')
-    print('           e.g. add this to your .bashrc:')
-    print('')
-    print(ld_preload)
-    sys.exit(1)
+
+#if ld_preload and 'libmpi.so' not in sys_ld_preload:
+#    print('PolyChord: You need to configure your LD_PRELOAD')
+#    print('           to point to your mpi installation.')
+#    print('           e.g. add this to your .bashrc:')
+#    print('')
+#    print(ld_preload)
+#    sys.exit(1)
 
 
 def default_prior(cube):

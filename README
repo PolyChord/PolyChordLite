@@ -131,22 +131,13 @@ please email Will (wh260@mrao.cam.ac.uk).
 Python likelihoods (PyPolyChord)
 --------------------------------
 Being python, this interface is much more self-explanatory. You need to compile
-the library with
+the library with:
 $  make PyPolyChord
 
-You then need to point python to the library folder ./lib by adding it to
-LD_LIBRARY PATH. For example, in bash:
-$  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/lib
-
-You may then need to also amend LD_PRELOAD with your mpi library. This is only
-necessary on some systems, and only then if you wish to run it with MPI.  Find
-out where your mpi library is kept, and then add it to LD_PRELOAD. For
-examples, in bash on Ubuntu 14.04:
-$  export LD_PRELOAD=/usr/lib/openmpi/lib/libmpi.so:$LD_PRELOAD
-
-A good trick to finding the correct library is to inspect the output of:
-$  ldd lib/libchord.so
-
+If you are using intel compilers, it is advisable to separate the python and shared
+object compilation
+$  make
+$  python setup.py install --user
 
 You can then import PyPolyChord from anywhere with the lines:
 import PyPolyChord
@@ -159,10 +150,10 @@ $  mpirun -np 4 python run_PyPolyChord.py
 
 If so, the rest of the interface is relatively painless. Follow the example in
 run_PyPolyChord.py, and consult the docstring if you need help:
->   import PyPolyChord as PPC
+>   import PyPolyChord
 >   from PyPolyChord.settings import PolyChordSettings
 >
->   help(PPC.run_polychord)
+>   help(PyPolyChord.run_polychord)
 >   help(PolyChordSettings)
 
 

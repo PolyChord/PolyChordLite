@@ -60,7 +60,7 @@ export PYTHON
 
 
 # make shortcuts
-all: $(LIB_DIR)/libchord.a $(LIB_DIR)/libchord.so environment
+all: $(LIB_DIR)/libchord.a $(LIB_DIR)/libchord.so
 examples: $(EXAMPLES)
 $(EXAMPLES): % : $(BIN_DIR)/%
 $(PROGRAMS): % : $(BIN_DIR)/%
@@ -74,13 +74,7 @@ $(LIB_DIR)/libchord.a:
 $(LIB_DIR)/libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 
-environment: $(LIB_DIR)/libchord.so
-	$(shell touch PyPolyChord/.ld_library_path.sh; echo 'export LD_LIBRARY_PATH=$(LIB_DIR)/:$$LD_LIBRARY_PATH' > PyPolyChord/.ld_library_path.sh)
-ifdef MPI
-	$(shell touch PyPolyChord/.ld_preload.sh; ldd $(LIB_DIR)/libchord.so | grep -o '/.*libmpi.so[^/]* ' | awk '{print "export LD_PRELOAD="$$1":$$LD_PRELOAD"}' > PyPolyChord/.ld_preload.sh)
-endif
-
-PyPolyChord: environment $(LIB_DIR)/libchord.so
+PyPolyChord: $(LIB_DIR)/libchord.so
 	python3 setup.py install --user
 	python2 setup.py install --user
 
