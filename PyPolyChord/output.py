@@ -1,7 +1,7 @@
 try:
     import getdist.mcsamples
 except ImportError:
-    print("Warning: Install getdist for easier treatment of outputs")
+    pass
 import re
 import os
 
