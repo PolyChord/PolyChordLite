@@ -53,7 +53,7 @@ RM = rm -rf
 
 # Library flags
 LDFLAGS += -L$(LIB_DIR)
-LDLIBS += -lchord 
+LDLIBS += -Wl,-Bstatic -lchord -Wl,-Bdynamic
 
 
 # Export all of the necessary variables
