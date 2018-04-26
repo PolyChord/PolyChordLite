@@ -9,13 +9,13 @@ pypolychord_module = Extension(
         name= '_PyPolyChord',
         library_dirs = [os.path.join(os.getcwd(),'lib')],
         runtime_library_dirs = [os.path.join(os.getcwd(),'lib')],
-        libraries = ['chord','gfortran'],
+        libraries = ['chord'],
         sources=[os.path.join(os.getcwd(),'PyPolyChord/_PyPolyChord.cpp')]
         )
 
 setup(name='PyPolyChord',
-      version='1.13',
-      description='Python interface to PolyChord 1.12',
+      version='1.14',
+      description='Python interface to PolyChord 1.14',
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
       author='Will Handley',
       author_email='wh260@cam.ac.uk',

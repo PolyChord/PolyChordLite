@@ -1,4 +1,4 @@
-PolyChord v 1.9
+PolyChord v 1.14
 Will Handley, Mike Hobson & Anthony Lasenby
 wh260@mrao.cam.ac.uk
 arXiv:1502.01856
@@ -133,10 +133,6 @@ Python likelihoods (PyPolyChord)
 Being python, this interface is much more self-explanatory. You need to compile
 the library with:
 $  make PyPolyChord
-
-If you are using intel compilers, it is advisable to separate the python and shared
-object compilation
-$  make
 $  python setup.py install --user
 
 OSX users may need to specify their C compilers to not be clang, e.g:
