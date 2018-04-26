@@ -4,6 +4,8 @@ import pkg_resources
 import sys
 import os
 import resource
+import subprocess
+import re
 try:
     import _PyPolyChord
 except ImportError as e:
@@ -32,13 +34,36 @@ except ValueError:
     print(' (on OSX, you may need to put this in your .bashrc or equivalent) ')
 
 
-#if ld_preload and 'libmpi.so' not in sys_ld_preload:
-#    print('PolyChord: You need to configure your LD_PRELOAD')
-#    print('           to point to your mpi installation.')
-#    print('           e.g. add this to your .bashrc:')
-#    print('')
-#    print(ld_preload)
-#    sys.exit(1)
+try:
+    test_script = os.path.abspath(os.path.join(os.path.dirname(__file__),'test.py'))
+
+    output = subprocess.check_output('python %s' % test_script, 
+                                     stderr=subprocess.STDOUT, 
+                                     shell=True, universal_newlines=True)
+
+except subprocess.CalledProcessError as exc:
+    library_dirs = set(re.findall('/.*openmpi.*/lib',exc.output))
+    libraries = {os.path.join(s,'libmpi.so') for s in library_dirs 
+                    if os.path.exists(os.path.join(s,'libmpi.so'))}
+    if libraries:
+        print("PolyChord Error: MPI Issue")
+        print("--------------------------")
+        print("Unfortunately Python can be a little delicate when it comes to\n" 
+              "interacting with certain versions of openmpi\n\n")
+        print("Try running one of these commands before calling the python script:\n")
+        for library in libraries:
+            print('    export LD_PRELOAD=%s\n\n' % library)
+    else:
+        print("PolyChord Error: possible MPI Issue")
+        print("--------------------------")
+        print("Try setting the environment variable LD_PRELOAD to be the full path"
+              "of libmpi.so for your mpi installation\n\n")
+
+    with open('start_error.log','w') as f:
+        f.write(exc.output)
+        print("Full error output is in start_error.log")
+
+    sys.exit(exc.returncode)
 
 
 def default_prior(cube):
