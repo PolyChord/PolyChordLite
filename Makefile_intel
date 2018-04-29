@@ -22,7 +22,7 @@ AR = ar rv
 # fpic                   : shared object libraries
 # assume noold_maxminloc : in intel v16 compilers, they changed the default behavior of minloc (ffs).
 # 						   this flag is necessary to ensure consistent behavior across compilers
-FFLAGS += -fpp -fpic -assume noold_maxminloc
+FFLAGS += -fpp -fpic -assume noold_maxminloc -heap-arrays
 CXXFLAGS += -fpic
 # nofor_main 	         : essential for linking c++ and fortran
 LDFLAGS += -nofor-main

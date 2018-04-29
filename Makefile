@@ -42,7 +42,6 @@ include Makefile_gnu
 endif
 
 
-
 ifdef MPI
 FFLAGS += -DMPI
 CXXFLAGS += -DMPI

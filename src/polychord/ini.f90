@@ -455,6 +455,7 @@ contains
 
         ! deallocate it if it's already allocated
         if(allocated(prior_params)) deallocate(prior_params)
+        if(allocated(temp_params)) deallocate(temp_params)
 
         ! Trim leading spaces
         line_buffer = adjustl(line_buffer)

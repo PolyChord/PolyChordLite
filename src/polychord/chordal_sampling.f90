@@ -207,6 +207,7 @@ module chordal_module
         real(dp) :: temp_random
 
         integer :: i_step
+        real(dp) :: x0Rd, x0Ld
 
         ! Select initial start and end points
         temp_random = random_real()
@@ -236,63 +237,38 @@ module chordal_module
         if(i_step>100) write(*,'(" too many L steps (",I10,")")') i_step
 
         ! Sample within this bound
-        i_step=0
-        baby_point = find_positive_within(L,R)
-
-        contains
-
-        recursive function find_positive_within(L,R) result(x1)
-            implicit none
-            !> The upper bound
-            real(dp), intent(inout), dimension(S%nTotal)   :: R
-            !> The lower bound
-            real(dp), intent(inout), dimension(S%nTotal)   :: L
-
-            ! The output finish point
-            real(dp),    dimension(S%nTotal)   :: x1
-
-            real(dp) :: x0Rd
-            real(dp) :: x0Ld
-
-            i_step=i_step+1
-            if (i_step>100) then
-                write(*,'("Polychord Warning: Non deterministic loglikelihood")')
-                x1(S%l0) = logzero
-                return
-            end if
-
+        do i_step=0,100
             ! Find the distance between x0 and L 
             x0Ld= distance(x0(S%h0:S%h1),L(S%h0:S%h1))
             ! Find the distance between x0 and R 
             x0Rd= distance(x0(S%h0:S%h1),R(S%h0:S%h1))
 
             ! Draw a random point within L and R
-            x1(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 
+            baby_point(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 
 
             ! calculate the likelihood 
-            call calculate_point(loglikelihood,prior,x1,S,n)
+            call calculate_point(loglikelihood,prior,baby_point,S,n)
 
             ! If we're not within the likelihood bound then we need to sample further
-            if( x1(S%l0) < logL .or. x1(S%l0) <= logzero ) then
-
-                if ( dot_product(x1(S%h0:S%h1)-x0(S%h0:S%h1),nhat) > 0d0 ) then
-                    ! If x1 is on the R side of x0, then
+            if( baby_point(S%l0) < logL .or. baby_point(S%l0) <= logzero ) then
+                if ( dot_product(baby_point(S%h0:S%h1)-x0(S%h0:S%h1),nhat) > 0d0 ) then
+                    ! If baby_point is on the R side of x0, then
                     ! contract R
-                    R = x1
+                    R = baby_point
                 else
-                    ! If x1 is on the L side of x0, then
+                    ! If baby_point is on the L side of x0, then
                     ! contract L
-                    L = x1
+                    L = baby_point
                 end if
-
-                ! Call the function again
-                x1 = find_positive_within(L,R)
-
+            else
+                return
             end if
-            ! otherwise x1 is returned
+        end do
 
-        end function find_positive_within
-
+        if (i_step>100) then
+            write(*,'("Polychord Warning: Non deterministic loglikelihood")')
+            baby_point(S%l0) = logzero
+        end if
 
     end function slice_sample
 

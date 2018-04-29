@@ -12,24 +12,6 @@ module array_module
     end interface reallocate
     contains
 
-    !> This subroutine allocates an array with the correct size, and initialises it with values
-    subroutine allocate_and_assign_i(array,values)
-        implicit none
-        !> Array to be allocated
-        integer, dimension(:),allocatable, intent(inout) :: array
-        !> Values to be assigned
-        integer, dimension(:), intent(in) :: values
-
-        ! Allocate the array
-        allocate(array(size(values)))
-
-        ! Assign the values
-        array = values
-
-    end subroutine
-
-
-
     !> Reallocate a 1D array of doubles
     !!
     !! The array is allocated with a new size defined by new_size1 (optional variable)
@@ -66,33 +48,18 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices1) .and. present(target_indices1)) then
-
-            ! If both save and target indices are present, then these should be assigned accordingly
-            call allocate_and_assign_i(s1,save_indices1)
-            call allocate_and_assign_i(t1,target_indices1)
-
+            s1 = save_indices1
+            t1 = target_indices1
             if(size(s1)/=size(t1)) call halt_program('reallocate_1_d error: save and target indices must be equal in size') 
-
         else if(present(save_indices1)) then
-
-            ! If just the save indices are present, then we assign these
-            call allocate_and_assign_i(s1,save_indices1)
-
-            ! The target indices are allocated with a default array of size s1
-            call allocate_and_assign_i(t1,[ (i,i=1,size(s1)) ])
-
+            s1 = save_indices1
+            t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
-
-            ! If just the target indices are present, then we assign these
-            call allocate_and_assign_i(t1,target_indices1)
-
-            ! The save indices are allocated with a default array of size t1
-            call allocate_and_assign_i(s1,[ (i,i=1,size(t1)) ])
-
+            t1 = target_indices1
+            s1 = [ (i,i=1,size(t1)) ]
         else
-            ! Default indices to save are all of them
-            call allocate_and_assign_i(s1,[ (i,i=1,size(array,1)) ] )
-            call allocate_and_assign_i(t1,[ (i,i=1,size(array,1)) ] )
+            s1 = [ (i,i=1,size(array,1)) ]
+            t1 = [ (i,i=1,size(array,1)) ]
         end if
 
         a = array                           ! Save the old array 
@@ -148,65 +115,35 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices1) .and. present(target_indices1)) then
-
-            ! If both save and target indices are present, then these should be assigned accordingly
-            call allocate_and_assign_i(s1,save_indices1)
-            call allocate_and_assign_i(t1,target_indices1)
-
+            s1 = save_indices1
+            t1 = target_indices1
             if(size(s1)/=size(t1)) call halt_program('reallocate_2_d error: save and target indices must be equal in size') 
-
         else if(present(save_indices1)) then
-
-            ! If just the save indices are present, then we assign these
-            call allocate_and_assign_i(s1,save_indices1)
-
-            ! The target indices are allocated with a default array of size s1
-            call allocate_and_assign_i(t1,[ (i,i=1,size(s1)) ])
-
+            s1 = save_indices1
+            t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
-
-            ! If just the target indices are present, then we assign these
-            call allocate_and_assign_i(t1,target_indices1)
-
-            ! The save indices are allocated with a default array of size t1
-            call allocate_and_assign_i(s1,[ (i,i=1,size(t1)) ])
-
+            t1 = target_indices1
+            s1 = [ (i,i=1,size(t1)) ]
         else
-            ! Default indices to save are all of them
-            call allocate_and_assign_i(s1,[ (i,i=1,size(array,1)) ] )
-            call allocate_and_assign_i(t1,[ (i,i=1,size(array,1)) ] )
+            s1 = [ (i,i=1,size(array,1)) ] 
+            t1 = [ (i,i=1,size(array,1)) ] 
         end if
 
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices2) .and. present(target_indices2)) then
-
-            ! If both save and target indices are present, then these should be assigned accordingly
-            call allocate_and_assign_i(s2,save_indices2)
-            call allocate_and_assign_i(t2,target_indices2)
-
+            s2 = save_indices2
+            t2 = target_indices2
             if(size(s2)/=size(t2)) call halt_program('reallocate_2_d error: save and target indices must be equal in size') 
-
         else if(present(save_indices2)) then
-
-            ! If just the save indices are present, then we assign these
-            call allocate_and_assign_i(s2,save_indices2)
-
-            ! The target indices are allocated with a default array of size s2
-            call allocate_and_assign_i(t2,[ (i,i=1,size(s2)) ])
-
+            s2 = save_indices2
+            t2 = [ (i,i=1,size(s2)) ]
         else if(present(target_indices2)) then
-
-            ! If just the target indices are present, then we assign these
-            call allocate_and_assign_i(t2,target_indices2)
-
-            ! The save indices are allocated with a default array of size t2
-            call allocate_and_assign_i(s2,[ (i,i=1,size(t2)) ])
-
+            t2 = target_indices2
+            s2 = [ (i,i=1,size(t2)) ]
         else
-            ! Default indices to save are all of them
-            call allocate_and_assign_i(s2,[ (i,i=1,size(array,2)) ] )
-            call allocate_and_assign_i(t2,[ (i,i=1,size(array,2)) ] )
+            s2 = [ (i,i=1,size(array,2)) ] 
+            t2 = [ (i,i=1,size(array,2)) ] 
         end if
 
         a = array                           ! Save the old array 
@@ -270,97 +207,53 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices1) .and. present(target_indices1)) then
-
-            ! If both save and target indices are present, then these should be assigned accordingly
-            call allocate_and_assign_i(s1,save_indices1)
-            call allocate_and_assign_i(t1,target_indices1)
-
+            s1 = save_indices1
+            t1 = target_indices1
             if(size(s1)/=size(t1)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
-
         else if(present(save_indices1)) then
-
-            ! If just the save indices are present, then we assign these
-            call allocate_and_assign_i(s1,save_indices1)
-
-            ! The target indices are allocated with a default array of size s1
-            call allocate_and_assign_i(t1,[ (i,i=1,size(s1)) ])
-
+            s1 = save_indices1
+            t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
-
-            ! If just the target indices are present, then we assign these
-            call allocate_and_assign_i(t1,target_indices1)
-
-            ! The save indices are allocated with a default array of size t1
-            call allocate_and_assign_i(s1,[ (i,i=1,size(t1)) ])
-
+            t1 = target_indices1
+            s1 = [ (i,i=1,size(t1)) ]
         else
-            ! Default indices to save are all of them
-            call allocate_and_assign_i(s1,[ (i,i=1,size(array,1)) ] )
-            call allocate_and_assign_i(t1,[ (i,i=1,size(array,1)) ] )
+            s1 = [ (i,i=1,size(array,1)) ] 
+            t1 = [ (i,i=1,size(array,1)) ] 
         end if
 
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices2) .and. present(target_indices2)) then
-
-            ! If both save and target indices are present, then these should be assigned accordingly
-            call allocate_and_assign_i(s2,save_indices2)
-            call allocate_and_assign_i(t2,target_indices2)
-
+            s2 = save_indices2
+            t2 = target_indices2
             if(size(s2)/=size(t2)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
-
         else if(present(save_indices2)) then
-
-            ! If just the save indices are present, then we assign these
-            call allocate_and_assign_i(s2,save_indices2)
-
-            ! The target indices are allocated with a default array of size s2
-            call allocate_and_assign_i(t2,[ (i,i=1,size(s2)) ])
-
+            s2 = save_indices2
+            t2 = [ (i,i=1,size(s2)) ]
         else if(present(target_indices2)) then
-
-            ! If just the target indices are present, then we assign these
-            call allocate_and_assign_i(t2,target_indices2)
-
-            ! The save indices are allocated with a default array of size t2
-            call allocate_and_assign_i(s2,[ (i,i=1,size(t2)) ])
-
+            t2 = target_indices2
+            s2 = [ (i,i=1,size(t2)) ]
         else
-            ! Default indices to save are all of them
-            call allocate_and_assign_i(s2,[ (i,i=1,size(array,2)) ] )
-            call allocate_and_assign_i(t2,[ (i,i=1,size(array,2)) ] )
+            s2 = [ (i,i=1,size(array,2)) ] 
+            t2 = [ (i,i=1,size(array,2)) ] 
         end if
 
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices3) .and. present(target_indices3)) then
-
-            ! If both save and target indices are present, then these should be assigned accordingly
-            call allocate_and_assign_i(s3,save_indices3)
-            call allocate_and_assign_i(t3,target_indices3)
-
+            s3 = save_indices3
+            t3 = target_indices3
             if(size(s3)/=size(t3)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
-
         else if(present(save_indices3)) then
-
-            ! If just the save indices are present, then we assign these
-            call allocate_and_assign_i(s3,save_indices3)
-
-            ! The target indices are allocated with a default array of size s3
-            call allocate_and_assign_i(t3,[ (i,i=1,size(s3)) ])
-
+            s3 = save_indices3
+            t3 = [ (i,i=1,size(s3)) ]
         else if(present(target_indices3)) then
-
-            ! If just the target indices are present, then we assign these
-            call allocate_and_assign_i(t3,target_indices3)
-
-            ! The save indices are allocated with a default array of size t3
-            call allocate_and_assign_i(s3,[ (i,i=1,size(t3)) ])
+            t3 = target_indices3
+            s3 = [ (i,i=1,size(t3)) ]
 
         else
-            ! Default indices to save are all of them
-            call allocate_and_assign_i(s3,[ (i,i=1,size(array,3)) ] )
-            call allocate_and_assign_i(t3,[ (i,i=1,size(array,3)) ] )
+            s3 = [ (i,i=1,size(array,3)) ] 
+            t3 = [ (i,i=1,size(array,3)) ] 
         end if
 
 
@@ -410,33 +303,18 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices1) .and. present(target_indices1)) then
-
-            ! If both save and target indices are present, then these should be assigned accordingly
-            call allocate_and_assign_i(s1,save_indices1)
-            call allocate_and_assign_i(t1,target_indices1)
-
+            s1 = save_indices1
+            t1 = target_indices1
             if(size(s1)/=size(t1)) call halt_program('reallocate_1_i error: save and target indices must be equal in size') 
-
         else if(present(save_indices1)) then
-
-            ! If just the save indices are present, then we assign these
-            call allocate_and_assign_i(s1,save_indices1)
-
-            ! The target indices are allocated with a default array of size s1
-            call allocate_and_assign_i(t1,[ (i,i=1,size(s1)) ])
-
+            s1 = save_indices1
+            t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
-
-            ! If just the target indices are present, then we assign these
-            call allocate_and_assign_i(t1,target_indices1)
-
-            ! The save indices are allocated with a default array of size t1
-            call allocate_and_assign_i(s1,[ (i,i=1,size(t1)) ])
-
+            t1 = target_indices1
+            s1 = [ (i,i=1,size(t1)) ]
         else
-            ! Default indices to save are all of them
-            call allocate_and_assign_i(s1,[ (i,i=1,size(array,1)) ] )
-            call allocate_and_assign_i(t1,[ (i,i=1,size(array,1)) ] )
+            s1 = [ (i,i=1,size(array,1)) ] 
+            t1 = [ (i,i=1,size(array,1)) ] 
         end if
 
         a = array                           ! Save the old array 
