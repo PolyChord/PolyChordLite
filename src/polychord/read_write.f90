@@ -243,15 +243,16 @@ module read_write_module
         call write_doubles(RTI%covmat,             "=== covariance matrices ===")
         call write_doubles(RTI%cholesky,           "=== cholesky decompositions ===")
   
-        call write_doubles(RTI%live,               "=== live points ===",                               RTI%nlive )
-        call write_doubles(RTI%dead,               "=== dead points ===",                               RTI%ndead )
-        call write_doubles(RTI%phantom,            "=== phantom points ===",                            RTI%nphantom )
-        call write_doubles(RTI%posterior,          "=== weighted posterior points ===",                 RTI%nposterior )
-        call write_doubles(RTI%posterior_dead,     "=== dead weighted posterior points ===",            RTI%nposterior_dead )
-        call write_doubles(RTI%posterior_global,   "=== global weighted posterior points ===",          RTI%nposterior_global )
-        call write_doubles_3(RTI%equals,             "=== equally weighted posterior points ===",         RTI%nequals )
-        call write_doubles(RTI%equals_dead,        "=== dead equally weighted posterior points ===",    RTI%nequals_dead )
-        call write_doubles(RTI%equals_global,      "=== global equally weighted posterior points ===",  RTI%nequals_global )
+        call write_doubles(RTI%live,                  "=== live points ===",                               RTI%nlive )
+        call write_doubles(RTI%dead,                  "=== dead points ===",                               RTI%ndead )
+        call write_doubles(RTI%logweights(:RTI%ndead),"=== logweights of dead points ===")
+        call write_doubles(RTI%phantom,               "=== phantom points ===",                            RTI%nphantom )
+        call write_doubles(RTI%posterior,             "=== weighted posterior points ===",                 RTI%nposterior )
+        call write_doubles(RTI%posterior_dead,        "=== dead weighted posterior points ===",            RTI%nposterior_dead )
+        call write_doubles(RTI%posterior_global,      "=== global weighted posterior points ===",          RTI%nposterior_global )
+        call write_doubles(RTI%equals,                "=== equally weighted posterior points ===",         RTI%nequals )
+        call write_doubles(RTI%equals_dead,           "=== dead equally weighted posterior points ===",    RTI%nequals_dead )
+        call write_doubles(RTI%equals_global,         "=== global equally weighted posterior points ===",  RTI%nequals_global )
 
         ! Close the writing file
         close(write_resume_unit)
@@ -424,6 +425,7 @@ module read_write_module
   
         call read_doubles(RTI%live,'-',settings%nTotal,maxval(RTI%nlive),RTI%ncluster,RTI%nlive)
         call read_doubles(RTI%dead,'-',settings%nTotal,RTI%ndead)
+        call read_doubles(RTI%logweights,'-',RTI%ndead)
         call read_doubles(RTI%phantom,'-',settings%nTotal,maxval(RTI%nphantom),RTI%ncluster,RTI%nphantom)
   
         call read_doubles(RTI%posterior,'-',settings%nposterior,maxval(RTI%nposterior),RTI%ncluster,RTI%nposterior)

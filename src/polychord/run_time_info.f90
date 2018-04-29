@@ -60,6 +60,7 @@ module run_time_module
 
         !> Pure nested sampling points
         real(dp), allocatable, dimension(:,:)   :: dead
+        real(dp), allocatable, dimension(:)     :: logweights
 
         !> Covariance Matrices
         real(dp), allocatable, dimension(:,:,:) :: covmat
@@ -126,6 +127,7 @@ module run_time_module
         allocate(                                                       &
             RTI%live(settings%nTotal,settings%nlive,1),                 &
             RTI%dead(settings%nTotal,settings%nlive),                   &
+            RTI%logweights(settings%nlive),                             &
             RTI%phantom(settings%nTotal,settings%nlive,1),              &
             RTI%posterior_stack(settings%nposterior,settings%nlive,1),  &
             RTI%posterior(settings%nposterior,settings%nlive,1),        &
@@ -785,7 +787,7 @@ module run_time_module
     subroutine delete_outermost_point(settings,RTI)
         use settings_module, only: program_settings
         use utils_module, only: logsumexp,logincexp,minpos
-        use array_module, only: add_point,delete_point
+        use array_module, only: add_point,delete_point, reallocate
         use calculate_module, only: calculate_posterior_point
         implicit none
         type(program_settings), intent(in) :: settings !> Program settings
@@ -801,6 +803,8 @@ module run_time_module
         deleted_point = delete_point(RTI%i(cluster_del),RTI%live,RTI%nlive,cluster_del)  ! Delete the live point from the array
         call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
         call add_point(deleted_point,RTI%dead,RTI%ndead)                                 ! Add the deleted point to the dead points
+        if (RTI%ndead > size(RTI%logweights)) call reallocate(RTI%logweights,RTI%ndead*2)
+        RTI%logweights(RTI%ndead) = logweight                                            ! Add the logweight to the array
 
         ! Calculate the posterior point and add it to the posterior stack
         posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
