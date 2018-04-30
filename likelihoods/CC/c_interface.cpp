@@ -36,6 +36,7 @@ Settings::Settings(int _nDims,int _nDerived):
 void run_polychord( 
         double (*c_loglikelihood_ptr)(double*,int,double*,int), 
         void (*c_prior_ptr)(double*,double*,int), 
+        void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
         Settings s)
 {
     // Ridiculous gubbins for passing strings between C and FORTRAN
@@ -51,7 +52,7 @@ void run_polychord(
     double grade_frac[ngrade];
     grade_frac[0] = 1.0;
     int grade_dims[ngrade];
-    grade_frac[0] = s.nDims;
+    grade_dims[0] = s.nDims;
 
     int n_nlives = 0;
     double loglikes[ngrade];
@@ -60,6 +61,7 @@ void run_polychord(
     polychord_c_interface( 
             c_loglikelihood_ptr, 
             c_prior_ptr, 
+            c_dumper_ptr, 
             s.nlive, 
             s.num_repeats,
             s.nprior,
@@ -98,17 +100,22 @@ void run_polychord(
     delete[] file_root;
 }
 
-double default_loglikelihood(double* theta, int nDims, double* phi, int nDerived)
-{
-    return 0.0;
-}
+void run_polychord( 
+        double (*loglikelihood)(double*,int,double*,int),
+        void (*dumper)(int,int,int,double*,double*,double*,double,double), 
+        Settings S)
+{ run_polychord(loglikelihood,default_prior,dumper,S); } 
+void run_polychord( 
+        double (*loglikelihood)(double*,int,double*,int),
+        void (*prior)(double*,double*,int),
+        Settings S)
+{ run_polychord(loglikelihood,prior,default_dumper,S); } 
+void run_polychord(
+        double (*loglikelihood)(double*,int,double*,int),
+        Settings S)
+{ run_polychord(loglikelihood,default_prior,default_dumper,S); } 
 
 void default_prior(double* cube, double* theta, int nDims)
-{
-    for(int i=0;i<nDims;i++) theta[i] = cube[i]; 
-}
+{ for(int i=0;i<nDims;i++) theta[i] = cube[i]; }
 
-void run_polychord( double (*loglikelihood)(double*,int,double*,int), Settings S) 
-{
-    run_polychord(loglikelihood,default_prior,S);
-} 
+void default_dumper(int,int,int,double*,double*,double*,double,double) {}

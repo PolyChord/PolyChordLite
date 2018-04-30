@@ -5,9 +5,9 @@ int main()
 {
     Settings settings;
 
-    settings.nDims         = 20;
+    settings.nDims         = 3;
     settings.nDerived      = 1;
-    settings.nlive         = 500;
+    settings.nlive         = 50;
     settings.num_repeats   = settings.nDims*5;
     settings.do_clustering = false;
 
@@ -32,7 +32,7 @@ int main()
     settings.boost_posterior= 5.0;
 
     setup_loglikelihood();
-    run_polychord(loglikelihood, prior, settings) ;
+    run_polychord(loglikelihood,prior,dumper,settings) ;
 
 
 }

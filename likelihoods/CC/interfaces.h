@@ -1,9 +1,11 @@
 #ifndef INTERFACES_H
 #define INTERFACES_H
 
+
 extern "C" void polychord_c_interface(
         double (*)(double*,int,double*,int), 
         void (*)(double*,double*,int), 
+        void (*)(int,int,int,double*,double*,double*,double,double), 
         int,
         int,
         int,
@@ -34,6 +36,5 @@ extern "C" void polychord_c_interface(
         double*,
         int*,
         int);
-
 
 #endif

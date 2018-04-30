@@ -17,7 +17,7 @@ module nested_sampling_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    function NestedSampling_with_dumper(loglikelihood,prior, dumper, settings,mpi_communicator, call_dumper) result(output_info)
+    function NestedSampling(loglikelihood,prior, dumper, settings, mpi_communicator) result(output_info)
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,cyc,time
         use read_write_module
@@ -52,11 +52,10 @@ module nested_sampling_module
             end function
         end interface
         interface
-            subroutine dumper(ndead, nlive, nPar, live, dead, logweights, logZ, logZerr, context)
+            subroutine dumper(live, dead, logweights, logZ, logZerr)
                 import :: dp
-                integer ndead, nlive, nPar, context
-                real(dp) :: live(:,:), dead(:,:), logweights(:)
-                real(dp) logZ, logZerr
+                real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
+                real(dp), intent(in) :: logZ, logZerr
             end subroutine dumper
         end interface
 
@@ -66,9 +65,6 @@ module nested_sampling_module
         !> MPI handle
         integer, intent(in) :: mpi_communicator
         
-        !> Dumper instruction
-        logical, intent(in), optional :: call_dumper
-
         ! Program Outputs
         ! ===============      
         ! 1) log(evidence)
@@ -133,8 +129,6 @@ module nested_sampling_module
         integer ::  slave_epoch
         integer ::  master_epoch
 #endif
-        ! C Pointer if necessary
-        integer context
 
 
         ! A) Initialisation
@@ -286,7 +280,7 @@ module nested_sampling_module
                         if(settings%write_stats)                   call write_stats_file(settings,RTI,nlikesum)
                         if(settings%equals.or.settings%posteriors) call write_posterior_file(settings,RTI)   
                         call rename_files(settings,RTI)
-                        if (present(call_dumper) .and. call_dumper) call dump(dumper,settings,RTI, context)
+                        call dump(dumper,settings,RTI)
 
                     end if
 
@@ -340,6 +334,7 @@ module nested_sampling_module
             if(settings%equals.or.settings%posteriors) call write_posterior_file(settings,RTI)   
             if(settings%write_dead)                    call write_dead_points(settings,RTI)   
             call rename_files(settings,RTI)
+            call dump(dumper,settings,RTI)
 
             ! Create the output array
             ! (1) log evidence
@@ -445,48 +440,7 @@ module nested_sampling_module
 
 
 
-    end function NestedSampling_with_dumper
-
-
-    function NestedSampling(loglikelihood,prior,settings,mpi_communicator) result(output_info)
-        use settings_module,   only: program_settings
-        implicit none
-        interface
-            function loglikelihood(theta,phi)
-                import :: dp
-                real(dp), intent(in), dimension(:)  :: theta
-                real(dp), intent(out), dimension(:) :: phi
-                real(dp) :: loglikelihood
-            end function
-        end interface
-        interface
-            function prior(cube) result(theta)
-                import :: dp
-                real(dp), intent(in), dimension(:) :: cube
-                real(dp), dimension(size(cube))    :: theta
-            end function
-        end interface
-        type(program_settings), intent(in) :: settings
-        integer, intent(in) :: mpi_communicator
-        real(dp), dimension(4) :: output_info
-
-        output_info = NestedSampling_with_dumper(loglikelihood,prior,dumper,settings,mpi_communicator,.true.)
-
-        contains
-            subroutine dumper(ndead, nlive, nPar, live, dead, logweights, logZ, logZerr, context)
-                integer ndead, nlive, nPar, context
-                real(dp) :: live(:,:), dead(:,:), logweights(:)
-                real(dp) logZ, logZerr
-            end subroutine dumper
     end function NestedSampling
-
-
-
-
-
-
-
-
 
 
     !> This function checks whether we've done enough to stop
@@ -523,38 +477,48 @@ module nested_sampling_module
     end function more_samples_needed
 
 
-    subroutine dump(dumper, settings, RTI, context)
+    subroutine dump(dumper, settings, RTI)
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info, calculate_logZ_estimate
         use utils_module,      only: logsumexp
         implicit none
         type(run_time_info), intent(in) :: RTI
         type(program_settings), intent(in) :: settings
-        integer :: context
 
         interface
-            subroutine dumper(ndead, nlive, nPar, live, dead, logweights, logZ, logZerr, context)
+            subroutine dumper(live, dead, logweights, logZ, logZerr)
                 import :: dp
-                integer ndead, nlive, nPar, context
-                real(dp) :: live(:,:), dead(:,:), logweights(:)
-                real(dp) logX, logZ, logZerr
+                real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
+                real(dp), intent(in) :: logZ, logZerr
             end subroutine dumper
         end interface
 
-        real(dp), dimension(settings%nTotal,sum(RTI%nlive)) :: live
-        real(dp), dimension(settings%nTotal,RTI%ndead) :: dead
+        real(dp), dimension(settings%nDims+settings%nDerived+2,sum(RTI%nlive)) :: live
+        real(dp), dimension(settings%nDims+settings%nDerived+2,RTI%ndead) :: dead
         real(dp), dimension(RTI%ndead) :: logweights
         real(dp) :: logZ, varlogZ
 
-        integer i_cluster
+        integer i_cluster, nlive,n0,n1
 
-        dead = RTI%dead(:,:RTI%ndead)
-        logweights = RTI%logweights(:RTI%ndead)
+        dead(1:settings%nDims,:) = RTI%dead(settings%p0:settings%p1,:RTI%ndead)
+        dead(settings%nDims+1:settings%nDims+settings%nDerived,:) = RTI%dead(settings%d0:settings%d1,:RTI%ndead)
+        dead(settings%nDims+settings%nDerived+1,:) = RTI%dead(settings%b0,:RTI%ndead)
+        dead(settings%nDims+settings%nDerived+2,:) = RTI%dead(settings%l0,:RTI%ndead)
+
+        logweights = RTI%logweights(:RTI%ndead) + RTI%dead(settings%l0,:RTI%ndead)
+        logweights = logweights - logsumexp(logweights)
+
         do i_cluster=1,RTI%ncluster
-            live(:,1+sum(RTI%nlive(:i_cluster-1)):) = RTI%live(:,:RTI%nlive(i_cluster),i_cluster)
+            nlive = RTI%nlive(i_cluster)
+            n0 = 1+sum(RTI%nlive(:i_cluster-1))
+            n1 = sum(RTI%nlive(:i_cluster))
+            live(1:settings%nDims,n0:n1) = RTI%live(settings%p0:settings%p1,:nlive,i_cluster)
+            live(settings%nDims+1:settings%nDims+settings%nDerived,n0:n1) = RTI%live(settings%d0:settings%d1,:nlive,i_cluster)
+            live(settings%nDims+settings%nDerived+1,n0:n1) = RTI%live(settings%b0,:nlive,i_cluster)
+            live(settings%nDims+settings%nDerived+2,n0:n1) = RTI%live(settings%l0,:nlive,i_cluster)
         end do
         call calculate_logZ_estimate(RTI,logZ,varlogZ)
-        call dumper(RTI%ndead, sum(RTI%nlive), settings%nDims+settings%nDerived, live, dead, logweights, logZ, sqrt(varlogZ), context)
+        call dumper(live, dead, logweights, logZ, sqrt(varlogZ))
 
 
     end subroutine dump

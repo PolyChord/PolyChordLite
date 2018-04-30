@@ -32,13 +32,25 @@ struct Settings
     Settings(int _nDims=0,int _nDerived=0);
 };
 
-void run_polychord( double (*loglikelihood)(double*,int,double*,int), void (*prior)(double*,double*,int), Settings);
-void run_polychord( double (*loglikelihood)(double*,int,double*,int), Settings);  
+void run_polychord( 
+        double (*loglikelihood)(double*,int,double*,int), 
+        void (*prior)(double*,double*,int), 
+        void (*dumper)(int,int,int,double*,double*,double*,double,double), 
+        Settings);
+void run_polychord( 
+        double (*loglikelihood)(double*,int,double*,int),
+        void (*dumper)(int,int,int,double*,double*,double*,double,double), 
+        Settings);
+void run_polychord( 
+        double (*loglikelihood)(double*,int,double*,int),
+        void (*prior)(double*,double*,int),
+        Settings);
+void run_polychord(
+        double (*loglikelihood)(double*,int,double*,int),
+        Settings);  
 
 double default_loglikelihood(double*,int,double*,int); 
 void default_prior(double*,double*,int); 
-
-
-
+void default_dumper(int,int,int,double*,double*,double*,double,double);
 
 #endif

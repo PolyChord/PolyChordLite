@@ -15,11 +15,7 @@ LIB_DIR = $(PWD)/lib
 export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
 
 # Whether to use MPI
-ifeq "$(shell uname)" "Linux"
-MPI=1
-else
 MPI= 
-endif
 
 # Whether to compile in debugging mode
 DEBUG=

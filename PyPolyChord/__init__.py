@@ -3,7 +3,6 @@ import numpy
 import pkg_resources
 import sys
 import os
-import resource
 import subprocess
 import re
 try:
@@ -20,19 +19,6 @@ except ImportError as e:
         sys.exit(1)
     else:
         raise e
-
-try:
-    resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
-except ValueError:
-    print("Could not unlimit stack size automatically. ")
-    print('')
-    print("If you get a segfault, you need to unlimit the stack size manually:")
-    print("e.g:")
-    print('   $ ulimit -s unlimited ')
-    print('or')
-    print('   $ ulimit -s 65532 ')
-    print(' (on OSX, you may need to put this in your .bashrc or equivalent) ')
-
 
 try:
     test_script = os.path.abspath(os.path.join(os.path.dirname(__file__),'test.py'))

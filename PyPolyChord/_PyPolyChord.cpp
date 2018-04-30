@@ -9,6 +9,7 @@
 extern "C" void polychord_c_interface(
         double (*)(double*,int,double*,int), 
         void (*)(double*,double*,int), 
+        void (*)(int,int,int,double*,double*,double*,double,double), 
         int,
         int,
         int,
@@ -238,6 +239,10 @@ void prior(double* cube, double* theta, int nDims)
     Py_DECREF(list_theta);
 }
 
+void dumper(int ndead,int nlive,int npars,double* live,double* dead,double* logweights,double logZ, double logZerr)
+{
+}
+
 
 /* Function to run PyPolyChord */
 static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
@@ -347,6 +352,7 @@ static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
     polychord_c_interface( 
             loglikelihood, 
             prior, 
+            dumper,
             nlive, 
             num_repeats,
             nprior,

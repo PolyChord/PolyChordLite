@@ -1,4 +1,5 @@
 # include "CC_likelihood.hpp"
+#include <iostream>
 
 // This module is where your likelihood code should be placed.
 //
@@ -50,6 +51,8 @@ double loglikelihood (double theta[], int nDims, double phi[], int nDerived)
     //
     //
     //============================================================
+    for (auto i=0;i<nDims;i++)
+        logL += theta[i]*theta[i];
     
     return logL;
 
@@ -77,6 +80,29 @@ void prior (double cube[], double theta[], int nDims)
 
 }
 
+// Dumper function
+//
+// This function gives you runtime access to variables, every time the live
+// points are compressed by a factor settings.compression_factor.
+//
+// To use the arrays, subscript by following this example:
+//
+//    for (auto i_dead=0;i_dead<ndead;i_dead++)
+//    {
+//        for (auto j_par=0;j_par<npars;j_par++)
+//            std::cout << dead[npars*i_dead+j_par] << " ";
+//        std::cout << std::endl;
+//    }
+//
+// in the live and dead arrays, the rows contain the physical and derived
+// parameters for each point, followed by the birth contour, then the
+// loglikelihood contour
+//
+// logweights are posterior weights
+// 
+void dumper(int ndead,int nlive,int npars,double* live,double* dead,double* logweights,double logZ, double logZerr)
+{
+}
 
 
 // Setup of the loglikelihood
