@@ -8,6 +8,7 @@ def readme():
 pypolychord_module = Extension(
         name= '_PyPolyChord',
         library_dirs = [os.path.join(os.getcwd(),'lib')],
+        include_dirs = [os.path.join(os.getcwd(),'src/polychord/')],
         runtime_library_dirs = [os.path.join(os.getcwd(),'lib')],
         libraries = ['chord'],
         sources=[os.path.join(os.getcwd(),'PyPolyChord/_PyPolyChord.cpp')]

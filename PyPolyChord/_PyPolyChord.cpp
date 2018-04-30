@@ -1,46 +1,12 @@
 #include <Python.h>
 #include <stdexcept>
 #include <iostream>
+#include "interfaces.h"
+#include "interfaces.hpp"
 
 #if PY_MAJOR_VERSION >=3
 #define PYTHON3
 #endif
-
-extern "C" void polychord_c_interface(
-        double (*)(double*,int,double*,int), 
-        void (*)(double*,double*,int), 
-        void (*)(int,int,int,double*,double*,double*,double,double), 
-        int,
-        int,
-        int,
-        bool,
-        int,
-        double,
-        int,
-        double,
-        bool,
-        bool,
-        bool,
-        bool,
-        bool,
-        bool,
-        bool,
-        bool,
-        bool,
-        bool,
-        double,
-        int,
-        int,
-        char*,
-        char*,
-        int,
-        double*,
-        int*,
-        int,
-        double*,
-        int*,
-        int);
-
 
 /* Exception */
 class PythonException : std::exception {};
@@ -239,54 +205,42 @@ void prior(double* cube, double* theta, int nDims)
     Py_DECREF(list_theta);
 }
 
-void dumper(int ndead,int nlive,int npars,double* live,double* dead,double* logweights,double logZ, double logZerr)
-{
-}
-
 
 /* Function to run PyPolyChord */
 static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
 {
+    Settings S;
 
     PyObject *temp_logl, *temp_prior;
-    int nDims, nDerived, nlive, num_repeats, nprior;
-    int do_clustering;
-    int feedback;
-    double precision_criterion;
-    int max_ndead;
-    double boost_posterior;
-    int posteriors, equals, cluster_posteriors, write_resume, write_paramnames, read_resume, write_stats, write_live, write_dead, write_prior;
-    double compression_factor;
-    char* base_dir, *file_root;
     PyObject* py_grade_dims, *py_grade_frac, *py_nlives;
-    int seed;
+    char* base_dir, *file_root;
         
 
     if (!PyArg_ParseTuple(args,
                 "OOiiiiiiididiiiiiiiiiidssO!O!O!i:run",
                 &temp_logl,
                 &temp_prior,
-                &nDims,
-                &nDerived,
-                &nlive,
-                &num_repeats,
-                &nprior,
-                &do_clustering,
-                &feedback,
-                &precision_criterion,
-                &max_ndead,
-                &boost_posterior,
-                &posteriors,
-                &equals,
-                &cluster_posteriors,
-                &write_resume,
-                &write_paramnames,
-                &read_resume,
-                &write_stats,
-                &write_live,
-                &write_dead,
-                &write_prior,
-                &compression_factor,
+                &S.nDims,
+                &S.nDerived,
+                &S.nlive,
+                &S.num_repeats,
+                &S.nprior,
+                &S.do_clustering,
+                &S.feedback,
+                &S.precision_criterion,
+                &S.max_ndead,
+                &S.boost_posterior,
+                &S.posteriors,
+                &S.equals,
+                &S.cluster_posteriors,
+                &S.write_resume,
+                &S.write_paramnames,
+                &S.read_resume,
+                &S.write_stats,
+                &S.write_live,
+                &S.write_dead,
+                &S.write_prior,
+                &S.compression_factor,
                 &base_dir,
                 &file_root,
                 &PyList_Type,
@@ -295,10 +249,12 @@ static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
                 &py_grade_dims,
                 &PyDict_Type,
                 &py_nlives,
-                &seed
+                &S.seed
                 )
             )
         return NULL;
+    S.base_dir = base_dir;
+    S.file_root = file_root;
     
     int nGrade = PyList_Size(py_grade_frac);
     double grade_frac[nGrade];
@@ -328,7 +284,7 @@ static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
         return NULL;
     }
     int tot = 0; for (int i=0;i<nGrade;i++) tot += grade_dims[i];
-    if (tot != nDims) {
+    if (tot != S.nDims) {
         PyErr_SetString(PyExc_ValueError,"grade_dims must sum to nDims");
         return NULL;
     }
@@ -348,43 +304,7 @@ static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
     python_prior = temp_prior;
 
     /* Run PolyChord */
-    try{
-    polychord_c_interface( 
-            loglikelihood, 
-            prior, 
-            dumper,
-            nlive, 
-            num_repeats,
-            nprior,
-            do_clustering,
-            feedback,
-            precision_criterion,
-            max_ndead,
-            boost_posterior,
-            posteriors,
-            equals,
-            cluster_posteriors,
-            write_resume,
-            write_paramnames,
-            read_resume,
-            write_stats,
-            write_live,
-            write_dead,
-            write_prior,
-            compression_factor, 
-            nDims,
-            nDerived,
-            base_dir,
-            file_root,
-            nGrade,
-            grade_frac,
-            grade_dims,
-            n_nlives,
-            loglikes,
-            nlives,
-            seed
-            );
-    }
+    try{ run_polychord(loglikelihood, prior, S); }
     catch (PythonException& e)
     { 
         Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);
