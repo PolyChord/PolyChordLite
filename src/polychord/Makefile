@@ -1,6 +1,6 @@
 # Object files:
 # find all files ending in 90, and change .f90 and .F90 to .o, 
-FOBJECTS = $(patsubst %.F90,%.o,$(patsubst %.f90,%.o,$(wildcard *90)))
+FOBJECTS = $(patsubst %.F90,%.o,$(patsubst %.f90,%.o,$(wildcard *90)))  $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 
 OBJECTS = $(FOBJECTS)
 
@@ -20,6 +20,8 @@ $(LIB_DIR)/libchord.so: $(OBJECTS)
 	$(FC) $(FFLAGS) -c $<
 %.o: %.F90
 	$(FC) $(FFLAGS) -c $<
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $<
 
 # Utility targets
 .PHONY: clean veryclean

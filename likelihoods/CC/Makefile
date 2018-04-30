@@ -1,5 +1,5 @@
 # rule for building the c++ wrapper
-$(LIB_DIR)/libCC_likelihood.a: CC_likelihood.o c_interface.o
+$(LIB_DIR)/libCC_likelihood.a: CC_likelihood.o
 	$(AR) $@ $^ 
 
 
