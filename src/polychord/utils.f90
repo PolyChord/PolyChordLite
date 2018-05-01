@@ -1,5 +1,9 @@
+
 module utils_module
     implicit none
+#ifdef MPI
+    include 'mpif.h'
+#endif
     integer, parameter :: dp = kind(1.d0)
 
     !> The effective value of \f$ log(0) \f$
@@ -1030,10 +1034,10 @@ module utils_module
 
     !> This gets the wallclock timer from the mpi library
     function time() 
-#ifdef MPI
-        use mpi,only: MPI_Wtime
-#endif
         implicit none
+#ifdef MPI
+        include 'mpif.h'
+#endif
         real(dp) :: time
 
 #ifdef MPI

@@ -18,9 +18,11 @@ contains
         use nested_sampling_module,   only: NestedSampling
 #ifdef MPI
         use mpi_module,               only: initialise_mpi, finalise_mpi
-        use mpi,                      only: MPI_COMM_WORLD
 #endif
         implicit none
+#ifdef MPI
+        include 'mpif.h'
+#endif
 
         interface
             function loglikelihood(theta,phi)

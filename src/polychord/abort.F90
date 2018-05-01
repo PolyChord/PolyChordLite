@@ -1,13 +1,13 @@
 module abort_module
     use utils_module, only: dp
-#ifdef MPI
-    use mpi
-#endif
     contains
 
     subroutine halt_program(message)
         use utils_module, only: stderr_unit
         implicit none
+#ifdef MPI
+        include 'mpif.h'
+#endif
 
         character(LEN=*), intent(in), optional :: message
 

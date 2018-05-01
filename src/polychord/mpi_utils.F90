@@ -1,10 +1,10 @@
 module mpi_module
     use utils_module, only: dp, normal_fb
 
-#ifdef MPI
-    use mpi
-#endif
     implicit none
+#ifdef MPI
+    include 'mpif.h'
+#endif
 
     integer :: mpierror
     logical :: finalize
