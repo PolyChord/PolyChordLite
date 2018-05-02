@@ -728,12 +728,12 @@ module read_write_module
 
         real(dp)                           :: logZ       
         real(dp)                           :: varlogZ  
-        real(dp), dimension(RTI%ncluster) :: logZp      
-        real(dp), dimension(RTI%ncluster) :: varlogZp 
+        real(dp), dimension(RTI%ncluster)  :: logZp      
+        real(dp), dimension(RTI%ncluster)  :: varlogZp 
         real(dp), dimension(RTI%ncluster_dead) :: logZp_dead      
         real(dp), dimension(RTI%ncluster_dead) :: varlogZp_dead 
         real(dp), dimension(settings%nDims+settings%nDerived) :: mu,sig
-        real(dp), dimension(size(nlikesum)) :: update_files
+        real(dp)                           :: update_files
 
         integer :: p, i_dims
 
@@ -786,9 +786,10 @@ module read_write_module
         write(write_stats_unit,fmt_nlike) RTI%nlike
 
         write(fmt_nlike,'(  "("" <nlike>:    "","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
-        update_files = -RTI%nlive*log(settings%compression_factor)
-        where(update_files==0) update_files = huge(1)
-        write(write_stats_unit,fmt_nlike) dble(nlikesum)/update_files,dble(nlikesum)/dble(RTI%num_repeats*update_files)
+        if (sum(RTI%nlive)>0) then
+            update_files = -sum(RTI%nlive)*log(settings%compression_factor)
+            write(write_stats_unit,fmt_nlike) dble(nlikesum)/update_files,dble(nlikesum)/dble(RTI%num_repeats*update_files)
+        end if
 
         if (settings%posteriors) then
             write(fmt_Z,'("(I3,", A, ","" +/- "",", A, ")")') DB_FMT,DB_FMT
