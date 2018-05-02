@@ -12,6 +12,7 @@ extern "C" void polychord_c_interface(
         bool,
         int,
         double,
+        double,
         int,
         double,
         bool,

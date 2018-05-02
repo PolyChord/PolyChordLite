@@ -220,7 +220,7 @@ module feedback_module
     subroutine write_intermediate_results(settings,RTI,nlikesum)
         use run_time_module, only: run_time_info,calculate_logZ_estimate
         use settings_module, only: program_settings
-        use utils_module,    only: stdout_unit,logzero,fmt_len,normal_fb,sort_doubles
+        use utils_module,    only: stdout_unit,fmt_len,normal_fb,sort_doubles
         implicit none
         type(program_settings), intent(in)    :: settings    !> program settings
         type(run_time_info),    intent(in)    :: RTI         !> run time info

@@ -12,6 +12,7 @@ struct Settings
     bool do_clustering;
     int feedback;
     double precision_criterion;
+    double logzero;
     int max_ndead;
     double boost_posterior;
     bool posteriors;

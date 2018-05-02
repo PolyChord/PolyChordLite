@@ -50,6 +50,11 @@ class PolyChordSettings:
         contained in the live points is precision_criterion fraction of the
         total evidence.
 
+    logzero : float
+        (Default: -1e30)
+        The loglikelihood value at which PolyChord considers points
+        'unphysical', and excludes them at the prior level.
+
     max_ndead : int
         (Default: -1)
         Alternative termination criterion. Stop after max_ndead iterations.
@@ -142,6 +147,7 @@ class PolyChordSettings:
         self.do_clustering = kwargs.pop('do_clustering', True)
         self.feedback = kwargs.pop('feedback', 1)
         self.precision_criterion = kwargs.pop('precision_criterion', 0.001)
+        self.logzero = kwargs.pop('logzero', -1e30)
         self.max_ndead = kwargs.pop('max_ndead', -1)
         self.boost_posterior = kwargs.pop('boost_posterior', 0.0)
         self.posteriors = kwargs.pop('posteriors', True)

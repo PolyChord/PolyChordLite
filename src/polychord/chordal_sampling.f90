@@ -162,7 +162,7 @@ module chordal_module
     !!
     function slice_sample(loglikelihood,prior,logL,nhat,x0,w,S,n) result(baby_point)
         use settings_module, only: program_settings
-        use utils_module,  only: logzero, distance
+        use utils_module,  only: distance
         use random_module, only: random_real
         use calculate_module, only: calculate_point
         implicit none
@@ -220,7 +220,7 @@ module chordal_module
 
         ! expand R until it's outside the likelihood region
         i_step=0
-        do while( R(S%l0) >= logL .and. R(S%l0) > logzero )
+        do while( R(S%l0) >= logL .and. R(S%l0) > S%logzero )
             i_step=i_step+1
             R(S%h0:S%h1) = x0(S%h0:S%h1) + nhat * w * i_step
             call calculate_point(loglikelihood,prior,R,S,n)
@@ -229,7 +229,7 @@ module chordal_module
 
         ! expand L until it's outside the likelihood region
         i_step=0
-        do while(L(S%l0) >= logL      .and. L(S%l0) > logzero )
+        do while(L(S%l0) >= logL      .and. L(S%l0) > S%logzero )
             i_step=i_step+1
             L(S%h0:S%h1) = x0(S%h0:S%h1) - nhat * w * i_step
             call calculate_point(loglikelihood,prior,L,S,n)
@@ -250,7 +250,7 @@ module chordal_module
             call calculate_point(loglikelihood,prior,baby_point,S,n)
 
             ! If we're not within the likelihood bound then we need to sample further
-            if( baby_point(S%l0) < logL .or. baby_point(S%l0) <= logzero ) then
+            if( baby_point(S%l0) < logL .or. baby_point(S%l0) <= S%logzero ) then
                 if ( dot_product(baby_point(S%h0:S%h1)-x0(S%h0:S%h1),nhat) > 0d0 ) then
                     ! If baby_point is on the R side of x0, then
                     ! contract R
@@ -267,7 +267,7 @@ module chordal_module
 
         if (i_step>100) then
             write(*,'("Polychord Warning: Non deterministic loglikelihood")')
-            baby_point(S%l0) = logzero
+            baby_point(S%l0) = S%logzero
         end if
 
     end function slice_sample

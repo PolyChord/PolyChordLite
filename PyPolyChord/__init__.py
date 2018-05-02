@@ -180,6 +180,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior)
                      settings.do_clustering,
                      settings.feedback,
                      settings.precision_criterion,
+                     settings.logzero,
                      settings.max_ndead,
                      settings.boost_posterior,
                      settings.posteriors,

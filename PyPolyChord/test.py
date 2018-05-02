@@ -9,6 +9,7 @@ nprior = 2
 do_clustering = False
 feedback = -1
 precision_criterion = 0
+logzero = -1e30
 max_ndead = 1
 boost_posterior = 0
 posteriors = False
@@ -45,6 +46,7 @@ try:
                      do_clustering,
                      feedback,
                      precision_criterion,
+                     logzero,
                      max_ndead,
                      boost_posterior,
                      posteriors,

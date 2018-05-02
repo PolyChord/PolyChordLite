@@ -5,7 +5,6 @@ module calculate_module
 
     subroutine calculate_point(loglikelihood,prior,point,settings,nlike)
         use settings_module, only: program_settings
-        use utils_module, only: logzero
         implicit none
         interface
             function loglikelihood(theta,phi)
@@ -36,13 +35,13 @@ module calculate_module
 
         if ( any(cube<0) .or. any(cube>1) )  then
             theta = 0
-            logL  = logzero
+            logL  = settings%logzero
         else
             theta = prior(cube)
             logL  = loglikelihood(theta,phi)
         end if
 
-        if(logL>logzero) nlike = nlike+1
+        if(logL>settings%logzero) nlike = nlike+1
 
         point(settings%p0:settings%p1) = theta
         point(settings%d0:settings%d1) = phi

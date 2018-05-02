@@ -6,11 +6,6 @@ module utils_module
 #endif
     integer, parameter :: dp = kind(1.d0)
 
-    !> The effective value of \f$ log(0) \f$
-    real(dp), parameter :: logzero = -1d30
-    !> The effective value of \f$ log(\inf) \f$
-    real(dp), parameter :: loginf = +1d30
-
     !> The maximum character length
     integer, parameter :: STR_LENGTH = 300
 
@@ -395,7 +390,7 @@ module utils_module
         if(loga>logb) then
             logsubexp = loga + log(1-exp(logb-loga))
         else 
-            logsubexp = logzero
+            logsubexp = -huge(1d0)
         end if
 
     end function logsubexp

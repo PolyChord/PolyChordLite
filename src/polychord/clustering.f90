@@ -132,7 +132,6 @@ module KNN_clustering
 
 
     function compute_knn(similarity_matrix,k) result(knn)
-        use utils_module, only: loginf
         implicit none
 
         !> The data to compute on
@@ -156,7 +155,7 @@ module KNN_clustering
 
         do i=1,nPoints
             ! Find the k nearest neighbors for each point
-            distance2s = loginf
+            distance2s = huge(1d0)
             do j=1,nPoints
                 ! If the distance between i and j is too large to be considered,
                 ! this returns 0

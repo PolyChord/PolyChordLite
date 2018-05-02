@@ -166,6 +166,7 @@ contains
             do_clustering,&
             feedback, &
             precision_criterion,&
+            logzero,&
             max_ndead,&
             boost_posterior,&
             posteriors,&
@@ -240,6 +241,7 @@ contains
         logical(c_bool), intent(in), value  :: do_clustering
         integer(c_int), intent(in), value   :: feedback
         real(c_double), intent(in), value   :: precision_criterion
+        real(c_double), intent(in), value   :: logzero
         integer(c_int), intent(in), value   :: max_ndead
         real(c_double), intent(in), value   :: boost_posterior
         logical(c_bool), intent(in), value  :: posteriors
@@ -282,6 +284,7 @@ contains
         settings%do_clustering       = do_clustering        
         settings%feedback            = feedback             
         settings%precision_criterion = precision_criterion  
+        settings%logzero             = logzero  
         settings%max_ndead           = max_ndead            
         settings%boost_posterior     = boost_posterior      
         settings%posteriors          = posteriors           

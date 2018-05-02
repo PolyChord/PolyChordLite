@@ -19,6 +19,7 @@ module settings_module
         integer :: feedback = 1                 !> The degree of feedback to provide
 
         real(dp) :: precision_criterion = 1d-3  !> The stopping criterion
+        real(dp) :: logzero = -1d30             !> The threshold for 'log(0) values'
 
         !> The maximum number of dead points/samples
         !!
@@ -151,7 +152,7 @@ module settings_module
     !!
     subroutine initialise_settings(settings)
         use abort_module, only: halt_program
-        use utils_module, only: sort_doubles, logzero
+        use utils_module, only: sort_doubles
         implicit none
         type(program_settings), intent(inout) :: settings
 
@@ -224,7 +225,7 @@ module settings_module
         if (.not. allocated(settings%nlives)) then
             allocate(settings%nlives(1),settings%loglikes(1))
             settings%nlives(1) = settings%nlive
-            settings%loglikes(1) = logzero
+            settings%loglikes(1) = settings%logzero
         end if
 
         settings%nlives = settings%nlives(sort_doubles(settings%loglikes))

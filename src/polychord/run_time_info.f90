@@ -112,7 +112,7 @@ module run_time_module
     !!
     !! It allocates the arrays for a single cluster 
     subroutine initialise_run_time_info(settings,RTI)
-        use utils_module,    only: logzero,identity_matrix
+        use utils_module,    only: identity_matrix
         use settings_module, only: program_settings
 
         implicit none
@@ -162,12 +162,12 @@ module run_time_module
             )
 
         ! All evidences set to logzero
-        RTI%logZ=logzero
-        RTI%logZ2=logzero
-        RTI%logZp=logzero
-        RTI%logZXp=logzero
-        RTI%logZp2=logzero
-        RTI%logZpXp=logzero
+        RTI%logZ=settings%logzero
+        RTI%logZ2=settings%logzero
+        RTI%logZp=settings%logzero
+        RTI%logZXp=settings%logzero
+        RTI%logZp2=settings%logzero
+        RTI%logZpXp=settings%logzero
 
         ! All volumes set to 1
         RTI%logXp=0d0
@@ -194,14 +194,14 @@ module run_time_module
         RTI%covmat(:,:,1)   = identity_matrix(settings%nDims)
 
         ! Loglikelihoods at zero
-        RTI%logLp = logzero
+        RTI%logLp = settings%logzero
         ! First position default lowest
         RTI%i     = 0
 
         ! maximum logweight
-        RTI%maxlogweight = logzero
-        RTI%maxlogweight_dead = logzero
-        RTI%maxlogweight_global = logzero
+        RTI%maxlogweight = settings%logzero
+        RTI%maxlogweight_dead = settings%logzero
+        RTI%maxlogweight_global = settings%logzero
 
         RTI%thin_posterior = 0d0
 
@@ -650,7 +650,6 @@ module run_time_module
     !! What we accumulate in the routine update_evidence is log(<Z>), and log(<Z^2>).
     !! What we want is <log(Z)>,and 
     subroutine calculate_logZ_estimate(RTI,logZ,varlogZ,logZp,varlogZp,logZp_dead,varlogZp_dead)
-        use utils_module, only: logzero
         implicit none
 
         type(run_time_info),intent(in)                                  :: RTI        !> Run time information
@@ -661,16 +660,16 @@ module run_time_module
         real(dp), intent(out), dimension(RTI%ncluster_dead),optional :: logZp_dead      !>
         real(dp), intent(out), dimension(RTI%ncluster_dead),optional :: varlogZp_dead !>
 
-        logZ       = max(logzero,2*RTI%logZ - 0.5*RTI%logZ2)
+        logZ       = max(-huge(1d0),2*RTI%logZ - 0.5*RTI%logZ2)
         varlogZ    = RTI%logZ2 - 2*RTI%logZ
 
         if(present(logZp).and.present(varlogZp))then
-            logZp      = max(logzero,2*RTI%logZp - 0.5*RTI%logZp2)
+            logZp      = max(-huge(1d0),2*RTI%logZp - 0.5*RTI%logZp2)
             varlogZp = RTI%logZp2 - 2*RTI%logZp
         end if
 
         if(present(logZp_dead).and.present(varlogZp_dead))then
-            logZp_dead      = max(logzero,2*RTI%logZp_dead - 0.5*RTI%logZp2_dead)
+            logZp_dead      = max(-huge(1d0),2*RTI%logZp_dead - 0.5*RTI%logZp2_dead)
             varlogZp_dead   = RTI%logZp2_dead - 2*RTI%logZp_dead
         end if
 
@@ -682,7 +681,7 @@ module run_time_module
 
 
     function live_logZ(settings,RTI)
-        use utils_module, only: logzero,logsumexp,logincexp
+        use utils_module, only: logsumexp,logincexp
         use settings_module, only: program_settings
 
         implicit none
@@ -694,7 +693,7 @@ module run_time_module
         integer :: i_cluster ! cluster iterator
 
         ! Initialise it with no log evidence
-        live_logZ = logzero
+        live_logZ = settings%logzero
 
         ! Sum up over all the clusters mean(likelihood) * volume
         do i_cluster = 1,RTI%ncluster
@@ -879,7 +878,7 @@ module run_time_module
 
 
     subroutine find_min_loglikelihoods(settings,RTI)
-        use utils_module, only: minpos,loginf
+        use utils_module, only: minpos
         use settings_module, only: program_settings
 
         implicit none
@@ -896,7 +895,7 @@ module run_time_module
 
             if(RTI%i(i_cluster) == 0) then
                 ! If the cluster is empty, we need to signal to delete all points
-                RTI%logLp(i_cluster) = loginf
+                RTI%logLp(i_cluster) = huge(1d0)
             else
                 ! Find the likelihood of the lowest point in this cluster
                 RTI%logLp(i_cluster) = RTI%live(settings%l0,RTI%i(i_cluster),i_cluster) 
@@ -910,7 +909,7 @@ module run_time_module
 
     function identify_cluster(settings,RTI,point) result(cluster)
         use settings_module,   only: program_settings
-        use utils_module,      only: loginf,distance2
+        use utils_module,      only: distance2
         implicit none
 
         type(program_settings), intent(in) :: settings
@@ -931,7 +930,7 @@ module run_time_module
             return
         end if
 
-        closest_distance2=loginf
+        closest_distance2=huge(1d0)
 
         ! Find the cluster this point is nearest to
         do i_cluster=1,RTI%ncluster

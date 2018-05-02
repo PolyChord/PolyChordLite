@@ -217,7 +217,7 @@ static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
         
 
     if (!PyArg_ParseTuple(args,
-                "OOiiiiiiididiiiiiiiiiidssO!O!O!i:run",
+                "OOiiiiiiiddidiiiiiiiiiidssO!O!O!i:run",
                 &temp_logl,
                 &temp_prior,
                 &S.nDims,
@@ -228,6 +228,7 @@ static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
                 &S.do_clustering,
                 &S.feedback,
                 &S.precision_criterion,
+                &S.logzero,
                 &S.max_ndead,
                 &S.boost_posterior,
                 &S.posteriors,

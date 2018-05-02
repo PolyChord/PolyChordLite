@@ -61,7 +61,7 @@ module generate_module
     subroutine GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
-        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len,minpos,time
+        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
@@ -156,10 +156,10 @@ module generate_module
                 time0 = time()
                 call calculate_point( loglikelihood, prior, live_point, settings, nlike)
                 time1 = time()
-                live_point(settings%b0) = logzero
+                live_point(settings%b0) = settings%logzero
 
                 ! If its valid, and we need more points, add it to the array
-                if(live_point(settings%l0)>logzero) then
+                if(live_point(settings%l0)>settings%logzero) then
                     total_time =total_time+ time1-time0
 
                     call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
@@ -195,7 +195,7 @@ module generate_module
                     slave_id = catch_point(live_point,mpi_information)
 
                     ! If its valid, and we need more points, add it to the array
-                    if(live_point(settings%l0)>logzero .and. RTI%nlive(1)<nprior) then
+                    if(live_point(settings%l0)>settings%logzero .and. RTI%nlive(1)<nprior) then
 
                         call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
@@ -233,8 +233,8 @@ module generate_module
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     time1 = time()
-                    live_point(settings%b0) = logzero
-                    if(live_point(settings%l0)>logzero) total_time = total_time + time1-time0
+                    live_point(settings%b0) = settings%logzero
+                    if(live_point(settings%l0)>settings%logzero) total_time = total_time + time1-time0
                     call throw_point(live_point,mpi_information)                                    ! Send it to the root node
                     if(.not. more_points_needed(mpi_information)) exit                              ! If we've recieved a kill signal, then exit this loop
 
@@ -295,7 +295,7 @@ module generate_module
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
         use random_module,   only: random_reals
-        use utils_module,    only: logzero,normal_fb,stdout_unit,fancy_fb,time
+        use utils_module,    only: normal_fb,stdout_unit,fancy_fb,time
         use calculate_module, only: calculate_point
         use abort_module
 #ifdef MPI
@@ -349,8 +349,8 @@ module generate_module
         do 
             live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
             call calculate_point( loglikelihood, prior, live_point, settings, nlike)
-            live_point(settings%b0) = logzero
-            if (live_point(settings%l0)> logzero) exit
+            live_point(settings%b0) = settings%logzero
+            if (live_point(settings%l0)> settings%logzero) exit
         end do
 
         if(settings%feedback>=normal_fb.and.is_root(mpi_information)) write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds")') char(13), 1, speed(1)
@@ -374,9 +374,9 @@ module generate_module
                 time0 = time()
                 call calculate_point( loglikelihood, prior, live_point, settings, nlike)
                 time1 = time()
-                live_point(settings%b0) = logzero
+                live_point(settings%b0) = settings%logzero
 
-                if(live_point(settings%l0)>logzero) then
+                if(live_point(settings%l0)>settings%logzero) then
                     total_time=total_time+time1-time0
                     i_live=i_live+1
                 else
@@ -386,8 +386,8 @@ module generate_module
                         do 
                             live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
                             call calculate_point( loglikelihood, prior, live_point, settings, nlike)
-                            live_point(settings%b0) = logzero
-                            if (live_point(settings%l0)> logzero) exit
+                            live_point(settings%b0) = settings%logzero
+                            if (live_point(settings%l0)> settings%logzero) exit
                         end do
                         failed = 0
                     end if
@@ -415,7 +415,7 @@ module generate_module
 
     subroutine GenerateLivePointsFromSeed(loglikelihood,prior,settings,RTI,mpi_information)
         use settings_module,  only: program_settings
-        use utils_module,    only: logzero,write_phys_unit,DB_FMT,fmt_len,minpos,time,stdout_unit
+        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time,stdout_unit
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
@@ -516,7 +516,7 @@ module generate_module
                     nhat(i_dim) = 1d0
 
                     time0 = time()
-                    live_point = slice_sample(loglikelihood,prior,logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
+                    live_point = slice_sample(loglikelihood,prior,settings%logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
                     time1 = time()
                     times(i_grade) = times(i_grade) + time1 - time0
                 end do

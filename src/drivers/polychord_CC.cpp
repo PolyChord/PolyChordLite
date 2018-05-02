@@ -12,6 +12,7 @@ int main()
     settings.do_clustering = false;
 
     settings.precision_criterion = 1e-3;
+    settings.logzero = -1e30;
 
     settings.base_dir      = "chains";
     settings.file_root     = "test";
