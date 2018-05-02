@@ -587,7 +587,7 @@ module generate_module
                             nhat(i_dim) = 1d0
 
                             time0 = time()
-                            live_point = slice_sample(loglikelihood,prior,logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
+                            live_point = slice_sample(loglikelihood,prior,settings%logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
                             time1 = time()
                             times(i_grade) = times(i_grade) + time1 - time0
                         end do

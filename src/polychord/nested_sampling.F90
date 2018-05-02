@@ -28,7 +28,7 @@ module nested_sampling_module
         use cluster_module,    only: do_clustering
         use generate_module,   only: GenerateSeed,GenerateLivePoints,GenerateLivePointsFromSeed
 #ifdef MPI
-        use utils_module, only: logzero,normal_fb,stdout_unit
+        use utils_module, only: normal_fb,stdout_unit
 #endif
 
         implicit none
@@ -395,9 +395,9 @@ module nested_sampling_module
             ! On the first loop, send a nonsense set of baby_points
             ! to indicate that we're ready to start receiving
 
-            baby_points = 0d0                     ! Avoid sending nonsense
-            baby_points(settings%l0,:) = logzero  ! zero contour to ensure these are all thrown away
-            nlike = 0                             ! no likelihood calls in this round
+            baby_points = 0d0                              ! Avoid sending nonsense
+            baby_points(settings%l0,:) = settings%logzero  ! zero contour to ensure these are all thrown away
+            nlike = 0                                      ! no likelihood calls in this round
             call throw_babies(baby_points,nlike,slave_epoch,mpi_information)
             wait_time = 0
             slice_time = 0
