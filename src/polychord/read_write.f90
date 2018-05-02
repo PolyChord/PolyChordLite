@@ -790,7 +790,7 @@ module read_write_module
             update_files = -sum(RTI%nlive)*log(settings%compression_factor)
             write(write_stats_unit,fmt_nlike) dble(nlikesum)/update_files,dble(nlikesum)/dble(RTI%num_repeats*update_files)
         else
-            write(write_stats_unit,fmt_nlike) [(0, p=1,size(nlikesum))], [(0, p=1,size(nlikesum))]
+            write(write_stats_unit,fmt_nlike) [(0d0, p=1,size(nlikesum))], [(0d0, p=1,size(nlikesum))]
         end if
 
         if (settings%posteriors) then

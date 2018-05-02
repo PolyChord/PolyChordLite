@@ -3,7 +3,7 @@ Will Handley, Mike Hobson & Anthony Lasenby
 wh260@mrao.cam.ac.uk
 arXiv:1502.01856
 arXiv:1506.00171
-Released April 2016
+Released May 2018
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PolyChord Licence
@@ -23,7 +23,7 @@ MPI Support
 
 The code is MPI compatible with openMPI. To disable the MPI parallelization, 
 set MPI= in ./Makefile, or compile with
-make MPI= <target>
+make <target>  MPI=
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -106,10 +106,10 @@ $  ./bin/polychord_fortran
 
 C++/C likelihoods
 -----------------
-You should place your likelihood code in the function cpp_loglikelihood,
+You should place your likelihood code in the function loglikelihood,
 contained in 
 
-./likelihoods/CC/likelihood.cpp
+./likelihoods/CC/CC_likelihood.cpp
 
 Any setup required (such as reading in input files) should be conducted in the
 function setup_loglikelihood.  In most cases, this will likely just be a call
@@ -117,11 +117,21 @@ to your own pre-written library.
 
 You should then alter the polychord run-time settings within the driver file:
 
-./src/drivers/polychord_fortran.cpp
+./src/drivers/polychord_CC.cpp
+
+or use the ini file version:
+
+./likelihoods/CC_ini/CC_ini_likelihood.cpp
+./src/drivers/polychord_CC_ini.cpp
 
 Your code can be compiled and run with the commands:
 $  make polychord_CC
 $  ./bin/polychord_CC 
+
+or
+
+$  make polychord_CC_ini
+$  ./bin/polychord_CC_ini ini/gaussian_CC.ini
 
 If you have an additional suggestions to make the c++ wrapper more easy to use, 
 please email Will (wh260@mrao.cam.ac.uk).
@@ -179,7 +189,7 @@ This is used if settings%read_resume=.true.
 ----------
 File containing weighted posterior samples. Compatable with the format
 required by getdist package which is part of the CosmoMC package.
-Contains npars+ndims+2 columns:
+Contains ndims+nderived+2 columns:
 
 weight -2*loglike <params> <derived params>
 
@@ -201,22 +211,37 @@ compression of the .txt file.
 --------------------
 Live points in the physical space. This is produced if
 settings%write_phys_live=.true.
-This file contains npars+ndims+1 columns, indicating the physical
+This file contains ndims+nderived+1 columns, indicating the physical
 parameters, derived parameters and the log-likelihood. This is useful
 for monitoring a run as it progresses. 
 
 [root]_dead.txt
---------------------
+---------------
 Points that have been killed off. This is produced if
 settings%write_dead=.true.
-This file contains npars+ndims+1 columns, indicating the loglikelihood,
+This file contains ndims+nderived+1 columns, indicating the loglikelihood,
 physical parameters, derived parameters and the log-likelihood. This is useful
 for monitoring a run as it progresses, and for performing alternative
 calculations and checks on evidence and posterior computations
 
 [root].paramnames
-------------
+-----------------
 Parameter names file for compatibility with getdist
+
+
+[root]phys_live-birth.txt & [root]dead-birth.txt 
+------------------------------------------------
+
+These can be used to reconstruct a full nested sampling run, as well as
+simulate dynamic nested sampling.  The format & contents of these two files
+are as follows: They have has ndims+nderived+2 columns. The first
+ndims+nderived columns are the ndim parameter values along with the nderived
+additional parameters that are being passed by the likelihood routine for
+PolyChord to save along with the ndims parameters. The ndims+nderived+1 column
+is the log-likelihood value.  The ndims+nderived+2 column is the log-likelihood
+value that the point was born at. They are is identical to the
+[root]_phys_live.txt and [root]_dead.txt file, except for an additional column
+including the birth contours
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,25 +260,14 @@ Common Problems & FAQs:
 
 Run time Issues
 ===============
-1. PolyChord crashes after segmentation fault.
-
-Try increasing the stack size:
-Linux:    ulimit -s unlimited 
-OSX:      ulimit -s hard 
-& resume your job.
-The slice sampling & clustering steps use a recursive procedure. The
-default memory allocated to recursive procedures is embarassingly
-small (to guard against memory leaks).
-
-
-2. Output files ([root].txt & [root]_equal_weights.dat) files have
+1. Output files ([root].txt & [root]_equal_weights.dat) files have
 very few (of order tens) points.
 
 These files only become populated as the algorithm approaches the
 peak(s) of the posterior. Wait for the run to be closer to finishing.
 
 
-3. MPI doesn't help
+2. MPI doesn't help
 
 * Currently, the MPI parallelisation will only increase speed for 
   'slow' likelihoods, i.e. likelihoods where the slice sampling step

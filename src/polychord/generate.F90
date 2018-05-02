@@ -353,7 +353,9 @@ module generate_module
             if (live_point(settings%l0)> settings%logzero) exit
         end do
 
-        if(settings%feedback>=normal_fb.and.is_root(mpi_information)) write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds")') char(13), 1, speed(1)
+        if (is_root(mpi_information)) then
+            if(settings%feedback>=normal_fb) write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds")') char(13), 1, speed(1)
+        end if
         do i_speed=2,size(speed)
 
             h0 = settings%h0+sum(settings%grade_dims(:i_speed-1))
@@ -362,9 +364,11 @@ module generate_module
             i_live=0
             total_time=0
             
-            if(settings%feedback>=fancy_fb.and.is_root(mpi_information)) then
-                write(stdout_unit,'(A1,"Speed ",I2, " = ? (calculating)")',advance='no') char(13), i_speed
-                flush(stdout_unit)
+            if (is_root(mpi_information)) then
+                if(settings%feedback>=fancy_fb) then
+                    write(stdout_unit,'(A1,"Speed ",I2, " = ? (calculating)")',advance='no') char(13), i_speed
+                    flush(stdout_unit)
+                end if
             end if
 
             failed = 0
@@ -400,11 +404,13 @@ module generate_module
             nlike = sum_integers(nlike,mpi_information)
 #endif
             speed(i_speed) = total_time/i_live
-            if(is_root(mpi_information)) RTI%nlike(i_speed) =  RTI%nlike(i_speed) + nlike
-            if(settings%feedback>=fancy_fb.and.is_root(mpi_information)) then
-                write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds     ")') char(13), i_speed, speed(i_speed)
-            else if(settings%feedback>=normal_fb.and.is_root(mpi_information)) then
-                write(stdout_unit,'("Speed ",I2," = ",E10.3, " seconds     ")') i_speed, speed(i_speed)
+            if (is_root(mpi_information)) then
+                RTI%nlike(i_speed) =  RTI%nlike(i_speed) + nlike 
+                if(settings%feedback>=fancy_fb) then
+                    write(stdout_unit,'(A1,"Speed ",I2," = ",E10.3, " seconds     ")') char(13), i_speed, speed(i_speed)
+                else if(settings%feedback>=normal_fb) then
+                    write(stdout_unit,'("Speed ",I2," = ",E10.3, " seconds     ")') i_speed, speed(i_speed)
+                end if
             end if
 
 

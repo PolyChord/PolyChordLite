@@ -170,7 +170,9 @@ module nested_sampling_module
         else 
             
             ! Delete any existing files if we're going to be producing our own new ones
-            if(is_root(mpi_information).and.settings%write_resume) call delete_files(settings) 
+            if(is_root(mpi_information)) then
+                if(settings%write_resume) call delete_files(settings) 
+            end if
 
             ! Intialise the run by setting all of the relevant run time info, and generating live points
             if (settings%generate_from_seed) then
@@ -178,18 +180,23 @@ module nested_sampling_module
             else
                 call GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
             end if
-            if(is_root(mpi_information).and.settings%write_prior) then
-                call write_prior_file(settings,RTI) 
+
+            if(is_root(mpi_information)) then
+                if(settings%write_prior) call write_prior_file(settings,RTI) 
             end if
 
-            do while(is_root(mpi_information) .and. RTI%nlive(1) > settings%nlive )
-                call delete_outermost_point(settings,RTI)
-            end do
+            if (is_root(mpi_information)) then
+                do while(RTI%nlive(1) > settings%nlive )
+                    call delete_outermost_point(settings,RTI)
+                end do
+            end if
 
             ! Write a resume file (as the generation of live points can be intensive)
-            if(is_root(mpi_information).and.settings%write_resume) then
-                call write_resume_file(settings,RTI) 
-                call rename_files(settings,RTI)
+            if(is_root(mpi_information)) then
+                if(settings%write_resume) then
+                    call write_resume_file(settings,RTI) 
+                    call rename_files(settings,RTI)
+                end if
             end if
 
 

@@ -350,11 +350,13 @@ module array_module
         real(dp), dimension(:,:,:), allocatable, intent(inout) :: array !> Array to be added to
         integer,dimension(:), allocatable, intent(inout) :: narray              !> number of points in array (second index)
         integer, intent(in) :: cluster_id                                       !> cluster identity (third index)
+        integer :: newsize2
 
         narray(cluster_id) = narray(cluster_id) + 1         ! Increase the number of points in the cluster
 
         ! If this takes us over the size of the array, then double it
-        if(narray(cluster_id) > size(array,2) ) call reallocate(array, new_size2=size(array,2)*2 )
+        newsize2 = max(1,size(array,2)*2)
+        if(narray(cluster_id) > size(array,2) ) call reallocate(array, new_size2=newsize2 )
 
         array(:,narray(cluster_id),cluster_id) = point       ! Add the point to the end position
 
@@ -365,11 +367,13 @@ module array_module
         real(dp), dimension(:), intent(in) :: point                   !> Point to be added to end of array
         real(dp), dimension(:,:), allocatable, intent(inout) :: array !> Array to be added to
         integer, intent(inout) :: narray                                      !> number of points in array (second index)
+        integer :: newsize2
 
         narray = narray + 1         ! Increase the number of points
 
         ! If this takes us over the size of the array, then double it
-        if(narray > size(array,2) ) call reallocate(array, new_size2=size(array,2)*2 )
+        newsize2 = max(1,size(array,2)*2)
+        if(narray > size(array,2) ) call reallocate(array, new_size2=newsize2 )
 
         array(:,narray) = point       ! Add the point to the end position
 
