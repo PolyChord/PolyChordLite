@@ -6,7 +6,7 @@ module interfaces_module
 
     implicit none
     interface run_polychord
-        module procedure run_polychord_full, run_polychord_no_prior, run_polychord_no_dumper, run_polychord_no_prior_no_dumper
+        module procedure run_polychord_full, run_polychord_no_prior, run_polychord_no_dumper, run_polychord_no_prior_no_dumper, run_polychord_ini
     end interface run_polychord
 
 contains
@@ -154,6 +154,49 @@ contains
             real(dp), intent(in) :: logZ, logZerr
         end subroutine dumper
     end subroutine run_polychord_no_prior_no_dumper
+
+
+    subroutine run_polychord_ini(loglikelihood, setup_loglikelihood, input_file)
+        use ini_module,               only: read_params
+        use params_module,            only: add_parameter,param_type
+        use priors_module
+        use settings_module,          only: program_settings
+        use utils_module,             only: STR_LENGTH
+        implicit none
+        type(program_settings)                    :: settings  ! The program settings 
+        type(prior), dimension(:),allocatable     :: priors    ! The details of the priors
+
+        character(len=STR_LENGTH), intent(in)     :: input_file     ! input file
+        type(param_type),dimension(:),allocatable :: params         ! Parameter array
+        type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
+        interface
+            function loglikelihood(theta,phi)
+                import :: dp
+                real(dp), intent(in),  dimension(:) :: theta
+                real(dp), intent(out),  dimension(:) :: phi
+                real(dp) :: loglikelihood
+            end function loglikelihood
+        end interface
+        interface
+            subroutine setup_loglikelihood(settings)
+                import :: program_settings
+                type(program_settings), intent(in) :: settings
+            end subroutine setup_loglikelihood
+        end interface
+
+        call read_params(trim(input_file),settings,params,derived_params)
+        call create_priors(priors,params,settings)
+        call setup_loglikelihood(settings)
+        call run_polychord(loglikelihood,prior_wrapper,settings) 
+
+        contains
+            function prior_wrapper(cube) result(theta)
+                implicit none
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
+                theta = hypercube_to_physical(cube,priors)
+            end function prior_wrapper
+    end subroutine run_polychord_ini
 
 
     subroutine polychord_c_interface(&
@@ -386,6 +429,76 @@ contains
 
 
     end subroutine polychord_c_interface
+
+
+    subroutine polychord_c_interface_ini(c_loglikelihood_ptr, c_setup_loglikelihood_ptr, input_file_c)&
+            bind(c,name='polychord_c_interface_ini')
+
+        use iso_c_binding
+        use utils_module,             only: STR_LENGTH, convert_c_string
+
+        ! ~~~~~~~ Local Variable Declaration ~~~~~~~
+        implicit none
+
+        interface
+            function c_loglikelihood(theta,nDims,phi,nDerived) bind(c)
+                use iso_c_binding
+                integer(c_int), intent(in), value :: nDims
+                integer(c_int), intent(in), value :: nDerived
+                real(c_double), intent(in),  dimension(nDims) :: theta
+                real(c_double), intent(out),  dimension(nDerived) :: phi
+                real(c_double) :: c_loglikelihood
+            end function c_loglikelihood
+        end interface
+        interface
+            subroutine c_setup_loglikelihood() bind(c)
+            end subroutine c_setup_loglikelihood
+        end interface
+        character(len=STR_LENGTH)     :: input_file     ! input file
+
+        type(c_funptr), intent(in), value   :: c_loglikelihood_ptr
+        type(c_funptr), intent(in), value   :: c_setup_loglikelihood_ptr
+        character(len=1,kind=c_char), intent(in), dimension(STR_LENGTH) :: input_file_c
+
+        procedure(c_loglikelihood), pointer :: f_loglikelihood_ptr
+        procedure(c_setup_loglikelihood), pointer :: f_setup_loglikelihood_ptr
+
+        input_file = convert_c_string(input_file_c)
+
+        call c_f_procpointer(c_loglikelihood_ptr, f_loglikelihood_ptr)
+        call c_f_procpointer(c_setup_loglikelihood_ptr, f_setup_loglikelihood_ptr)
+
+        call run_polychord(loglikelihood, setup_loglikelihood, input_file) 
+
+    contains
+        function loglikelihood(theta,phi)
+            implicit none
+            real(dp), intent(in),  dimension(:) :: theta
+            real(dp), intent(out),  dimension(:) :: phi
+            real(dp) :: loglikelihood
+
+            real (c_double),dimension(size(theta)) :: c_theta
+            integer (c_int)                        :: c_nDims
+            real (c_double),dimension(size(phi))   :: c_phi
+            integer (c_int)                        :: c_nDerived
+            real (c_double)                        :: c_loglike
+
+            c_nDims = size(theta)
+            c_nDerived = size(phi)
+            c_theta = theta
+            c_loglike = f_loglikelihood_ptr(c_theta,c_nDims,c_phi,c_nDerived)
+            phi = c_phi
+            loglikelihood = c_loglike
+
+        end function loglikelihood
+
+        subroutine setup_loglikelihood(settings)
+            implicit none
+            type(program_settings), intent(in)    :: settings
+            call f_setup_loglikelihood_ptr()
+        end subroutine setup_loglikelihood
+
+    end subroutine polychord_c_interface_ini
 
 
 end module interfaces_module

@@ -50,6 +50,11 @@ void run_polychord(
         double (*loglikelihood)(double*,int,double*,int),
         Settings);  
 
+void run_polychord( 
+        double (*loglikelihood)(double*,int,double*,int), 
+        void (*setup_loglikelihood)(), 
+        std::string);
+
 double default_loglikelihood(double*,int,double*,int); 
 void default_prior(double*,double*,int); 
 void default_dumper(int,int,int,double*,double*,double*,double,double);

@@ -117,6 +117,23 @@ void run_polychord(
         Settings S)
 { run_polychord(loglikelihood,default_prior,default_dumper,S); } 
 
+void run_polychord( 
+        double (*c_loglikelihood_ptr)(double*,int,double*,int), 
+        void (*c_setup_loglikelihood_ptr)(), 
+        std::string inifile)
+{
+    // Ridiculous gubbins for passing strings between C and FORTRAN
+    char * inifile_c = new char[inifile.size()+1];
+    std::copy(inifile.begin(),inifile.end(),inifile_c);
+    inifile_c[inifile.size()] = '\0';
+    polychord_c_interface_ini( c_loglikelihood_ptr, c_setup_loglikelihood_ptr, inifile_c);
+    delete[] inifile_c;
+}
+
+
+
+
+
 void default_prior(double* cube, double* theta, int nDims)
 { for(int i=0;i<nDims;i++) theta[i] = cube[i]; }
 

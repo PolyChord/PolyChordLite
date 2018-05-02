@@ -2,7 +2,7 @@
 EXAMPLES = gaussian pyramidal rastrigin twin_gaussian random_gaussian himmelblau rosenbrock eggbox half_gaussian fitting gaussian_shell gaussian_shells object_detection
 
 # Your likelihood programs
-PROGRAMS = polychord_fortran polychord_CC
+PROGRAMS = polychord_fortran polychord_CC polychord_CC_ini
 
 # Directories
 SRC_DIR = $(PWD)/src

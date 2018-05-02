@@ -38,4 +38,10 @@ extern "C" void polychord_c_interface(
         int*,
         int);
 
+extern "C" void polychord_c_interface_ini(
+        double (*)(double*,int,double*,int), 
+        void (*)(), 
+        char*
+        );
+
 #endif
