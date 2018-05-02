@@ -266,9 +266,9 @@ module nested_sampling_module
 #endif
                     call replace_point(settings,RTI,baby_points,cluster_id)
 
-                    update = logsumexp(RTI%logXp) <= RTI%logX_last_update
+                    update = logsumexp(RTI%logXp) <= RTI%logX_last_update + log(settings%compression_factor) 
                     if (update) then
-                        RTI%logX_last_update = RTI%logX_last_update + log(settings%compression_factor)
+                        RTI%logX_last_update = logsumexp(RTI%logXp)
 
                         ! Update the posterior array
                         call update_posteriors(settings,RTI)  
