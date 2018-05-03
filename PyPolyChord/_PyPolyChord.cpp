@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <stdexcept>
 #include <iostream>
+#include <vector>
 #include "interfaces.h"
 #include "interfaces.hpp"
 
@@ -90,26 +91,26 @@ void list_Py2C(PyObject* list, int* array) {
     }
 }
 
-void dict_Py2C(PyObject* dict, double* loglikes, int* nlives) {
+void dict_Py2C(PyObject* dict, std::vector<double>& loglikes, std::vector<int>& nlives) {
     PyObject *key, *value;
     Py_ssize_t pos = 0;
-    int i=0;
+    nlives = {};
+    loglikes = {};
     if (dict==NULL) throw PythonException();
 
     while (PyDict_Next(dict, &pos, &key, &value)) {
         if (key==NULL) throw PythonException();
         if (value==NULL) throw PythonException();
 #ifdef PYTHON3
-        if(!PyLong_Check(value)) throw PythonException();
-        nlives[i] = PyLong_AsLong(value);
+        if(PyLong_Check(value)) nlives.push_back(PyLong_AsLong(value));
+        else throw PythonException();
 #else
-        if(PyInt_Check(value)) nlives[i] = PyInt_AsLong(value); 
-        else if(PyLong_Check(value)) nlives[i] = PyInt_AsLong(value); 
+        if(PyInt_Check(value)) nlives.push_back(PyInt_AsLong(value)); 
+        else if(PyLong_Check(value)) nlives.push_back(PyInt_AsLong(value)); 
         else throw PythonException();
 #endif
-        if(PyFloat_Check(key)) loglikes[i] = PyFloat_AsDouble(key);
+        if(PyFloat_Check(key)) loglikes.push_back(PyFloat_AsDouble(key));
         else throw PythonException();
-        i++;
     }
 }
 
@@ -258,22 +259,17 @@ static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
     S.file_root = file_root;
     
     int nGrade = PyList_Size(py_grade_frac);
-    double grade_frac[nGrade];
-    int grade_dims[nGrade];
+    S.grade_frac.resize(nGrade);
+    S.grade_dims.resize(nGrade);
     Py_INCREF(py_grade_frac); Py_INCREF(py_grade_dims);
 
-    int n_nlives = PyDict_Size(py_nlives);
-    double loglikes[n_nlives];
-    int nlives[n_nlives];
-    Py_INCREF(py_nlives);
-
-    try{ list_Py2C(py_grade_frac,grade_frac); }
+    try{ list_Py2C(py_grade_frac,&S.grade_frac[0]); }
     catch (PythonException& e){
         Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
         PyErr_SetString(PyExc_TypeError,"grade_frac must be a list of doubles");
         return NULL;
     }
-    try{ list_Py2C(py_grade_dims,grade_dims); }
+    try{ list_Py2C(py_grade_dims,&S.grade_dims[0]); }
     catch (PythonException& e){
         Py_DECREF(py_grade_frac); Py_DECREF(py_grade_dims);
         PyErr_SetString(PyExc_TypeError,"grade_dims must be a list of integers");
@@ -284,14 +280,13 @@ static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
         PyErr_SetString(PyExc_ValueError,"grade_dims and grade_frac must have the same size");
         return NULL;
     }
-    int tot = 0; for (int i=0;i<nGrade;i++) tot += grade_dims[i];
+    int tot = 0; for (int i=0;i<nGrade;i++) tot += S.grade_dims[i];
     if (tot != S.nDims) {
         PyErr_SetString(PyExc_ValueError,"grade_dims must sum to nDims");
         return NULL;
     }
-    try{ dict_Py2C(py_nlives,loglikes,nlives); }
+    try{ dict_Py2C(py_nlives,S.loglikes,S.nlives); }
     catch (PythonException& e){
-        Py_DECREF(py_nlives);
         PyErr_SetString(PyExc_TypeError,"nlives must be a dict mapping floats to integers");
         return NULL;
     }

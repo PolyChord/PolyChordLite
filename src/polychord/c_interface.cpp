@@ -28,6 +28,10 @@ Settings::Settings(int _nDims,int _nDerived):
     compression_factor  {0.36787944117144233},
     base_dir            {"chains"},
     file_root           {"test"},
+    grade_frac          {1.0},
+    grade_dims          {nDims},
+    loglikes            {},
+    nlives              {},
     seed                {-1}
 {}
 
@@ -48,16 +52,6 @@ void run_polychord(
     char * file_root = new char[s.file_root.size()+1];
     std::copy(s.file_root.begin(),s.file_root.end(),file_root);
     file_root[s.file_root.size()] = '\0';
-
-    int ngrade = 1;
-    double grade_frac[ngrade];
-    grade_frac[0] = 1.0;
-    int grade_dims[ngrade];
-    grade_dims[0] = s.nDims;
-
-    int n_nlives = 0;
-    double loglikes[ngrade];
-    int nlives[ngrade];
 
     polychord_c_interface( 
             c_loglikelihood_ptr, 
@@ -87,16 +81,14 @@ void run_polychord(
             s.nDerived,
             base_dir,
             file_root,
-            ngrade,
-            grade_frac,
-            grade_dims,
-            n_nlives,
-            loglikes,
-            nlives,
+            s.grade_frac.size(),
+            &s.grade_frac[0],
+            &s.grade_dims[0],
+            s.loglikes.size(),
+            &s.loglikes[0],
+            &s.nlives[0],
             s.seed
                 );
-
-
 
     delete[] base_dir;
     delete[] file_root;

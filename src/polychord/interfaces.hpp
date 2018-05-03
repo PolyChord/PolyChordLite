@@ -1,6 +1,7 @@
 #ifndef INTERFACES_HPP
 #define INTERFACES_HPP
 #include <string>
+#include <vector>
 
 struct Settings
 {
@@ -28,6 +29,10 @@ struct Settings
     double compression_factor;
     std::string base_dir;
     std::string file_root;
+    std::vector<double> grade_frac;
+    std::vector<int> grade_dims;
+    std::vector<double> loglikes;
+    std::vector<int> nlives;
     int seed;
 
     Settings(int _nDims=0,int _nDerived=0);
