@@ -6,9 +6,15 @@ import os
 import subprocess
 import re
 from ctypes import CDLL, RTLD_GLOBAL
+from inspect import signature
+
 
 # Preloading MPI
-CDLL("libmpi.so", mode=RTLD_GLOBAL)
+try:
+    CDLL("libmpi.so", mode=RTLD_GLOBAL)
+except OSError:
+    print("WARNING: Could not preload libmpi.so. If you are running with MPI, this may cause segfaults")
+    pass
 
 try:
     import _PyPolyChord
@@ -28,7 +34,7 @@ except ImportError as e:
 
 
 def default_prior(cube, theta):
-    theta[:] = cube[:]
+    theta[:] = cube
 
 def default_dumper(live, dead, logweights, logZ, logZerr):
     pass
@@ -63,14 +69,31 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior,
 
         Parameters
         ----------
-        theta: float list
-            physical coordinate. A list of of length nDims.
+        theta: numpy.array
+            physical coordinate. Length nDims.
 
         Returns
         -------
-        (logL, phi): (float, float list)
+        (logL, phi): (float, array-like)
             return is a 2-tuple of the log-likelihood (logL) and the derived
-            parameters (phi). phi is a list of length nDerived.
+            parameters (phi). phi length nDerived.
+
+        or
+
+        Parameters
+        ----------
+        theta, phi: numpy.array
+            physical coordinate and derived coordinates. Length nDims and
+            nDerived. Be sure to copy by value into phi, rather than by
+            reference, i.e.
+            phi[:] = <my array>
+            rather than
+            phi = <my array>
+
+        Returns
+        -------
+        logL: float
+            log-likelihood
 
     nDims: int
         Dimensionality of the model, i.e. the number of physical parameters.
@@ -91,13 +114,44 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior,
 
         Parameters
         ----------
-        cube: float list
-            coordinates in the unit hypercube. A list of length nDims.
+        cube: numpy.array
+            coordinates in the unit hypercube. Length nDims.
 
         Returns
         -------
-        theta: float list
-            physical coordinates. A list of length nDims.
+        theta: array-like
+            physical coordinates. Length nDims.
+
+        or
+
+        Parameters
+        ----------
+        cube, theta: numpy.array
+            coordinates in the unit hypercube and the physical space. Length
+            nDims. Be sure to copy by value into theta, rather than by
+            reference, i.e.
+            theta[:] = <my array>
+            rather than
+            theta = <my array>
+
+    dumper: function
+        This function gives run-time access to the posterior and live points.
+
+        Parameters
+        ----------
+        live: numpy.array
+            The live points and their loglikelihood birth and death contours
+            Shape (nDims+nDerived+2,nlive)
+        dead: numpy.array
+            The dead points and their loglikelihood birth and death contours
+            Shape (nDims+nDerived+2,ndead)
+        logweights: numpy.array
+            The posterior weights of the dead points
+            Shape (ndead)
+        logZ: float
+            The current log-evidence estimate
+        logZerr: float
+            The current log-evidence error estimate
 
     Returns
     -------
@@ -146,9 +200,27 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior,
     if not os.path.exists(settings.cluster_dir):
         os.makedirs(settings.cluster_dir)
 
+
+    if len(signature(loglikelihood).parameters) == 1:
+        def wrap_loglikelihood(theta, phi):
+            logL, phi[:] = loglikelihood(theta)
+            return logL
+    elif len(signature(loglikelihood).parameters) == 2:
+        wrap_loglikelihood = loglikelihood
+    else:
+        raise ValueError("Wrong likelihood function signature -- see help(run_polychord)")
+
+    if len(signature(prior).parameters) == 1:
+        def wrap_prior(cube, theta):
+            theta[:] = prior(cube)
+    elif len(signature(prior).parameters) == 2:
+        wrap_prior = prior
+    else:
+        raise ValueError("Wrong prior function signature -- see help(run_polychord)")
+
     # Run polychord from module library
-    _PyPolyChord.run(loglikelihood,
-                     prior,
+    _PyPolyChord.run(wrap_loglikelihood,
+                     wrap_prior,
                      dumper,
                      nDims,
                      nDerived,

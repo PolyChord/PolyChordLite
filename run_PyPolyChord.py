@@ -10,35 +10,30 @@ nDerived = 1
 def likelihood(theta):
     """ Simple Gaussian Likelihood"""
 
-    phi = [0.0] * nDerived
-
     sigma = 0.1
     nDims = len(theta)
 
-    r2 = sum([t**2 for t in theta])
-    phi[0] = sqrt(r2)
+    r2 = sum(theta**2)
 
     logL = -log(2*pi*sigma*sigma)*nDims/2.0
     logL += -r2/2/sigma/sigma
 
-    return logL, phi
+    return logL, [r2]
 
 
 def prior(hypercube):
     """ Uniform prior from [-1,1]^D. """
+    return UniformPrior(-1, 1)(hypercube)
 
-    theta = [0.0] * nDims
-    for i, x in enumerate(hypercube):
-        theta[i] = UniformPrior(-1, 1)(x)
-
-    return theta
+def dumper(live, dead, logweights, logZ, logZerr):
+    print(dead[-1])
 
 settings = PolyChordSettings(nDims, nDerived)
 settings.file_root = 'gaussian'
 settings.do_clustering = True
 settings.read_resume = False
 
-output = PyPolyChord.run_polychord(likelihood, nDims, nDerived, settings, prior)
+output = PyPolyChord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)
