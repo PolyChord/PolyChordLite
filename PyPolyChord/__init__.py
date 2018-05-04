@@ -27,12 +27,14 @@ except ImportError as e:
 
 
 
-def default_prior(cube):
-    theta = cube
-    return theta 
+def default_prior(cube, theta):
+    theta[:] = cube[:]
+
+def default_dumper(live, dead, logweights, logZ, logZerr):
+    pass
 
 
-def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior):
+def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior, dumper=default_dumper):
     """
     Runs PolyChord.
 
@@ -147,6 +149,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior)
     # Run polychord from module library
     _PyPolyChord.run(loglikelihood,
                      prior,
+                     dumper,
                      nDims,
                      nDerived,
                      settings.nlive,
