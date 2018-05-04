@@ -1,5 +1,4 @@
-#ifndef INTERFACES_HPP
-#define INTERFACES_HPP
+#pragma once
 #include <string>
 #include <vector>
 
@@ -63,5 +62,3 @@ void run_polychord(
 double default_loglikelihood(double*,int,double*,int); 
 void default_prior(double*,double*,int); 
 void default_dumper(int,int,int,double*,double*,double*,double,double);
-
-#endif

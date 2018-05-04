@@ -1,7 +1,4 @@
-#ifndef INTERFACES_H
-#define INTERFACES_H
-
-
+#pragma once
 extern "C" void polychord_c_interface(
         double (*)(double*,int,double*,int), 
         void (*)(double*,double*,int), 
@@ -43,5 +40,3 @@ extern "C" void polychord_c_interface_ini(
         void (*)(), 
         char*
         );
-
-#endif
