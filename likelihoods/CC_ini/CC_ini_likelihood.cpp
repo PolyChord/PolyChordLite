@@ -1,5 +1,5 @@
 # include "CC_ini_likelihood.hpp"
-#include <cmath>
+# include <cmath>
 
 // This module is where your likelihood code should be placed.
 //
@@ -53,7 +53,7 @@ double loglikelihood (double theta[], int nDims, double phi[], int nDerived)
         rad2 += (theta[i]-mu)*(theta[i]-mu);
 
     phi[0] = std::sqrt(rad2);
-    logL -= rad2/sigma/sigma/2;
+    logL -= rad2/(2.*sigma*sigma);
     
     return logL;
 
