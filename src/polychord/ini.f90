@@ -84,6 +84,11 @@ contains
         call get_doubles(file_name,'grade_frac',settings%grade_frac)
         call get_integers(file_name,'nlives',settings%nlives)
         call get_doubles(file_name,'loglikes',settings%loglikes)
+        write(*,*)'nlives'
+        write(*,*)settings%nlives
+        write(*,*)'loglikes'
+        write(*,*)settings%loglikes
+
 
         call get_params(file_name,params,derived_params)  
 
@@ -129,7 +134,7 @@ contains
         character(len=*),intent(in),optional  :: dflt  !> keyword to search for
         integer,intent(in), optional :: ith       !> Get the ith instance of this string
 
-        character(len=STR_LENGTH) :: get_string  ! string following keyword
+        character(len=:),allocatable :: get_string  ! string following keyword
 
         character(len=STR_LENGTH) :: keyword    !> keyword to search for
         character(len=STR_LENGTH) :: filename   ! The fortran readable filename
