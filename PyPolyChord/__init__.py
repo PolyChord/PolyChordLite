@@ -78,18 +78,6 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior,
             return is a 2-tuple of the log-likelihood (logL) and the derived
             parameters (phi). phi length nDerived.
 
-        or
-
-        Parameters
-        ----------
-        theta, phi: numpy.array
-            physical coordinate and derived coordinates. Length nDims and
-            nDerived. Be sure to copy by value into phi, rather than by
-            reference, i.e.
-            phi[:] = <my array>
-            rather than
-            phi = <my array>
-
         Returns
         -------
         logL: float
@@ -121,18 +109,6 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior,
         -------
         theta: array-like
             physical coordinates. Length nDims.
-
-        or
-
-        Parameters
-        ----------
-        cube, theta: numpy.array
-            coordinates in the unit hypercube and the physical space. Length
-            nDims. Be sure to copy by value into theta, rather than by
-            reference, i.e.
-            theta[:] = <my array>
-            rather than
-            theta = <my array>
 
     dumper: function
         This function gives run-time access to the posterior and live points.
@@ -200,23 +176,12 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior,
     if not os.path.exists(settings.cluster_dir):
         os.makedirs(settings.cluster_dir)
 
+    def wrap_loglikelihood(theta, phi):
+        logL, phi[:] = loglikelihood(theta)
+        return logL
 
-    if len(signature(loglikelihood).parameters) == 1:
-        def wrap_loglikelihood(theta, phi):
-            logL, phi[:] = loglikelihood(theta)
-            return logL
-    elif len(signature(loglikelihood).parameters) == 2:
-        wrap_loglikelihood = loglikelihood
-    else:
-        raise ValueError("Wrong likelihood function signature -- see help(run_polychord)")
-
-    if len(signature(prior).parameters) == 1:
-        def wrap_prior(cube, theta):
-            theta[:] = prior(cube)
-    elif len(signature(prior).parameters) == 2:
-        wrap_prior = prior
-    else:
-        raise ValueError("Wrong prior function signature -- see help(run_polychord)")
+    def wrap_prior(cube, theta):
+        theta[:] = prior(cube)
 
     # Run polychord from module library
     _PyPolyChord.run(wrap_loglikelihood,
