@@ -84,6 +84,11 @@ contains
         call get_doubles(file_name,'grade_frac',settings%grade_frac)
         call get_integers(file_name,'nlives',settings%nlives)
         call get_doubles(file_name,'loglikes',settings%loglikes)
+        write(*,*)'nlives'
+        write(*,*)settings%nlives
+        write(*,*)'loglikes'
+        write(*,*)settings%loglikes
+
 
         call get_params(file_name,params,derived_params)  
 
