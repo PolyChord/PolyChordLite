@@ -129,12 +129,12 @@ contains
         character(len=*),intent(in),optional  :: dflt  !> keyword to search for
         integer,intent(in), optional :: ith       !> Get the ith instance of this string
 
-        character(len=STR_LENGTH) :: get_string  ! string following keyword
+        character(len=:), allocatable :: get_string  ! string following keyword
 
         character(len=STR_LENGTH) :: keyword    !> keyword to search for
         character(len=STR_LENGTH) :: filename   ! The fortran readable filename
 
-        character(len=STR_LENGTH)                :: line_buffer     ! Line buffer
+        character(len=STR_LENGTH) :: line_buffer     ! Line buffer
 
         integer :: io_stat   ! check to see if we've reached the end of the file
 
@@ -223,7 +223,7 @@ contains
         character(len=*),intent(in)  :: key_word  !> keyword to search for
         real(dp), intent(out), allocatable, dimension(:) :: doubles
 
-        character(len=STR_LENGTH) :: string  ! string following keyword
+        character(len=:), allocatable :: string  ! string following keyword
 
         integer :: i
 
@@ -250,7 +250,7 @@ contains
         character(len=*),intent(in)  :: key_word  !> keyword to search for
         integer, intent(out), allocatable, dimension(:) :: integers
 
-        character(len=STR_LENGTH) :: string  ! string following keyword
+        character(len=:), allocatable :: string  ! string following keyword
 
         integer :: i
 
@@ -340,7 +340,7 @@ contains
         type(param_type),dimension(:),allocatable,intent(out) :: derived_params ! Derived parameter array
 
         
-        character(len=STR_LENGTH)                :: line_buffer     ! Line buffer
+        character(len=:), allocatable            :: line_buffer     ! Line buffer
         character(len=STR_LENGTH)                :: paramname       ! parameter name
         character(len=STR_LENGTH)                :: latex           ! latex name
         integer                                  :: speed           ! parameter speed
@@ -439,7 +439,7 @@ contains
     subroutine next_element(line_buffer,delimiter) 
         use utils_module,  only: STR_LENGTH
         implicit none
-        character(len=STR_LENGTH),intent(inout)  :: line_buffer ! Line buffer
+        character(len=:), allocatable,intent(inout)  :: line_buffer ! Line buffer
         character :: delimiter
 
         line_buffer = trim(line_buffer(scan(line_buffer,delimiter)+1:)) ! Find the next element
@@ -448,7 +448,7 @@ contains
     subroutine get_prior_params(prior_params,line_buffer)
         use utils_module,  only: STR_LENGTH
         implicit none
-        character(len=STR_LENGTH),intent(inout)               :: line_buffer ! Line buffer
+        character(len=:), allocatable,intent(inout)               :: line_buffer ! Line buffer
         real(dp),allocatable,dimension(:),intent(out) :: prior_params      ! prior parameters
         real(dp),allocatable,dimension(:)             :: temp_params       ! prior parameters
 
