@@ -82,13 +82,9 @@ contains
         call get_doubles(file_name,'seed_point',settings%seed_point)
 
         call get_doubles(file_name,'grade_frac',settings%grade_frac)
+        if (size(settings%grade_frac) == 0) settings%grade_frac = [1.]
         call get_integers(file_name,'nlives',settings%nlives)
         call get_doubles(file_name,'loglikes',settings%loglikes)
-        write(*,*)'nlives'
-        write(*,*)settings%nlives
-        write(*,*)'loglikes'
-        write(*,*)settings%loglikes
-
 
         call get_params(file_name,params,derived_params)  
 
@@ -123,6 +119,30 @@ contains
 
     end function default_params
 
+    function read_line(unit, line) result(io_stat)
+        ! the unit, connected for formatted input, to read the record from.
+        integer, intent(in) :: unit
+        ! the contents of the record.
+        character(:), intent(out), allocatable :: line
+
+        integer :: io_stat        ! io statement iostat result.
+        character(256) :: buffer  ! buffer to read a piece of the record.
+        integer :: size           ! number of characters read from the file.
+        !***
+        line = ''
+        do
+        read (unit, "(a)", advance='no', iostat=io_stat, size=size) buffer
+        if (io_stat > 0) return
+        line = line // buffer(:size)
+        ! an end of record condition or end of file condition stops the loop.
+        if (io_stat==-2) then
+            io_stat=0
+            return
+        else if (io_stat == -1) then
+            return
+        end if
+        end do
+    end function read_line
 
 
     function get_string(file_name,key_word,dflt,ith)
@@ -139,7 +159,7 @@ contains
         character(len=STR_LENGTH) :: keyword    !> keyword to search for
         character(len=STR_LENGTH) :: filename   ! The fortran readable filename
 
-        character(len=STR_LENGTH) :: line_buffer     ! Line buffer
+        character(len=:), allocatable :: line_buffer     ! Line buffer
 
         integer :: io_stat   ! check to see if we've reached the end of the file
 
@@ -154,13 +174,11 @@ contains
         if(io_stat/=0) call halt_program('ini error: '//trim(file_name)//' does not exist')
         write(keyword,'(A)') key_word
 
-        get_string = ''
-
         counter=1
-
+        get_string = ''
         do 
             ! Read in the next line
-            read(params_unit,'(A)',iostat=io_stat) line_buffer
+            io_stat = read_line(params_unit, line_buffer)
             ! Exit if io_stat is less than zero
             if (io_stat < 0) exit
 
@@ -174,9 +192,7 @@ contains
             ! check to see if this matches our keyword
             if( trim(adjustl(line_buffer(:i_equals-1))) == trim(adjustl(keyword)) ) then
 
-
                 if(present(ith)) then
-                    
                     if(counter==ith) then
                         get_string = adjustl(line_buffer(i_equals+1:))
                         exit
@@ -192,7 +208,13 @@ contains
 
         end do
 
-        if(trim(get_string)==''.and. present(dflt)) get_string=trim(dflt)
+        if(.not. allocated(get_string)) then
+            if (present(dflt))  then
+                get_string=trim(dflt)
+            else
+                get_string=''
+            end if
+        end if
 
         ! close the file
         close(params_unit)
@@ -207,7 +229,7 @@ contains
         character(len=*),intent(in)  :: key_word  !> keyword to search for
         real(dp),intent(in),optional :: dflt
 
-        character(len=STR_LENGTH) :: string  ! string following keyword
+        character(len=:), allocatable :: string  ! string following keyword
         real(dp) :: get_double  ! double following keyword
 
         string = get_string(file_name,key_word)
@@ -282,7 +304,7 @@ contains
         character(len=*),intent(in)  :: key_word  !> keyword to search for
         integer,intent(in),optional :: dflt
 
-        character(len=STR_LENGTH) :: string  ! string following keyword
+        character(len=:), allocatable :: string  ! string following keyword
         integer :: get_integer  ! integer following keyword
 
         if(present(dflt)) get_integer=dflt
@@ -305,7 +327,7 @@ contains
         character(len=*),intent(in)  :: key_word  !> keyword to search for
         logical,intent(in),optional :: dflt
 
-        character(len=STR_LENGTH) :: string  ! string following keyword
+        character(len=:), allocatable :: string  ! string following keyword
         logical :: get_logical  ! logical following keyword
 
         string = get_string(file_name,key_word)
@@ -444,10 +466,9 @@ contains
     subroutine next_element(line_buffer,delimiter) 
         use utils_module,  only: STR_LENGTH
         implicit none
-        character(len=:), allocatable,intent(inout)  :: line_buffer ! Line buffer
+        character(len=:), allocatable, intent(inout)  :: line_buffer ! Line buffer
         character :: delimiter
-
-        line_buffer = trim(line_buffer(scan(line_buffer,delimiter)+1:)) ! Find the next element
+        line_buffer = trim(line_buffer(scan(line_buffer,delimiter)+1:)) // ' ' ! Find the next element
     end subroutine next_element
 
     subroutine get_prior_params(prior_params,line_buffer)
