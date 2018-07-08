@@ -1,6 +1,7 @@
 import os
 import numpy
 
+
 class PolyChordSettings:
     """
     PolyChord settings
@@ -135,8 +136,9 @@ class PolyChordSettings:
     seed : positive int
         (Default: system time in milliseconds)
         Choose the seed to seed the random number generator.
-        Note **Positive seeds only** 
-        a negative seed indicates that you should use the system time in milliseconds
+        Note **Positive seeds only**
+        a negative seed indicates that you should use the system time in
+        milliseconds
 
     """
     def __init__(self, nDims, nDerived, **kwargs):
@@ -160,22 +162,25 @@ class PolyChordSettings:
         self.write_live = kwargs.pop('write_live', True)
         self.write_dead = kwargs.pop('write_dead', True)
         self.write_prior = kwargs.pop('write_prior', True)
-        self.compression_factor = kwargs.pop('compression_factor', numpy.exp(-1))
+        self.compression_factor = kwargs.pop('compression_factor',
+                                             numpy.exp(-1))
         self.base_dir = kwargs.pop('base_dir', 'chains')
         self.file_root = kwargs.pop('file_root', 'test')
-        self.seed = kwargs.pop('seed', -1)  
-        self.grade_dims = kwargs.pop('grade_dims', [nDims])
-        self.grade_frac = kwargs.pop('grade_frac', [1.0]*len(self.grade_dims))
-        self.nlives = kwargs.pop('nlives', {}) 
+        self.seed = kwargs.pop('seed', -1)
+        self.grade_dims = list(kwargs.pop('grade_dims',
+                                          [nDims]))
+        self.grade_frac = list(kwargs.pop('grade_frac',
+                                          [1.0]*len(self.grade_dims)))
+        self.nlives = kwargs.pop('nlives', {})
 
         if kwargs:
-            raise TypeError('Unexpected **kwargs in Contours constructor: %r' % kwargs)
+            raise TypeError('Unexpected **kwargs in Contours constructor: %r'
+                            % kwargs)
 
         if sum(self.grade_dims) != nDims:
-            raise ValueError('grade_dims must sum to the total dimensionality: sum(' + str(self.grade_dims) + ') /= %i' % nDims)
+            raise ValueError('grade_dims must sum to the total dimensionality:'
+                             'sum(%i) /= %i' % (self.grade_dims, nDims))
 
     @property
     def cluster_dir(self):
-        return os.path.join(self.base_dir,'clusters')
-
-
+        return os.path.join(self.base_dir, 'clusters')

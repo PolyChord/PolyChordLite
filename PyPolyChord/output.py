@@ -5,6 +5,7 @@ except ImportError:
 import re
 import os
 
+
 class PolyChordOutput:
     def __init__(self, base_dir, file_root):
         """
@@ -12,25 +13,28 @@ class PolyChordOutput:
         -------
         None. (in Python)
 
-        All output is currently produced in the form of text files in <base_dir>
-        directory. If you would like to contribute to PyPolyChord and improve this,
-        please get in touch:
+        All output is currently produced in the form of text files in
+        <base_dir> directory. If you would like to contribute to PyPolyChord
+        and improve this, please get in touch:
 
         Will Handley: wh260@cam.ac.uk
 
-        In general the contents of <base_dir> is a set of getdist compatible files.
+        In general the contents of <base_dir> is a set of getdist compatible
+        files.
 
         <root> = <base_dir>/<file_root>
 
-        <root>.txt                                               (posteriors = True)
+        <root>.txt                                          (posteriors = True)
             Weighted posteriors. Compatible with getdist. Each line contains:
-                -2*loglikelihood, weight, <physical parameters>, <derived parameters>
-            Note that here the weights are not normalised, but instead are chosen
-            so that the maximum weight is 1.0.
 
-        <root>_equal_weights.txt                                     (equals = True)
+                -2*loglikelihood, weight, <physical params>, <derived params>
+
+            Note that here the weights are not normalised, but instead are
+            chosen so that the maximum weight is 1.0.
+
+        <root>_equal_weights.txt                                (equals = True)
             Weighted posteriors. Compatible with getdist. Each line contains:
-                -2*loglikelihood, 1.0, <physical parameters>, <derived parameters>
+                -2*loglikelihood, 1.0, <physical params>, <derived params>
 
         <root>.stats
             Final output evidence statistics
@@ -39,7 +43,7 @@ class PolyChordOutput:
         self.base_dir = base_dir
         self.file_root = file_root
 
-        with open( '%s.stats' % self.root, 'r') as f:
+        with open('%s.stats' % self.root, 'r') as f:
             for _ in range(9):
                 line = f.readline()
 
@@ -52,8 +56,10 @@ class PolyChordOutput:
             self.logZs = []
             self.logZerrs = []
             while line[:5] == 'log(Z':
-                self.logZs.append(float(re.findall(r'=(.*)',line)[0].split()[0]))
-                self.logZerrs.append(float(re.findall(r'=(.*)',line)[0].split()[2]))
+                self.logZs.append(float(re.findall(r'=(.*)', line
+                                                   )[0].split()[0]))
+                self.logZerrs.append(float(re.findall(r'=(.*)', line
+                                                      )[0].split()[2]))
 
                 line = f.readline()
 
@@ -78,14 +84,13 @@ class PolyChordOutput:
             except ValueError:
                 self.avnlikeslice = None
 
-
-
     @property
     def root(self):
         return os.path.join(self.base_dir, self.file_root)
 
     def cluster_root(self, i):
-        return os.path.join(self.base_dir, 'clusters', self.file_root + '_%i' % i)
+        return os.path.join(self.base_dir, 'clusters',
+                            '%s_%i' % (self.file_root, i))
 
     @property
     def paramnames_file(self):
@@ -94,19 +99,20 @@ class PolyChordOutput:
     @property
     def posterior(self):
         return getdist.mcsamples.loadMCSamples(self.root)
-        
+
     def cluster_posterior(self, i):
         return getdist.mcsamples.loadMCSamples(self.cluster_root(i))
 
     def cluster_paramnames_file(self, i):
         return self.cluster_root(i) + '.paramnames'
 
-    def make_paramnames_files(self,paramnames):
+    def make_paramnames_files(self, paramnames):
         self.make_paramnames_file(paramnames, self.paramnames_file)
         for i, _ in enumerate(self.logZs):
-            self.make_paramnames_file(paramnames, self.cluster_paramnames_file(i))
+            self.make_paramnames_file(paramnames,
+                                      self.cluster_paramnames_file(i))
 
     def make_paramnames_file(self, paramnames, filename):
-        with open(filename,'w') as f:
+        with open(filename, 'w') as f:
             for name, latex in paramnames:
-                f.write('%s   %s\n' % (name, latex) )
+                f.write('%s   %s\n' % (name, latex))

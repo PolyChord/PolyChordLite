@@ -129,7 +129,7 @@ $(addsuffix clean,$(CLEANDIRS)): %clean:
 	$(MAKE) -C $* clean
 
 veryclean: clean $(addsuffix veryclean,$(CLEANDIRS))  
-	$(RM) *~ build dist PyPolyChord.egg-info
+	$(RM) *~ build dist PyPolyChord.egg-info PyPolyChord/*.pyc PyPolyChord/__pycache__ __pycache__
 $(addsuffix veryclean,$(CLEANDIRS))  : %veryclean: 
 	$(MAKE) -C $* veryclean
 	
