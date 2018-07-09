@@ -27,14 +27,14 @@ class PolyChordOutput:
         <root>.txt                                          (posteriors = True)
             Weighted posteriors. Compatible with getdist. Each line contains:
 
-                -2*loglikelihood, weight, <physical params>, <derived params>
+                weight, -2*loglikelihood, <physical params>, <derived params>
 
             Note that here the weights are not normalised, but instead are
             chosen so that the maximum weight is 1.0.
 
         <root>_equal_weights.txt                                (equals = True)
             Weighted posteriors. Compatible with getdist. Each line contains:
-                -2*loglikelihood, 1.0, <physical params>, <derived params>
+                1.0, -2*loglikelihood, <physical params>, <derived params>
 
         <root>.stats
             Final output evidence statistics

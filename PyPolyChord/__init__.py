@@ -143,14 +143,14 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     <root>.txt                                              (posteriors = True)
         Weighted posteriors. Compatible with getdist. Each line contains:
 
-          -2*loglikelihood, weight, <physical parameters>, <derived parameters>
+          weight, -2*loglikelihood, <physical parameters>, <derived parameters>
 
         Note that here the weights are not normalised, but instead are chosen
         so that the maximum weight is 1.0.
 
     <root>_equal_weights.txt                                    (equals = True)
         Weighted posteriors. Compatible with getdist. Each line contains:
-            -2*loglikelihood, 1.0, <physical parameters>, <derived parameters>
+            1.0, -2*loglikelihood, <physical parameters>, <derived parameters>
 
     <root>_dead.txt                                         (write_dead = True)
         Dead points. Each line contains:
