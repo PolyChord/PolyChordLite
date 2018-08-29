@@ -33,10 +33,21 @@ extern "C" void polychord_c_interface(
         int,
         double*,
         int*,
-        int);
+        int,
+#ifdef USE_MPI
+		  MPI_Fint&
+#else
+		  int&
+#endif
+		  );
 
 extern "C" void polychord_c_interface_ini(
         double (*)(double*,int,double*,int), 
         void (*)(), 
-        char*
+        char*,
+#ifdef USE_MPI
+		  MPI_Fint&
+#else
+		  int&
+#endif
         );

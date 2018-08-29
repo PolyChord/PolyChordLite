@@ -44,7 +44,7 @@ endif
 
 ifdef MPI
 FFLAGS += -DMPI
-CXXFLAGS += -DMPI
+CXXFLAGS += -DUSE_MPI
 endif
 
 # Remove command
