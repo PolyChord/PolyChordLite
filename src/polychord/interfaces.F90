@@ -1,10 +1,10 @@
 !> This allows for a simple C interface... 
-
-
 module interfaces_module
     use utils_module, only: dp
-
     implicit none
+#ifdef MPI
+    include 'mpif.h'
+#endif
     interface run_polychord
         module procedure run_polychord_full, run_polychord_no_prior, run_polychord_no_dumper, run_polychord_no_prior_no_dumper, run_polychord_ini
     end interface run_polychord
@@ -12,7 +12,7 @@ module interfaces_module
 contains
 
 
-    subroutine run_polychord_full(loglikelihood, prior, dumper, settings_in)
+    subroutine run_polychord_full(loglikelihood, prior, dumper, settings_in, mpi_communicator)
         use settings_module,          only: program_settings,initialise_settings
         use random_module,            only: initialise_random
         use nested_sampling_module,   only: NestedSampling
@@ -50,20 +50,31 @@ contains
         type(program_settings),intent(in)    :: settings_in
         type(program_settings)               :: settings 
 
+        !> MPI handle
+        integer, intent(in), optional :: mpi_communicator
+        integer :: comm
+
         real(dp), dimension(4) :: output_info
 
 #ifdef MPI
+        if (present(mpi_communicator)) then
+            comm = mpi_communicator
+        else 
+            comm = MPI_COMM_WORLD
+        end if
         call initialise_mpi(settings_in%feedback)
+#else 
+        comm =0
 #endif
         if (settings_in%seed >= 0) then
-            call initialise_random(settings_in%seed)
+            call initialise_random(comm,settings_in%seed)
         else
-            call initialise_random()
+            call initialise_random(comm)
         end if
         settings = settings_in
         call initialise_settings(settings)   
 #ifdef MPI
-        output_info = NestedSampling(loglikelihood,prior,dumper,settings,MPI_COMM_WORLD) 
+        output_info = NestedSampling(loglikelihood,prior,dumper,settings,comm) 
         call finalise_mpi
 #else
         output_info = NestedSampling(loglikelihood,prior,dumper,settings,0) 
@@ -73,7 +84,7 @@ contains
 
 
     !===================== INTERFACE ===============================================
-    subroutine run_polychord_no_prior(loglikelihood,dumper,settings)
+    subroutine run_polychord_no_prior(loglikelihood,dumper,settings,mpi_communicator)
         use settings_module,          only: program_settings
         implicit none
         interface
@@ -92,7 +103,18 @@ contains
             end subroutine dumper
         end interface
         type(program_settings),intent(in)    :: settings  ! The program settings 
-        call run_polychord(loglikelihood,prior,dumper,settings)
+        integer, intent(in), optional :: mpi_communicator
+        integer :: comm
+#ifdef MPI
+        if (present(mpi_communicator)) then
+            comm = mpi_communicator
+        else 
+            comm = MPI_COMM_WORLD
+        end if
+#else
+            comm = 0
+#endif
+        call run_polychord(loglikelihood,prior,dumper,settings,comm)
     contains
         function prior(cube) result(theta)
             implicit none
@@ -102,7 +124,7 @@ contains
         end function prior
     end subroutine run_polychord_no_prior
 
-    subroutine run_polychord_no_dumper(loglikelihood,prior,settings)
+    subroutine run_polychord_no_dumper(loglikelihood,prior,settings,mpi_communicator)
         use settings_module,          only: program_settings
         implicit none
         interface
@@ -121,7 +143,18 @@ contains
             end function prior
         end interface
         type(program_settings),intent(in)    :: settings  ! The program settings 
-        call run_polychord(loglikelihood,prior,dumper,settings)
+        integer, intent(in), optional :: mpi_communicator
+        integer :: comm
+#ifdef MPI
+        if (present(mpi_communicator)) then
+            comm = mpi_communicator
+        else 
+            comm = MPI_COMM_WORLD
+        end if
+#else
+            comm = 0
+#endif
+        call run_polychord(loglikelihood,prior,dumper,settings,comm)
     contains
         subroutine dumper(live, dead, logweights, logZ, logZerr)
             real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
@@ -129,7 +162,7 @@ contains
         end subroutine dumper
     end subroutine run_polychord_no_dumper
 
-    subroutine run_polychord_no_prior_no_dumper(loglikelihood, settings)
+    subroutine run_polychord_no_prior_no_dumper(loglikelihood, settings,mpi_communicator)
         use settings_module,          only: program_settings
         implicit none
         interface
@@ -141,7 +174,19 @@ contains
             end function loglikelihood
         end interface
         type(program_settings),intent(in)    :: settings  ! The program settings 
-        call run_polychord(loglikelihood,prior,settings)
+        !> MPI handle
+        integer, intent(in), optional :: mpi_communicator
+        integer :: comm
+#ifdef MPI
+        if (present(mpi_communicator)) then
+            comm = mpi_communicator
+        else 
+            comm = MPI_COMM_WORLD
+        end if
+#else
+            comm = 0
+#endif
+        call run_polychord(loglikelihood,prior,settings, comm)
     contains
         function prior(cube) result(theta)
             implicit none
@@ -156,7 +201,7 @@ contains
     end subroutine run_polychord_no_prior_no_dumper
 
 
-    subroutine run_polychord_ini(loglikelihood, setup_loglikelihood, input_file)
+    subroutine run_polychord_ini(loglikelihood, setup_loglikelihood, input_file,mpi_communicator)
         use ini_module,               only: read_params
         use params_module,            only: add_parameter,param_type
         use priors_module
@@ -183,11 +228,21 @@ contains
                 type(program_settings), intent(in) :: settings
             end subroutine setup_loglikelihood
         end interface
-
+        integer, intent(in), optional :: mpi_communicator
+        integer :: comm
+#ifdef MPI
+        if (present(mpi_communicator)) then
+            comm = mpi_communicator
+        else 
+            comm = MPI_COMM_WORLD
+        end if
+#else
+            comm = 0
+#endif
         call read_params(trim(input_file),settings,params,derived_params)
         call create_priors(priors,params,settings)
         call setup_loglikelihood(settings)
-        call run_polychord(loglikelihood,prior_wrapper,settings) 
+        call run_polychord(loglikelihood,prior_wrapper,settings,comm) 
 
         contains
             function prior_wrapper(cube) result(theta)
@@ -233,7 +288,8 @@ contains
             n_nlives,&
             loglikes,&
             nlives,&
-            seed) &
+            seed,&
+            comm) &
             bind(c,name='polychord_c_interface')
 
         use iso_c_binding
@@ -321,6 +377,8 @@ contains
         procedure(c_prior), pointer         :: f_prior_ptr
         procedure(c_dumper), pointer         :: f_dumper_ptr
 
+        integer, intent(in) :: comm
+
         settings%nlive               = nlive                
         settings%num_repeats         = num_repeats          
         settings%nprior              = nprior
@@ -367,7 +425,7 @@ contains
         call c_f_procpointer(c_prior_ptr, f_prior_ptr)
         call c_f_procpointer(c_dumper_ptr, f_dumper_ptr)
 
-        call run_polychord(loglikelihood,prior,dumper,settings) 
+        call run_polychord(loglikelihood,prior,dumper,settings,comm)
 
     contains
         function loglikelihood(theta,phi)
@@ -431,7 +489,7 @@ contains
     end subroutine polychord_c_interface
 
 
-    subroutine polychord_c_interface_ini(c_loglikelihood_ptr, c_setup_loglikelihood_ptr, input_file_c)&
+    subroutine polychord_c_interface_ini(c_loglikelihood_ptr, c_setup_loglikelihood_ptr, input_file_c, comm)&
             bind(c,name='polychord_c_interface_ini')
 
         use iso_c_binding
@@ -439,6 +497,7 @@ contains
 
         ! ~~~~~~~ Local Variable Declaration ~~~~~~~
         implicit none
+        integer, intent(in) :: comm
 
         interface
             function c_loglikelihood(theta,nDims,phi,nDerived) bind(c)
@@ -468,7 +527,7 @@ contains
         call c_f_procpointer(c_loglikelihood_ptr, f_loglikelihood_ptr)
         call c_f_procpointer(c_setup_loglikelihood_ptr, f_setup_loglikelihood_ptr)
 
-        call run_polychord(loglikelihood, setup_loglikelihood, input_file) 
+        call run_polychord(loglikelihood, setup_loglikelihood, input_file, comm) 
 
     contains
         function loglikelihood(theta,phi)

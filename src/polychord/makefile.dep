@@ -51,6 +51,7 @@ ini.o : \
 	utils.o 
 
 interfaces.o : \
+	mpi_utils.o \
 	read_write.o \
 	params.o \
 	ini.o \

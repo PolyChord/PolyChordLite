@@ -1,17 +1,22 @@
 from setuptools import setup, Extension
 import os
+import numpy
+
 
 def readme():
     with open('PyPolyChord_README.rst') as f:
         return f.read()
 
+
 pypolychord_module = Extension(
-        name= '_PyPolyChord',
-        library_dirs = [os.path.join(os.getcwd(),'lib')],
-        include_dirs = [os.path.join(os.getcwd(),'src/polychord/')],
-        runtime_library_dirs = [os.path.join(os.getcwd(),'lib')],
-        libraries = ['chord'],
-        sources=[os.path.join(os.getcwd(),'PyPolyChord/_PyPolyChord.cpp')]
+        name='_PyPolyChord',
+        library_dirs=[os.path.join(os.getcwd(), 'lib')],
+        include_dirs=[os.path.join(os.getcwd(), 'src/polychord/'),
+                      numpy.get_include()],
+        runtime_library_dirs=[os.path.join(os.getcwd(), 'lib')],
+        libraries=['chord'],
+        sources=[os.path.join(os.getcwd(),
+                 'PyPolyChord/_PyPolyChord.cpp')]
         )
 
 setup(name='PyPolyChord',
@@ -23,6 +28,6 @@ setup(name='PyPolyChord',
       license='PolyChord',
       packages=['PyPolyChord'],
       install_requires=['numpy'],
-      extras_require={'plotting':'getdist'},
+      extras_require={'plotting': 'getdist'},
       ext_modules=[pypolychord_module],
       zip_safe=False)

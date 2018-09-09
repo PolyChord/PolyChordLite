@@ -1,25 +1,21 @@
 from .output import PolyChordOutput
-import numpy
-import pkg_resources
 import sys
 import os
-import subprocess
-import re
 from ctypes import CDLL, RTLD_GLOBAL
-from inspect import signature
-
 
 # Preloading MPI
 try:
     CDLL("libmpi.so", mode=RTLD_GLOBAL)
 except OSError:
-    print("WARNING: Could not preload libmpi.so. If you are running with MPI, this may cause segfaults")
+    print("WARNING: Could not preload libmpi.so."
+          "If you are running with MPI, this may cause segfaults")
     pass
 
+err = 'libchord.so: cannot open shared object file: No such file or directory'
 try:
     import _PyPolyChord
 except ImportError as e:
-    if str(e) == 'libchord.so: cannot open shared object file: No such file or directory':
+    if str(e) == err:
         print('PolyChord: Could not find libchord.so')
         print('           Did you move/remove your polychord library?')
         print('           Go back to your PolyChord directory and run: ')
@@ -32,15 +28,16 @@ except ImportError as e:
         raise e
 
 
-
 def default_prior(cube, theta):
     theta[:] = cube
+
 
 def default_dumper(live, dead, logweights, logZ, logZerr):
     pass
 
 
-def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior, dumper=default_dumper):
+def run_polychord(loglikelihood, nDims, nDerived, settings,
+                  prior=default_prior, dumper=default_dumper):
     """
     Runs PolyChord.
 
@@ -143,21 +140,23 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior,
 
     <root> = <base_dir>/<file_root>
 
-    <root>.txt                                               (posteriors = True)
+    <root>.txt                                              (posteriors = True)
         Weighted posteriors. Compatible with getdist. Each line contains:
-            -2*loglikelihood, weight, <physical parameters>, <derived parameters>
+
+          weight, -2*loglikelihood, <physical parameters>, <derived parameters>
+
         Note that here the weights are not normalised, but instead are chosen
         so that the maximum weight is 1.0.
 
-    <root>_equal_weights.txt                                     (equals = True)
+    <root>_equal_weights.txt                                    (equals = True)
         Weighted posteriors. Compatible with getdist. Each line contains:
-            -2*loglikelihood, 1.0, <physical parameters>, <derived parameters>
+            1.0, -2*loglikelihood, <physical parameters>, <derived parameters>
 
-    <root>_dead.txt                                          (write_dead = True)
+    <root>_dead.txt                                         (write_dead = True)
         Dead points. Each line contains:
             loglikelihood, <physical parameters>, <derived parameters>
 
-    <root>_phys_live.txt                                     (write_live = True)
+    <root>_phys_live.txt                                    (write_live = True)
         Live points. Each line contains:
             <physical parameters>, <derived parameters>, loglikelihood
         Mostly useful for run-time monitoring.
@@ -216,4 +215,4 @@ def run_polychord(loglikelihood, nDims, nDerived, settings, prior=default_prior,
                      settings.nlives,
                      settings.seed)
 
-    return PolyChordOutput(settings.base_dir,settings.file_root)
+    return PolyChordOutput(settings.base_dir, settings.file_root)

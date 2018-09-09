@@ -23,11 +23,12 @@ module random_module
     !!
     !! @todo Write seed to log file
 
-    subroutine initialise_random(seed_input)
+    subroutine initialise_random(mpi_communicator,seed_input)
         use iso_fortran_env, only: int64
         implicit none
         !> Optional seed input.
         !! If this isn't included, then the system time is used
+        integer, intent(in) :: mpi_communicator
         integer, optional, intent(in) :: seed_input
 
         integer,allocatable,dimension(:) :: seed ! vector to be passed to random_seed
@@ -46,7 +47,7 @@ module random_module
 
         ! Get the global ranking
 #ifdef MPI
-        call MPI_COMM_RANK(MPI_COMM_WORLD, myrank, mpierror)
+        call MPI_COMM_RANK(mpi_communicator, myrank, mpierror)
 #else
         myrank = 0
 #endif
@@ -77,7 +78,7 @@ module random_module
 
 #ifdef MPI
         ! Broadcast the system time to all nodes
-        call MPI_BCAST(t,1,MPI_INTEGER,0,MPI_COMM_WORLD,mpierror)      
+        call MPI_BCAST(t,1,MPI_INTEGER,0,mpi_communicator,mpierror)      
 
         ! Augment the seed on each node by adding 1 to it
         t = ieor(t, int(myrank, kind(t)))

@@ -51,7 +51,7 @@ double loglikelihood (double theta[], int nDims, double phi[], int nDerived)
     //
     //
     //============================================================
-    for (auto i=0;i<nDims;i++)
+    for (int i=0;i<nDims;i++)
         logL += theta[i]*theta[i];
     
     return logL;
@@ -87,9 +87,9 @@ void prior (double cube[], double theta[], int nDims)
 //
 // To use the arrays, subscript by following this example:
 //
-//    for (auto i_dead=0;i_dead<ndead;i_dead++)
+//    for (int i_dead=0;i_dead<ndead;i_dead++)
 //    {
-//        for (auto j_par=0;j_par<npars;j_par++)
+//        for (int j_par=0;j_par<npars;j_par++)
 //            std::cout << dead[npars*i_dead+j_par] << " ";
 //        std::cout << std::endl;
 //    }

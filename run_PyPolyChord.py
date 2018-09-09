@@ -26,7 +26,7 @@ def prior(hypercube):
     return UniformPrior(-1, 1)(hypercube)
 
 def dumper(live, dead, logweights, logZ, logZerr):
-    print(dead[-1])
+    print("Last dead point:", dead[-1])
 
 settings = PolyChordSettings(nDims, nDerived)
 settings.file_root = 'gaussian'
