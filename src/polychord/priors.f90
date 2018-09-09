@@ -2,60 +2,67 @@ module priors_module
     use utils_module, only: dp
     implicit none
 
-    integer, parameter :: unknown_type        = 0
-    integer, parameter :: uniform_type        = 1
-    integer, parameter :: gaussian_type       = 2
-    integer, parameter :: log_uniform_type    = 3
-    integer, parameter :: sorted_uniform_type = 4
+    integer, parameter :: unknown_type                        = 0
+    integer, parameter :: uniform_type                        = 1
+    integer, parameter :: log_uniform_type                    = 2
+    integer, parameter :: power_uniform_type                  = 3
+    integer, parameter :: gaussian_type                       = 4
+    integer, parameter :: half_gaussian_type                  = 5
+    integer, parameter :: exponential_type                    = 6
+    integer, parameter :: sorted_uniform_type                 = 7
+    integer, parameter :: sorted_gaussian_type                = 8
+    integer, parameter :: sorted_half_gaussian_type           = 9
+    integer, parameter :: sorted_exponential_type             = 10
+    integer, parameter :: adaptive_sorted_uniform_type        = 11
+    integer, parameter :: adaptive_sorted_gaussian_type       = 12
+    integer, parameter :: adaptive_sorted_half_gaussian_type  = 13
+    integer, parameter :: adaptive_sorted_exponential_type    = 14
+    integer, parameter :: nn_adaptive_layer_gaussian_type     = 15
 
     type prior
         integer :: npars = 0
         integer :: prior_type = unknown_type
         integer, dimension(:), allocatable :: hypercube_indices
         integer, dimension(:), allocatable :: physical_indices
-
         real(dp), dimension(:), allocatable :: parameters
 
     end type prior
 
 
-
     contains
+
+
+    !============= Separable Priors ================================================
 
 
     !============= Uniform (Separable) ================================================
 
     function uniform_htp(hypercube_coords,parameters) result(physical_coords)
+
         implicit none
         !> The hypercube coordinates to be transformed
         real(dp), intent(in), dimension(:) :: hypercube_coords
-
         !> The parameters of the transformation
         real(dp), intent(in), dimension(:) :: parameters
-
         !> The transformed coordinates
         real(dp), dimension(size(hypercube_coords)) :: physical_coords
-
         ! This is a fairly simple transformation, each parameter is transformed as
         ! hypercube_coord -> min + hypercube_coord * (max-min)
         ! odd indices of the parameters array are the minimums
         ! even indices of the parameters array are the maximums
-
         physical_coords = parameters(1::2) + (parameters(2::2) - parameters(1::2) ) * hypercube_coords
 
     end function uniform_htp
 
     function uniform_pth(physical_coords,parameters) result(hypercube_coords)
+
         implicit none
         !> The physical coordinates to be transformed
         real(dp), intent(in), dimension(:) :: physical_coords
-
         !> The parameters of the transformation
         real(dp), intent(in), dimension(:) :: parameters
-
         !> The transformed coordinates
         real(dp), dimension(size(physical_coords)) :: hypercube_coords
-
         hypercube_coords = (physical_coords - parameters(1::2)) / (parameters(2::2) - parameters(1::2) )
 
     end function uniform_pth
@@ -64,68 +71,55 @@ module priors_module
     !============= Gaussian (Separable) ===============================================
 
     function gaussian_htp(hypercube_coords,parameters) result(physical_coords)
+
         use utils_module, only: inv_normal_cdf
         implicit none
         !> The hypercube coordinates to be transformed
         real(dp), intent(in), dimension(:) :: hypercube_coords
-
         !> The parameters of the transformation
         real(dp), intent(in), dimension(:) :: parameters
-
         !> The transformed coordinates
         real(dp), dimension(size(hypercube_coords)) :: physical_coords
-
         ! Transform via the inverse normal cumulative distribution function
         physical_coords = inv_normal_cdf(hypercube_coords)
-
         ! Scale by the standard deviation and shift by the mean
         physical_coords = parameters(1::2) + parameters(2::2) * physical_coords
 
     end function gaussian_htp
 
     function gaussian_pth(physical_coords,parameters) result(hypercube_coords)
+
         use utils_module, only: normal_cdf
         implicit none
         !> The physical coordinates to be transformed
         real(dp), intent(in), dimension(:) :: physical_coords
-
         !> The parameters of the transformation
         real(dp), intent(in), dimension(:) :: parameters
-
         !> The transformed coordinates
         real(dp), dimension(size(physical_coords)) :: hypercube_coords
-
         integer :: npars 
-
         npars=size(physical_coords)
-
         ! Scale by the standard deviation and shift by the mean
         ! odd indices of the parameters array are the means
         ! even indices of the parameters array are the stdevs
-
         hypercube_coords = ( physical_coords - parameters(1::2) )/parameters(2::2)
-
         ! Transform via the normal cumulative distribution function
         hypercube_coords = normal_cdf(hypercube_coords)
 
     end function gaussian_pth
 
 
-
-
-
     !============= Log-Uniform (Separable) ============================================
+
     function log_uniform_htp(hypercube_coords,parameters) result(physical_coords)
+
         implicit none
         !> The hypercube coordinates to be transformed
         real(dp), intent(in), dimension(:) :: hypercube_coords
-
         !> The parameters of the transformation
         real(dp), intent(in), dimension(:) :: parameters
-
         !> The transformed coordinates
         real(dp), dimension(size(hypercube_coords)) :: physical_coords
-
         ! hypercube_coord -> min * (max/min)**hypercube_coord
         ! Lower half of the parameters array are the minimums
         ! Upper half of the parameters array are the maximums
@@ -134,16 +128,14 @@ module priors_module
     end function log_uniform_htp
 
     function log_uniform_pth(physical_coords,parameters) result(hypercube_coords)
+
         implicit none
         !> The physical coordinates to be transformed
         real(dp), intent(in), dimension(:) :: physical_coords
-
         !> The parameters of the transformation
         real(dp), intent(in), dimension(:) :: parameters
-
         !> The transformed coordinates
         real(dp), dimension(size(physical_coords)) :: hypercube_coords
-
         ! hypercube_coord -> min * (max/min)**hypercube_coord
         ! Lower half of the parameters array are the minimums
         ! Upper half of the parameters array are the maximums
@@ -152,8 +144,67 @@ module priors_module
     end function log_uniform_pth
 
 
+    !============= Power uniform (Separable) ===============================================
 
-    !============= Sorted Uniform =====================================================
+    ! Prior such that theta^power is uniformly distributed.
+    ! Power must be negative.
+    function power_uniform_htp(hypercube_coords,parameters) result(physical_coords)
+
+        use utils_module, only: inv_normal_cdf
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        !> The Constants
+        real(dp), dimension(size(hypercube_coords)) :: const
+        const = 1.0 / abs((parameters(1::3) ** (1.0 / parameters(3::3))) -  (parameters(2::3) ** (1.0 / parameters(3::3))))
+        physical_coords = (parameters(1::3) ** (1.0 / parameters(3::3))) - (hypercube_coords / const)
+        physical_coords = physical_coords ** parameters(3::3)
+
+    end function power_uniform_htp
+
+
+    !============= Half Gaussian (Separable) ===============================================
+
+    function half_gaussian_htp(hypercube_coords,parameters) result(physical_coords)
+
+        use utils_module, only: inv_normal_cdf
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        ! Transform to upper half of hypercube
+        physical_coords = 0.5 + (0.5 * hypercube_coords)
+        ! Apply gaussian_htp
+        physical_coords = gaussian_htp(physical_coords, parameters)
+
+    end function half_gaussian_htp
+
+
+    !============= Exponential (Separable) ===============================================
+
+    function exponential_htp(hypercube_coords,parameters) result(physical_coords)
+
+        use utils_module, only: inv_normal_cdf
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        physical_coords = -log(1 - hypercube_coords) / parameters(1::1)
+
+    end function exponential_htp
+
+
+    !============= Sorted Priors ================================================
 
     !> This transforms the unit hypercube to a "forced identifiablity" prior.
     !! This means that the \f$(\theta_1,\theta_2,\ldots,\theta_n)\f$ variables are uniformly distributed in the
@@ -188,77 +239,260 @@ module priors_module
     !! Then transform the unit hypercube into the physical space with a linear
     !! rescaling
 
-    function sorted_uniform_htp(hypercube_coords,parameters) result(physical_coords)
-        implicit none
+    function sort_hypercube(hypercube_coords) result(sorted_coords)
 
+        implicit none
         !> The hypercube coordinates to be transformed
         real(dp), intent(in), dimension(:) :: hypercube_coords
-
-        !> The parameters of the transformation
-        real(dp), intent(in), dimension(:) :: parameters
-
         !> The transformed coordinates
-        real(dp), dimension(size(hypercube_coords)) :: physical_coords
-
+        real(dp), dimension(size(hypercube_coords)) :: sorted_coords
         integer n_prior ! the dimension
-
         ! Get the size of the array
         n_prior = size(hypercube_coords)
-
         ! Transform the largest index to the largest of n_prior variables in [0,1]
-        physical_coords(n_prior) = hypercube_coords(n_prior)**(1d0/n_prior)
-
+        sorted_coords(n_prior) = hypercube_coords(n_prior)**(1d0/n_prior)
         ! Then for the remaining variables, transform them to the largest of the
         ! remaining variables, and rescale so that the variable one larger is
         ! the maximum
         do n_prior=n_prior-1,1,-1
-            physical_coords(n_prior) = hypercube_coords(n_prior)**(1d0/n_prior)*physical_coords(n_prior+1)
+            sorted_coords(n_prior) = hypercube_coords(n_prior)**(1d0/n_prior)*sorted_coords(n_prior+1)
         end do
 
-        ! Rescale using the parameters
-        physical_coords = parameters(1) + physical_coords*(parameters(2)-parameters(1))
+    end function sort_hypercube
+
+
+    !============= Sorted Uniform =====================================================
+
+    function sorted_uniform_htp(hypercube_coords,parameters) result(physical_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        ! Sort the coordinates
+        physical_coords = sort_hypercube(hypercube_coords)
+        ! Apply the prior
+        physical_coords = uniform_htp(physical_coords, parameters)
 
     end function sorted_uniform_htp
 
-
     function sorted_uniform_pth(physical_coords,parameters) result(hypercube_coords)
-        implicit none
 
+        implicit none
         !> The physical coordinates to be transformed
         real(dp), intent(in), dimension(:) :: physical_coords
-
         !> The parameters of the transformation
         real(dp), intent(in), dimension(:) :: parameters
-
         !> The transformed coordinates
         real(dp), dimension(size(physical_coords)) :: hypercube_coords
-
         integer n_prior ! the dimension
         integer i_prior ! the dimension
-
         ! Get the size of the array
         n_prior = size(physical_coords)
-
-
         ! Rescale back to [0,1]
         hypercube_coords =  (physical_coords - parameters(1)) / (parameters(2)-parameters(1))  
-
         ! Undo the trasformation piece by piece
         do i_prior = 1,n_prior-1
             hypercube_coords(i_prior) = ( hypercube_coords(i_prior)/hypercube_coords(i_prior+1) )**i_prior
         end do
         hypercube_coords(n_prior) = hypercube_coords(n_prior)**n_prior
 
-
     end function sorted_uniform_pth
 
 
+    !============= Sorted Gaussian =====================================================
+
+    function sorted_gaussian_htp(hypercube_coords,parameters) result(physical_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        ! Sort the coordinates
+        physical_coords = sort_hypercube(hypercube_coords)
+        ! Apply the prior
+        physical_coords = gaussian_htp(physical_coords, parameters)
+
+    end function sorted_gaussian_htp
+
+
+    !============= Sorted Half Gaussian =====================================================
+
+    function sorted_half_gaussian_htp(hypercube_coords,parameters) result(physical_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        ! Sort the coordinates
+        physical_coords = sort_hypercube(hypercube_coords)
+        ! Apply the prior
+        physical_coords = half_gaussian_htp(physical_coords, parameters)
+
+    end function sorted_half_gaussian_htp
+
+
+    !============= Sorted Exponential =====================================================
+
+    function sorted_exponential_htp(hypercube_coords,parameters) result(physical_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        ! Sort the coordinates
+        physical_coords = sort_hypercube(hypercube_coords)
+        ! Apply the prior
+        physical_coords = exponential_htp(physical_coords, parameters)
+
+    end function sorted_exponential_htp
+
+
+    !============= Adaptive Sorted Priors ===============================================
+
+    ! Uniform prior on first parameter in (0.5, nparams - 0.5) rounded to int to give number of basis functions to use
+    ! Then sort only the basis functions to be used
+    function adaptive_sorted_transform(hypercube_coords) result(transformed_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: transformed_coords
+        !> Number of functions selected by adaptive parameter
+        integer nfunc
+        transformed_coords = hypercube_coords
+        ! Scale the first parameter, which when rounded to nearest int determines the number of functions to use
+        transformed_coords(1) = (0.5 + (hypercube_coords(1) * (size(hypercube_coords) - 1)))
+        ! Get nfunc = first coord rounded to nearest int. Note INT rounds down so need to add 0.5
+        nfunc = INT(transformed_coords(1) + 0.5)
+        ! Sort the next nfunc coords
+        transformed_coords(2:nfunc + 1) = sort_hypercube(transformed_coords(2:nfunc + 1))
+
+    end function adaptive_sorted_transform
+
+
+    !============= Adaptive Sorted Uniform =====================================================
+
+    function adaptive_sorted_uniform_htp(hypercube_coords,parameters) result(physical_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        ! Sort the coordinates and scale first coord
+        physical_coords = adaptive_sorted_transform(hypercube_coords)
+        ! Apply the prior
+        physical_coords(2:) = uniform_htp(physical_coords(2:), parameters(3:))
+
+    end function adaptive_sorted_uniform_htp
+
+
+    !============= Adaptive Sorted Gaussian =====================================================
+
+    function adaptive_sorted_gaussian_htp(hypercube_coords,parameters) result(physical_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        ! Sort the coordinates
+        physical_coords = adaptive_sorted_transform(hypercube_coords)
+        ! Apply the prior
+        physical_coords(2:) = gaussian_htp(physical_coords(2:), parameters(3:))
+
+    end function adaptive_sorted_gaussian_htp
+
+
+    !============= Adaptive Sorted Half Gaussian ================================================
+
+    function adaptive_sorted_half_gaussian_htp(hypercube_coords,parameters) result(physical_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        ! Sort the coordinates
+        physical_coords = adaptive_sorted_transform(hypercube_coords)
+        ! Apply the prior
+        physical_coords(2:) = half_gaussian_htp(physical_coords(2:), parameters(3:))
+
+    end function adaptive_sorted_half_gaussian_htp
+
+
+    !============= Adaptive Sorted Exponential ==================================================
+
+    function adaptive_sorted_exponential_htp(hypercube_coords,parameters) result(physical_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        ! Sort the coordinates
+        physical_coords = adaptive_sorted_transform(hypercube_coords)
+        ! Apply the prior
+        physical_coords(2:) = exponential_htp(physical_coords(2:), parameters(2:))
+
+    end function adaptive_sorted_exponential_htp
+
+
+    !============= NN Adaptive Layer Gaussian ===================================================
+
+    ! Used for neural networks with a number of hidden layers determined by the first parameter
+    ! If there is 1 hidden layer we use the adaptive_sorted_half_gaussian. Otherwise use the adaptive sorted gaussian.
+    ! See "Bayesian sparse reconstruction: a brute-force approach to astronomical imaging and machine learning" (Higson et al 2018) for more information
+
+    function nn_adaptive_layer_gaussian_htp(hypercube_coords,parameters) result(physical_coords)
+
+        implicit none
+        !> The hypercube coordinates to be transformed
+        real(dp), intent(in), dimension(:) :: hypercube_coords
+        !> The parameters of the transformation
+        real(dp), intent(in), dimension(:) :: parameters
+        !> The transformed coordinates
+        real(dp), dimension(size(hypercube_coords)) :: physical_coords
+        !> Get the number of layers (currently 1 or 2)
+        physical_coords = hypercube_coords
+        physical_coords(1) = (0.5 + (hypercube_coords(1) * 2))
+        !> Select prior based on number of layers
+        IF (physical_coords(1) .LT. 1.5) THEN
+            physical_coords(2:) = adaptive_sorted_half_gaussian_htp(physical_coords(2:), parameters(3:))
+        ELSE
+            physical_coords(2:) = adaptive_sorted_gaussian_htp(physical_coords(2:), parameters(3:))
+        END IF
+
+    end function nn_adaptive_layer_gaussian_htp
 
 
     ! =============================== Wrapper functions =====================================
 
     ! prior transformations
     function hypercube_to_physical(hypercube_coords,priors) result(physical_coords)
+
         implicit none
         type(prior), dimension(:), intent(in) :: priors
         real(dp), intent(in), dimension(:) :: hypercube_coords
@@ -274,14 +508,47 @@ module priors_module
             case(uniform_type)
                 physical_coords(priors(i)%physical_indices)= uniform_htp&
                     (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
-            case(gaussian_type)
-                physical_coords(priors(i)%physical_indices)= gaussian_htp&
-                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
             case(log_uniform_type)
                 physical_coords(priors(i)%physical_indices)= log_uniform_htp&
                     (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(power_uniform_type)
+                physical_coords(priors(i)%physical_indices)= power_uniform_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(gaussian_type)
+                physical_coords(priors(i)%physical_indices)= gaussian_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(half_gaussian_type)
+                physical_coords(priors(i)%physical_indices)= half_gaussian_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(exponential_type)
+                physical_coords(priors(i)%physical_indices)= exponential_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
             case(sorted_uniform_type)
                 physical_coords(priors(i)%physical_indices)= sorted_uniform_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(sorted_gaussian_type)
+                physical_coords(priors(i)%physical_indices)= sorted_gaussian_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(sorted_half_gaussian_type)
+                physical_coords(priors(i)%physical_indices)= sorted_half_gaussian_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(sorted_exponential_type)
+                physical_coords(priors(i)%physical_indices)= sorted_exponential_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(adaptive_sorted_uniform_type)
+                physical_coords(priors(i)%physical_indices)= adaptive_sorted_uniform_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(adaptive_sorted_gaussian_type)
+                physical_coords(priors(i)%physical_indices)= adaptive_sorted_gaussian_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(adaptive_sorted_half_gaussian_type)
+                physical_coords(priors(i)%physical_indices)= adaptive_sorted_half_gaussian_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(adaptive_sorted_exponential_type)
+                physical_coords(priors(i)%physical_indices)= adaptive_sorted_exponential_htp&
+                    (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
+            case(nn_adaptive_layer_gaussian_type)
+                physical_coords(priors(i)%physical_indices)= nn_adaptive_layer_gaussian_htp&
                     (hypercube_coords(priors(i)%hypercube_indices),priors(i)%parameters)
             end select
         end do
@@ -289,6 +556,7 @@ module priors_module
     end function hypercube_to_physical
 
     function physical_to_hypercube(physical_coords,priors) result(hypercube_coords)
+
         implicit none
         type(prior), dimension(:), intent(in) :: priors
         real(dp), intent(in), dimension(:) :: physical_coords
@@ -363,12 +631,34 @@ module priors_module
 
         case('uniform')
             prior_type=uniform_type
-        case('gaussian')
-            prior_type=gaussian_type
         case('log_uniform')
             prior_type=log_uniform_type
+        case('power_uniform')
+            prior_type=power_uniform_type
+        case('gaussian')
+            prior_type=gaussian_type
+        case('half_gaussian')
+            prior_type=half_gaussian_type
+        case('exponential')
+            prior_type=exponential_type
         case('sorted_uniform')
             prior_type=sorted_uniform_type
+        case('sorted_gaussian')
+            prior_type=sorted_gaussian_type
+        case('sorted_half_gaussian')
+            prior_type=sorted_half_gaussian_type
+        case('sorted_exponential')
+            prior_type=sorted_exponential_type
+        case('adaptive_sorted_uniform')
+            prior_type=adaptive_sorted_uniform_type
+        case('adaptive_sorted_gaussian')
+            prior_type=adaptive_sorted_gaussian_type
+        case('adaptive_sorted_half_gaussian')
+            prior_type=adaptive_sorted_half_gaussian_type
+        case('adaptive_sorted_exponential')
+            prior_type=adaptive_sorted_exponential_type
+        case('nn_adaptive_layer_gaussian')
+            prior_type=nn_adaptive_layer_gaussian_type
         case default
             prior_type=unknown_type
         end select
