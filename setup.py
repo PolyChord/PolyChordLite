@@ -8,6 +8,13 @@ def readme():
         return f.read()
 
 
+def get_version(short=False):
+    with open('src/polychord/feedback.f90') as f:
+        for line in f:
+            if 'version' in line:
+                return line[44:48]
+
+
 pypolychord_module = Extension(
         name='_PyPolyChord',
         library_dirs=[os.path.join(os.getcwd(), 'lib')],
@@ -20,7 +27,7 @@ pypolychord_module = Extension(
         )
 
 setup(name='PyPolyChord',
-      version='1.14',
+      version=get_version(),
       description='Python interface to PolyChord 1.14',
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
       author='Will Handley',
