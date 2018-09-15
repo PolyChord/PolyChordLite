@@ -1,5 +1,6 @@
 # include "CC_ini_likelihood.hpp"
 # include <cmath>
+# include <string>  // for set_ini function
 
 // This module is where your likelihood code should be placed.
 //
@@ -106,6 +107,17 @@ void dumper(int ndead,int nlive,int npars,double* live,double* dead,double* logw
 }
 
 
+// Ini path reading function
+//
+// If you want the file path to the ini file (for example for pointing to other config files), store ite value in a global variable with this function
+void set_ini(std::string ini_str_in)
+{
+    /**
+    Set value for constant holding ini file path.
+
+    @param ini_str_in: ini file path
+    **/
+}
 // Setup of the loglikelihood
 // 
 // This is called before nested sampling, but after the priors and settings
