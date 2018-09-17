@@ -1,6 +1,5 @@
 # include "CC_ini_likelihood.hpp"
 # include <cmath>
-# include <string>  // for set_ini function
 
 // This module is where your likelihood code should be placed.
 //

@@ -60,8 +60,6 @@ void run_polychord(
         double (*loglikelihood)(double*,int,double*,int), 
         void (*setup_loglikelihood)(), 
         std::string);
-void set_ini(
-        std::string);
 
 #ifdef USE_MPI
 void run_polychord( 

@@ -1,6 +1,5 @@
 #include "interfaces.hpp"
-#include "CC_likelihood.hpp"
-#include <string>
+#include "CC_ini_likelihood.hpp"
 #include <iostream>
 
 int main(int argc, char *argv[])

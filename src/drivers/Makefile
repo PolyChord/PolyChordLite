@@ -6,7 +6,7 @@ $(DRIVERS_DIR)/polychord_CC.o: polychord_CC.cpp
 	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR)/CC -c $<
 
 $(DRIVERS_DIR)/polychord_CC_ini.o: polychord_CC_ini.cpp
-	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR)/CC -c $<
+	$(CXX) $(CXXFLAGS) -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR)/CC_ini -c $<
 
 $(DRIVERS_DIR)/polychord_fortran.o: polychord_fortran.f90
 	$(FC) $(FFLAGS) -I$(POLYCHORD_DIR) -I$(LIKELIHOOD_DIR)/fortran -c $<
