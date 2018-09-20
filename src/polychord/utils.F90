@@ -381,6 +381,20 @@ module utils_module
 
     end function logaddexp
 
+    function logaddexp_(loga,logb)
+        implicit none
+        real(dp), dimension(:) :: loga
+        real(dp), dimension(size(loga)) :: logb
+        real(dp), dimension(size(loga)) :: logaddexp_
+
+        where (loga>logb)
+            logaddexp_ = loga + log(exp(logb-loga) + 1)
+        else where
+            logaddexp_ = logb + log(exp(loga-logb) + 1)
+        end where
+
+    end function logaddexp_
+
     function logsubexp(loga,logb)
         implicit none
         real(dp) :: loga

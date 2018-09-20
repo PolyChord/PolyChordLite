@@ -803,6 +803,10 @@ module read_write_module
             do i_dims=1,settings%nDims
                 write(write_stats_unit,fmt_Z) i_dims, mu(i_dims), sig(i_dims)
             end do
+            write(write_stats_unit, '("-------------------------------")')
+            do i_dims=settings%nDims+1,settings%nDims+settings%nDerived
+                write(write_stats_unit,fmt_Z) i_dims, mu(i_dims), sig(i_dims)
+            end do
         end if
 
 
@@ -813,20 +817,22 @@ module read_write_module
     function mean(RTI,settings) result(mu)
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info
+        use utils_module,    only: logaddexp
         implicit none
         type(run_time_info),    intent(in) :: RTI
         type(program_settings), intent(in) :: settings
 
         integer i
         real(dp), dimension(settings%nDims+settings%nDerived) :: mu,x
-        real(dp) :: wsum, w
+        real(dp) :: logwsum, logw
         mu = 0
+        logwsum = settings%logzero
 
         do i=1,RTI%nposterior_global
             x = RTI%posterior_global(settings%pos_p0:settings%pos_d1,i)
-            w = RTI%posterior_global(settings%pos_w,i) 
-            wsum = wsum + w
-            mu = mu + (w/wsum)*(x-mu)
+            logw = RTI%posterior_global(settings%pos_w,i) 
+            logwsum = logaddexp(logwsum,logw)
+            mu = mu + exp(logw-logwsum)*(x-mu)
         end do
         
 
@@ -835,28 +841,26 @@ module read_write_module
     function variance(RTI,settings) result(var)
         use settings_module, only: program_settings
         use run_time_module, only: run_time_info
+        use utils_module, only: logaddexp,logaddexp_
         implicit none
         type(run_time_info),    intent(in) :: RTI
         type(program_settings), intent(in) :: settings
 
         integer i
-        real(dp), dimension(settings%nDims+settings%nDerived) :: mu,mu_old,x,var,S
-        real(dp) :: w, wsum
+        real(dp), dimension(settings%nDims+settings%nDerived) :: mu,mu_old,x,var,logS
+        real(dp) :: logw, logwsum
         mu = 0
+        logwsum = settings%logzero
 
         do i=1,RTI%nposterior_global
             x = RTI%posterior_global(settings%pos_p0:settings%pos_d1,i)
-            w = RTI%posterior_global(settings%pos_w,i) 
+            logw = RTI%posterior_global(settings%pos_w,i) 
             mu_old = mu
-            wsum = wsum + w
-            mu = mu_old + (w/wsum)*(x-mu_old)
-            S = S + w * (x-mu_old)*(x-mu)
+            logwsum = logaddexp(logwsum,logw)
+            mu = mu_old + exp(logw-logwsum)*(x-mu_old)
+            logS = logaddexp_(logS,logw + log((x-mu_old)*(x-mu)))
         end do
-        if (RTI%nposterior_global <= 0) then
-            var = 0
-        else
-            var = S/wsum
-        end if
+        var = exp(logS - logwsum)
 
     end function variance
 
