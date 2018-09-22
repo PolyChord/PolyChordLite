@@ -830,7 +830,7 @@ module read_write_module
 
         do i=1,RTI%nposterior_global
             x = RTI%posterior_global(settings%pos_p0:settings%pos_d1,i)
-            logw = RTI%posterior_global(settings%pos_w,i) 
+            logw = RTI%posterior_global(settings%pos_w,i) + RTI%posterior_global(settings%pos_l,i) 
             logwsum = logaddexp(logwsum,logw)
             mu = mu + exp(logw-logwsum)*(x-mu)
         end do
@@ -851,10 +851,11 @@ module read_write_module
         real(dp) :: logw, logwsum
         mu = 0
         logwsum = settings%logzero
+        logS = settings%logzero 
 
         do i=1,RTI%nposterior_global
             x = RTI%posterior_global(settings%pos_p0:settings%pos_d1,i)
-            logw = RTI%posterior_global(settings%pos_w,i) 
+            logw = RTI%posterior_global(settings%pos_w,i) + RTI%posterior_global(settings%pos_l,i) 
             mu_old = mu
             logwsum = logaddexp(logwsum,logw)
             mu = mu_old + exp(logw-logwsum)*(x-mu_old)
