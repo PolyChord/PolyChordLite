@@ -859,7 +859,7 @@ module read_write_module
             mu_old = mu
             logwsum = logaddexp(logwsum,logw)
             mu = mu_old + exp(logw-logwsum)*(x-mu_old)
-            logS = logaddexp_(logS,logw + log((x-mu_old)*(x-mu)))
+            if (all((x-mu_old)*(x-mu)>0)) logS = logaddexp_(logS,logw + log((x-mu_old)*(x-mu)))
         end do
         var = exp(logS - logwsum)
 
