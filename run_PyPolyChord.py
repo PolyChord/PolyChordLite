@@ -44,6 +44,6 @@ try:
     posterior = output.posterior
     g = getdist.plots.getSubplotPlotter()
     g.triangle_plot(posterior, filled=True)
-    plt.show()
+    g.export('posterior.pdf')
 except ImportError:
     print("Install matplotlib and getdist for plotting examples")
