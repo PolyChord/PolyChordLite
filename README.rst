@@ -1,4 +1,4 @@
-PolyChord v 1.14
+PolyChord v 1.15
 
 Will Handley, Mike Hobson & Anthony Lasenby
 
@@ -8,7 +8,7 @@ arXiv:1502.01856
 
 arXiv:1506.00171
 
-Released May 2018
+Released Sep 2019
 
 
 PolyChord Licence
