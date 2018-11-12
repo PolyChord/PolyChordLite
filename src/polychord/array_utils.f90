@@ -30,7 +30,8 @@ module array_module
         ! Temporary versions of the above variables
         real(dp), dimension(size(array,1)) :: a
         integer :: n1
-        integer, dimension(size(array)) :: s1,t1
+        integer, allocatable, dimension(:) :: s1
+        integer, allocatable, dimension(:) :: t1
 
         ! constructor variable
         integer :: i
@@ -52,11 +53,14 @@ module array_module
             if(size(s1)/=size(t1)) call halt_program('reallocate_1_d error: save and target indices must be equal in size') 
         else if(present(save_indices1)) then
             s1 = save_indices1
+            allocate(t1(size(s1)))
             t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
             t1 = target_indices1
+            allocate(s1(size(t1)))
             s1 = [ (i,i=1,size(t1)) ]
         else
+            allocate(t1(size(array,1)),s1(size(array,1)))
             s1 = [ (i,i=1,size(array,1)) ]
             t1 = [ (i,i=1,size(array,1)) ]
         end if
@@ -91,8 +95,8 @@ module array_module
         ! Temporary versions of the above variables
         real(dp), dimension(size(array,1),size(array,2)) :: a
         integer :: n1,n2
-        integer, dimension(size(array,1)) :: s1,t1
-        integer, dimension(size(array,2)) :: s2,t2
+        integer, allocatable, dimension(:) :: s1,s2
+        integer, allocatable, dimension(:) :: t1,t2
 
         ! constructor variable
         integer :: i
@@ -119,13 +123,16 @@ module array_module
             if(size(s1)/=size(t1)) call halt_program('reallocate_2_d error: save and target indices must be equal in size') 
         else if(present(save_indices1)) then
             s1 = save_indices1
+            allocate(t1(size(s1)))
             t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
             t1 = target_indices1
+            allocate(s1(size(t1)))
             s1 = [ (i,i=1,size(t1)) ]
         else
-            s1 = [ (i,i=1,size(array,1)) ] 
-            t1 = [ (i,i=1,size(array,1)) ] 
+            allocate(t1(size(array,1)),s1(size(array,1)))
+            s1 = [ (i,i=1,size(array,1)) ]
+            t1 = [ (i,i=1,size(array,1)) ]
         end if
 
 
@@ -136,11 +143,14 @@ module array_module
             if(size(s2)/=size(t2)) call halt_program('reallocate_2_d error: save and target indices must be equal in size') 
         else if(present(save_indices2)) then
             s2 = save_indices2
+            allocate(t2(size(s2)))
             t2 = [ (i,i=1,size(s2)) ]
         else if(present(target_indices2)) then
             t2 = target_indices2
+            allocate(s2(size(t2)))
             s2 = [ (i,i=1,size(t2)) ]
         else
+            allocate(t2(size(array,2)),s2(size(array,2)))
             s2 = [ (i,i=1,size(array,2)) ] 
             t2 = [ (i,i=1,size(array,2)) ] 
         end if
@@ -178,9 +188,8 @@ module array_module
         ! Temporary versions of the above variables
         real(dp), dimension(size(array,1),size(array,2),size(array,3)) :: a
         integer :: n1,n2,n3
-        integer, dimension(size(array,1)) :: s1,t1
-        integer, dimension(size(array,2)) :: s2,t2
-        integer, dimension(size(array,3)) :: s3,t3
+        integer, allocatable, dimension(:) :: s1,s2,s3
+        integer, allocatable, dimension(:) :: t1,t2,t3
 
         ! constructor variable
         integer :: i
@@ -212,13 +221,16 @@ module array_module
             if(size(s1)/=size(t1)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
         else if(present(save_indices1)) then
             s1 = save_indices1
+            allocate(t1(size(s1)))
             t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
             t1 = target_indices1
+            allocate(s1(size(t1)))
             s1 = [ (i,i=1,size(t1)) ]
         else
-            s1 = [ (i,i=1,size(array,1)) ] 
-            t1 = [ (i,i=1,size(array,1)) ] 
+            allocate(t1(size(array,1)),s1(size(array,1)))
+            s1 = [ (i,i=1,size(array,1)) ]
+            t1 = [ (i,i=1,size(array,1)) ]
         end if
 
 
@@ -229,11 +241,14 @@ module array_module
             if(size(s2)/=size(t2)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
         else if(present(save_indices2)) then
             s2 = save_indices2
+            allocate(t2(size(s2)))
             t2 = [ (i,i=1,size(s2)) ]
         else if(present(target_indices2)) then
             t2 = target_indices2
+            allocate(s2(size(t2)))
             s2 = [ (i,i=1,size(t2)) ]
         else
+            allocate(t2(size(array,2)),s2(size(array,2)))
             s2 = [ (i,i=1,size(array,2)) ] 
             t2 = [ (i,i=1,size(array,2)) ] 
         end if
@@ -246,12 +261,15 @@ module array_module
             if(size(s3)/=size(t3)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
         else if(present(save_indices3)) then
             s3 = save_indices3
+            allocate(t3(size(s3)))
             t3 = [ (i,i=1,size(s3)) ]
         else if(present(target_indices3)) then
             t3 = target_indices3
+            allocate(s3(size(t3)))
             s3 = [ (i,i=1,size(t3)) ]
 
         else
+            allocate(t3(size(array,3)),s3(size(array,3)))
             s3 = [ (i,i=1,size(array,3)) ] 
             t3 = [ (i,i=1,size(array,3)) ] 
         end if
@@ -285,7 +303,8 @@ module array_module
         ! Temporary versions of the above variables
         integer, dimension(size(array,1)) :: a
         integer :: n1
-        integer, dimension(size(array)) :: s1,t1
+        integer, allocatable, dimension(:) :: s1
+        integer, allocatable, dimension(:) :: t1
 
         ! constructor variable
         integer :: i
@@ -307,11 +326,14 @@ module array_module
             if(size(s1)/=size(t1)) call halt_program('reallocate_1_i error: save and target indices must be equal in size') 
         else if(present(save_indices1)) then
             s1 = save_indices1
+            allocate(t1(size(s1)))
             t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
             t1 = target_indices1
+            allocate(s1(size(t1)))
             s1 = [ (i,i=1,size(t1)) ]
         else
+            allocate(t1(size(array,1)),s1(size(array,1)))
             s1 = [ (i,i=1,size(array,1)) ] 
             t1 = [ (i,i=1,size(array,1)) ] 
         end if
