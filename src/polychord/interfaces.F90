@@ -203,6 +203,7 @@ contains
 
     subroutine run_polychord_ini(loglikelihood, setup_loglikelihood, input_file,mpi_communicator)
         use ini_module,               only: read_params
+        use read_write_module,        only: write_paramnames_file
         use params_module,            only: add_parameter,param_type
         use priors_module
         use settings_module,          only: program_settings
@@ -240,6 +241,7 @@ contains
             comm = 0
 #endif
         call read_params(trim(input_file),settings,params,derived_params)
+        if(settings%write_paramnames) call write_paramnames_file(settings,params,derived_params)
         call create_priors(priors,params,settings)
         call setup_loglikelihood(settings)
         call run_polychord(loglikelihood,prior_wrapper,settings,comm) 
