@@ -30,8 +30,7 @@ module array_module
         ! Temporary versions of the above variables
         real(dp), dimension(size(array,1)) :: a
         integer :: n1
-        integer, allocatable, dimension(:) :: s1
-        integer, allocatable, dimension(:) :: t1
+        integer, dimension(size(array)) :: s1,t1
 
         ! constructor variable
         integer :: i
@@ -92,8 +91,8 @@ module array_module
         ! Temporary versions of the above variables
         real(dp), dimension(size(array,1),size(array,2)) :: a
         integer :: n1,n2
-        integer, allocatable, dimension(:) :: s1,s2
-        integer, allocatable, dimension(:) :: t1,t2
+        integer, dimension(size(array,1)) :: s1,t1
+        integer, dimension(size(array,2)) :: s2,t2
 
         ! constructor variable
         integer :: i
@@ -179,8 +178,9 @@ module array_module
         ! Temporary versions of the above variables
         real(dp), dimension(size(array,1),size(array,2),size(array,3)) :: a
         integer :: n1,n2,n3
-        integer, allocatable, dimension(:) :: s1,s2,s3
-        integer, allocatable, dimension(:) :: t1,t2,t3
+        integer, dimension(size(array,1)) :: s1,t1
+        integer, dimension(size(array,2)) :: s2,t2
+        integer, dimension(size(array,3)) :: s3,t3
 
         ! constructor variable
         integer :: i
@@ -285,8 +285,7 @@ module array_module
         ! Temporary versions of the above variables
         integer, dimension(size(array,1)) :: a
         integer :: n1
-        integer, allocatable, dimension(:) :: s1
-        integer, allocatable, dimension(:) :: t1
+        integer, dimension(size(array)) :: s1,t1
 
         ! constructor variable
         integer :: i
