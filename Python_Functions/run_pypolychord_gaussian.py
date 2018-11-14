@@ -1,23 +1,24 @@
-from numpy import pi, log, sqrt, cos
-import PyPolyChord
-from PyPolyChord.settings import PolyChordSettings
-from PyPolyChord.priors import UniformPrior
+from numpy import pi, log, sqrt
+import pypolychord
+from pypolychord.settings import PolyChordSettings
+from pypolychord.priors import UniformPrior
 
 nDims = 3
 nDerived = 1
 
-functionName = 'rastrigin'
+functionName = 'gaussian'
 
 # param : array
 def likelihood(theta):
-    """ Rastrigin Likelihood"""
+    """ Simple Gaussian Likelihood"""
 
-    A = 10
-    TwoPi = 2*pi
-    r2 = 0
+    sigma = 0.1
+    nDims = len(theta)
 
-    logL =  -sum( log(4991.21750) + theta**2 - A*cos(TwoPi*theta) )
+    r2 = sum(theta**2)
 
+    logL = -log(2*pi*sigma*sigma)*nDims/2.0
+    logL += -r2/2/sigma/sigma
 
     return logL, [r2] # float, array-like
 
@@ -35,7 +36,7 @@ settings.file_root = functionName #string
 settings.do_clustering = True 
 settings.read_resume = False
 
-output = PyPolyChord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
+output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)

@@ -158,14 +158,14 @@ please email Will (wh260@mrao.cam.ac.uk).
 
 
 
-Python likelihoods (PyPolyChord)
+Python likelihoods (pypolychord)
 --------------------------------
 Being python, this interface is much more self-explanatory. You need to compile
 the library with:
 
 .. code::
 
-    $  make PyPolyChord
+    $  make pypolychord
     $  python setup.py install --user
 
 OSX users may need to specify their C compilers to not be clang, e.g:
@@ -174,30 +174,30 @@ OSX users may need to specify their C compilers to not be clang, e.g:
 
     $ CC=/usr/local/bin/gcc-6 CXX=/usr/local/bin/g++-6  python3 setup.py install --user
 
-You can then import PyPolyChord from anywhere with the lines:
-import PyPolyChord
+You can then import pypolychord from anywhere with the lines:
+import pypolychord
 
 and check that it's working by running:
 
 .. code::
 
-    $  python run_PyPolyChord.py
+    $  python run_pypolychord.py
 
 or in MPI:
 
 .. code::
 
-    $  mpirun -np 4 python run_PyPolyChord.py
+    $  mpirun -np 4 python run_pypolychord.py
 
 If so, the rest of the interface is relatively painless. Follow the example in
-run_PyPolyChord.py, and consult the docstring if you need help:
+run_pypolychord.py, and consult the docstring if you need help:
 
 .. code:: python
 
-    import PyPolyChord
-    from PyPolyChord.settings import PolyChordSettings
+    import pypolychord
+    from pypolychord.settings import PolyChordSettings
 
-    help(PyPolyChord.run_polychord)
+    help(pypolychord.run_polychord)
     help(PolyChordSettings)
 
 

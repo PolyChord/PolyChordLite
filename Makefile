@@ -77,7 +77,7 @@ $(LIB_DIR)/libchord.a:
 $(LIB_DIR)/libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 
-PyPolyChord: $(LIB_DIR)/libchord.so
+pypolychord: $(LIB_DIR)/libchord.so
 	@echo '======================================================================================='
 	@echo ' now run:                                                                              '
 	@echo '                                                                                       '
@@ -129,7 +129,7 @@ $(addsuffix clean,$(CLEANDIRS)): %clean:
 	$(MAKE) -C $* clean
 
 veryclean: clean $(addsuffix veryclean,$(CLEANDIRS))  
-	$(RM) *~ build dist PyPolyChord.egg-info PyPolyChord/*.pyc PyPolyChord/__pycache__ __pycache__
+	$(RM) *~ build dist pypolychord.egg-info pypolychord/*.pyc pypolychord/__pycache__ __pycache__
 $(addsuffix veryclean,$(CLEANDIRS))  : %veryclean: 
 	$(MAKE) -C $* veryclean
 	

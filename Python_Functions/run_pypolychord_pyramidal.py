@@ -1,20 +1,35 @@
-from numpy import log, prod, cos
-import PyPolyChord
-from PyPolyChord.settings import PolyChordSettings
-from PyPolyChord.priors import UniformPrior
+from numpy import log, exp, sqrt, pi
+from scipy.special import loggamma
+import pypolychord
+from pypolychord.settings import PolyChordSettings
+from pypolychord.priors import UniformPrior
 
 #EGGBOX 
 
 nDims = 3
 nDerived = 1
 
-functionName = 'eggbox'
+functionName = 'pyramidal'
 
 # param : array
 def likelihood(theta):
-    """ Simple eggbox likelihood"""
+    """ Simple pyramidal likelihood"""
 
-    logL = -(2+prod(cos(theta/2)))**5
+    nDims = 0
+    factor = 1
+    sigma=0.1
+    mu=0.5
+    logSqrtTwoPi = log(sqrt(2*pi))
+
+    if len(theta) != nDims:
+        nDims = len(theta)
+        factor = exp(-2/nDims * loggamma(1 + nDims/2)) * (pi/2)
+    
+    # normalisation
+    logL =   - (logSqrtTwoPi+log(sigma))
+
+    # theta dependence
+    logL = logL - max(abs(theta-mu)/sigma)**2  / factor
 
     r2 = 0
     return logL, [r2] # float, array-like
@@ -33,7 +48,7 @@ settings.file_root = functionName
 settings.do_clustering = True
 settings.read_resume = False
 
-output = PyPolyChord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
+output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)

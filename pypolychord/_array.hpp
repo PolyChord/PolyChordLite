@@ -1,6 +1,6 @@
 #pragma once
 #include "_python.hpp"
-#include "_PyPolyChord.hpp"
+#include "_pypolychord.hpp"
 #include <vector>
 
 /* Convert from Python list to C array */

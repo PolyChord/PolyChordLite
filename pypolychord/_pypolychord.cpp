@@ -1,5 +1,5 @@
 #include "_python.hpp"
-#include "_PyPolyChord.hpp"
+#include "_pypolychord.hpp"
 #include "_array.hpp"
 #include "interfaces.hpp"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -8,15 +8,15 @@
 
 /* Initialize the module */
 #ifdef PYTHON3
-PyMODINIT_FUNC PyInit__PyPolyChord(void)
+PyMODINIT_FUNC PyInit__pypolychord(void)
 {
     import_array();
     return PyModule_Create(&_pypolychordmodule);
 }
 #else
-PyMODINIT_FUNC init_PyPolyChord(void)
+PyMODINIT_FUNC init_pypolychord(void)
 {
-    Py_InitModule3("_PyPolyChord", module_methods, module_docstring);
+    Py_InitModule3("_pypolychord", module_methods, module_docstring);
     import_array();
 }
 #endif
@@ -115,8 +115,8 @@ void dumper(int ndead, int nlive, int npars, double* live, double* dead, double*
 }
 
 
-/* Function to run PyPolyChord */
-static PyObject *run_PyPolyChord(PyObject *, PyObject *args)
+/* Function to run pypolychord */
+static PyObject *run_pypolychord(PyObject *, PyObject *args)
 {
     Settings S;
 

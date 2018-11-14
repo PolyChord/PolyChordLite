@@ -4,7 +4,7 @@ import numpy
 
 
 def readme():
-    with open('PyPolyChord_README.rst') as f:
+    with open('pypolychord_README.rst') as f:
         return f.read()
 
 
@@ -16,24 +16,24 @@ def get_version(short=False):
 
 
 pypolychord_module = Extension(
-        name='_PyPolyChord',
+        name='_pypolychord',
         library_dirs=[os.path.join(os.getcwd(), 'lib')],
         include_dirs=[os.path.join(os.getcwd(), 'src/polychord/'),
                       numpy.get_include()],
         runtime_library_dirs=[os.path.join(os.getcwd(), 'lib')],
         libraries=['chord'],
         sources=[os.path.join(os.getcwd(),
-                 'PyPolyChord/_PyPolyChord.cpp')]
+                 'pypolychord/_pypolychord.cpp')]
         )
 
-setup(name='PyPolyChord',
+setup(name='pypolychord',
       version=get_version(),
       description='Python interface to PolyChord 1.14',
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
       author='Will Handley',
       author_email='wh260@cam.ac.uk',
       license='PolyChord',
-      packages=['PyPolyChord'],
+      packages=['pypolychord'],
       install_requires=['numpy'],
       extras_require={'plotting': 'getdist'},
       ext_modules=[pypolychord_module],

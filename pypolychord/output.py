@@ -14,7 +14,7 @@ class PolyChordOutput:
         None. (in Python)
 
         All output is currently produced in the form of text files in
-        <base_dir> directory. If you would like to contribute to PyPolyChord
+        <base_dir> directory. If you would like to contribute to pypolychord
         and improve this, please get in touch:
 
         Will Handley: wh260@cam.ac.uk

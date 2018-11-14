@@ -13,7 +13,7 @@ except OSError:
 
 err = 'libchord.so: cannot open shared object file: No such file or directory'
 try:
-    import _PyPolyChord
+    import _pypolychord
 except ImportError as e:
     if str(e) == err:
         print('PolyChord: Could not find libchord.so')
@@ -47,9 +47,9 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     * Nested Sampling paper: http://projecteuclid.org/euclid.ba/1340370944
 
     To run in mpi mode, just run your script with mpirun as usual.
-    Make sure that PyPolyChord is compiled with MPI:
+    Make sure that pypolychord is compiled with MPI:
     $ make veryclean
-    $ make PyPolyChord MPI=1
+    $ make pypolychord MPI=1
 
     Users are also required to cite the PolyChord papers:
     arXiv:1502.01856
@@ -131,7 +131,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     None. (in Python)
 
     All output is currently produced in the form of text files in <base_dir>
-    directory. If you would like to contribute to PyPolyChord and improve this,
+    directory. If you would like to contribute to pypolychord and improve this,
     please get in touch:
 
     Will Handley: wh260@cam.ac.uk
@@ -183,7 +183,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         theta[:] = prior(cube)
 
     # Run polychord from module library
-    _PyPolyChord.run(wrap_loglikelihood,
+    _pypolychord.run(wrap_loglikelihood,
                      wrap_prior,
                      dumper,
                      nDims,

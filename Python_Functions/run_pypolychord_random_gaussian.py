@@ -1,37 +1,25 @@
-from numpy import log, exp, sqrt, pi
-from scipy.special import loggamma
-import PyPolyChord
-from PyPolyChord.settings import PolyChordSettings
-from PyPolyChord.priors import UniformPrior
-
-#EGGBOX 
+from numpy import pi, log, sqrt
+import pypolychord
+from pypolychord.settings import PolyChordSettings
+from pypolychord.priors import UniformPrior
 
 nDims = 3
 nDerived = 1
 
-functionName = 'pyramidal'
+functionName = 'gaussian'
 
 # param : array
 def likelihood(theta):
-    """ Simple pyramidal likelihood"""
+    """ Simple Gaussian Likelihood"""
 
-    nDims = 0
-    factor = 1
-    sigma=0.1
-    mu=0.5
-    logSqrtTwoPi = log(sqrt(2*pi))
+    sigma = 0.1
+    nDims = len(theta)
 
-    if len(theta) != nDims:
-        nDims = len(theta)
-        factor = exp(-2/nDims * loggamma(1 + nDims/2)) * (pi/2)
-    
-    # normalisation
-    logL =   - (logSqrtTwoPi+log(sigma))
+    r2 = sum(theta**2)
 
-    # theta dependence
-    logL = logL - max(abs(theta-mu)/sigma)**2  / factor
+    logL = -log(2*pi*sigma*sigma)*nDims/2.0
+    logL += -r2/2/sigma/sigma
 
-    r2 = 0
     return logL, [r2] # float, array-like
 
 # param : array
@@ -43,12 +31,12 @@ def prior(hypercube):
 def dumper(live, dead, logweights, logZ, logZerr):
     print("Last dead point:", dead[-1]) # prints last element of dead (wich is an array)
 
-settings = PolyChordSettings(nDims, nDerived)
-settings.file_root = functionName
-settings.do_clustering = True
+settings = PolyChordSettings(nDims, nDerived) #settings is an object
+settings.file_root = functionName #string
+settings.do_clustering = True 
 settings.read_resume = False
 
-output = PyPolyChord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
+output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)
