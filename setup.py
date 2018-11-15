@@ -17,10 +17,10 @@ def get_version(short=False):
 
 pypolychord_module = Extension(
         name='_pypolychord',
-        library_dirs=[os.path.join(os.getcwd(), 'lib')],
-        include_dirs=[os.path.join(os.getcwd(), 'src/polychord/'),
+        library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib')],
+        include_dirs=[os.path.join(os.getcwd(), 'pypolychord/src/polychord/'),
                       numpy.get_include()],
-        runtime_library_dirs=[os.path.join(os.getcwd(), 'lib')],
+        runtime_library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib')],
         libraries=['pypolychord/chord'],
         sources=[os.path.join(os.getcwd(),
                  'pypolychord/_pypolychord.cpp')]
