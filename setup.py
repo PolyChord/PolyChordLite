@@ -9,7 +9,7 @@ def readme():
 
 
 def get_version(short=False):
-    with open('pypolychord/src/polychord/feedback.f90') as f:
+    with open('pypolychord/src/feedback.f90') as f:
         for line in f:
             if 'version' in line:
                 return line[44:48]
@@ -18,10 +18,10 @@ def get_version(short=False):
 pypolychord_module = Extension(
         name='_pypolychord',
         library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib')],
-        include_dirs=[os.path.join(os.getcwd(), 'pypolychord/src/polychord/'),
+        include_dirs=[os.path.join(os.getcwd(), 'pypolychord/include/'),
                       numpy.get_include()],
         runtime_library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib')],
-        libraries=['pypolychord/chord'],
+        libraries=['chord'],
         sources=[os.path.join(os.getcwd(),
                  'pypolychord/_pypolychord.cpp')]
         )

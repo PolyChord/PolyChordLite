@@ -1,137 +1,57 @@
-# List of available example likelihoods
-EXAMPLES = gaussian pyramidal rastrigin twin_gaussian random_gaussian himmelblau rosenbrock eggbox half_gaussian fitting gaussian_shell gaussian_shells object_detection
+FC = gfortran 
+FFLAGS = -fPIC -ffree-line-length-none
 
-# Your likelihood programs
-PROGRAMS = polychord_fortran polychord_CC polychord_CC_ini
+CXX = g++
+CXXFLAGS=-fPIC -std=c++11
 
-# Directories
-ROOT_PYPOLYCHORD = $(PWD)/pypolychord
-SRC_DIR = $(ROOT_PYPOLYCHORD)/src
-DRIVERS_DIR = $(SRC_DIR)/drivers
-POLYCHORD_DIR = $(SRC_DIR)/polychord
-C_INTERFACE_DIR = $(SRC_DIR)/polychord
-LIKELIHOOD_DIR = $(ROOT_PYPOLYCHORD)/likelihoods
-EXAMPLES_DIR = $(LIKELIHOOD_DIR)/examples
-BIN_DIR = $(ROOT_PYPOLYCHORD)/bin
-LIB_DIR = $(ROOT_PYPOLYCHORD)/lib
-export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
+LD=$(FC)
 
-# Whether to use MPI
-ifeq "$(shell uname)" "Linux"
-MPI=1
-else
-MPI= 
-endif
-
-# Whether to compile in debugging mode
-DEBUG=
-export MPI DEBUG
-
-# We can autodetect the compiler type on unix systems via the shell.
-# if you want to override this then just run make with
-# make COMPILER_TYPE=<your type>
-# where <your type> is gnu or intel
-ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
-COMPILER_TYPE=intel
-else ifeq "$(shell which gfortran >/dev/null 2>&1; echo $$?)" "0"
-COMPILER_TYPE=gnu
-endif
-
-ifeq ($(COMPILER_TYPE),intel)
-include Makefile_intel
-else ifeq ($(COMPILER_TYPE),gnu) 
-include Makefile_gnu
-endif
+PPC=pypolychord
+SRC=$(PPC)/src
+LIB=$(PPC)/lib
+INC=$(PPC)/include
 
 
-ifdef MPI
-FFLAGS += -DMPI
-CXXFLAGS += -DUSE_MPI
-endif
+# Object files:
+# find all files ending in 90, and change .f90 and .F90 to .o, 
+OBJECTS = $(patsubst %.F90,%.o,$(patsubst %.f90,%.o,$(wildcard $(SRC)/*90)))  $(patsubst %.cpp,%.o,$(wildcard $(SRC)/*.cpp))
 
-# Remove command
-RM = rm -rf
-
-# Library flags
-LDFLAGS += -L$(LIB_DIR)
-LDLIBS += -Wl,-Bstatic -lchord -Wl,-Bdynamic
+$(LIB)/libchord.so: $(OBJECTS)
+	$(LD) -shared $^ -o $@
 
 
-# Export all of the necessary variables
-export CC CXX FC LD LDSHARED RM AR 
-export CFLAGS CXXFLAGS FFLAGS
-export EXAMPLES PROGRAMS
-export PYTHON
+# General rule for building object file (.o)  from fortran files (.f90/.F90)
+%.o: %.f90
+	$(FC) $(FFLAGS) -c $< -o $@
+%.o: %.F90
+	$(FC) $(FFLAGS) -c $< -o $@
+%.o: %.cpp
+	$(CXX) -I$(INC) $(CXXFLAGS) -c $< -o $@
 
+# Utility targets
+.PHONY: clean veryclean
 
-# make shortcuts
-all: $(LIB_DIR)/libchord.a $(LIB_DIR)/libchord.so
-examples: $(EXAMPLES)
-$(EXAMPLES): % : $(BIN_DIR)/%
-$(PROGRAMS): % : $(BIN_DIR)/%
+clean:
+	$(RM) $(SRC)/*.o $(SRC)/*.mod $(SRC)/*.MOD
 
-# PolyChord
-# ---------
-# static library
-$(LIB_DIR)/libchord.a:
-	$(MAKE) -C $(POLYCHORD_DIR) $@
-# shared library
-$(LIB_DIR)/libchord.so:
-	$(MAKE) -C $(POLYCHORD_DIR) $@
+veryclean: clean
+	$(RM) $(LIB)/libchord.so
 
-pypolychord: $(LIB_DIR)/libchord.so
-	@echo '======================================================================================='
-	@echo ' now run:                                                                              '
-	@echo '                                                                                       '
-	@echo '    python3 setup.py install --user                                                    '
-	@echo '                                                                                       '
-	@echo ' or                                                                                    '
-	@echo '                                                                                       '
-	@echo '    python setup.py install --user                                                     '
-	@echo '                                                                                       '
-	@echo ' (The shared object and python compilation steps                                       '
-	@echo '  separated to avoid compiler clashes)                                                 '
-	@echo '                                                                                       '
-	@echo ' OSX users may need to specify their C compilers to not be clang, e.g:                 '
-	@echo '                                                                                       '
-	@echo '    CC=/usr/local/bin/gcc-6 CXX=/usr/local/bin/g++-6  python3 setup.py install --user  '
-	@echo '======================================================================================='
-
-
-
-# Examples
-# --------
-$(patsubst %,$(BIN_DIR)/%,$(EXAMPLES)): $(BIN_DIR)/%: $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%.a $(DRIVERS_DIR)/polychord_examples.o
-	$(LD) $(DRIVERS_DIR)/polychord_examples.o -o $@ $(LDFLAGS) $(LDLIBS) -l$*
-
-$(patsubst %,$(LIB_DIR)/lib%.a,$(EXAMPLES)): $(LIB_DIR)/libchord.a
-	$(MAKE) -C $(EXAMPLES_DIR) $@
-
-$(DRIVERS_DIR)/polychord_examples.o:
-	$(MAKE) -C $(DRIVERS_DIR) $@
-
-# User Likelihoods
-# ----------------
-$(patsubst %,$(BIN_DIR)/%,$(PROGRAMS)): $(BIN_DIR)/polychord_% : $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%_likelihood.a $(DRIVERS_DIR)/polychord_%.o 
-	$(LD) $(DRIVERS_DIR)/polychord_$*.o  -o $@ $(LDFLAGS) -l$*_likelihood $(LDLIBS) 
-
-$(patsubst polychord_%,$(LIB_DIR)/lib%_likelihood.a,$(PROGRAMS)): $(LIB_DIR)/lib%_likelihood.a: $(LIB_DIR)/libchord.a
-	$(MAKE) -C $(LIKELIHOOD_DIR)/$* $@
-
-$(patsubst %,$(DRIVERS_DIR)/%.o,$(PROGRAMS)):
-	$(MAKE) -C $(DRIVERS_DIR) $@
-
-
-CLEANDIRS = $(POLYCHORD_DIR) $(PYPOLYCHORD_DIR) $(LIKELIHOOD_DIR) $(BIN_DIR) $(LIB_DIR) $(DRIVERS_DIR) 
-.PHONY: clean veryclean $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS))
-
-clean: $(addsuffix clean,$(CLEANDIRS))
-	$(RM) *.o *.mod *.MOD
-$(addsuffix clean,$(CLEANDIRS)): %clean: 
-	$(MAKE) -C $* clean
-
-veryclean: clean $(addsuffix veryclean,$(CLEANDIRS))  
-	$(RM) *~ build dist pypolychord.egg-info pypolychord/*.pyc pypolychord/__pycache__ __pycache__
-$(addsuffix veryclean,$(CLEANDIRS))  : %veryclean: 
-	$(MAKE) -C $* veryclean
-	
+$(SRC)/abort.o : $(SRC)/utils.o 
+$(SRC)/array_utils.o : $(SRC)/abort.o $(SRC)/utils.o 
+$(SRC)/calculate.o : $(SRC)/settings.o $(SRC)/utils.o 
+$(SRC)/chordal_sampling.o : $(SRC)/calculate.o $(SRC)/random_utils.o $(SRC)/settings.o $(SRC)/utils.o 
+$(SRC)/clustering.o : $(SRC)/calculate.o $(SRC)/run_time_info.o $(SRC)/settings.o $(SRC)/abort.o $(SRC)/utils.o 
+$(SRC)/feedback.o : $(SRC)/run_time_info.o $(SRC)/settings.o $(SRC)/read_write.o $(SRC)/utils.o 
+$(SRC)/generate.o : $(SRC)/mpi_utils.o $(SRC)/abort.o $(SRC)/array_utils.o $(SRC)/feedback.o $(SRC)/read_write.o $(SRC)/calculate.o $(SRC)/random_utils.o $(SRC)/run_time_info.o $(SRC)/settings.o $(SRC)/chordal_sampling.o $(SRC)/utils.o 
+$(SRC)/ini.o : $(SRC)/array_utils.o $(SRC)/abort.o $(SRC)/read_write.o $(SRC)/params.o $(SRC)/settings.o $(SRC)/priors.o $(SRC)/utils.o 
+$(SRC)/interfaces.o : $(SRC)/mpi_utils.o $(SRC)/read_write.o $(SRC)/params.o $(SRC)/ini.o $(SRC)/mpi_utils.o $(SRC)/nested_sampling.o $(SRC)/random_utils.o $(SRC)/settings.o $(SRC)/utils.o 
+$(SRC)/mpi_utils.o : $(SRC)/abort.o $(SRC)/utils.o 
+$(SRC)/nested_sampling.o : $(SRC)/generate.o $(SRC)/clustering.o $(SRC)/random_utils.o $(SRC)/chordal_sampling.o $(SRC)/run_time_info.o $(SRC)/feedback.o $(SRC)/read_write.o $(SRC)/settings.o $(SRC)/mpi_utils.o $(SRC)/utils.o 
+$(SRC)/params.o : $(SRC)/utils.o 
+$(SRC)/priors.o : $(SRC)/abort.o $(SRC)/array_utils.o $(SRC)/params.o $(SRC)/settings.o $(SRC)/utils.o 
+$(SRC)/random_utils.o : $(SRC)/mpi_utils.o $(SRC)/utils.o 
+$(SRC)/read_write.o : $(SRC)/params.o $(SRC)/priors.o $(SRC)/abort.o $(SRC)/run_time_info.o $(SRC)/settings.o $(SRC)/utils.o 
+$(SRC)/run_time_info.o : $(SRC)/calculate.o $(SRC)/random_utils.o $(SRC)/array_utils.o $(SRC)/settings.o $(SRC)/utils.o 
+$(SRC)/settings.o : $(SRC)/abort.o $(SRC)/utils.o 
+$(SRC)/utils.o : 

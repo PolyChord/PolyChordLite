@@ -1,7 +1,7 @@
 #include "_python.hpp"
 #include "_pypolychord.hpp"
 #include "_array.hpp"
-#include "src/polychord/interfaces.hpp"
+#include "include/interfaces.hpp"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 
