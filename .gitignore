@@ -7,9 +7,13 @@ doc/latex/
 *.o
 *.dat
 main
+pypolychord/main
 planck
+pypolychord/planck
 chains
+pypolychord/chains
 batch
+pypolychord/batch
 *.a
 *.so
 *.pyf
@@ -18,6 +22,7 @@ getdist/plot_data/*
 getdist/plots/*
 *.pyc
 bin/*
+pypolychord/bin/*
 *.gcda
 *.gcno
 *.gcov
@@ -25,7 +30,9 @@ gmon.out
 core*
 *.egg-info
 build
+pypolychord/build
 dist
+pypolychord/dist
 pypolychord/.ld_library_path.sh
 pypolychord/.ld_preload.sh
 .vscode
