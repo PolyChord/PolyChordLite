@@ -33,7 +33,9 @@ build
 pypolychord/build
 dist
 pypolychord/dist
+.ld_library_path.sh
 pypolychord/.ld_library_path.sh
+.ld_preload.sh
 pypolychord/.ld_preload.sh
 .vscode
 *.pdf
