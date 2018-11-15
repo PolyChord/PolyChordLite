@@ -5,13 +5,14 @@ EXAMPLES = gaussian pyramidal rastrigin twin_gaussian random_gaussian himmelblau
 PROGRAMS = polychord_fortran polychord_CC polychord_CC_ini
 
 # Directories
-SRC_DIR = $(PWD)/src
+ROOT_PYPOLYCHORD = $(PWD)/pypolychord
+SRC_DIR = $(ROOT_PYPOLYCHORD)/src
 DRIVERS_DIR = $(SRC_DIR)/drivers
 POLYCHORD_DIR = $(SRC_DIR)/polychord
-LIKELIHOOD_DIR = $(PWD)/likelihoods
+LIKELIHOOD_DIR = $(ROOT_PYPOLYCHORD)/likelihoods
 EXAMPLES_DIR = $(LIKELIHOOD_DIR)/examples
-BIN_DIR = $(PWD)/bin
-LIB_DIR = $(PWD)/lib
+BIN_DIR = $(ROOT_PYPOLYCHORD)/bin
+LIB_DIR = $(ROOT_PYPOLYCHORD)/lib
 export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
 
 # Whether to use MPI
