@@ -10,6 +10,7 @@ CXX = g++
 else ifeq ($(shell uname), Darwin) 
 CC = /usr/bin/gcc
 CXX = /usr/bin/g++
+OEXTRAS = /usr/local/Cellar/gcc/8.2.0/lib/libstdc++.a
 endif
 endif
 

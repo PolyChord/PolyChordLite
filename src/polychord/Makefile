@@ -10,10 +10,10 @@ include makefile.dep
 # The polychord library depends on the objects
 # we should make all the objects and the archive them with AR
 $(LIB_DIR)/libchord.a: $(OBJECTS)
-	$(AR) $@ $^
+	$(AR) $(OEXTRAS) $@ $^
 
 $(LIB_DIR)/libchord.so: $(OBJECTS)
-	$(LDSHARED) $^ -o $@
+	$(LDSHARED)  $^ $(OEXTRAS) -o $@
 
 # General rule for building object file (.o)  from fortran files (.f90/.F90)
 %.o: %.f90
