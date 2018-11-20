@@ -16,7 +16,6 @@ endif
 CPP = $(CC)
 LD = $(FC)
 LDSHARED = $(LD) -shared
-SOLIBS = -lstdc++
 
 
 # Archive tool

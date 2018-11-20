@@ -60,7 +60,6 @@ LDLIBS += -Wl,-Bstatic -lchord -Wl,-Bdynamic
 # Export all of the necessary variables
 export CC CXX FC LD LDSHARED RM AR 
 export CFLAGS CXXFLAGS FFLAGS
-export SOLIBS
 export EXAMPLES PROGRAMS
 export PYTHON
 
