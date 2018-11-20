@@ -78,23 +78,13 @@ $(LIB_DIR)/libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 
 pypolychord: $(LIB_DIR)/libchord.so
-	@echo '======================================================================================='
-	@echo ' now run:                                                                              '
-	@echo '                                                                                       '
-	@echo '    python3 setup.py install --user                                                    '
-	@echo '                                                                                       '
-	@echo ' or                                                                                    '
-	@echo '                                                                                       '
-	@echo '    python setup.py install --user                                                     '
-	@echo '                                                                                       '
-	@echo ' (The shared object and python compilation steps                                       '
-	@echo '  separated to avoid compiler clashes)                                                 '
-	@echo '                                                                                       '
-	@echo ' OSX users may need to specify their C compilers to not be clang, e.g:                 '
-	@echo '                                                                                       '
-	@echo '    CC=/usr/local/bin/gcc-6 CXX=/usr/local/bin/g++-6  python3 setup.py install --user  '
-	@echo '======================================================================================='
+	python setup.py install --user
 
+pypolychord3: $(LIB_DIR)/libchord.so
+	python3 setup.py install --user
+
+pypolychord2: $(LIB_DIR)/libchord.so
+	python2 setup.py install --user
 
 
 # Examples
