@@ -166,6 +166,7 @@ the library with:
 .. code:: bash
 
     make pypolychord
+    python setup.py install --user
 
 You can then import pypolychord from anywhere with the lines:
 

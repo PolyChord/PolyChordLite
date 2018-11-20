@@ -4,12 +4,12 @@ CC = mpicc
 CXX = mpicxx
 else
 FC = gfortran
-ifeq ($(UNAME), Linux)
+ifeq ($(shell uname), Linux)
 CC = gcc
 CXX = g++
-else ifeq ($(UNAME), Darwin) 
-CC = gcc-8
-CXX = g++-8
+else ifeq ($(shell uname), Darwin) 
+CC = /usr/bin/gcc
+CXX = /usr/bin/g++
 endif
 endif
 

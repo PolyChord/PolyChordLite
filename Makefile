@@ -14,6 +14,8 @@ BIN_DIR = $(PWD)/bin
 LIB_DIR = $(PWD)/lib
 export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
 
+PYTHON=python
+
 # Whether to use MPI
 ifeq "$(shell uname)" "Linux"
 MPI=1
@@ -78,14 +80,13 @@ $(LIB_DIR)/libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 
 pypolychord: $(LIB_DIR)/libchord.so
-	python setup.py install --user
-
-pypolychord3: $(LIB_DIR)/libchord.so
-	python3 setup.py install --user
-
-pypolychord2: $(LIB_DIR)/libchord.so
-	python2 setup.py install --user
-
+	$(PYTHON) setup.py build
+	@echo "======================================================================================="
+	@echo " now run:                                                                              "
+	@echo "                                                                                       "
+	@echo "    $(PYTHON) setup.py install --user                                                  "
+	@echo "                                                                                       "
+	@echo "======================================================================================="
 
 # Examples
 # --------
