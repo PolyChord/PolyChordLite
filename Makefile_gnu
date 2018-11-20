@@ -3,14 +3,16 @@ FC = mpif90
 CC = mpicc
 CXX = mpicxx
 else
-FC = gfortran
 ifeq ($(shell uname), Linux)
+FC = gfortran
 CC = gcc
 CXX = g++
 else ifeq ($(shell uname), Darwin) 
-CC = /usr/bin/gcc
-CXX = /usr/bin/g++
-OEXTRAS = /usr/local/Cellar/gcc/8.2.0/lib/libstdc++.a
+FC = gfortran
+CC = gcc-8
+CXX = g++-8
+SOEXTRAS =
+#SOEXTRAS = -L/usr/local/Cellar/gcc/8.2.0/lib/ -lstdc++
 endif
 endif
 

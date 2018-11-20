@@ -59,13 +59,14 @@ LDLIBS += -Wl,-Bstatic -lchord -Wl,-Bdynamic
 
 # Export all of the necessary variables
 export CC CXX FC LD LDSHARED RM AR 
-export CFLAGS CXXFLAGS FFLAGS OEXTRAS
+export CFLAGS CXXFLAGS FFLAGS SOEXTRAS
 export EXAMPLES PROGRAMS
 export PYTHON
 
 
 # make shortcuts
 all: $(LIB_DIR)/libchord.a $(LIB_DIR)/libchord.so
+
 examples: $(EXAMPLES)
 $(EXAMPLES): % : $(BIN_DIR)/%
 $(PROGRAMS): % : $(BIN_DIR)/%
@@ -77,6 +78,7 @@ $(LIB_DIR)/libchord.a:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 # shared library
 $(LIB_DIR)/libchord.so:
+	@echo "uname is $(shell uname)"
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 
 pypolychord: $(LIB_DIR)/libchord.so
