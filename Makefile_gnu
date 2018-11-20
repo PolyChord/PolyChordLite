@@ -8,8 +8,8 @@ ifeq ($(shell uname), Linux)
 CC = gcc
 CXX = g++
 else ifeq ($(shell uname), Darwin) 
-CC = /usr/bin/gcc
-CXX = /usr/bin/g++
+CC = /usr/local/bin/gcc
+CXX = /usr/local/bin/g++
 endif
 endif
 
