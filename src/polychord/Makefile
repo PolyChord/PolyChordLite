@@ -13,7 +13,7 @@ $(LIB_DIR)/libchord.a: $(OBJECTS)
 	$(AR) $@ $^
 
 $(LIB_DIR)/libchord.so: $(OBJECTS)
-	$(LDSHARED) $^ -o $@ $(SOEXTRAS)
+	$(LD) -shared $^ -o $@ $(LDLIBS)
 
 # General rule for building object file (.o)  from fortran files (.f90/.F90)
 %.o: %.f90

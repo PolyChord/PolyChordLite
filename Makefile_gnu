@@ -8,17 +8,13 @@ FC = gfortran
 CC = gcc
 CXX = g++
 else ifeq ($(shell uname), Darwin) 
-FC = gfortran
+FC = gfortran-8
 CC = gcc-8
 CXX = g++-8
-SOEXTRAS =
-#SOEXTRAS = -L/usr/local/Cellar/gcc/8.2.0/lib/ -lstdc++
 endif
 endif
 
-CPP = $(CC)
 LD = $(FC)
-LDSHARED = $(LD) -shared
 
 
 # Archive tool

@@ -54,14 +54,12 @@ RM = rm -rf
 
 # Library flags
 LDFLAGS += -L$(LIB_DIR)
-LDLIBS += -Wl,-Bstatic -lchord -Wl,-Bdynamic
 
 
 # Export all of the necessary variables
 export CC CXX FC LD LDSHARED RM AR 
-export CFLAGS CXXFLAGS FFLAGS SOEXTRAS
+export CFLAGS CXXFLAGS FFLAGS LDLIBS
 export EXAMPLES PROGRAMS
-export PYTHON
 
 
 # make shortcuts
@@ -82,18 +80,15 @@ $(LIB_DIR)/libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 
 pypolychord: $(LIB_DIR)/libchord.so
-	$(PYTHON) setup.py build
 	@echo "======================================================================================="
-	@echo " now run:                                                                              "
-	@echo "                                                                                       "
-	@echo "    $(PYTHON) setup.py install --user                                                  "
-	@echo "                                                                                       "
-	@echo "======================================================================================="
+	@echo " now run:"
+	@echo ""
+	@echo "    CC=$(CC) CXX=$(CXX) python setup.py install --user"
 
 # Examples
 # --------
 $(patsubst %,$(BIN_DIR)/%,$(EXAMPLES)): $(BIN_DIR)/%: $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%.a $(DRIVERS_DIR)/polychord_examples.o
-	$(LD) $(DRIVERS_DIR)/polychord_examples.o -o $@ $(LDFLAGS) $(LDLIBS) -l$*
+	$(LD) $(DRIVERS_DIR)/polychord_examples.o -o $@ $(LDFLAGS) -Wl,-Bstatic -lchord -Wl,-Bdynamic $(LDLIBS) -l$*
 
 $(patsubst %,$(LIB_DIR)/lib%.a,$(EXAMPLES)): $(LIB_DIR)/libchord.a
 	$(MAKE) -C $(EXAMPLES_DIR) $@
@@ -104,7 +99,7 @@ $(DRIVERS_DIR)/polychord_examples.o:
 # User Likelihoods
 # ----------------
 $(patsubst %,$(BIN_DIR)/%,$(PROGRAMS)): $(BIN_DIR)/polychord_% : $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%_likelihood.a $(DRIVERS_DIR)/polychord_%.o 
-	$(LD) $(DRIVERS_DIR)/polychord_$*.o  -o $@ $(LDFLAGS) -l$*_likelihood $(LDLIBS) 
+	$(LD) $(DRIVERS_DIR)/polychord_$*.o  -o $@ $(LDFLAGS) -Wl,-Bstatic -lchord -Wl,-Bdynamic -l$*_likelihood $(LDLIBS) 
 
 $(patsubst polychord_%,$(LIB_DIR)/lib%_likelihood.a,$(PROGRAMS)): $(LIB_DIR)/lib%_likelihood.a: $(LIB_DIR)/libchord.a
 	$(MAKE) -C $(LIKELIHOOD_DIR)/$* $@
