@@ -38,8 +38,8 @@ inline std::vector<int> list_Py2C_int(PyObject* list) {
 inline void dict_Py2C(PyObject* dict, std::vector<double>& loglikes, std::vector<int>& nlives) {
     PyObject *key, *value;
     Py_ssize_t pos = 0;
-    nlives = {};
-    loglikes = {};
+    nlives.clear();
+    loglikes.clear();
     if (dict==NULL) throw PythonException();
 
     while (PyDict_Next(dict, &pos, &key, &value)) {

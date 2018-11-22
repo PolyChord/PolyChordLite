@@ -45,6 +45,6 @@ setup(name='pypolychord',
       include_package_data=True,
       package_data={
         # If any package contains these files, include them:
-        '': ['*.o', '*.h', '*.hpp', '*.ini', '*.so', 'Makefile', '*.cpp']
+        '': ['*.o', '*.so']
       },
       distclass=BinaryDistribution)
