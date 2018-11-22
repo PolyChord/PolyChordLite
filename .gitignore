@@ -39,3 +39,6 @@ pypolychord/.ld_library_path.sh
 pypolychord/.ld_preload.sh
 .vscode
 *.pdf
+wheelhouse
+*.whl
+output
