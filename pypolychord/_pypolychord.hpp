@@ -33,3 +33,31 @@ static struct PyModuleDef _pypolychordmodule =
     module_methods
 };
 #endif
+
+// static PyObject *
+// moduleinit(void)
+// {
+//     PyObject *m;
+
+// #ifdef PYTHON3
+//     m = PyModule_Create(&_pypolychordmodule);
+// #else
+//     m = Py_InitModule3("extension",
+//                         module_methods, "This is a module");
+// #endif
+//   return m;
+// }
+
+// #ifdef PYTHON3
+//     PyMODINIT_FUNC
+//     initextension(void)
+//     {
+//         moduleinit();
+//     }
+// #else
+//     PyMODINIT_FUNC
+//     PyInit_extension(void)
+//     {
+//         moduleinit();
+//     }
+// #endif

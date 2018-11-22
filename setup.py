@@ -1,6 +1,7 @@
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 import os
 import numpy
+from setuptools.dist import Distribution
 
 
 def readme():
@@ -14,6 +15,10 @@ def get_version(short=False):
             if 'version' in line:
                 return line[44:48]
 
+class BinaryDistribution(Distribution):
+   def is_pure(self):
+       return False
+
 
 pypolychord_module = Extension(
         name='_pypolychord',
@@ -22,8 +27,7 @@ pypolychord_module = Extension(
                       numpy.get_include()],
         runtime_library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib')],
         libraries=['chord'],
-        sources=[os.path.join(os.getcwd(),
-                 'pypolychord/_pypolychord.cpp')]
+        sources=['pypolychord/_pypolychord.cpp']
         )
 
 setup(name='pypolychord',
@@ -33,8 +37,14 @@ setup(name='pypolychord',
       author='Will Handley',
       author_email='wh260@cam.ac.uk',
       license='PolyChord',
-      packages=['pypolychord'],
-      install_requires=['numpy'],
+      packages=find_packages(),
+      install_requires=[],
       extras_require={'plotting': 'getdist'},
       ext_modules=[pypolychord_module],
-      zip_safe=False)
+      zip_safe=False,
+      include_package_data=True,
+      package_data={
+        # If any package contains these files, include them:
+        '': ['*.o', '*.h', '*.hpp', '*.ini', '*.so', 'Makefile', '*.cpp']
+      },
+      distclass=BinaryDistribution)

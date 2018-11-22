@@ -1,5 +1,5 @@
 FC = gfortran 
-FFLAGS = -fPIC -ffree-line-length-none
+FFLAGS = -fPIC -ffree-line-length-none -static-libgfortran
 
 CXX = g++
 CXXFLAGS=-fPIC -std=c++11
@@ -26,16 +26,19 @@ $(LIB)/libchord.so: $(OBJECTS)
 %.o: %.F90
 	$(FC) $(FFLAGS) -c $< -o $@
 %.o: %.cpp
-	$(CXX) -I$(INC) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -o $@ -c $< -I$(INC)
 
 # Utility targets
 .PHONY: clean veryclean
 
 clean:
 	$(RM) $(SRC)/*.o $(SRC)/*.mod $(SRC)/*.MOD
+	$(RM) *.o *.mod *.MOD
+	$(RM) *.pdf
 
 veryclean: clean
 	$(RM) $(LIB)/libchord.so
+	$(RM) build dist *.egg-info wheelhouse -rf
 
 $(SRC)/abort.o : $(SRC)/utils.o 
 $(SRC)/array_utils.o : $(SRC)/abort.o $(SRC)/utils.o 
