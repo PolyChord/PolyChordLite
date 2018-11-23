@@ -48,14 +48,18 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices1) .and. present(target_indices1)) then
+            allocate(s1(size(save_indices1)))
             s1 = save_indices1
+            allocate(t1(size(target_indices1)))
             t1 = target_indices1
             if(size(s1)/=size(t1)) call halt_program('reallocate_1_d error: save and target indices must be equal in size') 
         else if(present(save_indices1)) then
+            allocate(s1(size(save_indices1)))
             s1 = save_indices1
             allocate(t1(size(s1)))
             t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
+            allocate(t1(size(target_indices1)))
             t1 = target_indices1
             allocate(s1(size(t1)))
             s1 = [ (i,i=1,size(t1)) ]
@@ -118,14 +122,18 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices1) .and. present(target_indices1)) then
+            allocate(s1(size(save_indices1)))
             s1 = save_indices1
+            allocate(t1(size(target_indices1)))
             t1 = target_indices1
             if(size(s1)/=size(t1)) call halt_program('reallocate_2_d error: save and target indices must be equal in size') 
         else if(present(save_indices1)) then
+            allocate(s1(size(save_indices1)))
             s1 = save_indices1
             allocate(t1(size(s1)))
             t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
+            allocate(t1(size(target_indices1)))
             t1 = target_indices1
             allocate(s1(size(t1)))
             s1 = [ (i,i=1,size(t1)) ]
@@ -138,14 +146,18 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices2) .and. present(target_indices2)) then
+            allocate(s2(size(save_indices2)))
             s2 = save_indices2
+            allocate(t2(size(target_indices2)))
             t2 = target_indices2
             if(size(s2)/=size(t2)) call halt_program('reallocate_2_d error: save and target indices must be equal in size') 
         else if(present(save_indices2)) then
+            allocate(s2(size(save_indices2)))
             s2 = save_indices2
             allocate(t2(size(s2)))
             t2 = [ (i,i=1,size(s2)) ]
         else if(present(target_indices2)) then
+            allocate(t2(size(target_indices2)))
             t2 = target_indices2
             allocate(s2(size(t2)))
             s2 = [ (i,i=1,size(t2)) ]
@@ -216,14 +228,18 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices1) .and. present(target_indices1)) then
+            allocate(s1(size(save_indices1)))
             s1 = save_indices1
+            allocate(t1(size(target_indices1)))
             t1 = target_indices1
             if(size(s1)/=size(t1)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
         else if(present(save_indices1)) then
+            allocate(s1(size(save_indices1)))
             s1 = save_indices1
             allocate(t1(size(s1)))
             t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
+            allocate(t1(size(target_indices1)))
             t1 = target_indices1
             allocate(s1(size(t1)))
             s1 = [ (i,i=1,size(t1)) ]
@@ -236,14 +252,18 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices2) .and. present(target_indices2)) then
+            allocate(s2(size(save_indices2)))
             s2 = save_indices2
+            allocate(t2(size(target_indices2)))
             t2 = target_indices2
             if(size(s2)/=size(t2)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
         else if(present(save_indices2)) then
+            allocate(s2(size(save_indices2)))
             s2 = save_indices2
             allocate(t2(size(s2)))
             t2 = [ (i,i=1,size(s2)) ]
         else if(present(target_indices2)) then
+            allocate(t2(size(target_indices2)))
             t2 = target_indices2
             allocate(s2(size(t2)))
             s2 = [ (i,i=1,size(t2)) ]
@@ -256,14 +276,18 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices3) .and. present(target_indices3)) then
+            allocate(s3(size(save_indices3)))
             s3 = save_indices3
+            allocate(t3(size(target_indices3)))
             t3 = target_indices3
             if(size(s3)/=size(t3)) call halt_program('reallocate_3_d error: save and target indices must be equal in size') 
         else if(present(save_indices3)) then
+            allocate(s3(size(save_indices3)))
             s3 = save_indices3
             allocate(t3(size(s3)))
             t3 = [ (i,i=1,size(s3)) ]
         else if(present(target_indices3)) then
+            allocate(t3(size(target_indices3)))
             t3 = target_indices3
             allocate(s3(size(t3)))
             s3 = [ (i,i=1,size(t3)) ]
@@ -321,21 +345,25 @@ module array_module
 
         ! Define the positions of where data is coming from and going to
         if(present(save_indices1) .and. present(target_indices1)) then
+            allocate(s1(size(save_indices1)))
             s1 = save_indices1
+            allocate(t1(size(target_indices1)))
             t1 = target_indices1
             if(size(s1)/=size(t1)) call halt_program('reallocate_1_i error: save and target indices must be equal in size') 
         else if(present(save_indices1)) then
+            allocate(s1(size(save_indices1)))
             s1 = save_indices1
             allocate(t1(size(s1)))
             t1 = [ (i,i=1,size(s1)) ]
         else if(present(target_indices1)) then
+            allocate(t1(size(target_indices1)))
             t1 = target_indices1
             allocate(s1(size(t1)))
             s1 = [ (i,i=1,size(t1)) ]
         else
             allocate(t1(size(array,1)),s1(size(array,1)))
-            s1 = [ (i,i=1,size(array,1)) ] 
-            t1 = [ (i,i=1,size(array,1)) ] 
+            s1 = [ (i,i=1,size(array,1)) ]
+            t1 = [ (i,i=1,size(array,1)) ]
         end if
 
         a = array                           ! Save the old array 
