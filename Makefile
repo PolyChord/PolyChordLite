@@ -1,10 +1,18 @@
-FC = gfortran 
-FFLAGS = -fPIC -ffree-line-length-none -static-libgfortran
-
+ifeq ($(shell uname), Linux)
+FC = gfortran
+CC = gcc
 CXX = g++
+else ifeq ($(shell uname), Darwin) 
+FC = gfortran-8
+CC = gcc-8
+CXX = g++-8
+endif
+
+FFLAGS = -fPIC -ffree-line-length-none -static-libgfortran
 CXXFLAGS=-fPIC -std=c++11
 
 LD=$(FC)
+LDLIBS += -lstdc++
 
 PPC=pypolychord
 SRC=$(PPC)/src
@@ -17,7 +25,7 @@ INC=$(PPC)/include
 OBJECTS = $(patsubst %.F90,%.o,$(patsubst %.f90,%.o,$(wildcard $(SRC)/*90)))  $(patsubst %.cpp,%.o,$(wildcard $(SRC)/*.cpp))
 
 $(LIB)/libchord.so: $(OBJECTS)
-	$(LD) -shared $^ -o $@
+	$(LD) -shared $^ -o $@ $(LDLIBS)
 
 
 # General rule for building object file (.o)  from fortran files (.f90/.F90)
