@@ -64,6 +64,8 @@ export EXAMPLES PROGRAMS
 
 # make shortcuts
 all: $(LIB_DIR)/libchord.a $(LIB_DIR)/libchord.so
+libchord.a: $(LIB_DIR)/libchord.a
+libchord.so: $(LIB_DIR)/libchord.so
 
 examples: $(EXAMPLES)
 $(EXAMPLES): % : $(BIN_DIR)/%
