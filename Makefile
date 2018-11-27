@@ -78,7 +78,6 @@ $(LIB_DIR)/libchord.a:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 # shared library
 $(LIB_DIR)/libchord.so:
-	@echo "uname is $(shell uname)"
 	$(MAKE) -C $(POLYCHORD_DIR) $@
 
 pypolychord: $(LIB_DIR)/libchord.so
