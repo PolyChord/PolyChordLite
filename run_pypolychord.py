@@ -9,17 +9,12 @@ nDerived = 1
 
 def likelihood(theta):
     """ Simple Gaussian Likelihood"""
-
     sigma = 0.1
     nDims = len(theta)
-
     r2 = sum(theta**2)
-
     logL = -log(2*pi*sigma*sigma)*nDims/2.0
     logL += -r2/2/sigma/sigma
-
     return logL, [r2]
-
 
 def prior(hypercube):
     """ Uniform prior from [-1,1]^D. """

@@ -17,7 +17,7 @@ PolyChord Licence
 Users are required to accept the licence agreement given in LICENCE
 file. PolyChord is free for academic usage
 
-Users are also required to cite the PolyChord papers: 
+Users are also required to cite the PolyChord papers:
 
 - arXiv:1502.01856
 - arXiv:1506.00171
@@ -27,14 +27,15 @@ in their publications.
 MPI Support
 ===========
 
-The code is MPI compatible with openMPI. To disable the MPI parallelization, 
+The code is MPI compatible with openMPI.
+To disable the MPI parallelization,
 set MPI= in ./Makefile, or compile with
 
-.. code::
+    .. code:: bash
 
-    make <target>  MPI=
+        make <target>  MPI=
 
-Additional Libraries  
+Additional Libraries
 ====================
 
 PolyChord requires no additional libraries to run in linear mode
@@ -44,7 +45,7 @@ To run with MPI it requires the openMPI library
 Compilers
 =========
 
-PolyChord compiles with both gfortran and intel compilers. 
+PolyChord compiles with both gfortran and intel compilers.
 
 Compiler type is chosen in the Makefile with the COMPILER_TYPE flag;
 
@@ -68,24 +69,24 @@ First, try a couple of quick examples:
 
 Run the commands:
 
-.. code::
+    .. code:: bash
 
-    $  make gaussian
-    $  ./bin/gaussian ini/gaussian.ini
+        $  make gaussian
+        $  ./bin/gaussian ini/gaussian.ini
 
 2) Rastrigin
 
 Run the commands:
 
-.. code::
+    .. code:: bash
 
-    $ make rastrigin
-    $ ./bin/rastrigin ini/rastrigin.ini
+        $ make rastrigin
+        $ ./bin/rastrigin ini/rastrigin.ini
 
 This runs the rastrigin 'bunch of grapes' loglikelihood.
 
-In general, binary executables are stored in the directory ./bin, and ini files are
-stored in the directory ./ini.
+In general, binary executables are stored in the directory ./bin,
+and ini files are stored in the directory ./ini.
 
 You can create new likelihoods by modelling them on the ones in
 likelihoods/examples, and triggering them with their own ini files
@@ -100,7 +101,7 @@ Fortran likelihoods
 You should place your likelihood code in the function loglikelihood and your
 prior code in the function prior, contained in:
 
-./likelihoods/fortran/likelihood.f90 
+./likelihoods/fortran/likelihood.f90
 
 Any setup required (such as reading in input files) should be conducted in the
 function setup_loglikelihood. In most cases, this will likely just be a call
@@ -112,17 +113,17 @@ You should then alter the polychord run-time settings within the driver file:
 
 Your code can be compiled and run with the commands:
 
-.. code::
+    .. code:: bash
 
-    $  make polychord_fortran
-    $  ./bin/polychord_fortran
+        $  make polychord_fortran
+        $  ./bin/polychord_fortran
 
 
 
 C++/C likelihoods
 -----------------
 You should place your likelihood code in the function loglikelihood,
-contained in 
+contained in:
 
 ./likelihoods/CC/CC_likelihood.cpp
 
@@ -141,19 +142,20 @@ or use the ini file version:
 
 Your code can be compiled and run with the commands:
 
-.. code::
+    .. code:: bash
 
-    $  make polychord_CC
-    $  ./bin/polychord_CC 
+        $  make polychord_CC
+        $  ./bin/polychord_CC
 
 or
 
-.. code::
+    .. code:: bash
 
-    $  make polychord_CC_ini
-    $  ./bin/polychord_CC_ini ini/gaussian_CC.ini
+        $  make polychord_CC_ini
+        $  ./bin/polychord_CC_ini ini/gaussian_CC.ini
 
-If you have an additional suggestions to make the c++ wrapper more easy to use, 
+If you have an additional suggestions to make
+the c++ wrapper more easy to use,
 please email Will (wh260@mrao.cam.ac.uk).
 
 
@@ -163,47 +165,47 @@ Python likelihoods (pypolychord)
 Being python, this interface is much more self-explanatory. You need to compile
 the library with:
 
-.. code::
+    .. code:: bash
 
-    $  make pypolychord
-    $  python setup.py install --user
+        $  make pypolychord
+        $  python setup.py install --user
 
 OSX users may need to specify their C compilers to not be clang, e.g:
 
-.. code::
+    .. code:: bash
 
-    $ CC=/usr/local/bin/gcc-6 CXX=/usr/local/bin/g++-6  python3 setup.py install --user
+        $ CC=/usr/local/bin/gcc-6 CXX=/usr/local/bin/g++-6  python3 setup.py install --user
 
 You can then import pypolychord from anywhere with the lines:
 import pypolychord
 
 and check that it's working by running:
 
-.. code::
+    .. code:: bash
 
-    $  python run_pypolychord.py
+        $  python run_pypolychord.py
 
 or in MPI:
 
-.. code::
+    .. code:: bash
 
-    $  mpirun -np 4 python run_pypolychord.py
+        $  mpirun -np 4 python run_pypolychord.py
 
 If so, the rest of the interface is relatively painless. Follow the example in
 run_pypolychord.py, and consult the docstring if you need help:
 
-.. code:: python
+    .. code:: python
 
-    import pypolychord
-    from pypolychord.settings import PolyChordSettings
+        import pypolychord
+        from pypolychord.settings import PolyChordSettings
 
-    help(pypolychord.run_polychord)
-    help(PolyChordSettings)
+        help(pypolychord.run_polychord)
+        help(PolyChordSettings)
 
 
 
-Output files 
-=============
+Output files
+============
 PolyChord produces several output files depending on which settings
 are chosen
 
@@ -224,22 +226,22 @@ File containing weighted posterior samples. Compatable with the format
 required by getdist package which is part of the CosmoMC package.
 Contains ndims+nderived+2 columns:
 
-.. code::
+    .. code::
 
-    weight -2*loglike <params> <derived params>
+        weight -2*loglike <params> <derived params>
 
 Refer to the following website in order to download or get more
 information about getdist:
 http://cosmologist.info/cosmomc/readme.html#Analysing
 
 If settings%cluster_posteriors=.true. there are additional cluster files in
-clusters/[root]_<integer>.txt 
+clusters/[root]_<integer>.txt
 
 [root]_equal_weights.txt
 ------------------------
 As above, but the posterior points are equally weighted. This is
 better for 'eyeballing' the posterior, and provides a natural ~4 fold
-compression of the .txt file. 
+compression of the .txt file.
 
 
 [root]_phys_live.txt
@@ -248,7 +250,7 @@ Live points in the physical space. This is produced if
 settings%write_phys_live=.true.
 This file contains ndims+nderived+1 columns, indicating the physical
 parameters, derived parameters and the log-likelihood. This is useful
-for monitoring a run as it progresses. 
+for monitoring a run as it progresses.
 
 [root]_dead.txt
 ---------------
@@ -264,7 +266,7 @@ calculations and checks on evidence and posterior computations
 Parameter names file for compatibility with getdist
 
 
-[root]phys_live-birth.txt & [root]dead-birth.txt 
+[root]phys_live-birth.txt & [root]dead-birth.txt
 ------------------------------------------------
 
 These can be used to reconstruct a full nested sampling run, as well as
@@ -294,16 +296,19 @@ Common Problems & FAQs:
 Run time Issues
 ===============
 
-1 Output files ([root].txt & [root]_equal_weights.dat) files have very few (of order tens) points. 
+1 Output files ([root].txt & [root]_equal_weights.dat)
+files have very few (of order tens) points.
 
-These files only become populated as the algorithm approaches the peak(s) of the posterior. Wait for the run to be closer to finishing.
+These files only become populated as the algorithm
+approaches the peak(s) of the posterior.
+Wait for the run to be closer to finishing.
 
 2 MPI doesn't help
 
-* Currently, the MPI parallelisation will only increase speed for 
+* Currently, the MPI parallelisation will only increase speed for
   'slow' likelihoods, i.e. likelihoods where the slice sampling step
   is the dominant computational cost (compared to the organisation of
-  live points and clustering steps). 
+  live points and clustering steps).
 * Parallelisation is only effective up to ncores~O(nlive).
 
 
