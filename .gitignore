@@ -30,3 +30,5 @@ pypolychord/.ld_library_path.sh
 pypolychord/.ld_preload.sh
 .vscode
 *.pdf
+# Chains folder (test results only)
+chains/*
