@@ -21,8 +21,8 @@ The following commands create the CentOS 5 64 & 32 bit docker images:
         $ sudo docker pull quay.io/pypa/manylinux1_x86_64
         $ sudo docker pull quay.io/pypa/manylinux1_i686
 
-**Note:** Make sure that if you want to upload these
-wheels, update PolyChordLite's version number:
+**Note:** If you want to upload the generated wheels,
+don't forget to update PolyChordLite's version number.
 
 The following commands make the wheels,
 add manlinux tags using auditwheel,

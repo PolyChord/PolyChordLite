@@ -2,13 +2,16 @@ ifeq ($(shell uname), Linux)
 FC = gfortran
 CC = gcc
 CXX = g++
+# FC = mpif90
+# CC = mpicc
+# CXX = mpicxx
 else ifeq ($(shell uname), Darwin) 
 FC = gfortran-8
 CC = gcc-8
 CXX = g++-8
 endif
 
-FFLAGS = -fPIC -ffree-line-length-none -static-libgfortran
+FFLAGS = -fPIC -ffree-line-length-none
 CXXFLAGS=-fPIC -std=c++11
 
 LD=$(FC)
@@ -46,7 +49,7 @@ clean:
 
 veryclean: clean
 	$(RM) $(LIB)/libchord.so
-	$(RM) build dist *.egg-info wheelhouse -rf
+	$(RM) -rf build dist *.egg-info
 
 $(SRC)/abort.o : $(SRC)/utils.o 
 $(SRC)/array_utils.o : $(SRC)/abort.o $(SRC)/utils.o 

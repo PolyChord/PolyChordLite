@@ -42,5 +42,5 @@ for PYBIN in /opt/python/*/bin/; do
 
     # Install and run all the weels with run_pypolychord
     "${PYBIN}/pip" install pypolychord --no-index -f $manylinuxWheelsPath
-    cd "$HOME" && "${PYBIN}/python" /io/run_pypolychord.py > "${outputPath}/${PYPATH[3]}"_output_$(uname -m).txt
+    cd "$HOME" && "${PYBIN}/python" /io/run_pypolychord.py > "${outputPath}/${PYPATH[3]}"_$(uname -m)_output.txt
 done

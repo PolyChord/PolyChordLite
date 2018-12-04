@@ -8,7 +8,7 @@ nDerived = 1
 
 
 def likelihood(theta):
-    """ Simple Gaussian Likelihood"""
+    """ Simple Gaussian Likelihood """
     sigma = 0.1
     nDims = len(theta)
     r2 = sum(theta**2)

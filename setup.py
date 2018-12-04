@@ -7,7 +7,6 @@ Polychord is a tool to solve high dimensional problems.
 from setuptools import setup, Extension, find_packages
 import os
 import numpy
-from setuptools.dist import Distribution
 
 DOCLINES = (__doc__ or '').split("\n")
 
@@ -21,10 +20,6 @@ def get_version(short=False):
         for line in f:
             if 'version' in line:
                 return line[44:48]
-
-class BinaryDistribution(Distribution):
-   def is_pure(self):
-       return False
 
 
 pypolychord_module = Extension(
@@ -46,13 +41,7 @@ setup(name='pypolychord',
       author_email='wh260@cam.ac.uk',
       license='PolyChord',
       packages=find_packages(),
-      install_requires=[],
+      install_requires=['numpy', 'scipy'],
       extras_require={'plotting': 'getdist'},
       ext_modules=[pypolychord_module],
-      zip_safe=False,
-      include_package_data=True,
-      package_data={
-        # If any package contains these files, include them:
-        '': ['*.o', '*.so']
-      },
-      distclass=BinaryDistribution)
+      zip_safe=False)
