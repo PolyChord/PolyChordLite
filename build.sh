@@ -9,22 +9,41 @@ set -e -x
 # Run these commands to build the wheels :
 # sudo docker run --rm -v `pwd`:/io quay.io/pypa/manylinux1_x86_64 /io/build.sh
 # sudo docker run --rm -v `pwd`:/io quay.io/pypa/manylinux1_i686 /io/build.sh
+#
+# If you want to compile with MPI : (Look at the todo below)
+# sudo docker run --rm -v `pwd`:/io quay.io/pypa/manylinux1_x86_64 /io/openmpi.sh
+# sudo docker run --rm -v `pwd`:/io quay.io/pypa/manylinux1_xi686 /io/openmpi.sh
 # --------------------------------------------------
 
-wheelsPath="/io/wheelhouse"
+if [[ $1 == "MPI" ]];
+then
+    MPI=1
+    wheelsPath="/io/wheelhouse/mpi"
+else
+    wheelsPath="/io/wheelhouse"
+fi
+
 manylinuxWheelsPath="${wheelsPath}/manylinux"
 outputPath="${wheelsPath}/output"
 
 mkdir -p $wheelsPath $manylinuxWheelsPath $outputPath
 
 # Cleans and makes the shared libraries 
+# TODO: Add make MPI
 cd /io && make veryclean && make
 
 # Build a wheel for each version of Python
 for PYBIN in /opt/python/*/bin; do 
     "${PYBIN}/pip" install -r /io/requirements.txt
-    # wheels are stored in the '/io/wheelhouse' directory
-    cd /io && "${PYBIN}/python" setup.py bdist_wheel -d $wheelsPath
+    if [[ $MPI ]];
+    then 
+        "${PYBIN}/pip" install mpi4py
+        # wheels are stored in the '/io/wheelhouse' directory
+        cd /io && CC=mpicc CXX=mpicxx "${PYBIN}/python" setup.py bdist_wheel -d $wheelsPath
+    else
+        # wheels are stored in the '/io/wheelhouse' directory
+        cd /io && "${PYBIN}/python" setup.py bdist_wheel -d $wheelsPath
+    fi
 done
 
 # Bundle external shared libraries into the wheels
