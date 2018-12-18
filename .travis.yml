@@ -17,6 +17,9 @@ matrix:
         - docker
       env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
            PRE_CMD=linux32
+branches:
+  only:
+  - setup_pip
 
 install:
   - docker pull $DOCKER_IMAGE
