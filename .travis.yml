@@ -17,9 +17,6 @@ matrix:
         - docker
       env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
            PRE_CMD=linux32
-branches:
-  only:
-  - setup_pip
 
 install:
   - docker pull $DOCKER_IMAGE
@@ -35,4 +32,5 @@ deploy:
   password:
     secure: GvkEOrpYloP0x1shXbHv2xg450PTBhCXHRY7buLm12i60R0xm8WrxahW/AGZQaHbLqDGMqpXniomy08Ommsq8Q/1V3b8gs12c2MUl3qRfC3ab/bDFgkbmQ9Y+G8JKIt7rZqwoVFmnSApc6mYfuXz4SjSCPcAUidxV0WukrJHaSheMrqN3gfimXWDl9BnFzXecWPxg6Dpj8KFR9N8cpjUYy0O2xRXecr+JnAcE5L4sFF2YKa/xI8juM2NxBK1wckRTwpONwoHp1ozj+JV1n/0IagvA55bXUlblgkQAzwPNfPQB1hhQ15TKXVAQt8wA2FWBnqh/AvBH2hgCI9hwTS5U5Li2WS8TpBn5ZKgUGcTbkogmzztUa4+YEEgC/ScXizfY3URBXs9cwTn5QyZXO+UuK+drkWOIzTK2sv0wCY6j307HHvpdOelWA+trvzNRldPOUJL3/E0Pqa346cXje1wCXWHnAQ8XwIEsOkD3KvUjtH/JWhj/qysjThfH2VcfvbzrHUTcvYHtfrpWpeES5AKNroDqkPLJ0zVBSCAIwdNIEifHTKyqEch9h4OMMEg/ftkUpLCgIPx5IB7lr0Alr3cVd6eIKO5Bf0u5EuhGHEXQ+jmtthRGMPFmO3c2yvAEchfCjM2d354UVjZuQr3h+r2RkRfGoeH4xCvVdBwFoVnass=
   skip_existing: true
-
+  on:
+    branch: setup_pip
