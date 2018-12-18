@@ -41,4 +41,3 @@ pypolychord/.ld_preload.sh
 *.pdf
 wheelhouse
 *.whl
-output

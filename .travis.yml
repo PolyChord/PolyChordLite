@@ -3,34 +3,33 @@ notifications:
 
 language: python
 python:
-  - '2.7'
+- '2.7'
 os: linux
 
 matrix:
   include:
-    - sudo: required
-      services:
-        - docker
-      env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
-    - sudo: required
-      services:
-        - docker
-      env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
-           PRE_CMD=linux32
+  - sudo: required
+    services:
+    - docker
+    env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
+  - sudo: required
+    services:
+    - docker
+    env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686 PRE_CMD=linux32
 
 install:
-  - docker pull $DOCKER_IMAGE
+- docker pull $DOCKER_IMAGE
 
 script:
-  - docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/build.sh
-  
+- docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/build.sh
+
 deploy:
   provider: pypi
-  user: "guillaume.srimbault"
+  user: guillaume.srimbault
   distributions: sdist
   server: https://test.pypi.org/legacy/
   password:
-    secure: GvkEOrpYloP0x1shXbHv2xg450PTBhCXHRY7buLm12i60R0xm8WrxahW/AGZQaHbLqDGMqpXniomy08Ommsq8Q/1V3b8gs12c2MUl3qRfC3ab/bDFgkbmQ9Y+G8JKIt7rZqwoVFmnSApc6mYfuXz4SjSCPcAUidxV0WukrJHaSheMrqN3gfimXWDl9BnFzXecWPxg6Dpj8KFR9N8cpjUYy0O2xRXecr+JnAcE5L4sFF2YKa/xI8juM2NxBK1wckRTwpONwoHp1ozj+JV1n/0IagvA55bXUlblgkQAzwPNfPQB1hhQ15TKXVAQt8wA2FWBnqh/AvBH2hgCI9hwTS5U5Li2WS8TpBn5ZKgUGcTbkogmzztUa4+YEEgC/ScXizfY3URBXs9cwTn5QyZXO+UuK+drkWOIzTK2sv0wCY6j307HHvpdOelWA+trvzNRldPOUJL3/E0Pqa346cXje1wCXWHnAQ8XwIEsOkD3KvUjtH/JWhj/qysjThfH2VcfvbzrHUTcvYHtfrpWpeES5AKNroDqkPLJ0zVBSCAIwdNIEifHTKyqEch9h4OMMEg/ftkUpLCgIPx5IB7lr0Alr3cVd6eIKO5Bf0u5EuhGHEXQ+jmtthRGMPFmO3c2yvAEchfCjM2d354UVjZuQr3h+r2RkRfGoeH4xCvVdBwFoVnass=
+    secure: j7NujNJJIZ8Y6rJR9ALN9ryXbz5nBdoVqcuoiLgb7T2f7CwbJiP5t7ByZaCPSYyBjLVTXrdaI1VKBcUqI8wdnHM+h7x0VM9BYqeQ11MX1jywapO79HC+tv3X0bKBrFb70V8JR4DJtEykogweXMBRoNtPrXajQqeABbRD0PdZz9U64FV/L9BZ52+d0ncSnSfY11V/pHTB0rie/EDEwdyKvTNismTYaoxwuJ6rTxfD/NBqiq/GW0XM5wq5d86ost2POFvSYo8pKwHZxW/kh8MvkEfORlfnRWb3XbSvX1bjMIE8QUJqJBoKpDfPeoG1tP0bvARGB+cQELVgqMkx2XSJyvNIYWT9SeJMOU9OJExPkes9w3PHxJl52/7Ln9wQHJaxA4RDgw21mr5QBOa3kGZG9d8ZnDmuSiG2G/HrL/no0Pb2VsPeQUTbNwci1UsLMvFnAJ0m3RguMPcLUnsPeWFvIYtqrNIS4Yr8tvrpNYPXRjw9kHcWHb2OtTSVun1v4au+mm9pPGIkJRSNKjCya98M4uzjG2Jqm5M4iUaJuBQDfJuV5SOp3mIXz5CEet5ZkHqpp+1E9gIBKwHD0UY3GrAuuDzcAxglbFRDYXKWZbZtYw7/pUog2E/cEtKrP6RUwtxYVWlAhOkKwg8r5zeJPMNFtsqaMS+xbwztQ5lgWCFf1YA=
   skip_existing: true
   on:
     branch: setup_pip
