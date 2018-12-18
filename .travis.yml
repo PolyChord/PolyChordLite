@@ -6,9 +6,6 @@ python:
     - "3.5"
     - "3.4"
     - "2.7"
-env:
-  - MPI=
-  - MPI=1
 
 # OSX matrix
 matrix:
@@ -16,11 +13,11 @@ matrix:
         - os: osx
           osx_image: xcode10.1
           language: generic
-          env: PYTHON_VERSION=python2 MPI=
+          env: PYTHON_VERSION=python2
         - os: osx
           osx_image: xcode10.1
           language: generic
-          env: PYTHON_VERSION=python3 MPI=
+          env: PYTHON_VERSION=python3
 
 
 # System packages
@@ -30,8 +27,6 @@ addons:
             - gfortran
             - libblas3
             - liblapack3
-            - openmpi-bin
-            - libopenmpi-dev
     homebrew:
         packages: 
             - gcc
@@ -50,24 +45,10 @@ before_install:
 
 install:
     - pip install numpy
-    - make MPI=$MPI pypolychord
-    - if [ "$MPI" ]; then 
-          CC=mpicc CXX=mpicxx python setup.py install;
-      elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-          CC=gcc-8 CXX=g++-8 python setup.py install;
-      else 
-          python setup.py install;
-      fi
-
-    # requirements install
+    - make
+    - python setup.py install
     - pip install -r requirements.txt
-    - if [ "$MPI" ]; then pip install mpi4py; fi
 
 # Run tests
 script:
-    - if [ "$MPI" ];
-      then 
-          mpirun -np 2 python run_pypolychord.py;
-      else 
-          python run_pypolychord.py; 
-      fi
+    - python run_pypolychord.py; 
