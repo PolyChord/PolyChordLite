@@ -169,10 +169,17 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
 
     """
 
-    if not os.path.exists(settings.base_dir):
+    try:
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+    except ImportError:
+        rank = 0
+
+    if not os.path.exists(settings.base_dir) and rank == 0:
         os.makedirs(settings.base_dir)
 
-    if not os.path.exists(settings.cluster_dir):
+    if not os.path.exists(settings.cluster_dir) and rank == 0:
         os.makedirs(settings.cluster_dir)
 
     def wrap_loglikelihood(theta, phi):

@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.org/PolyChord/PolyChordLite.svg?branch=setup_pip
+    :target: https://travis-ci.org/PolyChord/PolyChordLite
+
 PolyChord v 1.15
 
 Will Handley, Mike Hobson & Anthony Lasenby
@@ -165,47 +168,42 @@ Python likelihoods (pypolychord)
 Being python, this interface is much more self-explanatory. You need to compile
 the library with:
 
-    .. code:: bash
+.. code:: bash
 
-        $  make pypolychord
-        $  python setup.py install --user
-
-OSX users may need to specify their C compilers to not be clang, e.g:
-
-    .. code:: bash
-
-        $ CC=/usr/local/bin/gcc-6 CXX=/usr/local/bin/g++-6  python3 setup.py install --user
+    make pypolychord
+    python setup.py install --user
 
 You can then import pypolychord from anywhere with the lines:
-import pypolychord
+
+.. code:: python
+
+   import pypolychord
 
 and check that it's working by running:
 
-    .. code:: bash
+.. code:: bash
 
         $  python run_pypolychord.py
 
 or in MPI:
 
-    .. code:: bash
+.. code:: bash
 
         $  mpirun -np 4 python run_pypolychord.py
 
 If so, the rest of the interface is relatively painless. Follow the example in
 run_pypolychord.py, and consult the docstring if you need help:
 
-    .. code:: python
+.. code:: python
 
-        import pypolychord
-        from pypolychord.settings import PolyChordSettings
+  import pypolychord
+  from pypolychord.settings import PolyChordSettings
 
-        help(pypolychord.run_polychord)
-        help(PolyChordSettings)
+  help(pypolychord.run_polychord)
+  help(PolyChordSettings)
 
-
-
-Output files
-============
+Output files 
+=============
 PolyChord produces several output files depending on which settings
 are chosen
 
@@ -226,7 +224,7 @@ File containing weighted posterior samples. Compatable with the format
 required by getdist package which is part of the CosmoMC package.
 Contains ndims+nderived+2 columns:
 
-    .. code::
+.. code::
 
         weight -2*loglike <params> <derived params>
 
