@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo $pwd
-
 mpiVersion="2.1.5"
 mpiFile="openmpi-${mpiVersion}"
 

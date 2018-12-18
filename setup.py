@@ -16,6 +16,7 @@ def readme():
 
 
 def get_version(short=False):
+    return '1.16'
     with open('pypolychord/src/feedback.f90') as f:
         for line in f:
             if 'version' in line:
