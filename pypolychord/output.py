@@ -4,7 +4,7 @@ except ImportError:
     pass
 import re
 import os
-
+import pandas as pd
 
 class PolyChordOutput:
     def __init__(self, base_dir, file_root):
@@ -84,6 +84,9 @@ class PolyChordOutput:
             except ValueError:
                 self.avnlikeslice = None
 
+        # build the stats table
+        self._create_pandas_table()
+                
     @property
     def root(self):
         return os.path.join(self.base_dir, self.file_root)
@@ -121,15 +124,20 @@ class PolyChordOutput:
         :rtype: 
 
         """
+        return np.array(self._samples_table['loglike'])
 
-        # grab the getdist mcsample object
-        posterior = getdist.mcsamples.loadMCSamples(self.root)
+    @property
+    def samples(self):
+        """
+        A pandas table of the samples
+        :returns: 
+        :rtype: 
 
-        # note that getdist incorrectly labels
-        # -2 loglike as loglike 
+        """
+        
+        return self._samples_table
 
-        return -0.5 * posterior.loglikes
-
+    
     def cluster_posterior(self, i):
         return getdist.mcsamples.loadMCSamples(self.cluster_root(i))
 
@@ -141,8 +149,36 @@ class PolyChordOutput:
         for i, _ in enumerate(self.logZs):
             self.make_paramnames_file(paramnames,
                                       self.cluster_paramnames_file(i))
-
+        self._create_pandas_table(paramnames = paramnames)
+            
+            
     def make_paramnames_file(self, paramnames, filename):
         with open(filename, 'w') as f:
             for name, latex in paramnames:
                 f.write('%s   %s\n' % (name, latex))
+
+    def _create_pandas_table(self, paramnames = None):
+
+        initial_col_names = ['weight','loglike']
+
+        n_params = np.genfromtxt(self.root).shape[1] - 2
+
+        # build the paranames for the table
+        if param_names is None:
+            for i in range(n_params):
+
+                initial_col_names.append('p%d'%i)
+        else:
+
+            initial_col_names.extend(paramnames)
+        
+    
+
+        # now read the table
+
+        self._samples_table = pd.read_table(self.root,sep=' ',
+                                            skipinitialspace=1,
+                                            names= initial_col_names)
+
+        # correct to loglike
+        self._samples_table['loglike'] *= -0.5 
