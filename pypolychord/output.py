@@ -4,7 +4,10 @@ except ImportError:
     pass
 import re
 import os
+import numpy as np
 import pandas as pd
+import collections
+from IPython.display import display
 
 class PolyChordOutput:
     def __init__(self, base_dir, file_root):
@@ -161,10 +164,10 @@ class PolyChordOutput:
 
         initial_col_names = ['weight','loglike']
 
-        n_params = np.genfromtxt(self.root).shape[1] - 2
+        n_params = np.genfromtxt('%s.txt' % self.root).shape[1] - 2
 
         # build the paranames for the table
-        if param_names is None:
+        if paramnames is None:
             for i in range(n_params):
 
                 initial_col_names.append('p%d'%i)
@@ -176,9 +179,45 @@ class PolyChordOutput:
 
         # now read the table
 
-        self._samples_table = pd.read_table(self.root,sep=' ',
+        self._samples_table = pd.read_table('%s.txt' % self.root,sep=' ',
                                             skipinitialspace=1,
                                             names= initial_col_names)
 
         # correct to loglike
         self._samples_table['loglike'] *= -0.5 
+
+    def display(self):
+        """
+        display the the global fit information
+
+        :returns: 
+        :rtype: 
+
+        """
+
+        print('Global evidence:')
+
+        display(pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )}))
+        
+        print('\nLocal evidences:')
+
+        local_z_dict = collections.OrderedDict()
+       
+        for i, (z, zerr) in enumerate(zip(self.logZs, self.logZerrs)):
+            local_z_dict['log(Z_%d)' % i+1] = '%f +/-  %f'% (z, zerr)
+
+           
+        display(pd.Series(local_z_dict))
+
+        print('\nRun-time information')
+
+        display( pd.Series( {'ncluster': self.ncluster,
+                             'nposterior': self.nposterior,
+                             'nequals' : self.nequals,
+                             'ndead' : self.ndead,
+                             'nlive' : self.nlive,
+                             'nlike' : self.nlike,
+                             '<nlike>' : self.avnlike
+
+
+        }  )   )
