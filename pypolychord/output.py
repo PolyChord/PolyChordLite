@@ -7,6 +7,7 @@ import os
 
 
 class PolyChordOutput:
+
     def __init__(self, base_dir, file_root):
         """
         Returns
@@ -56,10 +57,8 @@ class PolyChordOutput:
             self.logZs = []
             self.logZerrs = []
             while line[:5] == 'log(Z':
-                self.logZs.append(float(re.findall(r'=(.*)', line
-                                                   )[0].split()[0]))
-                self.logZerrs.append(float(re.findall(r'=(.*)', line
-                                                      )[0].split()[2]))
+                self.logZs.append(float(re.findall(r'=(.*)', line)[0].split()[0]))
+                self.logZerrs.append(float(re.findall(r'=(.*)', line)[0].split()[2]))
 
                 line = f.readline()
 
@@ -89,8 +88,7 @@ class PolyChordOutput:
         return os.path.join(self.base_dir, self.file_root)
 
     def cluster_root(self, i):
-        return os.path.join(self.base_dir, 'clusters',
-                            '%s_%i' % (self.file_root, i))
+        return os.path.join(self.base_dir, 'clusters', '%s_%i' % (self.file_root, i))
 
     @property
     def paramnames_file(self):
@@ -98,7 +96,37 @@ class PolyChordOutput:
 
     @property
     def posterior(self):
+        """
+        Return a getdist MCSample object.
+        Allows access to several chain statistics
+        and plotting. 
+
+        NOTE: calling posterior.loglikes will return -2 * loglike 
+
+        :returns: getdist.MCSample object
+        :rtype: 
+
+        """
+
         return getdist.mcsamples.loadMCSamples(self.root)
+
+    @property
+    def loglikes(self):
+        """
+        the log likelihood values of the samples
+
+        :returns: and array of log likelihood values
+        :rtype: 
+
+        """
+
+        # grab the getdist mcsample object
+        posterior = getdist.mcsamples.loadMCSamples(self.root)
+
+        # note that getdist incorrectly labels
+        # -2 loglike as loglike 
+
+        return -0.5 * posterior.loglikes
 
     def cluster_posterior(self, i):
         return getdist.mcsamples.loadMCSamples(self.cluster_root(i))
@@ -109,8 +137,7 @@ class PolyChordOutput:
     def make_paramnames_files(self, paramnames):
         self.make_paramnames_file(paramnames, self.paramnames_file)
         for i, _ in enumerate(self.logZs):
-            self.make_paramnames_file(paramnames,
-                                      self.cluster_paramnames_file(i))
+            self.make_paramnames_file(paramnames, self.cluster_paramnames_file(i))
 
     def make_paramnames_file(self, paramnames, filename):
         with open(filename, 'w') as f:
