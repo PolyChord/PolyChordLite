@@ -39,6 +39,9 @@ paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)
 
+output.display()
+
+
 try:
     import getdist.plots
     import matplotlib.pyplot as plt
