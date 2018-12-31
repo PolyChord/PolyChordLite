@@ -205,7 +205,7 @@ class PolyChordOutput:
         local_z_dict = collections.OrderedDict()
        
         for i, (z, zerr) in enumerate(zip(self.logZs, self.logZerrs)):
-            local_z_dict['log(Z_%d)' % i+1] = '%f +/-  %f'% (z, zerr)
+            local_z_dict['log(Z_%d)' % (i+1)] = '%f +/-  %f'% (z, zerr)
 
         print('\nLocal evidences:')
         
@@ -232,9 +232,9 @@ class PolyChordOutput:
 
         for paramname in self._samples_table.columns[2:]:
 
-            mean = np.mean(np.array(self._samples_table[paramname]))
-            std = np.std(np.array(self._samples_table[paramname])),
-            stats_dict[paramnam] = '%.3E +\- %.3E' % (mean, std)
+            mean = np.mean(np.array( self._samples_table[paramname]) )
+            std = np.std(np.array( self._samples_table[paramname]) )
+            stats_dict[paramname] = '%.3E +\- %.3E' % (mean, std)
 
         print('\nParameter estimates:')
             
