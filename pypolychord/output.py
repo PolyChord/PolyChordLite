@@ -164,7 +164,7 @@ class PolyChordOutput:
 
         initial_col_names = ['weight','loglike']
 
-        n_params = np.genfromtxt('%s.txt' % self.root).shape[1] - 2
+        n_params = np.genfromtxt('%s_equal_weights.txt' % self.root).shape[1] - 2
 
         # build the paranames for the table
         if paramnames is None:
@@ -179,7 +179,7 @@ class PolyChordOutput:
 
         # now read the table
 
-        self._samples_table = pd.read_table('%s.txt' % self.root,sep=' ',
+        self._samples_table = pd.read_table('%s_equal_weights.txt' % self.root,sep=' ',
                                             skipinitialspace=1,
                                             names= initial_col_names)
 
@@ -195,20 +195,24 @@ class PolyChordOutput:
 
         """
 
+        # display the global evidence
         print('Global evidence:')
 
         display(pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )}))
         
-        print('\nLocal evidences:')
-
+        # collect and display the local evidence
+        
         local_z_dict = collections.OrderedDict()
        
         for i, (z, zerr) in enumerate(zip(self.logZs, self.logZerrs)):
             local_z_dict['log(Z_%d)' % i+1] = '%f +/-  %f'% (z, zerr)
 
-           
+        print('\nLocal evidences:')
+        
         display(pd.Series(local_z_dict))
 
+        # display run time info
+        
         print('\nRun-time information')
 
         display( pd.Series( {'ncluster': self.ncluster,
@@ -221,3 +225,17 @@ class PolyChordOutput:
 
 
         }  )   )
+
+
+        # now collect simple estimates of the parameters
+        stats_dict = collections.OrderedDict()
+
+        for paramname in self._samples_table.columns[2:]:
+
+            mean = np.mean(np.array(self._samples_table[paramname]))
+            std = np.std(np.array(self._samples_table[paramname])),
+            stats_dict[paramnam] = '%.3E +\- %.3E' % (mean, std)
+
+        print('\nParameter estimates:')
+            
+        display(pd.Series(stats_dict))
