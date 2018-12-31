@@ -98,7 +98,37 @@ class PolyChordOutput:
 
     @property
     def posterior(self):
+        """
+        Return a getdist MCSample object.
+        Allows access to several chain statistics
+        and plotting. 
+
+        NOTE: calling posterior.loglikes will return -2 * loglike 
+
+        :returns: getdist.MCSample object
+        :rtype: 
+
+        """
+
         return getdist.mcsamples.loadMCSamples(self.root)
+
+    @property
+    def loglikes(self):
+        """
+        the log likelihood values of the samples
+
+        :returns: and array of log likelihood values
+        :rtype: 
+
+        """
+
+        # grab the getdist mcsample object
+        posterior = getdist.mcsamples.loadMCSamples(self.root)
+
+        # note that getdist incorrectly labels
+        # -2 loglike as loglike 
+
+        return -0.5 * posterior.loglikes
 
     def cluster_posterior(self, i):
         return getdist.mcsamples.loadMCSamples(self.cluster_root(i))
