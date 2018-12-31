@@ -59,7 +59,7 @@ class PolyChordOutput:
                 self.logZs.append(float(re.findall(r'=(.*)', line
                                                    )[0].split()[0]))
                 self.logZerrs.append(float(re.findall(r'=(.*)', line
-                                                     )[0].split()[2]))
+                                                      )[0].split()[2]))
 
                 line = f.readline()
 
