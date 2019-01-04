@@ -145,6 +145,7 @@ module nested_sampling_module
 
 
         !-------------------------------------------------------!
+        if(is_root(mpi_information)) call check_directories(settings)
         if(is_root(mpi_information)) call write_opening_statement(settings) !
         !-------------------------------------------------------!
 
