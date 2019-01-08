@@ -1,21 +1,24 @@
 ifeq ($(shell uname), Linux)
-	ifeq ($(MPI), 1)
+ifeq ($(MPI), 1)
 	FC = mpif90
+	FFLAGS += -DMPI
 	CC = mpicc
+	CFLAGS += -DUSE_MPI
 	CXX = mpicxx
-	else
+	CXXFLAGS += -DUSE_MPI
+else
 	FC = gfortran
 	CC = gcc
 	CXX = g++
-	endif
+endif
 else ifeq ($(shell uname), Darwin) 
 FC = gfortran-8
 CC = gcc-8
 CXX = g++-8
 endif
 
-FFLAGS = -fPIC -ffree-line-length-none
-CXXFLAGS=-fPIC -std=c++11
+FFLAGS += -fPIC -ffree-line-length-none
+CXXFLAGS += -fPIC -std=c++11
 
 LD=$(FC)
 LDLIBS += -lstdc++
