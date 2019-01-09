@@ -9,11 +9,6 @@ module nested_sampling_module
 
     implicit none
 
-    !interface NestedSampling
-    !    module procedure NestedSampling_with_dumper, NestedSampling_without_dumper
-    !end interface NestedSampling
-
-
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
@@ -150,6 +145,7 @@ module nested_sampling_module
 
 
         !-------------------------------------------------------!
+        if(is_root(mpi_information)) call check_directories(settings)
         if(is_root(mpi_information)) call write_opening_statement(settings) !
         !-------------------------------------------------------!
 
