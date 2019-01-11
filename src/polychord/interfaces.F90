@@ -263,6 +263,7 @@ contains
             nlive,&
             num_repeats,&
             nprior,&
+            nfail,&
             do_clustering,&
             feedback, &
             precision_criterion,&
@@ -339,6 +340,7 @@ contains
         integer(c_int), intent(in), value   :: nlive
         integer(c_int), intent(in), value   :: num_repeats
         integer(c_int), intent(in), value   :: nprior
+        integer(c_int), intent(in), value   :: nfail
         logical(c_bool), intent(in), value  :: do_clustering
         integer(c_int), intent(in), value   :: feedback
         real(c_double), intent(in), value   :: precision_criterion
@@ -384,6 +386,7 @@ contains
         settings%nlive               = nlive                
         settings%num_repeats         = num_repeats          
         settings%nprior              = nprior
+        settings%nfail               = nfail
         settings%do_clustering       = do_clustering        
         settings%feedback            = feedback             
         settings%precision_criterion = precision_criterion  

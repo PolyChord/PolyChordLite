@@ -24,6 +24,8 @@ module nested_sampling_module
         use generate_module,   only: GenerateSeed,GenerateLivePoints,GenerateLivePointsFromSeed
 #ifdef MPI
         use utils_module, only: normal_fb,stdout_unit
+#else
+        use utils_module, only: stdout_unit
 #endif
 
         implicit none
@@ -98,7 +100,7 @@ module nested_sampling_module
 
         integer :: cluster_id ! Cluster identifier
 
-        integer :: failures
+        integer :: failures, nfail
 
 
         ! Logical Switches
@@ -146,6 +148,11 @@ module nested_sampling_module
         nlikesum=0
 
         ! Number of failed spawns
+        if (settings%nfail <= 0) then
+            nfail = settings%nlive*10
+        else
+            nfail = settings%nfail
+        end if
         failures = 0
 
 
@@ -223,7 +230,7 @@ module nested_sampling_module
             call write_started_sampling(settings%feedback) !
             ! -------------------------------------------- !
 
-            do while ( more_samples_needed(settings,RTI) .and. failures < settings%nlive*10 )
+            do while ( more_samples_needed(settings,RTI) .and. failures <= nfail )
 
 
                 ! 1) Generate a new live point
@@ -362,6 +369,9 @@ module nested_sampling_module
             ! ------------------------------------------------------------ !
             call write_final_results(output_info,settings%feedback)        !
             ! ------------------------------------------------------------ !
+            if (failures > nfail) then
+                write(stdout_unit,'("Warning, unable to proceed after ",I6,": failed spawn events")') failures
+            end if
 
 
 

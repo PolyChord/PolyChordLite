@@ -37,6 +37,10 @@ class PolyChordSettings:
         (Default: nlive)
         The number of prior samples to draw before starting compression.
 
+    nfail : int
+        (Default: -1, do not use)
+        The number of failed spawns before stopping nested sampling.
+
     do_clustering : boolean
         (Default: True)
         Whether or not to use clustering at run time.
@@ -146,6 +150,7 @@ class PolyChordSettings:
         self.nlive = kwargs.pop('nlive', nDims*25)
         self.num_repeats = kwargs.pop('num_repeats', nDims*5)
         self.nprior = kwargs.pop('nprior', -1)
+        self.nfail = kwargs.pop('nprior', -1)
         self.do_clustering = kwargs.pop('do_clustering', True)
         self.feedback = kwargs.pop('feedback', 1)
         self.precision_criterion = kwargs.pop('precision_criterion', 0.001)
