@@ -6,6 +6,7 @@ extern "C" void polychord_c_interface(
         int,
         int,
         int,
+        int,
         bool,
         int,
         double,
