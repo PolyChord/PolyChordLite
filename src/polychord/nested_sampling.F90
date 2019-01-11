@@ -149,7 +149,7 @@ module nested_sampling_module
 
         ! Number of failed spawns
         if (settings%nfail <= 0) then
-            nfail = settings%nlive*10
+            nfail = settings%nlive
         else
             nfail = settings%nfail
         end if

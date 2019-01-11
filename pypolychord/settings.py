@@ -38,7 +38,7 @@ class PolyChordSettings:
         The number of prior samples to draw before starting compression.
 
     nfail : int
-        (Default: -1, do not use)
+        (Default: nlive)
         The number of failed spawns before stopping nested sampling.
 
     do_clustering : boolean
