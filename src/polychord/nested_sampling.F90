@@ -98,6 +98,8 @@ module nested_sampling_module
 
         integer :: cluster_id ! Cluster identifier
 
+        integer :: failures
+
 
         ! Logical Switches
         ! ----------------
@@ -142,6 +144,9 @@ module nested_sampling_module
 
         ! Rolling loglikelihood calculation
         nlikesum=0
+
+        ! Number of failed spawns
+        failures = 0
 
 
         !-------------------------------------------------------!
@@ -218,7 +223,7 @@ module nested_sampling_module
             call write_started_sampling(settings%feedback) !
             ! -------------------------------------------- !
 
-            do while ( more_samples_needed(settings,RTI)   )
+            do while ( more_samples_needed(settings,RTI) .and. failures < settings%nlive*10 )
 
 
                 ! 1) Generate a new live point
@@ -267,7 +272,11 @@ module nested_sampling_module
 #ifdef MPI
                 if( linear_mode(mpi_information) .or. master_epoch==slave_epoch ) then
 #endif
-                    call replace_point(settings,RTI,baby_points,cluster_id)
+                    if(replace_point(settings,RTI,baby_points,cluster_id)) then
+                        failures = 0
+                    else
+                        failures = failures + 1
+                    end if
 
                     update = logsumexp(RTI%logXp) <= RTI%logX_last_update + log(settings%compression_factor) 
                     if (update) then
