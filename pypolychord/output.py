@@ -187,19 +187,29 @@ class PolyChordOutput:
         # correct to loglike
         self._samples_table['loglike'] *= -0.5 
 
-    def display(self):
+    def display(self, return_string=False):
         """
         display the the global fit information
-
+        :param return_string: only called if output shoul be returned 
         :returns: 
         :rtype: 
 
         """
 
+
+        output = ""
+
+        
         # display the global evidence
         print('Global evidence:')
 
-        display(pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )}))
+        output +='Global evidence:\n'
+
+        df = pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )})
+
+        output+=df.to_string()
+        output+='\n'
+        display(df)
         
         # collect and display the local evidence
         
@@ -209,8 +219,14 @@ class PolyChordOutput:
             local_z_dict['log(Z_%d)' % (i+1)] = '%f +/-  %f'% (z, zerr)
 
         print('\nLocal evidences:')
+
+        output +='Local evidence:\n'
+
+        df = pd.Series(local_z_dict)
+        output+=df.to_string()
+        output+='\n'
+        display(df)
         
-        display(pd.Series(local_z_dict))
 
         
 
@@ -218,16 +234,21 @@ class PolyChordOutput:
         
         print('\nRun-time information')
 
-        display( pd.Series( {'ncluster': self.ncluster,
+        output +='Run-time information:\n'
+        
+        df = pd.Series( {'ncluster': self.ncluster,
                              'nposterior': self.nposterior,
                              'nequals' : self.nequals,
                              'ndead' : self.ndead,
                              'nlive' : self.nlive,
                              'nlike' : self.nlike,
                              '<nlike>' : self.avnlike
+        }  )  
 
-
-        }  )   )
+        output+=df.to_string()
+        output+='\n'
+        display(df)
+        
 
 
         # now collect simple estimates of the parameters
@@ -240,7 +261,25 @@ class PolyChordOutput:
             stats_dict[paramname] = '%.3E +\- %.3E' % (mean, std)
 
         print('\nParameter estimates:')
-            
-        display(pd.Series(stats_dict))
 
+        output +='Parameter estimates:\n'
         
+        df = pd.Series(stats_dict)
+
+        output+=df.to_string()
+        output+='\n'
+        display(df)
+
+
+        if return_string:
+
+            return output
+
+    
+    
+        
+    
+    def __repr__(self):
+
+        # call display but return a string
+        return self.display(return_string=True)
