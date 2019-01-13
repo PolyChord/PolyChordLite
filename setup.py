@@ -34,7 +34,11 @@ setup(name='pypolychord',
       author_email='wh260@cam.ac.uk',
       license='PolyChord',
       packages=['pypolychord'],
-      install_requires=['numpy','pandas','ipython'],
+      install_requires=[
+          'numpy',
+          'pandas',
+          #'ipython'
+      ],
       extras_require={'plotting': 'getdist'},
       ext_modules=[pypolychord_module],
       zip_safe=False)
