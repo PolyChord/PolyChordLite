@@ -7,7 +7,10 @@ import os
 import numpy as np
 import pandas as pd
 import collections
-from IPython.display import display
+
+
+# currently breaking install
+#from IPython.display import display
 
 class PolyChordOutput:
     def __init__(self, base_dir, file_root):
@@ -198,7 +201,9 @@ class PolyChordOutput:
         # display the global evidence
         print('Global evidence:')
 
-        display(pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )}))
+        #display(pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )}))
+
+        print(pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )}))
         
         # collect and display the local evidence
         
@@ -209,13 +214,27 @@ class PolyChordOutput:
 
         print('\nLocal evidences:')
         
-        display(pd.Series(local_z_dict))
+        #display(pd.Series(local_z_dict))
+
+        print(pd.Series(local_z_dict))
 
         # display run time info
         
         print('\nRun-time information')
 
-        display( pd.Series( {'ncluster': self.ncluster,
+        # display( pd.Series( {'ncluster': self.ncluster,
+        #                      'nposterior': self.nposterior,
+        #                      'nequals' : self.nequals,
+        #                      'ndead' : self.ndead,
+        #                      'nlive' : self.nlive,
+        #                      'nlike' : self.nlike,
+        #                      '<nlike>' : self.avnlike
+
+
+        # }  )   )
+
+
+        print( pd.Series( {'ncluster': self.ncluster,
                              'nposterior': self.nposterior,
                              'nequals' : self.nequals,
                              'ndead' : self.ndead,
@@ -238,4 +257,6 @@ class PolyChordOutput:
 
         print('\nParameter estimates:')
             
-        display(pd.Series(stats_dict))
+        #display(pd.Series(stats_dict))
+
+        print(pd.Series(stats_dict))
