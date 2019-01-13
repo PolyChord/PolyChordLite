@@ -42,6 +42,8 @@ output.make_paramnames_files(paramnames)
 output.display()
 
 
+print(output)
+
 try:
     import getdist.plots
     import matplotlib.pyplot as plt
