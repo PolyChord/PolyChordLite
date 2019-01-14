@@ -32,3 +32,4 @@ pypolychord/.ld_preload.sh
 *.pdf
 # Chains folder (test results only)
 chains/*
+.ipynb_checkpoints/

@@ -4,7 +4,9 @@ except ImportError:
     pass
 import re
 import os
-
+import numpy as np
+import pandas as pd
+import collections
 
 class PolyChordOutput:
     def __init__(self, base_dir, file_root):
@@ -84,6 +86,9 @@ class PolyChordOutput:
             except ValueError:
                 self.avnlikeslice = None
 
+        # build the stats table
+        self._create_pandas_table()
+                
     @property
     def root(self):
         return os.path.join(self.base_dir, self.file_root)
@@ -98,8 +103,7 @@ class PolyChordOutput:
 
     @property
     def posterior(self):
-        """
-        Return a getdist MCSample object.
+        """Return a getdist MCSample object.
         Allows access to several chain statistics
         and plotting. 
 
@@ -107,29 +111,28 @@ class PolyChordOutput:
 
         :returns: getdist.MCSample object
         :rtype: 
-
         """
-
         return getdist.mcsamples.loadMCSamples(self.root)
 
     @property
     def loglikes(self):
-        """
-        the log likelihood values of the samples
+        """log likelihood values of the samples
 
         :returns: and array of log likelihood values
         :rtype: 
-
         """
+        return np.array(self._samples_table['loglike'])
 
-        # grab the getdist mcsample object
-        posterior = getdist.mcsamples.loadMCSamples(self.root)
+    @property
+    def samples(self):
+        """A pandas table of the samples
 
-        # note that getdist incorrectly labels
-        # -2 loglike as loglike 
+        :returns: 
+        :rtype: 
+        """
+        return self._samples_table
 
-        return -0.5 * posterior.loglikes
-
+    
     def cluster_posterior(self, i):
         return getdist.mcsamples.loadMCSamples(self.cluster_root(i))
 
@@ -141,8 +144,63 @@ class PolyChordOutput:
         for i, _ in enumerate(self.logZs):
             self.make_paramnames_file(paramnames,
                                       self.cluster_paramnames_file(i))
-
+        self._create_pandas_table(paramnames = paramnames)
+            
+            
     def make_paramnames_file(self, paramnames, filename):
         with open(filename, 'w') as f:
             for name, latex in paramnames:
                 f.write('%s   %s\n' % (name, latex))
+
+    def _create_pandas_table(self, paramnames = None):
+        # build the paranames for the table
+        initial_col_names = ['weight','loglike']
+        n_params = np.genfromtxt('%s_equal_weights.txt' % self.root).shape[1] - 2
+        if paramnames is None:
+            for i in range(n_params):
+                initial_col_names.append('p%d'%i)
+        else:
+            initial_col_names.extend(paramnames)
+
+        # now read the table
+        self._samples_table = pd.read_table('%s_equal_weights.txt' % self.root,sep=' ',
+                                            skipinitialspace=1,
+                                            names= initial_col_names)
+        # correct to loglike
+        self._samples_table['loglike'] *= -0.5 
+
+    def _dataframes_for_printing(self):
+        lst = []
+        lst.append(pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )}))
+
+        local_z_dict = collections.OrderedDict()
+        for i, (z, zerr) in enumerate(zip(self.logZs, self.logZerrs)):
+            local_z_dict['log(Z_%d)' % (i+1)] = '%f +/-  %f'% (z, zerr)
+        lst.append(pd.Series(local_z_dict))
+
+        lst.append(pd.Series({'ncluster': self.ncluster,
+                              'nposterior': self.nposterior,
+                              'nequals' : self.nequals,
+                              'ndead' : self.ndead,
+                              'nlive' : self.nlive,
+                              'nlike' : self.nlike,
+                              '<nlike>' : self.avnlike}))
+
+        stats_dict = collections.OrderedDict()
+        for paramname in self._samples_table.columns[2:]:
+            mean = np.mean(np.array( self._samples_table[paramname]) )
+            std = np.std(np.array( self._samples_table[paramname]) )
+            stats_dict[paramname] = '%.3E +\- %.3E' % (mean, std)
+
+        lst.append(pd.Series(stats_dict))
+        return lst
+
+    def __str__(self):
+        string = "Global evidence:\n%s\n\n"\
+                 "Local evidences:\n%s\n\n"\
+                 "Run-time information:\n%s\n\n"\
+                 "Parameter estimates:\n%s"
+        return string % tuple(x.to_string() for x in self._dataframes_for_printing())
+
+    def __repr__(self):
+        return self.__str__()

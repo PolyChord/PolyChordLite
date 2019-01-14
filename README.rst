@@ -200,6 +200,8 @@ run_pypolychord.py, and consult the docstring if you need help:
     help(pypolychord.run_polychord)
     help(PolyChordSettings)
 
+There is also a demo `python notebook <https://github.com/williamjameshandley/py2nb/blob/master/run_pypolychord.ipynb>`_.
+
 Output files 
 =============
 PolyChord produces several output files depending on which settings
