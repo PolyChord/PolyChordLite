@@ -56,6 +56,7 @@ contains
         settings%nlive              = get_integer(file_name,'nlive')
         settings%num_repeats        = get_integer(file_name,'num_repeats')
         settings%nprior             = get_integer(file_name,'nprior',-1)
+        settings%nfail              = get_integer(file_name,'nfail',-1)
         settings%do_clustering      = get_logical(file_name,'do_clustering',.false.)
         settings%feedback           = get_integer(file_name,'feedback',1)
         settings%precision_criterion= get_double(file_name,'precision_criterion',1d-3)

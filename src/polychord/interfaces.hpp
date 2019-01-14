@@ -12,6 +12,7 @@ struct Settings
     int nlive;
     int num_repeats;
     int nprior;
+    int nfail;
     bool do_clustering;
     int feedback;
     double precision_criterion;
