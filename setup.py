@@ -37,8 +37,6 @@ setup(name='pypolychord',
       install_requires=[
           'numpy',
           'pandas',
-          "ipython<6.0 ; python_version<'3.5'",
-          "ipython>=6.0 ; python_version>='3.5'"
       ],
       extras_require={'plotting': 'getdist'},
       ext_modules=[pypolychord_module],

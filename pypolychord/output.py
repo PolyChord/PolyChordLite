@@ -8,8 +8,6 @@ import numpy as np
 import pandas as pd
 import collections
 
-from IPython.display import display
-
 class PolyChordOutput:
     def __init__(self, base_dir, file_root):
         """
@@ -105,8 +103,7 @@ class PolyChordOutput:
 
     @property
     def posterior(self):
-        """
-        Return a getdist MCSample object.
+        """Return a getdist MCSample object.
         Allows access to several chain statistics
         and plotting. 
 
@@ -114,31 +111,25 @@ class PolyChordOutput:
 
         :returns: getdist.MCSample object
         :rtype: 
-
         """
-
         return getdist.mcsamples.loadMCSamples(self.root)
 
     @property
     def loglikes(self):
-        """
-        the log likelihood values of the samples
+        """log likelihood values of the samples
 
         :returns: and array of log likelihood values
         :rtype: 
-
         """
         return np.array(self._samples_table['loglike'])
 
     @property
     def samples(self):
-        """
-        A pandas table of the samples
+        """A pandas table of the samples
+
         :returns: 
         :rtype: 
-
         """
-        
         return self._samples_table
 
     
@@ -162,124 +153,54 @@ class PolyChordOutput:
                 f.write('%s   %s\n' % (name, latex))
 
     def _create_pandas_table(self, paramnames = None):
-
-        initial_col_names = ['weight','loglike']
-
-        n_params = np.genfromtxt('%s_equal_weights.txt' % self.root).shape[1] - 2
-
         # build the paranames for the table
+        initial_col_names = ['weight','loglike']
+        n_params = np.genfromtxt('%s_equal_weights.txt' % self.root).shape[1] - 2
         if paramnames is None:
             for i in range(n_params):
-
                 initial_col_names.append('p%d'%i)
         else:
-
             initial_col_names.extend(paramnames)
-        
-    
 
         # now read the table
-
         self._samples_table = pd.read_table('%s_equal_weights.txt' % self.root,sep=' ',
                                             skipinitialspace=1,
                                             names= initial_col_names)
-
         # correct to loglike
         self._samples_table['loglike'] *= -0.5 
 
-    def display(self, return_string=False):
-        """
-        display the the global fit information
-        :param return_string: only called if output shoul be returned 
-        :returns: 
-        :rtype: 
+    def _dataframes_for_printing(self):
+        lst = []
+        lst.append(pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )}))
 
-        """
-
-
-        output = ""
-
-        
-        # display the global evidence
-        print('Global evidence:')
-
-        output +='Global evidence:\n'
-
-        df = pd.Series({'log(Z)': r'%f +/-  %f'%(self.logZ, self.logZerr )})
-
-        output+=df.to_string()
-        output+='\n'
-        display(df)
-        
-        # collect and display the local evidence
-        
         local_z_dict = collections.OrderedDict()
-       
         for i, (z, zerr) in enumerate(zip(self.logZs, self.logZerrs)):
             local_z_dict['log(Z_%d)' % (i+1)] = '%f +/-  %f'% (z, zerr)
+        lst.append(pd.Series(local_z_dict))
 
-        print('\nLocal evidences:')
+        lst.append(pd.Series({'ncluster': self.ncluster,
+                              'nposterior': self.nposterior,
+                              'nequals' : self.nequals,
+                              'ndead' : self.ndead,
+                              'nlive' : self.nlive,
+                              'nlike' : self.nlike,
+                              '<nlike>' : self.avnlike}))
 
-        output +='Local evidence:\n'
-
-        df = pd.Series(local_z_dict)
-        output+=df.to_string()
-        output+='\n'
-        display(df)
-        
-
-        
-
-        # display run time info
-        
-        print('\nRun-time information')
-
-        output +='Run-time information:\n'
-        
-        df = pd.Series( {'ncluster': self.ncluster,
-                             'nposterior': self.nposterior,
-                             'nequals' : self.nequals,
-                             'ndead' : self.ndead,
-                             'nlive' : self.nlive,
-                             'nlike' : self.nlike,
-                             '<nlike>' : self.avnlike
-        }  )  
-
-        output+=df.to_string()
-        output+='\n'
-        display(df)
-        
-
-
-        # now collect simple estimates of the parameters
         stats_dict = collections.OrderedDict()
-
         for paramname in self._samples_table.columns[2:]:
-
             mean = np.mean(np.array( self._samples_table[paramname]) )
             std = np.std(np.array( self._samples_table[paramname]) )
             stats_dict[paramname] = '%.3E +\- %.3E' % (mean, std)
 
-        print('\nParameter estimates:')
+        lst.append(pd.Series(stats_dict))
+        return lst
 
-        output +='Parameter estimates:\n'
-        
-        df = pd.Series(stats_dict)
+    def __str__(self):
+        string = "Global evidence:\n%s\n\n"\
+                 "Local evidences:\n%s\n\n"\
+                 "Run-time information:\n%s\n\n"\
+                 "Parameter estimates:\n%s"
+        return string % tuple(x.to_string() for x in self._dataframes_for_printing())
 
-        output+=df.to_string()
-        output+='\n'
-        display(df)
-
-
-        if return_string:
-
-            return output
-
-    
-    
-        
-    
     def __repr__(self):
-
-        # call display but return a string
-        return self.display(return_string=True)
+        return self.__str__()
