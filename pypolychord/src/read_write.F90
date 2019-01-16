@@ -11,6 +11,32 @@ module read_write_module
 
     contains
 
+    !> Check if a directory exists
+    function directory_exists(directory)
+        implicit none
+        character(len=*), intent(in) :: directory
+        logical :: directory_exists
+
+#ifdef __INTEL_COMPILER
+        inquire( directory=directory, exist=directory_exists )         ! Works with ifort, but not gfortran
+#else
+        inquire( file=trim(directory)//'/.', exist=directory_exists )  ! Works with gfortran, but not ifort
+#endif
+
+    end function directory_exists
+
+    subroutine check_directories(settings)
+        use settings_module, only: program_settings
+        use abort_module, only: halt_program
+        implicit none
+        type(program_settings), intent(in) :: settings
+        if (.not. directory_exists(settings%base_dir) ) then
+            call halt_program('directory error: ' // trim(settings%base_dir) // ' does not exist')
+        else if (settings%do_clustering .and. .not. directory_exists(cluster_dir(settings))) then
+            call halt_program('directory error: ' // trim(cluster_dir(settings)) // ' does not exist')
+        end if
+    end subroutine
+
     !> Check to see whether resume file exists
     function resume_file_exists(settings) result(resume)
         use settings_module, only: program_settings
@@ -198,6 +224,8 @@ module read_write_module
         implicit none
         type(program_settings), intent(in) :: settings
         type(run_time_info),    intent(in) :: RTI
+
+        call check_directories(settings)
 
         ! Open the .resume file
         open(write_resume_unit,file=trim(resume_file(settings,.true.)), action='write') 
@@ -465,6 +493,8 @@ module read_write_module
 
         character(len=fmt_len) :: fmt_dbl
 
+        call check_directories(settings)
+
         ! Assign the writing format
         write(fmt_dbl,'("(",I0,A,")")') settings%np,DB_FMT 
 
@@ -603,6 +633,8 @@ module read_write_module
 
         character(len=fmt_len) :: fmt_dbl, fmt_dbl_1
 
+        call check_directories(settings)
+
         ! Initialise the formats
         write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
         write(fmt_dbl_1,'("(",I0,A,")")') settings%nDims+settings%nDerived+2, DB_FMT
@@ -658,6 +690,8 @@ module read_write_module
 
         character(len=fmt_len) :: fmt_dbl
 
+        call check_directories(settings)
+
         ! Initialise the formats
         write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
 
@@ -697,6 +731,8 @@ module read_write_module
         integer i_prior
 
         character(len=fmt_len) :: fmt_dbl
+
+        call check_directories(settings)
 
         ! Initialise the formats
         write(fmt_dbl,'("(",I0,A,")")') settings%np,DB_FMT 
@@ -738,6 +774,8 @@ module read_write_module
         integer :: p, i_dims
 
         character(len=fmt_len) :: fmt_Z,fmt_nlike
+
+        call check_directories(settings)
 
         open(write_stats_unit,file=trim(stats_file(settings)), action='write') 
 
@@ -878,6 +916,8 @@ module read_write_module
         type(param_type),dimension(:),allocatable,intent(in) :: derived_params !> Derived parameter array
 
         integer :: i
+
+        call check_directories(settings)
 
         open(unit=paramnames_unit,file=trim(paramnames_file(settings)))
 

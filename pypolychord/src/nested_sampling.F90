@@ -9,11 +9,6 @@ module nested_sampling_module
 
     implicit none
 
-    !interface NestedSampling
-    !    module procedure NestedSampling_with_dumper, NestedSampling_without_dumper
-    !end interface NestedSampling
-
-
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
@@ -29,6 +24,8 @@ module nested_sampling_module
         use generate_module,   only: GenerateSeed,GenerateLivePoints,GenerateLivePointsFromSeed
 #ifdef MPI
         use utils_module, only: normal_fb,stdout_unit
+#else
+        use utils_module, only: stdout_unit
 #endif
 
         implicit none
@@ -103,6 +100,8 @@ module nested_sampling_module
 
         integer :: cluster_id ! Cluster identifier
 
+        integer :: failures, nfail
+
 
         ! Logical Switches
         ! ----------------
@@ -148,8 +147,17 @@ module nested_sampling_module
         ! Rolling loglikelihood calculation
         nlikesum=0
 
+        ! Number of failed spawns
+        if (settings%nfail <= 0) then
+            nfail = settings%nlive
+        else
+            nfail = settings%nfail
+        end if
+        failures = 0
+
 
         !-------------------------------------------------------!
+        if(is_root(mpi_information)) call check_directories(settings)
         if(is_root(mpi_information)) call write_opening_statement(settings) !
         !-------------------------------------------------------!
 
@@ -222,7 +230,7 @@ module nested_sampling_module
             call write_started_sampling(settings%feedback) !
             ! -------------------------------------------- !
 
-            do while ( more_samples_needed(settings,RTI)   )
+            do while ( more_samples_needed(settings,RTI) .and. failures <= nfail )
 
 
                 ! 1) Generate a new live point
@@ -271,7 +279,11 @@ module nested_sampling_module
 #ifdef MPI
                 if( linear_mode(mpi_information) .or. master_epoch==slave_epoch ) then
 #endif
-                    call replace_point(settings,RTI,baby_points,cluster_id)
+                    if(replace_point(settings,RTI,baby_points,cluster_id)) then
+                        failures = 0
+                    else
+                        failures = failures + 1
+                    end if
 
                     update = logsumexp(RTI%logXp) <= RTI%logX_last_update + log(settings%compression_factor) 
                     if (update) then
@@ -357,6 +369,9 @@ module nested_sampling_module
             ! ------------------------------------------------------------ !
             call write_final_results(output_info,settings%feedback)        !
             ! ------------------------------------------------------------ !
+            if (failures > nfail) then
+                write(stdout_unit,'("Warning, unable to proceed after ",I6,": failed spawn events")') failures
+            end if
 
 
 

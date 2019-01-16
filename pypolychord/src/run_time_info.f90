@@ -713,7 +713,7 @@ module run_time_module
 
 
 
-    subroutine replace_point(settings,RTI,baby_points,cluster_add)
+    function replace_point(settings,RTI,baby_points,cluster_add)
         use utils_module, only: logsumexp,logincexp
         use settings_module, only: program_settings
         use random_module, only: bernoulli_trial
@@ -726,7 +726,7 @@ module run_time_module
         !> New-born baby points, created by slice sampling routine
         real(dp),intent(in),dimension(:,:),allocatable :: baby_points
 
-        logical :: replaced ! Have we successfully replaced a point?
+        logical :: replace_point ! Have we successfully replaced a point?
 
         ! live point, last of the baby points
         real(dp),dimension(settings%nTotal) :: point
@@ -759,7 +759,7 @@ module run_time_module
         ! Now assign the live point
         point = baby_points(:,i_baby)
 
-        replaced = .false.
+        replace_point = .false.
         if( point(settings%l0) > logL ) then ! (1)
             if( identify_cluster(settings,RTI,point) == cluster_add) then !(2)
 
@@ -771,7 +771,7 @@ module run_time_module
                 end if
                 if (sum(RTI%nlive) >= max(nlive,1)) then
                     call delete_outermost_point(settings,RTI)
-                    replaced = .true.                                                                ! Mark this as a replaced live point
+                    replace_point = .true.                                                           ! Mark this as a replaced live point
                 end if
                 if (sum(RTI%nlive) < nlive) then
                     point(settings%b0) = logL                                                        ! Note the moment it is born at
@@ -781,7 +781,7 @@ module run_time_module
             end if
         end if
 
-    end subroutine replace_point
+    end function replace_point
 
     subroutine delete_outermost_point(settings,RTI)
         use settings_module, only: program_settings
