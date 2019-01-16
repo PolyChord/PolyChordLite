@@ -11,23 +11,24 @@ set -e -x
 # sudo docker run --rm -v `pwd`:/io quay.io/pypa/manylinux1_i686 /io/build.sh
 # --------------------------------------------------
 
-# TODO: Uncomment this section and add use 'for i in `seq 1 2`; do' instead of 'for i in `seq 1 1`; do'
-# # Install OpenMPI
-# mpiVersion="2.1.5"
-# mpiFile="openmpi-${mpiVersion}"
+if ! hash mpicxx 2>/dev/null; then
+    # Install openmpi
+    mpiVersion="2.1.5"
+    mpiFile="openmpi-${mpiVersion}"
 
-# # Download
-# curl http://download.open-mpi.org/release/open-mpi/v2.1/${mpiFile}.tar.gz --output "/${mpiFile}.tar.gz"
-# # Unzip
-# tar -xf "/${mpiFile}.tar.gz"
+    # Download
+    curl http://download.open-mpi.org/release/open-mpi/v2.1/${mpiFile}.tar.gz --output "/${mpiFile}.tar.gz"
+    # Unzip
+    tar -xf "/${mpiFile}.tar.gz"
 
-# cd "/${mpiFile}" && ./configure --prefix=/usr/local && make all install
+    cd "/${mpiFile}" && ./configure --prefix=/usr/local && make all install
+fi
 
 MPI=0
 wheelsPath="/io/wheelhouse"
 distPath="/io/dist"
 
-for i in `seq 1 1`; do
+for i in `seq 1 2`; do
     manylinuxWheelsPath="${wheelsPath}/manylinux"
     outputPath="${wheelsPath}/output"
 
@@ -43,7 +44,7 @@ for i in `seq 1 1`; do
         then 
             "${PYBIN}/pip" install mpi4py
             # wheels are stored in the '/io/wheelhouse' directory
-            cd /io && CC=mpicc CXX=mpicxx "${PYBIN}/python" setup.py bdist_wheel -d $wheelsPath
+            cd /io && CC=mpicc CXX=mpicxx "${PYBIN}/python" setup.py bdist_wheel -d $wheelsPath mpi
         else
             # wheels are stored in the '/io/wheelhouse' directory
             cd /io && "${PYBIN}/python" setup.py bdist_wheel -d $wheelsPath
@@ -52,26 +53,27 @@ for i in `seq 1 1`; do
 
     # Bundle external shared libraries into the wheels
     for whl in $wheelsPath/py*$(uname -m).whl; do
-        auditwheel repair "$whl" -w $manylinuxWheelsPath
+        auditwheel repair "$whl" -w $manylinuxWheelsPath -L pypolychord/libs
     done
 
     cp $manylinuxWheelsPath/*.whl $distPath
 
-    cd /io && make veryclean
+    # cd /io && make veryclean
 
     # Test all the wheels
 
-    for PYBIN in /opt/python/*/bin/; do
-        # Split the path to get the python version ($PYPATH[3])
-        IFS='/' read -ra PYPATH <<< "$PYBIN"
+    # for PYBIN in /opt/python/*/bin/; do
+    #     # Split the path to get the python version ($PYPATH[3])
+    #     IFS='/' read -ra PYPATH <<< "$PYBIN"
 
-        # Install and run all the weels with run_pypolychord
-        "${PYBIN}/pip" install pypolychord --no-index -f $manylinuxWheelsPath
-        cd "$HOME" && "${PYBIN}/python" /io/run_pypolychord.py > "${outputPath}/${PYPATH[3]}"_$(uname -m)_output.txt
-    done
-
+    #     # Install and run all the weels with run_pypolychord
+    #     "${PYBIN}/pip" install pypolychord --no-index -f $manylinuxWheelsPath
+    #     cd "$HOME" && "${PYBIN}/python" /io/run_pypolychord.py > "${outputPath}/${PYPATH[3]}"_$(uname -m)_output.txt
+    # done
+    
     MPI=1
     wheelsPath="/io/wheelhouse/mpi"
 done
+
 
 echo "Wheels builded successfully"

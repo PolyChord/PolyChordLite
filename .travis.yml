@@ -4,8 +4,8 @@ notifications:
 language: python
 python:
 - '2.7'
-os: linux
 
+os: linux
 matrix:
   include:
   - sudo: required
@@ -25,9 +25,8 @@ script:
 
 deploy:
   provider: pypi
-  user: guillaume.srimbault
+  user: guillaume.polychord
   distributions: sdist
-  server: https://test.pypi.org/legacy/
   password:
     secure: j7NujNJJIZ8Y6rJR9ALN9ryXbz5nBdoVqcuoiLgb7T2f7CwbJiP5t7ByZaCPSYyBjLVTXrdaI1VKBcUqI8wdnHM+h7x0VM9BYqeQ11MX1jywapO79HC+tv3X0bKBrFb70V8JR4DJtEykogweXMBRoNtPrXajQqeABbRD0PdZz9U64FV/L9BZ52+d0ncSnSfY11V/pHTB0rie/EDEwdyKvTNismTYaoxwuJ6rTxfD/NBqiq/GW0XM5wq5d86ost2POFvSYo8pKwHZxW/kh8MvkEfORlfnRWb3XbSvX1bjMIE8QUJqJBoKpDfPeoG1tP0bvARGB+cQELVgqMkx2XSJyvNIYWT9SeJMOU9OJExPkes9w3PHxJl52/7Ln9wQHJaxA4RDgw21mr5QBOa3kGZG9d8ZnDmuSiG2G/HrL/no0Pb2VsPeQUTbNwci1UsLMvFnAJ0m3RguMPcLUnsPeWFvIYtqrNIS4Yr8tvrpNYPXRjw9kHcWHb2OtTSVun1v4au+mm9pPGIkJRSNKjCya98M4uzjG2Jqm5M4iUaJuBQDfJuV5SOp3mIXz5CEet5ZkHqpp+1E9gIBKwHD0UY3GrAuuDzcAxglbFRDYXKWZbZtYw7/pUog2E/cEtKrP6RUwtxYVWlAhOkKwg8r5zeJPMNFtsqaMS+xbwztQ5lgWCFf1YA=
   skip_existing: true

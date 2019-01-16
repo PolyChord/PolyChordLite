@@ -5,9 +5,10 @@ Polychord is a tool to solve high dimensional problems.
 """
 
 from setuptools import setup, Extension, find_packages
-import os
+import os, sys
 import numpy
 
+NAME = 'pypolychord'
 DOCLINES = (__doc__ or '').split("\n")
 
 def readme():
@@ -16,12 +17,10 @@ def readme():
 
 
 def get_version(short=False):
-    return '0.1.2'
     with open('pypolychord/src/feedback.f90') as f:
         for line in f:
             if 'version' in line:
                 return line[44:48]
-
 
 pypolychord_module = Extension(
         name='_pypolychord',
@@ -33,7 +32,15 @@ pypolychord_module = Extension(
         sources=['pypolychord/_pypolychord.cpp']
         )
 
-setup(name='pypolychord',
+if ('mpi' in sys.argv):
+    if ('mpi_usempi' not in pypolychord_module.libraries):
+        pypolychord_module.libraries.append('mpi_usempi')
+        pypolychord_module.libraries.append('mpi_mpifh')
+    sys.argv.remove('mpi')
+else:
+    NAME += '_nompi'
+
+setup(name=NAME,
       version=get_version(),
       description=DOCLINES[0] + get_version(),
       long_description = "\n".join(DOCLINES[2:]),
