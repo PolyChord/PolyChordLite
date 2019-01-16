@@ -1,5 +1,5 @@
 """
-Python interface to PolyChord 
+Python interface to PolyChord
 
 Polychord is a tool to solve high dimensional problems.
 """
@@ -39,11 +39,12 @@ if ('mpi' in sys.argv):
     sys.argv.remove('mpi')
 else:
     NAME += '_nompi'
+    DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
 
 setup(name=NAME,
       version=get_version(),
-      description=DOCLINES[0] + get_version(),
-      long_description = "\n".join(DOCLINES[2:]),
+      description=DOCLINES[1] + get_version(),
+      long_description = "\n".join(DOCLINES[3:-1]),
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
       author='Will Handley',
       author_email='wh260@cam.ac.uk',
