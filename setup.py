@@ -20,7 +20,7 @@ def get_version(short=False):
     with open('pypolychord/src/feedback.f90') as f:
         for line in f:
             if 'version' in line:
-                return line[44:48]
+                return line.split(': ')[1].split('"')[0]
 
 pypolychord_module = Extension(
         name='_pypolychord',
@@ -28,7 +28,7 @@ pypolychord_module = Extension(
         include_dirs=[os.path.join(os.getcwd(), 'pypolychord/include/'),
                       numpy.get_include()],
         runtime_library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib')],
-        libraries=['chord'],
+        libraries=['chord', 'gfortran'],
         sources=['pypolychord/_pypolychord.cpp']
         )
 
@@ -43,7 +43,7 @@ else:
 
 setup(name=NAME,
       version=get_version(),
-      description=DOCLINES[1] + get_version(),
+      description=DOCLINES[1],
       long_description = "\n".join(DOCLINES[3:-1]),
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
       author='Will Handley',
