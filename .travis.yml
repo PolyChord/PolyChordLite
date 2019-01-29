@@ -1,10 +1,8 @@
 notifications:
   email: false
-
 language: python
 python:
-- '2.7'
-
+- '3.7'
 os: linux
 matrix:
   include:
@@ -16,19 +14,16 @@ matrix:
     services:
     - docker
     env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686 PRE_CMD=linux32
-
 install:
 - docker pull $DOCKER_IMAGE
-
 script:
 - docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/build.sh
-
 deploy:
   provider: pypi
-  user: guillaume.polychord
+  user: travis.polychord
   distributions: sdist
   password:
-    secure: j7NujNJJIZ8Y6rJR9ALN9ryXbz5nBdoVqcuoiLgb7T2f7CwbJiP5t7ByZaCPSYyBjLVTXrdaI1VKBcUqI8wdnHM+h7x0VM9BYqeQ11MX1jywapO79HC+tv3X0bKBrFb70V8JR4DJtEykogweXMBRoNtPrXajQqeABbRD0PdZz9U64FV/L9BZ52+d0ncSnSfY11V/pHTB0rie/EDEwdyKvTNismTYaoxwuJ6rTxfD/NBqiq/GW0XM5wq5d86ost2POFvSYo8pKwHZxW/kh8MvkEfORlfnRWb3XbSvX1bjMIE8QUJqJBoKpDfPeoG1tP0bvARGB+cQELVgqMkx2XSJyvNIYWT9SeJMOU9OJExPkes9w3PHxJl52/7Ln9wQHJaxA4RDgw21mr5QBOa3kGZG9d8ZnDmuSiG2G/HrL/no0Pb2VsPeQUTbNwci1UsLMvFnAJ0m3RguMPcLUnsPeWFvIYtqrNIS4Yr8tvrpNYPXRjw9kHcWHb2OtTSVun1v4au+mm9pPGIkJRSNKjCya98M4uzjG2Jqm5M4iUaJuBQDfJuV5SOp3mIXz5CEet5ZkHqpp+1E9gIBKwHD0UY3GrAuuDzcAxglbFRDYXKWZbZtYw7/pUog2E/cEtKrP6RUwtxYVWlAhOkKwg8r5zeJPMNFtsqaMS+xbwztQ5lgWCFf1YA=
+    secure: LEbdyACmAMxmheIIonZ8OXu7Es9wV4SyjVIrEa5vAuAT9Quzl1Zs1a8vNUfmaGuTr27vbnmqU2yVFis2sHbR8TGi9VUoAmL8PkAYO1kV/V63PX8uhZH0goNKWvyyBD0HfEjHL8YCGyCOyCjpeVpxrT72D1WVqmI7iGSMbmnQ+5tHQ9A7ECBvjWJI/MXUAqFmLTpqPoVhTcBTUDMRaXr7bC5dvOKFCnwNsxVP7BR2Vvfnc6E5ehzacTqq81dIWnXO67d+uxQGa4kqHdQcfTXPFIC3viSHpIzIrzMM86wGdkzCDo3k3Pq53FR9A0vOwCXxRgzcKU1mLOVzRVsDa+/wgk5251lXWStMD/Xc3SmWCqDTP3zpHbFF9H71zD1L+E9VLTULOHfJw8TIshgXVX67orXBzRYVTtSgGLESp2dGTWvDdA/HDXQUWlEXVYtTvh6q4VrqX4std1dYfvsb9LFaLT503I2343uxUaMAiqZpioJaVGFgB6+T8ogsgpfOFBtPG+G87+aDPUoRAyNpUjU4A5edsNshPG/v2O4o5u9Auhb7nxwjv89WNQAUwg70DsxlPQfPBQpzoWpi/hg/mjDa8HwRybdYfeF3vEfi6YLS8utSuZTmomDXd3/P8kTP34Yrq+RoX54zLqsq5GdCTcTzu80WdlcP3d/TB+6XOe7jOk0=
   skip_existing: true
   on:
     branch: setup_pip
