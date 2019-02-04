@@ -498,6 +498,9 @@ module read_write_module
         ! Assign the writing format
         write(fmt_dbl,'("(",I0,A,")")') settings%np,DB_FMT 
 
+        ! Sort the indices into order
+        ordering = sort_doubles([-RTI%logZp,-RTI%logZp_dead])
+
         ! ============= Equally weighted posteriors ================
         if(settings%equals) then
             ! ------------- global equally weighted posteriors ----------------
@@ -512,10 +515,6 @@ module read_write_module
 
             ! Close the equally weighted global posterior file
             close(write_equals_unit)
-
-
-            ! Sort the indices into order
-            ordering = sort_doubles([-RTI%logZp,-RTI%logZp_dead])
 
             ! ------------- cluster equally weighted posteriors ----------------
 
