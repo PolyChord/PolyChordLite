@@ -157,7 +157,8 @@ class PolyChordOutput:
         for i, _ in enumerate(self.logZs):
             self.make_paramnames_file(paramnames,
                                       self.cluster_paramnames_file(i))
-        self._create_pandas_table(paramnames = paramnames)
+        if self.pandas:
+            self._create_pandas_table(paramnames = paramnames)
             
             
     def make_paramnames_file(self, paramnames, filename):
