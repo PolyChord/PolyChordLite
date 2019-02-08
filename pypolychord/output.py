@@ -2,10 +2,13 @@ try:
     import getdist.mcsamples
 except ImportError:
     pass
+try:
+    import pandas as pd
+except ImportError:
+    pass
 import re
 import os
 import numpy as np
-import pandas as pd
 import collections
 
 class PolyChordOutput:
@@ -83,11 +86,15 @@ class PolyChordOutput:
             self.avnlike = float(line.split()[1])
             try:
                 self.avnlikeslice = float(line.split()[3])
-            except ValueError:
+            except NameError:
                 self.avnlikeslice = None
 
         # build the stats table
-        self._create_pandas_table()
+        try:
+            self._create_pandas_table()
+            self.pandas = True
+        except NameError:
+            self.pandas = False
                 
     @property
     def root(self):
@@ -121,7 +128,11 @@ class PolyChordOutput:
         :returns: and array of log likelihood values
         :rtype: 
         """
-        return np.array(self._samples_table['loglike'])
+        if self.pandas:
+            return np.array(self._samples_table['loglike'])
+        else:
+            print("Install pandas for loglikes functionality")
+
 
     @property
     def samples(self):
@@ -130,8 +141,10 @@ class PolyChordOutput:
         :returns: 
         :rtype: 
         """
-        return self._samples_table
-
+        if self.pandas:
+            return self._samples_table
+        else:
+            print("Install pandas for samples functionality")
     
     def cluster_posterior(self, i):
         return getdist.mcsamples.loadMCSamples(self.cluster_root(i))
@@ -196,11 +209,14 @@ class PolyChordOutput:
         return lst
 
     def __str__(self):
-        string = "Global evidence:\n%s\n\n"\
-                 "Local evidences:\n%s\n\n"\
-                 "Run-time information:\n%s\n\n"\
-                 "Parameter estimates:\n%s"
-        return string % tuple(x.to_string() for x in self._dataframes_for_printing())
+        if self.pandas:
+            string = "Global evidence:\n%s\n\n"\
+                     "Local evidences:\n%s\n\n"\
+                     "Run-time information:\n%s\n\n"\
+                     "Parameter estimates:\n%s"
+            return string % tuple(x.to_string() for x in self._dataframes_for_printing())
+        else:
+            return self.root
 
     def __repr__(self):
         return self.__str__()
