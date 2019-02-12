@@ -93,7 +93,7 @@ class PolyChordOutput:
         try:
             self._create_pandas_table()
             self.pandas = True
-        except NameError:
+        except (NameError, IOError, FileNotFoundError):
             self.pandas = False
                 
     @property
