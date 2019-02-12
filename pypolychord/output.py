@@ -11,6 +11,12 @@ import os
 import numpy as np
 import collections
 
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
+
 class PolyChordOutput:
     def __init__(self, base_dir, file_root):
         """
@@ -93,7 +99,7 @@ class PolyChordOutput:
         try:
             self._create_pandas_table()
             self.pandas = True
-        except (NameError, IOError, FileNotFoundError):
+        except (NameError, FileNotFoundError):
             self.pandas = False
                 
     @property
