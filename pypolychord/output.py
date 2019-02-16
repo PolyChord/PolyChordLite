@@ -99,9 +99,9 @@ class PolyChordOutput:
         try:
             self._create_pandas_table()
             self.pandas = True
-        except (NameError, FileNotFoundError):
+        except (NameError, FileNotFoundError, OSError):
             self.pandas = False
-                
+
     @property
     def root(self):
         return os.path.join(self.base_dir, self.file_root)
