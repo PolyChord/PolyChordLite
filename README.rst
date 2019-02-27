@@ -1,7 +1,7 @@
 .. image:: https://travis-ci.org/PolyChord/PolyChordLite.svg?branch=master
     :target: https://travis-ci.org/PolyChord/PolyChordLite
 
-PolyChord v 1.15
+PolyChord v 1.16
 
 Will Handley, Mike Hobson & Anthony Lasenby
 
@@ -11,7 +11,7 @@ arXiv:1502.01856
 
 arXiv:1506.00171
 
-Released Sep 2019
+Released Mar 2019
 
 
 PolyChord Licence
