@@ -344,11 +344,7 @@ module nested_sampling_module
             if(settings%write_resume)                  call write_resume_file(settings,RTI)
 
             ! Do maximisation if required
-            !if(settings%maximise)
-
-            call maximise(loglikelihood,prior,settings,RTI,mpi_information)
-
-            !end if
+            if(settings%maximise) call maximise(loglikelihood,prior,settings,RTI,mpi_information)
 
             ! Clean up the remaining live points
 

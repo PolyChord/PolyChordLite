@@ -55,6 +55,7 @@ module settings_module
         integer :: nfail = -1
         integer :: nprior_repeat = -1
         logical :: write_prior = .false.
+        logical :: maximise = .false.
 
         integer :: seed = -1
 

@@ -280,6 +280,7 @@ contains
             write_live,&
             write_dead,&
             write_prior,&
+            maximise,&
             compression_factor,&
             nDims,&
             nDerived, &
@@ -357,6 +358,7 @@ contains
         logical(c_bool), intent(in), value  :: write_live
         logical(c_bool), intent(in), value  :: write_dead
         logical(c_bool), intent(in), value  :: write_prior
+        logical(c_bool), intent(in), value  :: maximise
         real(c_double),  intent(in), value  :: compression_factor
         integer(c_int), intent(in), value   :: nDims
         integer(c_int), intent(in), value   :: nDerived
@@ -403,6 +405,7 @@ contains
         settings%write_live          = write_live           
         settings%write_dead          = write_dead           
         settings%write_prior         = write_prior
+        settings%maximise            = maximise
         settings%compression_factor  = compression_factor         
         settings%nDims               = nDims
         settings%nDerived            = nDerived
