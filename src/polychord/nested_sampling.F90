@@ -483,17 +483,16 @@ module nested_sampling_module
         ! If we've put a maximum number of iterations on the algorithm, then
         ! we'll stop if we've reached that number. 
         ! If we don't want a maximum number of iterations, then max_ndead should
-        ! be set negative or 0
-        if(settings%max_ndead>0 .and. RTI%ndead >= settings%max_ndead) then
+        ! be set negative
+        if(settings%max_ndead==0) then
             more_samples_needed = .false. 
-            return
-        end if
+        else if(settings%max_ndead>0 .and. RTI%ndead >= settings%max_ndead) then
+            more_samples_needed = .false. 
 
-        ! If the evidence in the live points is less than precision_criterion %
-        ! of the total accumulated evidence, then stop.
-        if( live_logZ(settings,RTI) < log(settings%precision_criterion) + RTI%logZ )  then
+            ! If the evidence in the live points is less than precision_criterion %
+            ! of the total accumulated evidence, then stop.
+        else if( settings%precision_criterion > 0 .and. live_logZ(settings,RTI) < log(settings%precision_criterion) + RTI%logZ )  then
             more_samples_needed = .false.
-            return
         end if
 
 
