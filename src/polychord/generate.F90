@@ -63,7 +63,7 @@ module generate_module
         use random_module,   only: random_reals
         use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time
         use calculate_module, only: calculate_point
-        use read_write_module, only: phys_live_file
+        use read_write_module, only: phys_live_file, prior_info_file
         use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
         use run_time_module,   only: run_time_info,initialise_run_time_info
         use array_module,     only: add_point
@@ -111,7 +111,7 @@ module generate_module
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
         integer :: nlike ! number of likelihood calls
-        integer :: nprior
+        integer :: nprior, ndiscarded
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -142,6 +142,7 @@ module generate_module
         else
             nprior = settings%nprior
         end if
+        ndiscarded=0
 
         total_time=0
         if(linear_mode(mpi_information)) then
@@ -155,6 +156,7 @@ module generate_module
                 ! Compute physical coordinates, likelihoods and derived parameters
                 time0 = time()
                 call calculate_point( loglikelihood, prior, live_point, settings, nlike)
+                ndiscarded=ndiscarded+1
                 time1 = time()
                 live_point(settings%b0) = settings%logzero
 
@@ -232,6 +234,7 @@ module generate_module
                     live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
+                    ndiscarded=ndiscarded+1
                     time1 = time()
                     live_point(settings%b0) = settings%logzero
                     if(live_point(settings%l0)>settings%logzero) total_time = total_time + time1-time0
@@ -245,12 +248,19 @@ module generate_module
 
 #ifdef MPI
         nlike = sum_integers(nlike,mpi_information) ! Gather the likelihood calls onto one node
+        ndiscarded = sum_integers(ndiscarded,mpi_information) ! Gather the likelihood calls onto one node
         total_time = sum_doubles(total_time,mpi_information) ! Sum up the total time taken
 #endif
 
 
         ! ----------------------------------------------- !
-        if(is_root(mpi_information)) call write_finished_generating(settings%feedback)  
+        if(is_root(mpi_information)) then
+            call write_finished_generating(settings%feedback)  
+            open(1990,file=trim(prior_info_file(settings)), action='write', position="append" ) 
+            write(1990,'("nprior = ", I12)') nprior
+            write(1990,'("ndiscarded = ", I12)') ndiscarded
+            close(1990)
+        end if
         ! ----------------------------------------------- !
         ! Find the average time taken
         speed(1) = total_time/nprior

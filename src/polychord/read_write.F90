@@ -1108,4 +1108,16 @@ module read_write_module
 
     end function paramnames_file
 
+    function prior_info_file(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '.prior_info'
+
+    end function prior_info_file
+
 end module
