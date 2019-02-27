@@ -9,7 +9,7 @@ module maximise_module
         use utils_module, only: stdout_unit
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
-        use read_write_module,   only: write_max_file
+        use read_write_module,   only: write_max_file, mean
         use chordal_module, only: generate_nhats, slice_sample
 #ifdef MPI
         use mpi_module, only: mpi_bundle,is_root, throw_point, catch_point, mpi_synchronise, throw_seed, catch_seed
@@ -44,7 +44,7 @@ module maximise_module
         real(dp) :: max_loglike, max_loglike0
         integer :: imax(2)
         integer :: cluster_id, i, j, epoch
-        real(dp), dimension(settings%nTotal) :: max_point, max_point0, max_point1
+        real(dp), dimension(settings%nTotal) :: max_point, max_point0, max_point1, mean_point
         real(dp), dimension(settings%nDims,settings%nDims)   :: cholesky
         integer,   dimension(sum(num_repeats))   :: speeds ! The speed of each nhat
         real(dp),    dimension(settings%nDims,sum(num_repeats))   :: nhats
@@ -124,7 +124,15 @@ module maximise_module
                 write(stdout_unit,'("Loglike: ", F15.5, " change: ", F15.5 )') max_loglike, max_loglike - max_loglike0 
             end if
         end do
-        if(is_root(mpi_information)) call write_max_file(settings, max_point)
+        if(is_root(mpi_information)) then
+            if (settings%posteriors) then
+                mean_point(settings%p0:settings%d1) = mean(RTI, settings)
+                mean_point(settings%l0) = loglikelihood(mean_point(settings%p0:settings%p1),mean_point(settings%d0:settings%d1)) 
+                call write_max_file(settings, max_point, mean_point)
+            else
+                call write_max_file(settings, max_point)
+            end if
+        end if
 
 
     end subroutine maximise

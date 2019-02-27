@@ -751,7 +751,7 @@ module read_write_module
 
     end subroutine write_prior_file
 
-    subroutine write_max_file(settings,max_point)
+    subroutine write_max_file(settings,max_point, mean_point)
         use utils_module, only: DB_FMT,fmt_len,write_max_unit
         use settings_module, only: program_settings 
         use run_time_module, only: run_time_info 
@@ -759,6 +759,7 @@ module read_write_module
 
         type(program_settings), intent(in) :: settings
         real(dp), dimension(settings%nTotal), intent(in) :: max_point
+        real(dp), dimension(settings%nTotal), intent(in), optional :: mean_point
 
         character(len=fmt_len) :: fmt_dbl
 
@@ -769,7 +770,24 @@ module read_write_module
 
         ! Open a new file for appending to
         open(write_max_unit,file=trim(max_file(settings)), action='write')
-        write(write_max_unit, fmt_dbl) max_point(settings%p0:settings%d1),max_point(settings%l0)
+        write(write_max_unit, '("Maximum LogLikelihood:" )')
+        write(fmt_dbl,'("(",I0,A,")")') 1,DB_FMT 
+        write(write_max_unit, fmt_dbl) max_point(settings%l0)
+
+        write(write_max_unit, '("Maximum Likelihood point:" )')
+        write(fmt_dbl,'("(",I0,A,")")') settings%nDims + settings%nDerived,DB_FMT 
+        write(write_max_unit, fmt_dbl) max_point(settings%p0:settings%d1)
+
+        if (present(mean_point)) then
+            write(write_max_unit, '("LogLikelihood(mean):" )')
+            write(fmt_dbl,'("(",I0,A,")")') 1,DB_FMT 
+            write(write_max_unit, fmt_dbl) mean_point(settings%l0)
+
+            write(write_max_unit, '("mean point:" )')
+            write(fmt_dbl,'("(",I0,A,")")') settings%nDims + settings%nDerived,DB_FMT 
+            write(write_max_unit, fmt_dbl) mean_point(settings%p0:settings%d1)
+        end if
+
         close(write_max_unit)
 
     end subroutine write_max_file
