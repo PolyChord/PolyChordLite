@@ -22,6 +22,7 @@ module nested_sampling_module
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: do_clustering
         use generate_module,   only: GenerateSeed,GenerateLivePoints,GenerateLivePointsFromSeed
+        use maximise_module,   only: maximise
 #ifdef MPI
         use utils_module, only: normal_fb,stdout_unit
 #else
@@ -340,8 +341,16 @@ module nested_sampling_module
 
             end do ! End of main loop body
 
-            ! Clean up the remaining live points
             if(settings%write_resume)                  call write_resume_file(settings,RTI)
+
+            ! Do maximisation if required
+            !if(settings%maximise)
+
+            call maximise(loglikelihood,prior,settings,RTI,mpi_information)
+
+            !end if
+
+            ! Clean up the remaining live points
 
             do while(RTI%ncluster > 0)
                 call delete_outermost_point(settings,RTI)

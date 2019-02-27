@@ -77,6 +77,14 @@ nested_sampling.o : \
 	mpi_utils.o \
 	utils.o 
 
+maximiser.o : \
+	chordal_sampling.o \
+	run_time_info.o \
+	settings.o \
+	read_write.o \
+	mpi_utils.o \
+	utils.o 
+
 params.o : \
 	utils.o 
 

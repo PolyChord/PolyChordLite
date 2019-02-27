@@ -751,6 +751,29 @@ module read_write_module
 
     end subroutine write_prior_file
 
+    subroutine write_max_file(settings,max_point)
+        use utils_module, only: DB_FMT,fmt_len,write_max_unit
+        use settings_module, only: program_settings 
+        use run_time_module, only: run_time_info 
+        implicit none
+
+        type(program_settings), intent(in) :: settings
+        real(dp), dimension(settings%nTotal), intent(in) :: max_point
+
+        character(len=fmt_len) :: fmt_dbl
+
+        call check_directories(settings)
+
+        ! Initialise the formats
+        write(fmt_dbl,'("(",I0,A,")")') settings%nDims + settings%nDerived + 1,DB_FMT 
+
+        ! Open a new file for appending to
+        open(write_max_unit,file=trim(max_file(settings)), action='write')
+        write(write_max_unit, fmt_dbl) max_point(settings%p0:settings%d1),max_point(settings%l0)
+        close(write_max_unit)
+
+    end subroutine write_max_file
+
     subroutine write_stats_file(settings,RTI,nlikesum)
         use utils_module, only: DB_FMT,fmt_len,write_stats_unit,logsubexp
         use settings_module, only: program_settings
@@ -1073,6 +1096,17 @@ module read_write_module
         file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '_prior.txt'
 
     end function prior_file
+
+    function max_file(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/' // trim(settings%file_root) // '.maximum'
+
+    end function max_file
 
     function dead_file(settings) result(file_name)
         use settings_module, only: program_settings
