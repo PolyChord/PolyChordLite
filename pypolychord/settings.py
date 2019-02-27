@@ -107,9 +107,14 @@ class PolyChordSettings:
         (Default: True)
         Write a dead points file.
 
-    write_dead : boolean
+    write_prior : boolean
         (Default: True)
         Write a prior points file.
+
+    maximise : boolean
+        (Default: False)
+        Perform maximisation at the end of the run to find the maximum
+        likelihood point and value
 
     compression_factor : double
         (Default: exp(-1))
@@ -167,6 +172,7 @@ class PolyChordSettings:
         self.write_live = kwargs.pop('write_live', True)
         self.write_dead = kwargs.pop('write_dead', True)
         self.write_prior = kwargs.pop('write_prior', True)
+        self.maximise = kwargs.pop('maximise', False)
         self.compression_factor = kwargs.pop('compression_factor',
                                              numpy.exp(-1))
         self.base_dir = kwargs.pop('base_dir', 'chains')

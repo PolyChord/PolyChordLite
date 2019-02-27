@@ -29,6 +29,7 @@ struct Settings
     bool write_live;
     bool write_dead;
     bool write_prior;
+    bool maximise;
     double compression_factor;
     std::string base_dir;
     std::string file_root;

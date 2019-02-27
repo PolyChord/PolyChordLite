@@ -22,6 +22,7 @@ module nested_sampling_module
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: do_clustering
         use generate_module,   only: GenerateSeed,GenerateLivePoints,GenerateLivePointsFromSeed
+        use maximise_module,   only: maximise
 #ifdef MPI
         use utils_module, only: normal_fb,stdout_unit
 #else
@@ -339,9 +340,34 @@ module nested_sampling_module
 #endif
 
             end do ! End of main loop body
+#ifdef MPI
+            ! MPI cleanup
+            ! -----------
+            ! Kill off the final slaves.
+            ! If we're done, then clean up by receiving the last piece of
+            ! data from each node (and throw it away) and then send a kill signal back to it
+            do i_slave=mpi_information%nprocs-1,1,-1
+
+                ! Recieve baby point from slave slave_id
+                slave_id = catch_babies(baby_points,nlike,slave_epoch,mpi_information)
+
+                ! Add the likelihood calls to our counter
+                RTI%nlike = RTI%nlike + nlike
+
+                ! Send kill signal to slave slave_id (note that we no longer care about seed_point, so we'll just use the last one
+                call throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,master_epoch,.false.) 
+
+            end do
+
+
+#endif
+
+            if(settings%write_resume)                  call write_resume_file(settings,RTI)
+
+            ! Do maximisation if required
+            if(settings%maximise) call maximise(loglikelihood,prior,settings,RTI,num_repeats,mpi_information)
 
             ! Clean up the remaining live points
-            if(settings%write_resume)                  call write_resume_file(settings,RTI)
 
             do while(RTI%ncluster > 0)
                 call delete_outermost_point(settings,RTI)
@@ -379,29 +405,7 @@ module nested_sampling_module
 
 
 
-            ! C) Clean up
-            !    ========
-
 #ifdef MPI
-            ! MPI cleanup
-            ! -----------
-            ! Kill off the final slaves.
-            ! If we're done, then clean up by receiving the last piece of
-            ! data from each node (and throw it away) and then send a kill signal back to it
-            do i_slave=mpi_information%nprocs-1,1,-1
-
-                ! Recieve baby point from slave slave_id
-                slave_id = catch_babies(baby_points,nlike,slave_epoch,mpi_information)
-
-                ! Add the likelihood calls to our counter
-                RTI%nlike = RTI%nlike + nlike
-
-                ! Send kill signal to slave slave_id (note that we no longer care about seed_point, so we'll just use the last one
-                call throw_seed(seed_point,cholesky,logL,mpi_information,slave_id,master_epoch,.false.) 
-
-            end do
-
-
         else !(myrank/=root)
 
             ! These are the slave tasks
@@ -453,6 +457,7 @@ module nested_sampling_module
                 if(settings%feedback>=normal_fb) write(stdout_unit,'("Slave",I3,": efficient MPI parallisation; wait_time/slice_time= ", E17.8 )') mpi_information%rank, wait_time/slice_time 
             end if
 
+            if(settings%maximise) call maximise(loglikelihood,prior,settings,RTI,num_repeats,mpi_information)
 #endif
         end if !(myrank==root / myrank/=root) 
 
