@@ -84,12 +84,16 @@ module maximise_module
             nhats = matmul(cholesky,nhats)
             max_point0 = max_point
             max_loglike0 = max_loglike
+            nlike = 0
             do i=1,size(nhats,2)
                 nhat = nhats(:,i)
                 w = sqrt(dot_product(nhat,nhat))
                 w = w * 3d0 
-                max_point = slice_sample(loglikelihood,prior,max_loglike,nhat,max_point,1d0,settings,nlike(speeds(i))) 
-                max_loglike = max(max_point(settings%l0),max_loglike)
+                max_point1 = slice_sample(loglikelihood,prior,max_loglike,nhat,max_point,1d0,settings,nlike(speeds(i))) 
+                if (max_point1(settings%l0) > max_loglike) then
+                    max_loglike = max_point1(settings%l0)
+                    max_point = max_point1
+                end if
             end do
 
 #ifdef MPI
@@ -111,8 +115,8 @@ module maximise_module
             if(is_root(mpi_information)) then
                 x0 = max_point0(settings%h0:settings%h1) 
                 x1 = max_point(settings%h0:settings%h1) 
-                dx = sqrt(dot_product(x0-x1,x0-x1))
-                if (dx < 1e-5 .or. max_loglike - max_loglike0 < 1e-4) then
+                dx = maxval(abs(x0-x1))
+                if (dx < 1e-5 .or. max_loglike - max_loglike0 < 1e-5) then
 #ifdef MPI
                 call mpi_synchronise(mpi_information)
                     do i=1,mpi_information%nprocs-1
@@ -122,6 +126,7 @@ module maximise_module
                     exit
                 endif
                 write(stdout_unit,'("Loglike: ", F15.5, " change: ", F15.5 )') max_loglike, max_loglike - max_loglike0 
+                write(stdout_unit,*) nlike
             end if
         end do
         if(is_root(mpi_information)) then
