@@ -68,7 +68,7 @@ module maximise_module
 
 
     function do_maximisation(loglikelihood,prior,settings,RTI,num_repeats, dl, posterior) result(max_point)
-        use utils_module, only: stdout_unit
+        use utils_module, only: stdout_unit, fmt_len
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
         use read_write_module,   only: write_max_file, mean
@@ -111,10 +111,12 @@ module maximise_module
         real(dp), dimension(settings%nDims,settings%nDims)   :: cholesky
         integer,   dimension(sum(num_repeats))   :: speeds ! The speed of each nhat
         real(dp),    dimension(settings%nDims,sum(num_repeats))   :: nhats
-        integer, dimension(size(settings%grade_dims)) :: nlike      ! Temporary storage for number of likelihood calls
+        integer, dimension(size(settings%grade_dims)) :: nlikes      ! Temporary storage for number of likelihood calls
+        integer :: nlike
         real(dp) :: w
         real(dp),    dimension(settings%nDims)   :: nhat, x0, x1
         logical temp
+        character(len=fmt_len) fmt_nlike
 
         ! Get highest likelihood point
         imax = maxloc(RTI%live(settings%l0,:,:))
@@ -123,7 +125,7 @@ module maximise_module
         max_loglike = max_point(settings%l0)
         if (posterior) max_loglike = max_loglike + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
         cholesky = RTI%cholesky(:,:,cluster_id)
-
+        nlikes = 0
         do while(.true.)
 
             ! Do maximisation
@@ -131,21 +133,23 @@ module maximise_module
             nhats = matmul(cholesky,nhats)
             max_point0 = max_point
             max_loglike0 = max_loglike
-            nlike = 0
             do i=1,size(nhats,2)
                 nhat = nhats(:,i)
-                max_point = maximise_direction(loglikelihood,prior,settings, max_point, nhat, dl, posterior)
+                max_point = maximise_direction(loglikelihood,prior,settings, max_point, nhat, nlike, dl, posterior)
+                nlikes(speeds(i)) = nlikes(speeds(i)) + nlike
             end do
 
             max_loglike = max_point(settings%l0)
             if (max_loglike - max_loglike0 < 1e-5) exit
             write(stdout_unit,'("Loglike: ", F15.8, " change: ", F15.8 )') max_loglike, max_loglike - max_loglike0 
+            write(fmt_nlike,'("(""nlike      ="",",I0,"I20)")') size(nlikes)
+            write(stdout_unit,fmt_nlike) nlikes
         end do
 
 
     end function do_maximisation
 
-    function maximise_direction(loglikelihood,prior,settings, point, n, dl, posterior) result(max_point)
+    function maximise_direction(loglikelihood,prior,settings, point, n, nlike, dl, posterior) result(max_point)
         use utils_module, only: stdout_unit
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
@@ -179,11 +183,12 @@ module maximise_module
         ! The run time info (very important, see src/run_time_info.f90)
         logical, intent(in) :: posterior
         real(dp), intent(in) :: dl
+        integer, intent(out) ::  nlike
 
         real(dp), dimension(settings%nTotal) :: max_point, point, point_a, point_b, point_c, point_d
         real(dp),    dimension(settings%nDims)   :: n, x, a, b, c, d
-        integer nlike
         real(dp),parameter :: phi = (1+sqrt(5.))/2
+        real(dp) :: maxl, minl
 
 
         ! Construct initial bracket
@@ -191,6 +196,7 @@ module maximise_module
         point_b = point
         if (posterior) point_b(settings%l0) = point_b(settings%l0)  + dXdtheta(prior, point_b(settings%h0:settings%h1))
 
+        nlike = 0
         do while (.true.)
             point_a(settings%h0:settings%h1) = point_a(settings%h0:settings%h1) - n
             call calculate_point(loglikelihood,prior,point_a,settings,nlike) 
@@ -219,7 +225,7 @@ module maximise_module
         call calculate_point(loglikelihood,prior,point_d,settings,nlike) 
         if (posterior) point_d(settings%l0) = point_d(settings%l0)  + dXdtheta(prior, point_d(settings%h0:settings%h1))
 
-        do while ( abs(point_a(settings%l0)-point_b(settings%l0)) > dl ) 
+        do while ( max(point_a(settings%l0),point_d(settings%l0),point_c(settings%l0),point_d(settings%l0))-min(point_a(settings%l0),point_d(settings%l0),point_c(settings%l0),point_d(settings%l0)) > dl ) 
             if (point_c(settings%l0) > point_d(settings%l0)) then
                 point_b = point_d
                 point_d = point_c
