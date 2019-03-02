@@ -5,7 +5,7 @@ module maximise_module
 
     contains
 
-    subroutine maximise(loglikelihood,prior,settings,RTI,num_repeats,mpi_information)
+    subroutine maximise(loglikelihood,prior,settings,RTI,num_repeats)
         use utils_module, only: stdout_unit
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
@@ -39,7 +39,70 @@ module maximise_module
         type(run_time_info) :: RTI
         integer, dimension(size(settings%grade_dims)), intent(in) :: num_repeats
 
-        type(mpi_bundle),intent(in) :: mpi_information
+
+        real(dp) :: max_loglike, max_loglike0
+        integer :: imax(2)
+        integer :: cluster_id, i, j, epoch
+        real(dp), dimension(settings%nTotal) :: max_point, max_posterior_point, mean_point
+        real(dp), parameter :: dx=1d-5
+
+        ! Get highest likelihood point
+        write(stdout_unit,'("-------------------------------------")') 
+        write(stdout_unit,'("Maximising Likelihood")') 
+        max_point = do_maximisation(loglikelihood,prior,settings,RTI,num_repeats, dx, .false.) 
+
+        write(stdout_unit,'("-------------------------------------")') 
+        write(stdout_unit,'("Maximising Posterior")') 
+        max_posterior_point = do_maximisation(loglikelihood,prior,settings,RTI,num_repeats, dx, .true.) 
+
+        if (settings%posteriors) then
+            mean_point(settings%p0:settings%d1) = mean(RTI, settings)
+            mean_point(settings%l0) = loglikelihood(mean_point(settings%p0:settings%p1),mean_point(settings%d0:settings%d1)) 
+            call write_max_file(settings, max_point, max_posterior_point, dXdtheta(prior,max_posterior_point(settings%h0:settings%h1), dx),  mean_point)
+        else
+            call write_max_file(settings, max_point, max_posterior_point, dXdtheta(prior,max_posterior_point(settings%h0:settings%h1), dx))
+        end if
+
+
+    end subroutine maximise
+
+
+    function do_maximisation(loglikelihood,prior,settings,RTI,num_repeats, dx, posterior) result(max_point)
+        use utils_module, only: stdout_unit
+        use settings_module,  only: program_settings
+        use run_time_module,   only: run_time_info
+        use read_write_module,   only: write_max_file, mean
+        use chordal_module, only: generate_nhats, slice_sample
+#ifdef MPI
+        use mpi_module, only: mpi_bundle,is_root, throw_point, catch_point, mpi_synchronise, throw_seed, catch_seed
+#else
+        use mpi_module, only: mpi_bundle,is_root
+#endif
+        interface
+            function loglikelihood(theta,phi)
+                import :: dp
+                real(dp), intent(in), dimension(:)  :: theta
+                real(dp), intent(out), dimension(:) :: phi
+                real(dp) :: loglikelihood
+            end function
+        end interface
+        interface
+            function prior(cube) result(theta)
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
+            end function
+        end interface
+
+        !> Program settings
+        type(program_settings), intent(in) :: settings
+
+        ! The run time info (very important, see src/run_time_info.f90)
+        type(run_time_info), intent(in) :: RTI
+        integer, dimension(size(settings%grade_dims)), intent(in) :: num_repeats
+        logical, intent(in) :: posterior
+        real(dp), intent(in) :: dx
+
 
         real(dp) :: max_loglike, max_loglike0
         integer :: imax(2)
@@ -49,35 +112,19 @@ module maximise_module
         integer,   dimension(sum(num_repeats))   :: speeds ! The speed of each nhat
         real(dp),    dimension(settings%nDims,sum(num_repeats))   :: nhats
         integer, dimension(size(settings%grade_dims)) :: nlike      ! Temporary storage for number of likelihood calls
-        real(dp) :: w, dx
+        real(dp) :: w
         real(dp),    dimension(settings%nDims)   :: nhat, x0, x1
-#ifdef MPI
-            call mpi_synchronise(mpi_information)
-#endif
+        logical temp
 
         ! Get highest likelihood point
-        if(is_root(mpi_information)) then
-            write(stdout_unit,'("Maximising")') 
-            imax = maxloc(RTI%live(settings%l0,:,:))
-            cluster_id = imax(2)
-            max_point = RTI%live(:,imax(1),cluster_id)
-            max_loglike = max_point(settings%l0)
-            cholesky = RTI%cholesky(:,:,cluster_id)
-        end if
+        imax = maxloc(RTI%live(settings%l0,:,:))
+        cluster_id = imax(2)
+        max_point = RTI%live(:,imax(1),cluster_id)
+        max_loglike = max_point(settings%l0)
+        if (posterior) max_loglike = max_loglike + dXdtheta(prior, max_point(settings%h0:settings%h1), dx) 
+        cholesky = RTI%cholesky(:,:,cluster_id)
 
         do while(.true.)
-
-#ifdef MPI
-            call mpi_synchronise(mpi_information)
-            ! Synchronise details for maximising
-            if(is_root(mpi_information)) then
-                do i=1,mpi_information%nprocs-1
-                    call throw_seed(max_point,cholesky,max_loglike,mpi_information,i,j,.true.)
-                end do
-            else
-                if(.not. catch_seed(max_point,cholesky,max_loglike,j,mpi_information)) exit
-            end if
-#endif
 
             ! Do maximisation
             nhats = generate_nhats(settings,num_repeats,speeds)
@@ -87,59 +134,197 @@ module maximise_module
             nlike = 0
             do i=1,size(nhats,2)
                 nhat = nhats(:,i)
-                w = sqrt(dot_product(nhat,nhat))
-                w = w * 3d0 
-                max_point1 = slice_sample(loglikelihood,prior,max_loglike,nhat,max_point,1d0,settings,nlike(speeds(i))) 
-                if (max_point1(settings%l0) > max_loglike) then
-                    max_loglike = max_point1(settings%l0)
-                    max_point = max_point1
-                end if
+                max_point = maximise_direction(loglikelihood,prior,settings, max_point, nhat, dx, posterior)
             end do
 
-#ifdef MPI
-            ! Catch maxima from all cores
-            if(is_root(mpi_information)) then
-                do i=1,mpi_information%nprocs-1
-                    j = catch_point(max_point1,mpi_information)
-                    if (max_point1(settings%l0) > max_loglike) then
-                        max_loglike = max_point1(settings%l0)
-                        max_point = max_point1
-                    end if
-                end do
-            else
-                call throw_point(max_point,mpi_information)
-            end if
-            call mpi_synchronise(mpi_information)
-#endif
+            max_loglike = max_point(settings%l0)
+            if (max_loglike - max_loglike0 < 1e-5) exit
+            write(stdout_unit,'("Loglike: ", F15.5, " change: ", F15.5 )') max_loglike, max_loglike - max_loglike0 
+        end do
 
-            if(is_root(mpi_information)) then
-                x0 = max_point0(settings%h0:settings%h1) 
-                x1 = max_point(settings%h0:settings%h1) 
-                dx = maxval(abs(x0-x1))
-                if (dx < 1e-5 .or. max_loglike - max_loglike0 < 1e-5) then
+
+    end function do_maximisation
+
+    function maximise_direction(loglikelihood,prior,settings, point, n, dx, posterior) result(max_point)
+        use utils_module, only: stdout_unit
+        use settings_module,  only: program_settings
+        use run_time_module,   only: run_time_info
+        use read_write_module,   only: write_max_file, mean
+        use chordal_module, only: generate_nhats, slice_sample
+        use calculate_module, only: calculate_point
 #ifdef MPI
-                call mpi_synchronise(mpi_information)
-                    do i=1,mpi_information%nprocs-1
-                        call throw_seed(max_point,cholesky,max_loglike,mpi_information,i,j,.false.)
-                    end do
+        use mpi_module, only: mpi_bundle,is_root, throw_point, catch_point, mpi_synchronise, throw_seed, catch_seed
+#else
+        use mpi_module, only: mpi_bundle,is_root
 #endif
-                    exit
-                endif
-                write(stdout_unit,'("Loglike: ", F15.5, " change: ", F15.5 )') max_loglike, max_loglike - max_loglike0 
-                write(stdout_unit,*) nlike
+        interface
+            function loglikelihood(theta,phi)
+                import :: dp
+                real(dp), intent(in), dimension(:)  :: theta
+                real(dp), intent(out), dimension(:) :: phi
+                real(dp) :: loglikelihood
+            end function
+        end interface
+        interface
+            function prior(cube) result(theta)
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
+            end function
+        end interface
+
+        !> Program settings
+        type(program_settings), intent(in) :: settings
+
+        ! The run time info (very important, see src/run_time_info.f90)
+        logical, intent(in) :: posterior
+        real(dp), intent(in) :: dx
+
+        real(dp), dimension(settings%nTotal) :: max_point, point, point_a, point_b, point_c, point_d
+        real(dp),    dimension(settings%nDims)   :: n, x, a, b, c, d
+        integer nlike
+        real(dp),parameter :: phi = (1+sqrt(5.))/2
+
+
+        ! Construct initial bracket
+        point_a = point
+        point_b = point
+        if (posterior) point_b(settings%l0) = point_b(settings%l0)  + dXdtheta(prior, point_b(settings%h0:settings%h1), dx)
+
+        do while (.true.)
+            point_a(settings%h0:settings%h1) = point_a(settings%h0:settings%h1) - n
+            call calculate_point(loglikelihood,prior,point_a,settings,nlike) 
+            if (posterior) point_a(settings%l0) = point_a(settings%l0)  + dXdtheta(prior, point_a(settings%h0:settings%h1), dx)
+            if (point_a(settings%l0) <= point(settings%l0)) exit
+            point_b = point
+            point = point_a
+        end do
+
+        do while (point_b(settings%l0) > point(settings%l0))
+            point = point_b
+            point_b(settings%h0:settings%h1) = point_b(settings%h0:settings%h1) + n
+            call calculate_point(loglikelihood,prior,point_b,settings,nlike) 
+            if (posterior) point_b(settings%l0) = point_b(settings%l0)  + dXdtheta(prior, point_b(settings%h0:settings%h1), dx)
+        end do
+
+        ! Now do golden section search
+        a = point_a(settings%h0:settings%h1)
+        b = point_b(settings%h0:settings%h1)
+
+        point_c(settings%h0:settings%h1) = b - (b-a)/phi
+        call calculate_point(loglikelihood,prior,point_c,settings,nlike) 
+        if (posterior) point_c(settings%l0) = point_c(settings%l0)  + dXdtheta(prior, point_c(settings%h0:settings%h1), dx)
+
+        point_d(settings%h0:settings%h1) = a + (b-a)/phi
+        call calculate_point(loglikelihood,prior,point_d,settings,nlike) 
+        if (posterior) point_d(settings%l0) = point_d(settings%l0)  + dXdtheta(prior, point_d(settings%h0:settings%h1), dx)
+
+        do while ( sqrt(dot_product(b-a,b-a)) > dx ) 
+            if (point_c(settings%l0) > point_d(settings%l0)) then
+                point_b = point_d
+                point_d = point_c
+                a = point_a(settings%h0:settings%h1)
+                b = point_b(settings%h0:settings%h1)
+                point_c(settings%h0:settings%h1) = b - (b-a)/phi
+                call calculate_point(loglikelihood,prior,point_c,settings,nlike) 
+                if (posterior) point_c(settings%l0) = point_c(settings%l0)  + dXdtheta(prior, point_c(settings%h0:settings%h1), dx)
+            else
+                point_a = point_c
+                point_c = point_d
+                a = point_a(settings%h0:settings%h1)
+                b = point_b(settings%h0:settings%h1)
+                point_d(settings%h0:settings%h1) = a + (b-a)/phi
+                call calculate_point(loglikelihood,prior,point_d,settings,nlike) 
+                if (posterior) point_d(settings%l0) = point_d(settings%l0)  + dXdtheta(prior, point_d(settings%h0:settings%h1), dx)
             end if
         end do
-        if(is_root(mpi_information)) then
-            if (settings%posteriors) then
-                mean_point(settings%p0:settings%d1) = mean(RTI, settings)
-                mean_point(settings%l0) = loglikelihood(mean_point(settings%p0:settings%p1),mean_point(settings%d0:settings%d1)) 
-                call write_max_file(settings, max_point, mean_point)
-            else
-                call write_max_file(settings, max_point)
-            end if
+
+        if (point_c(settings%l0) > point_d(settings%l0)) then
+            max_point = point_c
+        else
+            max_point = point_d
         end if
 
+    end function maximise_direction
 
-    end subroutine maximise
+    function dXdtheta(prior, cube, dx)
+        implicit none
+        interface
+            function prior(cube) result(theta)
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
+            end function
+        end interface
+        real(dp), intent(in), dimension(:) :: cube
+        real(dp), intent(in) ::  dx
+        real(dp) dXdtheta
+
+        real(dp), dimension(size(cube)) :: cube0
+        real(dp), dimension(size(cube),size(cube)) :: dtheta
+        integer :: i, s
+
+        s=1
+        do i=1,size(cube)
+            cube0 = cube
+            if (cube0(i) + dx >= 1) then
+                cube0(i) = cube0(i) - dx
+                s = -s 
+            else
+                cube0(i) = cube0(i) + dx
+            end if
+            dtheta(:,i) = prior(cube0) - prior(cube)
+        end do
+        dXdtheta =  size(cube)*log(dx) - log(s*det(dtheta))
+
+    end function dXdtheta
+
+    function det(matrix)
+        implicit none
+        real(dp), dimension(:,:) :: matrix
+        real(dp) det
+        real(dp) :: m, temp
+        integer :: n, i, j, k, l
+        logical :: detexists = .true.
+        n = size(matrix,1)
+        l = 1
+        !convert to upper triangular form
+        do k = 1, n-1
+            if (matrix(k,k) == 0) then
+                detexists = .false.
+                do i = k+1, n
+                    if (matrix(i,k) /= 0) then
+                        do j = 1, n
+                            temp = matrix(i,j)
+                            matrix(i,j)= matrix(k,j)
+                            matrix(k,j) = temp
+                        end do
+                        detexists = .true.
+                        l=-l
+                        exit
+                    endif
+                end do
+                if (detexists .eqv. .false.) then
+                    det = 0
+                    return
+                end if
+            endif
+            do j = k+1, n
+                m = matrix(j,k)/matrix(k,k)
+                do i = k+1, n
+                    matrix(j,i) = matrix(j,i) - m*matrix(k,i)
+                end do
+            end do
+        end do
+        
+        !calculate determinant by finding product of diagonal elements
+        det = l
+        do i = 1, n
+            det = det * matrix(i,i)
+        end do
+        
+    end function det
+
+
 
 end module maximise_module
