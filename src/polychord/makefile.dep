@@ -70,6 +70,7 @@ nested_sampling.o : \
 	clustering.o \
 	random_utils.o \
 	chordal_sampling.o \
+	maximiser.o \
 	run_time_info.o \
 	feedback.o \
 	read_write.o \
