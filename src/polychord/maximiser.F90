@@ -110,15 +110,15 @@ module maximise_module
             !write(*,*) "clusters", cluster_id, imax
             if (RTI%live(settings%l0,imax,cluster_id) > max_loglike) then
                 max_point = RTI%live(:,imax,cluster_id)
-                if (posterior) max_point(settings%l0) = max_point(settings%l0) + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
                 max_loglike = max_point(settings%l0)
+                if (posterior) max_loglike = max_loglike + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
             end if
         end do
 
         xl = 0
         xu = 1
         x = max_point(settings%h0:settings%h1)
-        call minimize_with_bobyqa(settings%ndims,x,xl,xu,settings%ndims+2, 1d-3,1d-6,3, 10000, CALFUN ) 
+        call minimize_with_bobyqa(settings%ndims,x,xl,xu,settings%ndims+2, 1d-3,1d-10,3, 10000, CALFUN ) 
         max_point(settings%h0:settings%h1) = x
         call calculate_point(loglikelihood,prior,max_point,settings,nlike) 
 
@@ -133,8 +133,8 @@ module maximise_module
 
             point(settings%h0:settings%h1) = x
             call calculate_point(loglikelihood,prior,point,settings,nlike) 
-            f  = - point(settings%l0)
-            if (posterior .and. f>settings%logzero) f = f - dXdtheta(prior, point(settings%h0:settings%h1))
+            f  = max_loglike- point(settings%l0)
+            if (posterior .and. f<-settings%logzero) f = f - dXdtheta(prior, point(settings%h0:settings%h1))
 
          end subroutine
 

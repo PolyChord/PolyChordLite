@@ -783,9 +783,9 @@ module read_write_module
 
         write(write_max_unit, '("Maximum Posterior:" )')
         write(fmt_dbl,'("(",I0,A,")")') 1,DB_FMT 
-        write(write_max_unit, fmt_dbl) max_posterior_point(settings%l0)
+        write(write_max_unit, fmt_dbl) max_posterior_point(settings%l0) + dXdtheta
         write(write_max_unit, '("Maximum Likelihood at posterior:" )')
-        write(write_max_unit, fmt_dbl) max_posterior_point(settings%l0) - dXdtheta
+        write(write_max_unit, fmt_dbl) max_posterior_point(settings%l0)
 
         write(write_max_unit, '("Maximum Posterior point:" )')
         write(fmt_dbl,'("(",I0,A,")")') settings%nDims + settings%nDerived,DB_FMT 
