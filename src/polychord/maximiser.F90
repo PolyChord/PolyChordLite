@@ -41,10 +41,9 @@ module maximise_module
 
 
         real(dp) :: max_loglike, max_loglike0
-        integer :: imax(2)
         integer :: cluster_id, i, j, epoch
         real(dp), dimension(settings%nTotal) :: max_point, max_posterior_point, mean_point
-        real(dp), parameter :: dl=1d-8
+        real(dp), parameter :: dl=1d-5
 
         ! Get highest likelihood point
         write(stdout_unit,'("-------------------------------------")') 
@@ -105,7 +104,7 @@ module maximise_module
 
 
         real(dp) :: max_loglike, max_loglike0
-        integer :: imax(2)
+        integer :: imax
         integer :: cluster_id, i, j, epoch
         real(dp), dimension(settings%nTotal) :: max_point, max_point0, max_point1, mean_point
         real(dp), dimension(settings%nDims,settings%nDims)   :: cholesky
@@ -119,13 +118,20 @@ module maximise_module
         character(len=fmt_len) fmt_nlike
 
         ! Get highest likelihood point
-        imax = maxloc(RTI%live(settings%l0,:,:))
-        cluster_id = imax(2)
-        max_point = RTI%live(:,imax(1),cluster_id)
-        max_loglike = max_point(settings%l0)
-        if (posterior) max_loglike = max_loglike + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
-        cholesky = RTI%cholesky(:,:,cluster_id)
+        max_loglike = settings%logzero
+        do cluster_id=1,RTI%ncluster
+            imax = maxloc(RTI%live(settings%l0,:RTI%nlive(cluster_id),cluster_id), dim=1)
+            !write(*,*) "clusters", cluster_id, imax
+            if (RTI%live(settings%l0,imax,cluster_id) > max_loglike) then
+                max_point = RTI%live(:,imax,cluster_id)
+                if (posterior) max_point(settings%l0) = max_point(settings%l0) + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
+                max_loglike = max_point(settings%l0)
+                cholesky = RTI%cholesky(:,:,cluster_id)
+            end if
+        end do
         nlikes = 0
+
+
         do while(.true.)
 
             ! Do maximisation
@@ -137,6 +143,7 @@ module maximise_module
                 nhat = nhats(:,i)
                 max_point = maximise_direction(loglikelihood,prior,settings, max_point, nhat, nlike, dl, posterior)
                 nlikes(speeds(i)) = nlikes(speeds(i)) + nlike
+                !write(*,*) "~~~~~~~~~~", max_point(settings%l0)
             end do
 
             max_loglike = max_point(settings%l0)
@@ -184,72 +191,77 @@ module maximise_module
         logical, intent(in) :: posterior
         real(dp), intent(in) :: dl
         integer, intent(out) ::  nlike
+        real(dp), intent(in), dimension(settings%nTotal) :: point
 
-        real(dp), dimension(settings%nTotal) :: max_point, point, point_a, point_b, point_c, point_d
-        real(dp),    dimension(settings%nDims)   :: n, x, a, b, c, d
-        real(dp),parameter :: phi = (1+sqrt(5.))/2
-        real(dp) :: maxl, minl
+        real(dp), dimension(settings%nTotal) :: max_point, point_a, point_b, point_c, point_d
+        real(dp), dimension(settings%nDims)   :: n, x, a, b, c, d
+        real(dp), parameter :: phi = (1+sqrt(5.))/2
+        real(dp) :: d1, d2
 
-
-        ! Construct initial bracket
-        point_a = point
-        point_b = point
-        if (posterior) point_b(settings%l0) = point_b(settings%l0)  + dXdtheta(prior, point_b(settings%h0:settings%h1))
 
         nlike = 0
+
+        point_a = point
         do while (.true.)
             point_a(settings%h0:settings%h1) = point_a(settings%h0:settings%h1) - n
             call calculate_point(loglikelihood,prior,point_a,settings,nlike) 
-            if (posterior) point_a(settings%l0) = point_a(settings%l0)  + dXdtheta(prior, point_a(settings%h0:settings%h1))
+            if (posterior .and. point_a(settings%l0)>settings%logzero) point_a(settings%l0) = point_a(settings%l0)  + dXdtheta(prior, point_a(settings%h0:settings%h1))
             if (point_a(settings%l0) <= point(settings%l0)) exit
-            point_b = point
-            point = point_a
         end do
 
-        do while (point_b(settings%l0) > point(settings%l0))
-            point = point_b
-            point_b(settings%h0:settings%h1) = point_b(settings%h0:settings%h1) + n
-            call calculate_point(loglikelihood,prior,point_b,settings,nlike) 
-            if (posterior) point_b(settings%l0) = point_b(settings%l0)  + dXdtheta(prior, point_b(settings%h0:settings%h1))
+        point_b = point
+
+        point_c = point
+        do while (.true.)
+            point_c(settings%h0:settings%h1) = point_c(settings%h0:settings%h1) + n
+            call calculate_point(loglikelihood,prior,point_c,settings,nlike) 
+            if (posterior .and. point_c(settings%l0)>settings%logzero) point_c(settings%l0) = point_c(settings%l0)  + dXdtheta(prior, point_c(settings%h0:settings%h1))
+            if (point_c(settings%l0) <= point(settings%l0)) exit
         end do
 
         ! Now do golden section search
-        a = point_a(settings%h0:settings%h1)
-        b = point_b(settings%h0:settings%h1)
-
-        point_c(settings%h0:settings%h1) = b - (b-a)/phi
-        call calculate_point(loglikelihood,prior,point_c,settings,nlike) 
-        if (posterior) point_c(settings%l0) = point_c(settings%l0)  + dXdtheta(prior, point_c(settings%h0:settings%h1))
-
-        point_d(settings%h0:settings%h1) = a + (b-a)/phi
-        call calculate_point(loglikelihood,prior,point_d,settings,nlike) 
-        if (posterior) point_d(settings%l0) = point_d(settings%l0)  + dXdtheta(prior, point_d(settings%h0:settings%h1))
-
-        do while ( max(point_a(settings%l0),point_d(settings%l0),point_c(settings%l0),point_d(settings%l0))-min(point_a(settings%l0),point_d(settings%l0),point_c(settings%l0),point_d(settings%l0)) > dl ) 
-            if (point_c(settings%l0) > point_d(settings%l0)) then
-                point_b = point_d
-                point_d = point_c
-                a = point_a(settings%h0:settings%h1)
-                b = point_b(settings%h0:settings%h1)
-                point_c(settings%h0:settings%h1) = b - (b-a)/phi
-                call calculate_point(loglikelihood,prior,point_c,settings,nlike) 
-                if (posterior) point_c(settings%l0) = point_c(settings%l0)  + dXdtheta(prior, point_c(settings%h0:settings%h1))
-            else
-                point_a = point_c
-                point_c = point_d
-                a = point_a(settings%h0:settings%h1)
-                b = point_b(settings%h0:settings%h1)
-                point_d(settings%h0:settings%h1) = a + (b-a)/phi
+        do while (point_b(settings%l0)-min(point_a(settings%l0),point_c(settings%l0)) > dl ) 
+            a = point_a(settings%h0:settings%h1)
+            b = point_b(settings%h0:settings%h1)
+            c = point_c(settings%h0:settings%h1)
+            d1 = sqrt(dot_product(b-a,b-a))
+            d2 = sqrt(dot_product(c-b,c-b))
+            if (d1 > d2) then
+                ! a d b c
+                point_d(settings%h0:settings%h1) = b +  0.38197*(a-b)
                 call calculate_point(loglikelihood,prior,point_d,settings,nlike) 
-                if (posterior) point_d(settings%l0) = point_d(settings%l0)  + dXdtheta(prior, point_d(settings%h0:settings%h1))
-            end if
-        end do
+                if (posterior .and. point_d(settings%l0)>settings%logzero) point_d(settings%l0) = point_d(settings%l0)  + dXdtheta(prior, point_d(settings%h0:settings%h1))
 
-        if (point_c(settings%l0) > point_d(settings%l0)) then
-            max_point = point_c
-        else
-            max_point = point_d
-        end if
+                if (point_d(settings%l0) > point_b(settings%l0)) then
+                    !   d    
+                    ! a   b c 
+                    point_c = point_b
+                    point_b = point_d
+                else
+                    !     b  
+                    ! a d   c 
+                    point_a = point_d
+                end if
+            else
+                ! a b d c
+                point_d(settings%h0:settings%h1) = b +  0.38197*(c-b)
+                call calculate_point(loglikelihood,prior,point_d,settings,nlike) 
+                if (posterior .and. point_d(settings%l0)>settings%logzero) point_d(settings%l0) = point_d(settings%l0)  + dXdtheta(prior, point_d(settings%h0:settings%h1))
+
+                if (point_d(settings%l0) > point_b(settings%l0)) then
+                    !     d  
+                    ! a b   c 
+                    point_a = point_b
+                    point_b = point_d
+                else
+                    !   b    
+                    ! a   d c 
+                    point_c = point_d
+                end if
+            end if
+            !write(*,'(">>>>>>>>", 3F18.8)') point_a(settings%l0), point_b(settings%l0), point_c(settings%l0)
+        end do
+        max_point = point_b
 
     end function maximise_direction
 
@@ -271,7 +283,7 @@ module maximise_module
         integer :: i, s
         real(dp) :: dx
 
-        dx = 1e-8
+        dx = 1e-5
         if (present(dx_)) dx=dx_
 
         s=1
