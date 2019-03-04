@@ -344,7 +344,7 @@ module nested_sampling_module
             if(settings%write_resume)                  call write_resume_file(settings,RTI)
 
             ! Do maximisation if required
-            if(is_root(mpi_information) .and. settings%maximise) call maximise(loglikelihood,prior,settings,RTI,num_repeats)
+            if(is_root(mpi_information) .and. settings%maximise) call maximise(loglikelihood,prior,settings,RTI)
 
             do while(RTI%ncluster > 0)
                 call delete_outermost_point(settings,RTI)

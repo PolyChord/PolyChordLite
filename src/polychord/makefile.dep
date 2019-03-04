@@ -79,6 +79,7 @@ nested_sampling.o : \
 	utils.o 
 
 maximiser.o : \
+	bobyqa.o \
 	chordal_sampling.o \
 	run_time_info.o \
 	settings.o \

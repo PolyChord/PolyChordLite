@@ -5,69 +5,8 @@ module maximise_module
 
     contains
 
-    subroutine maximise(loglikelihood,prior,settings,RTI,num_repeats)
+    subroutine maximise(loglikelihood,prior,settings,RTI)
         use utils_module, only: stdout_unit
-        use settings_module,  only: program_settings
-        use run_time_module,   only: run_time_info
-        use read_write_module,   only: write_max_file, mean
-        use chordal_module, only: generate_nhats, slice_sample
-#ifdef MPI
-        use mpi_module, only: mpi_bundle,is_root, throw_point, catch_point, mpi_synchronise, throw_seed, catch_seed
-#else
-        use mpi_module, only: mpi_bundle,is_root
-#endif
-        interface
-            function loglikelihood(theta,phi)
-                import :: dp
-                real(dp), intent(in), dimension(:)  :: theta
-                real(dp), intent(out), dimension(:) :: phi
-                real(dp) :: loglikelihood
-            end function
-        end interface
-        interface
-            function prior(cube) result(theta)
-                import :: dp
-                real(dp), intent(in), dimension(:) :: cube
-                real(dp), dimension(size(cube))    :: theta
-            end function
-        end interface
-
-        !> Program settings
-        type(program_settings), intent(in) :: settings
-
-        ! The run time info (very important, see src/run_time_info.f90)
-        type(run_time_info) :: RTI
-        integer, dimension(size(settings%grade_dims)), intent(in) :: num_repeats
-
-
-        real(dp) :: max_loglike, max_loglike0
-        integer :: cluster_id, i, j, epoch
-        real(dp), dimension(settings%nTotal) :: max_point, max_posterior_point, mean_point
-        real(dp), parameter :: dl=1d-5
-
-        ! Get highest likelihood point
-        write(stdout_unit,'("-------------------------------------")') 
-        write(stdout_unit,'("Maximising Likelihood")') 
-        max_point = do_maximisation(loglikelihood,prior,settings,RTI,num_repeats, dl, .false.) 
-
-        write(stdout_unit,'("-------------------------------------")') 
-        write(stdout_unit,'("Maximising Posterior")') 
-        max_posterior_point = do_maximisation(loglikelihood,prior,settings,RTI,num_repeats, dl, .true.) 
-
-        if (settings%posteriors) then
-            mean_point(settings%p0:settings%d1) = mean(RTI, settings)
-            mean_point(settings%l0) = loglikelihood(mean_point(settings%p0:settings%p1),mean_point(settings%d0:settings%d1)) 
-            call write_max_file(settings, max_point, max_posterior_point, dXdtheta(prior,max_posterior_point(settings%h0:settings%h1)),  mean_point)
-        else
-            call write_max_file(settings, max_point, max_posterior_point, dXdtheta(prior,max_posterior_point(settings%h0:settings%h1)))
-        end if
-
-
-    end subroutine maximise
-
-
-    function do_maximisation(loglikelihood,prior,settings,RTI,num_repeats, dl, posterior) result(max_point)
-        use utils_module, only: stdout_unit, fmt_len
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
         use read_write_module,   only: write_max_file, mean
@@ -98,71 +37,37 @@ module maximise_module
 
         ! The run time info (very important, see src/run_time_info.f90)
         type(run_time_info), intent(in) :: RTI
-        integer, dimension(size(settings%grade_dims)), intent(in) :: num_repeats
-        logical, intent(in) :: posterior
-        real(dp), intent(in) :: dl
-
-
-        real(dp) :: max_loglike, max_loglike0
-        integer :: imax
-        integer :: cluster_id, i, j, epoch
-        real(dp), dimension(settings%nTotal) :: max_point, max_point0, max_point1, mean_point
-        real(dp), dimension(settings%nDims,settings%nDims)   :: cholesky
-        integer,   dimension(sum(num_repeats))   :: speeds ! The speed of each nhat
-        real(dp),    dimension(settings%nDims,sum(num_repeats))   :: nhats
-        integer, dimension(size(settings%grade_dims)) :: nlikes      ! Temporary storage for number of likelihood calls
-        integer :: nlike
-        real(dp) :: w
-        real(dp),    dimension(settings%nDims)   :: nhat, x0, x1
-        logical temp
-        character(len=fmt_len) fmt_nlike
+        real(dp), dimension(settings%nTotal) :: max_point, max_posterior_point, mean_point
 
         ! Get highest likelihood point
-        max_loglike = settings%logzero
-        do cluster_id=1,RTI%ncluster
-            imax = maxloc(RTI%live(settings%l0,:RTI%nlive(cluster_id),cluster_id), dim=1)
-            !write(*,*) "clusters", cluster_id, imax
-            if (RTI%live(settings%l0,imax,cluster_id) > max_loglike) then
-                max_point = RTI%live(:,imax,cluster_id)
-                if (posterior) max_point(settings%l0) = max_point(settings%l0) + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
-                max_loglike = max_point(settings%l0)
-                cholesky = RTI%cholesky(:,:,cluster_id)
-            end if
-        end do
-        nlikes = 0
+        write(stdout_unit,'("-------------------------------------")') 
+        write(stdout_unit,'("Maximising Likelihood")') 
+        max_point = do_maximisation(loglikelihood,prior,settings,RTI, .false.) 
+
+        write(stdout_unit,'("-------------------------------------")') 
+        write(stdout_unit,'("Maximising Posterior")') 
+        max_posterior_point = do_maximisation(loglikelihood,prior,settings,RTI, .true.) 
+
+        if (settings%posteriors) then
+            mean_point(settings%p0:settings%d1) = mean(RTI, settings)
+            mean_point(settings%l0) = loglikelihood(mean_point(settings%p0:settings%p1),mean_point(settings%d0:settings%d1)) 
+            call write_max_file(settings, max_point, max_posterior_point, dXdtheta(prior,max_posterior_point(settings%h0:settings%h1)),  mean_point)
+        else
+            call write_max_file(settings, max_point, max_posterior_point, dXdtheta(prior,max_posterior_point(settings%h0:settings%h1)))
+        end if
 
 
-        do while(.true.)
-
-            ! Do maximisation
-            nhats = generate_nhats(settings,num_repeats,speeds)
-            nhats = matmul(cholesky,nhats)
-            max_point0 = max_point
-            max_loglike0 = max_loglike
-            do i=1,size(nhats,2)
-                nhat = nhats(:,i)
-                max_point = maximise_direction(loglikelihood,prior,settings, max_point, nhat, nlike, dl, posterior)
-                nlikes(speeds(i)) = nlikes(speeds(i)) + nlike
-                !write(*,*) "~~~~~~~~~~", max_point(settings%l0)
-            end do
-
-            max_loglike = max_point(settings%l0)
-            if (max_loglike - max_loglike0 < 1e-5) exit
-            write(stdout_unit,'("Loglike: ", F15.8, " change: ", F15.8 )') max_loglike, max_loglike - max_loglike0 
-            write(fmt_nlike,'("(""nlike      ="",",I0,"I20)")') size(nlikes)
-            write(stdout_unit,fmt_nlike) nlikes
-        end do
+    end subroutine maximise
 
 
-    end function do_maximisation
-
-    function maximise_direction(loglikelihood,prior,settings, point, n, nlike, dl, posterior) result(max_point)
-        use utils_module, only: stdout_unit
+    function do_maximisation(loglikelihood,prior,settings,RTI, posterior) result(max_point)
+        use calculate_module, only: calculate_point
+        use utils_module, only: stdout_unit, fmt_len
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
         use read_write_module,   only: write_max_file, mean
         use chordal_module, only: generate_nhats, slice_sample
-        use calculate_module, only: calculate_point
+        use bobyqa_module, only: minimize_with_bobyqa
 #ifdef MPI
         use mpi_module, only: mpi_bundle,is_root, throw_point, catch_point, mpi_synchronise, throw_seed, catch_seed
 #else
@@ -188,82 +93,53 @@ module maximise_module
         type(program_settings), intent(in) :: settings
 
         ! The run time info (very important, see src/run_time_info.f90)
+        type(run_time_info), intent(in) :: RTI
         logical, intent(in) :: posterior
-        real(dp), intent(in) :: dl
-        integer, intent(out) ::  nlike
-        real(dp), intent(in), dimension(settings%nTotal) :: point
-
-        real(dp), dimension(settings%nTotal) :: max_point, point_a, point_b, point_c, point_d
-        real(dp), dimension(settings%nDims)   :: n, x, a, b, c, d
-        real(dp), parameter :: phi = (1+sqrt(5.))/2
-        real(dp) :: d1, d2
 
 
-        nlike = 0
+        real(dp) :: max_loglike
+        integer :: imax, cluster_id
+        real(dp), dimension(settings%nTotal) :: max_point
+        integer :: nlike
+        real(dp),    dimension(settings%nDims)   :: xl, xu, x
 
-        point_a = point
-        do while (.true.)
-            point_a(settings%h0:settings%h1) = point_a(settings%h0:settings%h1) - n
-            call calculate_point(loglikelihood,prior,point_a,settings,nlike) 
-            if (posterior .and. point_a(settings%l0)>settings%logzero) point_a(settings%l0) = point_a(settings%l0)  + dXdtheta(prior, point_a(settings%h0:settings%h1))
-            if (point_a(settings%l0) <= point(settings%l0)) exit
-        end do
-
-        point_b = point
-
-        point_c = point
-        do while (.true.)
-            point_c(settings%h0:settings%h1) = point_c(settings%h0:settings%h1) + n
-            call calculate_point(loglikelihood,prior,point_c,settings,nlike) 
-            if (posterior .and. point_c(settings%l0)>settings%logzero) point_c(settings%l0) = point_c(settings%l0)  + dXdtheta(prior, point_c(settings%h0:settings%h1))
-            if (point_c(settings%l0) <= point(settings%l0)) exit
-        end do
-
-        ! Now do golden section search
-        do while (point_b(settings%l0)-min(point_a(settings%l0),point_c(settings%l0)) > dl ) 
-            a = point_a(settings%h0:settings%h1)
-            b = point_b(settings%h0:settings%h1)
-            c = point_c(settings%h0:settings%h1)
-            d1 = sqrt(dot_product(b-a,b-a))
-            d2 = sqrt(dot_product(c-b,c-b))
-            if (d1 > d2) then
-                ! a d b c
-                point_d(settings%h0:settings%h1) = b +  0.38197*(a-b)
-                call calculate_point(loglikelihood,prior,point_d,settings,nlike) 
-                if (posterior .and. point_d(settings%l0)>settings%logzero) point_d(settings%l0) = point_d(settings%l0)  + dXdtheta(prior, point_d(settings%h0:settings%h1))
-
-                if (point_d(settings%l0) > point_b(settings%l0)) then
-                    !   d    
-                    ! a   b c 
-                    point_c = point_b
-                    point_b = point_d
-                else
-                    !     b  
-                    ! a d   c 
-                    point_a = point_d
-                end if
-            else
-                ! a b d c
-                point_d(settings%h0:settings%h1) = b +  0.38197*(c-b)
-                call calculate_point(loglikelihood,prior,point_d,settings,nlike) 
-                if (posterior .and. point_d(settings%l0)>settings%logzero) point_d(settings%l0) = point_d(settings%l0)  + dXdtheta(prior, point_d(settings%h0:settings%h1))
-
-                if (point_d(settings%l0) > point_b(settings%l0)) then
-                    !     d  
-                    ! a b   c 
-                    point_a = point_b
-                    point_b = point_d
-                else
-                    !   b    
-                    ! a   d c 
-                    point_c = point_d
-                end if
+        ! Get highest likelihood point
+        max_loglike = settings%logzero
+        do cluster_id=1,RTI%ncluster
+            imax = maxloc(RTI%live(settings%l0,:RTI%nlive(cluster_id),cluster_id), dim=1)
+            !write(*,*) "clusters", cluster_id, imax
+            if (RTI%live(settings%l0,imax,cluster_id) > max_loglike) then
+                max_point = RTI%live(:,imax,cluster_id)
+                if (posterior) max_point(settings%l0) = max_point(settings%l0) + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
+                max_loglike = max_point(settings%l0)
             end if
-            !write(*,'(">>>>>>>>", 3F18.8)') point_a(settings%l0), point_b(settings%l0), point_c(settings%l0)
         end do
-        max_point = point_b
 
-    end function maximise_direction
+        xl = 0
+        xu = 1
+        x = max_point(settings%h0:settings%h1)
+        call minimize_with_bobyqa(settings%ndims,x,xl,xu,settings%ndims+2, 1d-3,1d-6,3, 10000, CALFUN ) 
+        max_point(settings%h0:settings%h1) = x
+        call calculate_point(loglikelihood,prior,max_point,settings,nlike) 
+
+        contains
+         subroutine CALFUN(n,x,f)
+            use calculate_module, only: calculate_point
+            integer, intent(in) :: n                 
+            real(8), intent(in), dimension(n) :: x
+            real(8), intent(out) :: f 
+            real(dp), dimension(settings%nTotal) :: point
+            integer nlike
+
+            point(settings%h0:settings%h1) = x
+            call calculate_point(loglikelihood,prior,point,settings,nlike) 
+            f  = - point(settings%l0)
+            if (posterior .and. f>settings%logzero) f = f - dXdtheta(prior, point(settings%h0:settings%h1))
+
+         end subroutine
+
+
+    end function do_maximisation
 
     function dXdtheta(prior, cube, dx_)
         implicit none
