@@ -186,6 +186,8 @@ class PolyChordOutput:
         self._samples_table = pd.read_table('%s_equal_weights.txt' % self.root,sep=' ',
                                             skipinitialspace=1,
                                             names= initial_col_names)
+        # Temporary fix while https://github.com/pandas-dev/pandas/issues/10065 is solved
+        self._samples_table = self._samples_table.astype(float)
         # correct to loglike
         self._samples_table['loglike'] *= -0.5 
 
