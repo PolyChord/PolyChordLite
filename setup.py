@@ -5,7 +5,10 @@ Polychord is a tool to solve high dimensional problems.
 """
 
 from setuptools import setup, Extension, find_packages
-import os, sys
+from setuptools.command.build_ext import build_ext as _build_ext
+from distutils.command.clean import clean as _clean
+
+import os, sys, subprocess
 import numpy
 
 NAME = 'pypolychord'
@@ -21,6 +24,16 @@ def get_version(short=False):
         for line in f:
             if 'version' in line:
                 return line.split(': ')[1].split('"')[0]
+
+class CustomBuildExt(_build_ext):
+    def run(self):
+        subprocess.check_call(["make"], env=os.environ)
+        return super().run()
+
+class CustomClean(_clean):
+    def run(self):
+        subprocess.check_call(["make", "veryclean"], env=os.environ)
+        return super().run()
 
 pypolychord_module = Extension(
         name='_pypolychord',
@@ -53,4 +66,6 @@ setup(name=NAME,
       install_requires=['numpy', 'scipy'],
       extras_require={'plotting': 'getdist'},
       ext_modules=[pypolychord_module],
+      cmdclass = {'build_ext' : CustomBuildExt,
+                  'clean' : CustomClean},
       zip_safe=False)
