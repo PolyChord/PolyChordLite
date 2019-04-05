@@ -1,27 +1,19 @@
-ifeq ($(shell uname), Linux)
 ifeq ($(MPI), 1)
-	FC = mpif90
 	FFLAGS += -DMPI
-	CC = mpicc
 	CFLAGS += -DUSE_MPI
-	CXX = mpicxx
 	CXXFLAGS += -DUSE_MPI
-else
-	FC = gfortran
-	CC = gcc
-	CXX = g++
-endif
-else ifeq ($(shell uname), Darwin) 
-FC = gfortran-8
-CC = gcc-8
-CXX = g++-8
 endif
 
 FFLAGS += -fPIC -ffree-line-length-none
 CXXFLAGS += -fPIC -std=c++11
 
 LD=$(FC)
-LDLIBS += -lstdc++
+# clang uses a different libstdc++ than GCC
+ifneq (,$(findstring clang,$(shell '$(CXX)' -v 2>&1)))
+	LDLIBS += -lc++
+else
+	LDLIBS += -lstdc++
+endif
 
 PPC=pypolychord
 SRC=$(PPC)/src
