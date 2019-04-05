@@ -71,7 +71,7 @@ def get_gfortran_libdir():
 
 pypolychord_module = Extension(
         name='_pypolychord',
-        library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib', get_gfortran_libdir())],
+        library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib'), get_gfortran_libdir()],
         include_dirs=[os.path.join(os.getcwd(), 'pypolychord/include/'),
                       numpy.get_include()],
         runtime_library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib')],
