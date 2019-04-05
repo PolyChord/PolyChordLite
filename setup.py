@@ -5,10 +5,10 @@ Polychord is a tool to solve high dimensional problems.
 """
 
 from setuptools import setup, Extension, find_packages, Distribution
-from setuptools.command.build_ext import build_ext as _build_ext
+from setuptools.command.build_py import build_py as _build_py
 from distutils.command.clean import clean as _clean
 
-import os, sys, subprocess
+import os, sys, subprocess, shutil
 
 import numpy
 
@@ -32,14 +32,14 @@ class DistributionWithMPIOption(Distribution):
         self.no_mpi = None
         super().__init__(*args, **kwargs)
 
-class CustomBuildExt(_build_ext):
+class CustomBuildPy(_build_py):
     def run(self):
         if self.distribution.no_mpi is None:
             env = {"MPI"   : "1",
                    "PATH"  : os.environ["PATH"],
-                   "CC"    : os.environ["CC"] if "CC" in os.environ else "mpicc",
-                   "CXX"   : os.environ["CXX"] if "CXX" in os.environ else "mpicxx",
-                   "FC"    : os.environ["FC"] if "FC" in os.environ else "mpif90",}
+                   "CC"    : "mpicc",
+                   "CXX"   : "mpicxx",
+                   "FC"    : "mpif90",}
         else:
             env = {"MPI"   : "0",
                    "PATH"  : os.environ["PATH"],
@@ -51,6 +51,7 @@ class CustomBuildExt(_build_ext):
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
 
         subprocess.check_call(["make"], env=env)
+        self.run_command("build_ext")
         return super().run()
 
 class CustomClean(_clean):
@@ -68,20 +69,22 @@ def get_gfortran_libdir():
     print("Could not find gfortran library.")
     return ""
 
-
-pypolychord_module = Extension(
-        name='_pypolychord',
-        library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib'), get_gfortran_libdir()],
-        include_dirs=[os.path.join(os.getcwd(), 'pypolychord/include/'),
-                      numpy.get_include()],
-        runtime_library_dirs=[os.path.join(os.getcwd(), 'pypolychord/lib')],
-        libraries=['chord', 'gfortran'],
-        sources=['pypolychord/_pypolychord.cpp']
-        )
-
 if "--no-mpi" in sys.argv:
     NAME += '_nompi'
     DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
+
+pypolychord_module = Extension(
+        name=f'_pypolychord',
+        library_dirs=[os.path.join(os.path.dirname(__file__), 'pypolychord/lib'), get_gfortran_libdir()],
+        include_dirs=[os.path.join(os.path.dirname(__file__), 'pypolychord/include/'),
+                      numpy.get_include()],
+        # runtime_library_dirs=[os.path.join(os.path.dirname(__file__), 'pypolychord/lib')],
+        # runtime_library_dirs=["c++"],
+        libraries=['chord', 'gfortran'],
+        # extra_link_args=["-Wl,-rpath,pypolychord/lib"],
+        # extra_compile_args=["-Wl,-rpath,pypolychord/lib"],
+        sources=['pypolychord/_pypolychord.cpp']
+        )
 
 setup(name=NAME,
       version=get_version(),
@@ -96,6 +99,10 @@ setup(name=NAME,
       extras_require={'plotting': 'getdist'},
       distclass=DistributionWithMPIOption,
       ext_modules=[pypolychord_module],
-      cmdclass = {'build_ext' : CustomBuildExt,
-                  'clean' : CustomClean},
+      cmdclass={'build_py' : CustomBuildPy,
+                'clean' : CustomClean},
+    #   libraries=["lib/libchord.so"],
+      package_data={"" : ["lib/libchord.so"]},
+      include_package_data=True,
+    #   data_files=[(NAME, ["pypolychord/lib/libchord.so"])],
       zip_safe=False)

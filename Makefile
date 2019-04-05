@@ -15,6 +15,15 @@ else
 	LDLIBS += -lstdc++
 endif
 
+# LDLIBS += -Wl,-rpath,./pypolychord
+detected_OS := $(shell uname -s)
+ifeq ($(detected_OS),Darwin)
+	RPATH=-install_name @loader_path/pypolychord/lib/libchord.so
+else
+	RPATH=
+endif
+LDLIBS += $(RPATH)
+
 PPC=pypolychord
 SRC=$(PPC)/src
 LIB=$(PPC)/lib
@@ -27,6 +36,9 @@ OBJECTS = $(patsubst %.F90,%.o,$(patsubst %.f90,%.o,$(wildcard $(SRC)/*90)))  $(
 
 $(LIB)/libchord.so: $(OBJECTS)
 	$(LD) -shared $^ -o $@ $(LDLIBS)
+
+# $(LIB)/libchord.a: $(OBJECTS)
+# 	$(AR) rc $@ $^
 
 
 # General rule for building object file (.o)  from fortran files (.f90/.F90)
