@@ -81,8 +81,8 @@ pypolychord_module = Extension(
         # runtime_library_dirs=[os.path.join(os.path.dirname(__file__), 'pypolychord/lib')],
         # runtime_library_dirs=["c++"],
         libraries=['chord', 'gfortran'],
-        # extra_link_args=["-Wl,-rpath,pypolychord/lib"],
-        # extra_compile_args=["-Wl,-rpath,pypolychord/lib"],
+        extra_link_args=["-Wl,-rpath,$ORIGIN/lib"],
+        extra_compile_args=["-Wl,-rpath,$ORIGIN/lib"],
         sources=['pypolychord/_pypolychord.cpp']
         )
 
