@@ -18,9 +18,9 @@ endif
 # LDLIBS += -Wl,-rpath,./pypolychord
 detected_OS := $(shell uname -s)
 ifeq ($(detected_OS),Darwin)
-	RPATH=-install_name @loader_path/pypolychord/lib/libchord.so
+	RPATH=-install_name @loader_path/lib/libchord.so
 else
-	RPATH="-Wl,-rpath,$$ORIGIN/../lib" 
+	RPATH= 
 endif
 LDLIBS += $(RPATH)
 
