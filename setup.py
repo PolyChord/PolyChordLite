@@ -39,7 +39,10 @@ class CustomBuildPy(_build_py):
                    "PATH"  : os.environ["PATH"],
                    "CC"    : "mpicc",
                    "CXX"   : "mpicxx",
-                   "FC"    : "mpif90",}
+                   "FC"    : "mpifort",}
+            # These need to be set so that build_ext uses the right compilers
+            os.environ["CC"] = "mpicc"
+            os.environ["CXX"] = "mpicxx"
         else:
             env = {"MPI"   : "0",
                    "PATH"  : os.environ["PATH"],
@@ -72,6 +75,8 @@ def get_gfortran_libdir():
 if "--no-mpi" in sys.argv:
     NAME += '_nompi'
     DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
+os.environ["CC"] = "mpicc"
+os.environ["CXX"] = "mpicxx"
 
 pypolychord_module = Extension(
         name=f'pypolychord._pypolychord',
