@@ -75,8 +75,6 @@ def get_gfortran_libdir():
 if "--no-mpi" in sys.argv:
     NAME += '_nompi'
     DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
-os.environ["CC"] = "mpicc"
-os.environ["CXX"] = "mpicxx"
 
 pypolychord_module = Extension(
         name=f'pypolychord._pypolychord',
