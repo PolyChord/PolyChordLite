@@ -20,7 +20,7 @@ detected_OS := $(shell uname -s)
 ifeq ($(detected_OS),Darwin)
 	RPATH=-install_name @loader_path/pypolychord/lib/libchord.so
 else
-	RPATH=
+	RPATH="-Wl,-rpath,$$ORIGIN/../lib" 
 endif
 LDLIBS += $(RPATH)
 

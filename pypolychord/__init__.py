@@ -11,7 +11,7 @@ except OSError:
           "If you are running with MPI, this may cause segfaults")
     pass
 
-import _pypolychord
+import pypolychord._pypolychord
 
 def default_prior(cube, theta):
     theta[:] = cube
