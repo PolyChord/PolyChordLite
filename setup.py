@@ -74,7 +74,7 @@ if "--no-mpi" in sys.argv:
     DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
 
 pypolychord_module = Extension(
-        name=f'_pypolychord',
+        name=f'pypolychord._pypolychord',
         library_dirs=[os.path.join(os.path.dirname(__file__), 'pypolychord/lib'), get_gfortran_libdir()],
         include_dirs=[os.path.join(os.path.dirname(__file__), 'pypolychord/include/'),
                       numpy.get_include()],
