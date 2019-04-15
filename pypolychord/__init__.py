@@ -179,13 +179,13 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     try:
         if rank == 0:
             os.makedirs(settings.base_dir)
-    except:
+    except OSError:
         pass
         
     try:
         if rank == 0:
             os.makedirs(settings.cluster_dir)
-    except:
+    except OSError:
         pass
 
     def wrap_loglikelihood(theta, phi):
