@@ -177,13 +177,13 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         rank = 0
 
     try:
-        if not rank == 0:
+        if rank == 0:
             os.makedirs(settings.base_dir)
     except:
         pass
         
     try:
-        if not rank == 0:
+        if rank == 0:
             os.makedirs(settings.cluster_dir)
     except:
         pass
