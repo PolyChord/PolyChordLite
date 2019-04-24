@@ -129,8 +129,12 @@ class PolyChordSettings:
         Root name of the files produced.
 
     grade_frac : List[float]
-        (Default: 1)
-        The amount of time to spend in each speed.
+        (Default: [1])
+        The amount of time to spend in each speed. 
+        If any of grade_frac are <= 1, then polychord will time each sub-speed,
+        and then choose num_repeats for the number of slowest repeats, and
+        spend the proportion of time indicated by grade_frac. Otherwise this
+        indicates the number of repeats to spend in each speed.
 
     grade_dims : List[int]
         (Default: 1)

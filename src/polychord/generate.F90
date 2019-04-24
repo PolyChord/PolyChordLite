@@ -264,7 +264,10 @@ module generate_module
         ! ----------------------------------------------- !
         ! Find the average time taken
         speed(1) = total_time/nprior
-        call time_speeds(loglikelihood,prior,settings,RTI,speed,mpi_information) 
+
+        if (any(settings%grade_frac<=1)) then
+            call time_speeds(loglikelihood,prior,settings,RTI,speed,mpi_information) 
+        end if
 
 
 
@@ -281,8 +284,12 @@ module generate_module
             if(settings%write_live) close(write_phys_unit)
 
             if(.not. allocated(RTI%num_repeats) ) allocate(RTI%num_repeats(size(settings%grade_dims)))
-            RTI%num_repeats(1) = settings%num_repeats
-            RTI%num_repeats(2:) = nint(settings%grade_frac(2:)/(settings%grade_frac(1)+0d0)*RTI%num_repeats(1)*speed(1)/speed(2:))
+            if (any(settings%grade_frac<=1)) then
+                RTI%num_repeats(1) = settings%num_repeats
+                RTI%num_repeats(2:) = nint(settings%grade_frac(2:)/(settings%grade_frac(1)+0d0)*RTI%num_repeats(1)*speed(1)/speed(2:))
+            else
+                RTI%num_repeats = int(settings%grade_frac)
+            end if
 
             ! Set the posterior thinning factor
             if(settings%boost_posterior<0d0) then
@@ -649,8 +656,12 @@ module generate_module
             if(settings%write_live) close(write_phys_unit)
 
             if(.not. allocated(RTI%num_repeats) ) allocate(RTI%num_repeats(size(settings%grade_dims)))
-            RTI%num_repeats(1) = settings%num_repeats
-            RTI%num_repeats(2:) = nint(settings%grade_frac(2:)/(settings%grade_frac(1)+0d0)*RTI%num_repeats(1)*speed(1)/speed(2:))
+            if (any(settings%grade_frac<=1)) then
+                RTI%num_repeats(1) = settings%num_repeats
+                RTI%num_repeats(2:) = nint(settings%grade_frac(2:)/(settings%grade_frac(1)+0d0)*RTI%num_repeats(1)*speed(1)/speed(2:))
+            else
+                RTI%num_repeats = int(settings%grade_frac)
+            end if
 
             ! Set the posterior thinning factor
             if(settings%boost_posterior<0d0) then
