@@ -137,7 +137,7 @@ class PolyChordSettings:
         indicates the number of repeats to spend in each speed.
 
     grade_dims : List[int]
-        (Default: 1)
+        (Default: nDims)
         The number of parameters within each speed.
 
     nlives : dict {double:int}

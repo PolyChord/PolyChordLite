@@ -89,9 +89,12 @@ class PolyChordOutput:
             except ValueError:
                 self.nlike = None
             line = f.readline()
-            self.avnlike = float(line.split()[1])
+            line = line.split()
+            i = line.index('(')
+            self.avnlike = [float(x) for x in line[1:i]]
+
             try:
-                self.avnlikeslice = float(line.split()[3])
+                self.avnlikeslice = [float(x) for x in line[i+1:-3]]
             except NameError:
                 self.avnlikeslice = None
 
