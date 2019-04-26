@@ -11,7 +11,7 @@ inline std::vector<double> list_Py2C_double(PyObject* list) {
     {
         PyObject *obj = PyList_GET_ITEM(list, i);
         if (obj==NULL) throw PythonException();
-        if(!PyFloat_Check(obj)) throw PythonException();
+        if(!PyNumber_Check(obj)) throw PythonException();
         array.push_back(PyFloat_AsDouble(obj));
     }
     return array;
