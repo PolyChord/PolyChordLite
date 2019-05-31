@@ -37,6 +37,7 @@ addons:
             - gcc
             - python2
             - python3
+            - openmpi
 
 # OSX setup
 before_install:
@@ -50,14 +51,11 @@ before_install:
 
 install:
     - pip install numpy
-    - make MPI=$MPI pypolychord
     - make MPI=$MPI gaussian
     - if [ "$MPI" ]; then 
-          CC=mpicc CXX=mpicxx python setup.py install;
-      elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-          CC=gcc-8 CXX=g++-8 python setup.py install;
+          FC=mpif90 python setup.py install;
       else 
-          python setup.py install;
+          python setup.py --no-mpi install;
       fi
 
     # requirements install
