@@ -16,15 +16,15 @@ export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN
 
 PYTHON=python
 
-# Whether to use MPI
+# Whether to use MPI (default to MPI on Linux)
 ifeq "$(shell uname)" "Linux"
-MPI=1
+	MPI := $(if $(MPI),$(MPI),1)
 else
-MPI= 
+	MPI := $(if $(MPI),$(MPI),0)
 endif
 
-# Whether to compile in debugging mode
-DEBUG=
+# Whether to compile in debugging mode (default: false)
+DEBUG := $(if $(DEBUG),$(DEBUG),0)
 export MPI DEBUG
 
 # We can autodetect the compiler type on unix systems via the shell.
@@ -32,21 +32,21 @@ export MPI DEBUG
 # make COMPILER_TYPE=<your type>
 # where <your type> is gnu or intel
 ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
-COMPILER_TYPE=intel
+	COMPILER_TYPE=intel
 else ifeq "$(shell which gfortran >/dev/null 2>&1; echo $$?)" "0"
-COMPILER_TYPE=gnu
+	COMPILER_TYPE=gnu
 endif
 
 ifeq ($(COMPILER_TYPE),intel)
-include Makefile_intel
+	include Makefile_intel
 else ifeq ($(COMPILER_TYPE),gnu) 
-include Makefile_gnu
+	include Makefile_gnu
 endif
 
 
-ifdef MPI
-FFLAGS += -DMPI
-CXXFLAGS += -DUSE_MPI
+ifeq ($(MPI),1)
+	FFLAGS += -DMPI
+	CXXFLAGS += -DUSE_MPI
 endif
 
 # Remove command

@@ -46,7 +46,8 @@ class CustomBuildPy(_build_py):
             os.environ["CC"] = "mpicc"
             os.environ["CXX"] = "mpicxx"
         else:
-            env = {"PATH"  : os.environ["PATH"],
+            env = {"MPI"   : "0",
+                   "PATH"  : os.environ["PATH"],
                    "CC"    : os.environ["CC"] if "CC" in os.environ else "gcc",
                    "CXX"   : os.environ["CXX"] if "CXX" in os.environ else "g++",
                    "FC"    : os.environ["FC"] if "FC" in os.environ else "gfortran",}

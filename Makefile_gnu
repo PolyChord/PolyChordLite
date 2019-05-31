@@ -1,4 +1,4 @@
-ifdef MPI
+ifeq ($(MPI),1)
 	FC := $(if $(FC),$(FC),mpif90)
 	CC := $(if $(CXX),$(CXX),mpicc)
 	CXX := $(if $(CXX),$(CXX),mpicxx)
@@ -38,27 +38,27 @@ else
 endif
 LDLIBS += $(RPATH)
 
-ifdef DEBUG
-# Debugging mode
-# --------------
-# g             : enable gnu debugger compatibility
-# O0            : no optimisation
-# Wall          : all warnings
-# Wextra        : even more warnings
-# pedantic      : check for language features not part of f95 standard
-# implicit-none : specify no implicit typing (breaks for bobyqa.f90)
-# backtrace     : produce backtrace of error
-# fpe-trap      : search for floating point exceptions (dividing by zero etc)
-# fbounds-check : check array indices
-FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fbacktrace -ffpe-trap=zero,overflow 
-#
-CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
-CFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
+ifeq ($(DEBUG),1)
+	# Debugging mode
+	# --------------
+	# g             : enable gnu debugger compatibility
+	# O0            : no optimisation
+	# Wall          : all warnings
+	# Wextra        : even more warnings
+	# pedantic      : check for language features not part of f95 standard
+	# implicit-none : specify no implicit typing (breaks for bobyqa.f90)
+	# backtrace     : produce backtrace of error
+	# fpe-trap      : search for floating point exceptions (dividing by zero etc)
+	# fbounds-check : check array indices
+	FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fbacktrace -ffpe-trap=zero,overflow 
+	#
+	CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
+	CFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
 else
-# Optimised mode
-# --------------
-# Ofast : maximum optimisation
-FFLAGS += -Ofast
-CXXFLAGS += -Ofast
-CXFLAGS += -Ofast
+	# Optimised mode
+	# --------------
+	# Ofast : maximum optimisation
+	FFLAGS += -Ofast
+	CXXFLAGS += -Ofast
+	CXFLAGS += -Ofast
 endif
