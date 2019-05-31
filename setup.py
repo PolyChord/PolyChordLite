@@ -57,7 +57,7 @@ class CustomBuildPy(_build_py):
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
         
         env["PWD"] = BASE_PATH
-        print(env)
+        # print(env)
         subprocess.run(["make", "libchord.so"], check=True, env=env, cwd=BASE_PATH)
         os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"), exist_ok=True)
         shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"), 
