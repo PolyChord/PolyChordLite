@@ -28,10 +28,13 @@ def get_version(short=False):
             if 'version' in line:
                 return line.split(': ')[1].split('"')[0]
 
-class DistributionWithMPIOption(Distribution):
+class DistributionWithOption(Distribution):
     def __init__(self, *args, **kwargs):
-        self.global_options = self.global_options + [("no-mpi", None, "Don't compile with MPI support.")]
+        self.global_options = self.global_options \
+                                + [("no-mpi", None, "Don't compile with MPI support."),
+                                   ("debug-flags", None, "Compile in debug mode.")]
         self.no_mpi = None
+        self.debug_flags = None
         super().__init__(*args, **kwargs)
 
 class CustomBuildPy(_build_py):
@@ -51,6 +54,9 @@ class CustomBuildPy(_build_py):
                    "CC"    : os.environ["CC"] if "CC" in os.environ else "gcc",
                    "CXX"   : os.environ["CXX"] if "CXX" in os.environ else "g++",
                    "FC"    : os.environ["FC"] if "FC" in os.environ else "gfortran",}
+
+        if self.distribution.debug_flags is not None:
+            env["DEBUG"] = "1"
 
         if sys.platform == "darwin":
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
@@ -84,10 +90,10 @@ if "--no-mpi" in sys.argv:
 
 pypolychord_module = Extension(
         name=f'_pypolychord',
-        library_dirs=[os.path.join(BASE_PATH, 'lib'), get_gfortran_libdir()],
+        library_dirs=[os.path.join(BASE_PATH, 'lib'),],
         include_dirs=[os.path.join(BASE_PATH, 'src/polychord'),
                       numpy.get_include()],
-        libraries=['chord', 'gfortran'],
+        libraries=['chord',],
         extra_link_args=["-Wl,-rpath,$ORIGIN/pypolychord/lib"],
         extra_compile_args=["-Wl,-rpath,$ORIGIN/pypolychord/lib", "-std=c++11"],
         runtime_library_dirs=[os.path.join(BASE_PATH, 'lib')],
@@ -105,7 +111,7 @@ setup(name=NAME,
       packages=find_packages(),
       install_requires=['numpy',],
       extras_require={'plotting': 'getdist'},
-      distclass=DistributionWithMPIOption,
+      distclass=DistributionWithOption,
       ext_modules=[pypolychord_module],
       cmdclass={'build_py' : CustomBuildPy,
                 'clean' : CustomClean},

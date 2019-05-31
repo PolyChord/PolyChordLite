@@ -164,7 +164,7 @@ module mpi_module
             call MPI_INIT(mpierror)
             finalize = .true.
         else
-            if(feedback >= normal_fb) write(*,'("PolyChord: MPI is already initilised, not initialising, and will not finalize")')
+            if(feedback >= normal_fb) write(*,*) "PolyChord: MPI is already initilised, not initialising, and will not finalize"
             finalize = .false.
         end if
 
