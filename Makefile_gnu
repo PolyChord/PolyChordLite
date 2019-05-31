@@ -1,17 +1,11 @@
 ifdef MPI
-FC = mpif90
-CC = mpicc
-CXX = mpicxx
+	FC := $(if $(FC),$(FC),mpif90)
+	CC := $(if $(CXX),$(CXX),mpicc)
+	CXX := $(if $(CXX),$(CXX),mpicxx)
 else
-ifeq ($(shell uname), Linux)
-FC = gfortran
-CC = gcc
-CXX = g++
-else ifeq ($(shell uname), Darwin) 
-FC = gfortran
-CC = gcc-8
-CXX = g++-8
-endif
+	FC := $(if $(FC),$(FC),gfortran)
+	CC := $(if $(CXX),$(CXX),gcc)
+	CXX := $(if $(CXX),$(CXX),g++)
 endif
 
 LD = $(FC)
