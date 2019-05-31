@@ -8,9 +8,9 @@ FC = gfortran
 CC = gcc
 CXX = g++
 else ifeq ($(shell uname), Darwin) 
-FC = gfortran-8
-CC = gcc-8
-CXX = g++-8
+FC = gfortran
+CC = gcc
+CXX = g++
 endif
 endif
 
@@ -29,7 +29,12 @@ FFLAGS += -ffree-line-length-none -cpp -fPIC -fno-stack-arrays
 CXXFLAGS += -std=c++11 -fPIC
 CFLAGS += -fPIC
 
-LDLIBS += -lstdc++
+# clang uses a different libstdc++ than GCC
+ifneq (,$(findstring clang,$(shell '$(CXX)' -v 2>&1)))
+	LDLIBS += -lc++
+else
+	LDLIBS += -lstdc++
+endif
 
 ifdef DEBUG
 # Debugging mode
@@ -39,11 +44,11 @@ ifdef DEBUG
 # Wall          : all warnings
 # Wextra        : even more warnings
 # pedantic      : check for language features not part of f95 standard
-# implicit-none : specify no implicit typing
+# implicit-none : specify no implicit typing (breaks for bobyqa.f90)
 # backtrace     : produce backtrace of error
 # fpe-trap      : search for floating point exceptions (dividing by zero etc)
 # fbounds-check : check array indices
-FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
+FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fbacktrace -ffpe-trap=zero,overflow 
 #
 CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
 CFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
