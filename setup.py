@@ -57,6 +57,7 @@ class CustomBuildPy(_build_py):
         
         env["PWD"] = BASE_PATH
         subprocess.run(["make", "libchord.so"], check=True, env=env, cwd=BASE_PATH)
+        os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"), exist_ok=True)
         shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"), 
                     os.path.join(BASE_PATH, "pypolychord/lib/"))
         self.run_command("build_ext")
@@ -102,7 +103,7 @@ setup(name=NAME,
       author_email='wh260@cam.ac.uk',
       license='PolyChord',
       packages=find_packages(),
-      install_requires=['numpy', 'scipy'],
+      install_requires=['numpy',],
       extras_require={'plotting': 'getdist'},
       distclass=DistributionWithMPIOption,
       ext_modules=[pypolychord_module],
