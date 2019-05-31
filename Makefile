@@ -18,13 +18,13 @@ PYTHON=python
 
 # Whether to use MPI (default to MPI on Linux)
 ifeq "$(shell uname)" "Linux"
-	MPI := $(if $(MPI),$(MPI),1)
+	MPI ?= 1
 else
-	MPI := $(if $(MPI),$(MPI),0)
+	MPI ?= 0
 endif
 
 # Whether to compile in debugging mode (default: false)
-DEBUG := $(if $(DEBUG),$(DEBUG),0)
+DEBUG ?= 0
 export MPI DEBUG
 
 # We can autodetect the compiler type on unix systems via the shell.
@@ -35,6 +35,17 @@ ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0"
 	COMPILER_TYPE=intel
 else ifeq "$(shell which gfortran >/dev/null 2>&1; echo $$?)" "0"
 	COMPILER_TYPE=gnu
+endif
+
+# Reset default values because the get set later
+ifeq ($(FC),f77)
+	FC :=
+endif
+ifeq ($(CC),cc)
+	CC :=
+endif
+ifeq ($(CXX),c++)
+	CXX :=
 endif
 
 ifeq ($(COMPILER_TYPE),intel)

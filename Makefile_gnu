@@ -1,10 +1,10 @@
 ifeq ($(MPI),1)
-	FC := $(if $(FC),$(FC),mpif90)
-	CC := $(if $(CXX),$(CXX),mpicc)
+	FC := $(if $(FC),$(FC),mpifort)
+	CC := $(if $(CC),$(CC),mpicc)
 	CXX := $(if $(CXX),$(CXX),mpicxx)
 else
 	FC := $(if $(FC),$(FC),gfortran)
-	CC := $(if $(CXX),$(CXX),gcc)
+	CC := $(if $(CC),$(CC),gcc)
 	CXX := $(if $(CXX),$(CXX),g++)
 endif
 
