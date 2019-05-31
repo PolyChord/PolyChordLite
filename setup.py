@@ -39,21 +39,16 @@ class DistributionWithOption(Distribution):
 
 class CustomBuildPy(_build_py):
     def run(self):
+        env = {}
+        env["PATH"] = os.environ["PATH"]
+        env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
         if self.distribution.no_mpi is None:
-            env = {"MPI"   : "1",
-                   "PATH"  : os.environ["PATH"],
-                   "CC"    : "mpicc",
-                   "CXX"   : "mpicxx",
-                   "FC"    : "mpifort",}
+            env["MPI"] = "1"
             # These need to be set so that build_ext uses the right compilers
-            os.environ["CC"] = "mpicc"
-            os.environ["CXX"] = "mpicxx"
+            if "CC" not in os.environ: os.environ["CC"] = "mpicc"
+            if "CXX" not in os.environ: os.environ["CXX"] = "mpicxx"
         else:
-            env = {"MPI"   : "0",
-                   "PATH"  : os.environ["PATH"],
-                   "CC"    : os.environ["CC"] if "CC" in os.environ else "gcc",
-                   "CXX"   : os.environ["CXX"] if "CXX" in os.environ else "g++",
-                   "FC"    : os.environ["FC"] if "FC" in os.environ else "gfortran",}
+            env["MPI"] = "0"
 
         if self.distribution.debug_flags is not None:
             env["DEBUG"] = "1"
@@ -62,6 +57,7 @@ class CustomBuildPy(_build_py):
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
         
         env["PWD"] = BASE_PATH
+        print(env)
         subprocess.run(["make", "libchord.so"], check=True, env=env, cwd=BASE_PATH)
         os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"), exist_ok=True)
         shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"), 

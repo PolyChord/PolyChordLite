@@ -4,7 +4,6 @@ os: linux
 python:
     - "3.6"
     - "3.5"
-    - "3.4"
 env:
   - MPI=
   - MPI=1
@@ -12,10 +11,6 @@ env:
 # OSX matrix
 matrix:
     include:
-        - os: osx
-          osx_image: xcode10.1
-          language: generic
-          env: PYTHON_VERSION=python2 MPI=
         - os: osx
           osx_image: xcode10.1
           language: generic
@@ -34,7 +29,6 @@ addons:
     homebrew:
         packages: 
             - gcc
-            - python2
             - python3
             - openmpi
 
