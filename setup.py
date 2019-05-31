@@ -74,22 +74,12 @@ class CustomClean(_clean):
         subprocess.run(["make", "veryclean"], check=True, env=os.environ)
         return super().run()
 
-def get_gfortran_libdir():
-    r = subprocess.run(f"gfortran -v", shell=True, env=os.environ, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    gfortran_info = r.stderr.decode("utf-8").split(" ")
-    for arg in gfortran_info:
-        if "--libdir" in arg:
-            libdir = arg[arg.find("=")+1:]
-            return libdir
-    print("Could not find gfortran library.")
-    return ""
-
 if "--no-mpi" in sys.argv:
     NAME += '_nompi'
     DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
 
 pypolychord_module = Extension(
-        name=f'_pypolychord',
+        name='_pypolychord',
         library_dirs=[os.path.join(BASE_PATH, 'lib'),],
         include_dirs=[os.path.join(BASE_PATH, 'src/polychord'),
                       numpy.get_include()],
