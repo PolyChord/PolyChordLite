@@ -55,7 +55,9 @@ class CustomBuildPy(_build_py):
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
         
         env["PWD"] = BASE_PATH
-        subprocess.run(["make", "libchord.a"], check=True, env=env, cwd=BASE_PATH)
+        subprocess.run(["make", "libchord.so"], check=True, env=env, cwd=BASE_PATH)
+        shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"), 
+                    os.path.join(BASE_PATH, "pypolychord/lib/"))
         self.run_command("build_ext")
         return super().run()
 
@@ -84,10 +86,9 @@ pypolychord_module = Extension(
         include_dirs=[os.path.join(BASE_PATH, 'src/polychord'),
                       numpy.get_include()],
         libraries=['chord', 'gfortran'],
-        # extra_link_args=["-Wl,-rpath,$ORIGIN/lib"],
-        # extra_compile_args=["-Wl,-rpath,$ORIGIN/lib"],
-        extra_link_args=["-lc++"],
-        extra_compile_args=["-std=c++11", "-stdlib=libc++", "-g","-O0"],
+        extra_link_args=["-Wl,-rpath,$ORIGIN/pypolychord/lib"],
+        extra_compile_args=["-Wl,-rpath,$ORIGIN/pypolychord/lib"],
+        runtime_library_dirs=[os.path.join(BASE_PATH, 'lib')],
         sources=['pypolychord/_pypolychord.cpp']
         )
 
@@ -106,6 +107,6 @@ setup(name=NAME,
       ext_modules=[pypolychord_module],
       cmdclass={'build_py' : CustomBuildPy,
                 'clean' : CustomClean},
-    #   package_data={"" : ["lib/libchord.so"]},
-    #   include_package_data=True,
+      package_data={"" : ["lib/libchord.so"]},
+      include_package_data=True,
       zip_safe=False)

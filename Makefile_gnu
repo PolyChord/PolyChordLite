@@ -9,8 +9,8 @@ CC = gcc
 CXX = g++
 else ifeq ($(shell uname), Darwin) 
 FC = gfortran
-CC = gcc
-CXX = g++
+CC = gcc-8
+CXX = g++-8
 endif
 endif
 
@@ -35,6 +35,14 @@ ifneq (,$(findstring clang,$(shell '$(CXX)' -v 2>&1)))
 else
 	LDLIBS += -lstdc++
 endif
+
+detected_OS := $(shell uname -s)
+ifeq ($(detected_OS),Darwin)
+	RPATH=-install_name @loader_path/pypolychord/lib/libchord.so
+else
+	RPATH= 
+endif
+LDLIBS += $(RPATH)
 
 ifdef DEBUG
 # Debugging mode
