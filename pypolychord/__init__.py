@@ -114,10 +114,10 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         ----------
         live: numpy.array
             The live points and their loglikelihood birth and death contours
-            Shape (nDims+nDerived+2,nlive)
+            Shape (nlive, nDims+nDerived+2)
         dead: numpy.array
             The dead points and their loglikelihood birth and death contours
-            Shape (nDims+nDerived+2,ndead)
+            Shape (ndead, nDims+nDerived+2)
         logweights: numpy.array
             The posterior weights of the dead points
             Shape (ndead)
