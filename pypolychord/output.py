@@ -178,7 +178,7 @@ class PolyChordOutput:
     def _create_pandas_table(self, paramnames = None):
         # build the paranames for the table
         initial_col_names = ['weight','loglike']
-        n_params = np.genfromtxt('%s_equal_weights.txt' % self.root).shape[1] - 2
+        n_params = np.atleast_2d(np.genfromtxt('%s_equal_weights.txt' % self.root)).shape[1] - 2
         if paramnames is None:
             for i in range(n_params):
                 initial_col_names.append('p%d'%i)
