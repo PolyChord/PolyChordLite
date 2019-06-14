@@ -19,7 +19,7 @@ module loglikelihood_module
     contains
 
     function loglikelihood(theta,phi)
-        use utils_module, only: logzero, logincexp,logTwoPi
+        use utils_module, only: logincexp,logTwoPi
         implicit none
         real(dp), intent(in),  dimension(:) :: theta         !> Input parameters
         real(dp), intent(out), dimension(:) :: phi           !> Output derived parameters
@@ -45,7 +45,7 @@ module loglikelihood_module
 
 
         ! Calculate the likelihood
-        loglikelihood_temp = logzero
+        loglikelihood_temp = -huge(1d0)
         loglikelihood      = 0d0
 
         ! Iterate over all points in the file
@@ -121,7 +121,7 @@ module loglikelihood_module
     ! sqrt(pi/2) s ( erf( (x2-x0)/sqrt2 s) - erf( (x1-x0)/sqrt2 s) )
     !
     function log_exp_int(x0,y0,sx,sy,xmin,xmax)
-        use utils_module, only: logzero,logincexp
+        use utils_module, only: logincexp
         implicit none
 
         real(dp), intent(in) :: x0,y0,sx,sy,xmin,xmax
@@ -134,7 +134,7 @@ module loglikelihood_module
 
         real(dp),parameter :: logsqrtpiby2 = log(sqrt(atan(1d0)*2d0))
 
-        log_exp_int = logzero
+        log_exp_int = -huge(1d0)
 
         n = size(spline_data,1)
 
@@ -176,7 +176,6 @@ module loglikelihood_module
     end function log_exp_int
 
     function logderf(a,b)
-        use utils_module, only: logzero
         implicit none
         real(dp),intent(in) :: a,b
         real(dp) logderf
@@ -187,7 +186,7 @@ module loglikelihood_module
         erfa = erf(a)
 
         if(erfb<=erfa) then
-            logderf = logzero
+            logderf = -huge(1d0)
         else
             logderf = log(erfb-erfa)
         end if
