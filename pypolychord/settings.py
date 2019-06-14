@@ -159,7 +159,7 @@ class PolyChordSettings:
         self.nlive = kwargs.pop('nlive', nDims*25)
         self.num_repeats = kwargs.pop('num_repeats', nDims*5)
         self.nprior = kwargs.pop('nprior', -1)
-        self.nfail = kwargs.pop('nprior', -1)
+        self.nfail = kwargs.pop('nfail', -1)
         self.do_clustering = kwargs.pop('do_clustering', True)
         self.feedback = kwargs.pop('feedback', 1)
         self.precision_criterion = kwargs.pop('precision_criterion', 0.001)
