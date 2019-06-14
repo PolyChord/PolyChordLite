@@ -1,11 +1,10 @@
 module loglikelihood_module
     use utils_module, only: dp
-    use utils_module, only: logzero
 
     real(dp), parameter :: sigma  = 0.1d0   ! all sigma set relatively small
     real(dp), parameter :: radius = 2d0
 
-    real(dp) :: A = logzero
+    real(dp) :: A = -huge(1d0)
 
     contains
 
@@ -32,7 +31,7 @@ module loglikelihood_module
 
         ndims  = size(theta)
 
-        if(A==logzero) then
+        if(A==-huge(1d0)) then
             r0 = (radius + sqrt(radius**2 + 4*(ndims-1)*sigma**2))/2
             logf0 = - (radius - r0)**2/2/sigma**2 + (ndims-1)*log(r0) + log(ndims+0d0) + ndims/2d0*logpi -loggamma(1+ndims/2d0) 
             sigma0 = sigma*sqrt((1+radius/sqrt(radius**2 + 4*(ndims-1)*sigma**2))/2d0)
