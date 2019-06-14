@@ -14,9 +14,6 @@ module utils_module
     !> \f$ \log(2\pi) \f$ in real(dp)
     real(dp), parameter :: logTwoPi = log(8d0*atan(1d0))
 
-    !> The threshold for 'log(0) values'
-    real(dp), parameter :: logzero = -1d30
-
     !> The default writing formats
     integer, parameter :: fmt_len = 200
     character(8) :: DB_FMT='E24.15E3'
