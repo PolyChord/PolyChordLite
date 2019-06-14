@@ -69,7 +69,7 @@ LDFLAGS += -L$(LIB_DIR)
 
 # Export all of the necessary variables
 export CC CXX FC LD LDSHARED RM AR 
-export CFLAGS CXXFLAGS FFLAGS LDLIBS
+export CFLAGS CXXFLAGS FFLAGS LDLIBS RPATH
 export EXAMPLES PROGRAMS
 
 
