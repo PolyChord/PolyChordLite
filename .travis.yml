@@ -53,11 +53,11 @@ install:
     - make MPI=$MPI pypolychord
     - make MPI=$MPI gaussian
     - if [ "$MPI" ]; then 
-          CC=mpicc CXX=mpicxx python setup.py install;
+          CC=mpicc CXX=mpicxx pip install .;
       elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-          CC=gcc-8 CXX=g++-8 python setup.py install;
+          CC=gcc-8 CXX=g++-8 pip install .;
       else 
-          python setup.py install;
+          pip install .;
       fi
 
     # requirements install
