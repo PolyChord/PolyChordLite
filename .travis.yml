@@ -49,7 +49,6 @@ before_install:
       fi
 
 install:
-    - pip install numpy
     - make MPI=$MPI pypolychord
     - make MPI=$MPI gaussian
     - if [ "$MPI" ]; then 
