@@ -433,14 +433,14 @@ contains
         call c_f_procpointer(c_prior_ptr, f_prior_ptr)
         call c_f_procpointer(c_dumper_ptr, f_dumper_ptr)
 
-        call run_polychord(loglikelihood,prior,dumper,settings,comm)
+        call run_polychord(fort_loglikelihood,fort_prior,fort_dumper,settings,comm)
 
     contains
-        function loglikelihood(theta,phi)
+        function fort_loglikelihood(theta,phi)
             implicit none
             real(dp), intent(in),  dimension(:) :: theta
             real(dp), intent(out),  dimension(:) :: phi
-            real(dp) :: loglikelihood
+            real(dp) :: fort_loglikelihood
 
             real (c_double),dimension(size(theta)) :: c_theta
             integer (c_int)                        :: c_nDims
@@ -453,11 +453,11 @@ contains
             c_theta = theta
             c_loglike = f_loglikelihood_ptr(c_theta,c_nDims,c_phi,c_nDerived)
             phi = c_phi
-            loglikelihood = c_loglike
+            fort_loglikelihood = c_loglike
 
-        end function loglikelihood
+        end function fort_loglikelihood
 
-        function prior(cube) result(theta)
+        function fort_prior(cube) result(theta)
             implicit none
             real(dp), intent(in), dimension(:) :: cube
             real(dp), dimension(size(cube))    :: theta
@@ -471,9 +471,9 @@ contains
             call f_prior_ptr(c_cube,c_theta,c_nDims)
             theta = c_theta
 
-        end function prior
+        end function fort_prior
 
-        subroutine dumper(live, dead, logweights, logZ, logZerr)
+        subroutine fort_dumper(live, dead, logweights, logZ, logZerr)
             implicit none
             real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
             real(dp), intent(in) :: logZ, logZerr
@@ -491,7 +491,7 @@ contains
             c_logZ = logZ
             c_logZerr = logZerr
             call f_dumper_ptr(c_ndead, c_nlive, c_npars, c_live, c_dead, c_logweights, c_logZ, c_logZerr)
-        end subroutine dumper
+        end subroutine fort_dumper
 
 
     end subroutine polychord_c_interface
