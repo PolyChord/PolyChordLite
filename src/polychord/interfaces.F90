@@ -12,7 +12,7 @@ module interfaces_module
 contains
 
 
-    subroutine run_polychord_full(loglikelihood, prior, dumper, settings_in, mpi_communicator)
+    subroutine run_polychord_full(loglikelihood, prior_transform, dumper, settings_in, mpi_communicator)
         use settings_module,          only: program_settings,initialise_settings
         use random_module,            only: initialise_random
         use nested_sampling_module,   only: NestedSampling
@@ -33,11 +33,11 @@ contains
             end function loglikelihood
         end interface
         interface
-            function prior(cube) result(theta)
+            function prior_transform(cube) result(theta)
                 import :: dp
                 real(dp), intent(in), dimension(:) :: cube
                 real(dp), dimension(size(cube))    :: theta
-            end function prior
+            end function prior_transform
         end interface
         interface
             subroutine dumper(live, dead, logweights, logZ, logZerr)
@@ -74,10 +74,10 @@ contains
         settings = settings_in
         call initialise_settings(settings)   
 #ifdef MPI
-        output_info = NestedSampling(loglikelihood,prior,dumper,settings,comm) 
+        output_info = NestedSampling(loglikelihood,prior_transform,dumper,settings,comm) 
         call finalise_mpi
 #else
-        output_info = NestedSampling(loglikelihood,prior,dumper,settings,0) 
+        output_info = NestedSampling(loglikelihood,prior_transform,dumper,settings,0) 
 #endif
 
     end subroutine run_polychord_full
@@ -114,17 +114,17 @@ contains
 #else
             comm = 0
 #endif
-        call run_polychord(loglikelihood,prior,dumper,settings,comm)
+        call run_polychord(loglikelihood,prior_transform,dumper,settings,comm)
     contains
-        function prior(cube) result(theta)
+        function prior_transform(cube) result(theta)
             implicit none
             real(dp), intent(in), dimension(:) :: cube
             real(dp), dimension(size(cube))    :: theta
             theta = cube
-        end function prior
+        end function prior_transform
     end subroutine run_polychord_no_prior
 
-    subroutine run_polychord_no_dumper(loglikelihood,prior,settings,mpi_communicator)
+    subroutine run_polychord_no_dumper(loglikelihood,prior_transform,settings,mpi_communicator)
         use settings_module,          only: program_settings
         implicit none
         interface
@@ -136,11 +136,11 @@ contains
             end function loglikelihood
         end interface
         interface
-            function prior(cube) result(theta)
+            function prior_transform(cube) result(theta)
                 import :: dp
                 real(dp), intent(in), dimension(:) :: cube
                 real(dp), dimension(size(cube))    :: theta
-            end function prior
+            end function prior_transform
         end interface
         type(program_settings),intent(in)    :: settings  ! The program settings 
         integer, intent(in), optional :: mpi_communicator
@@ -154,7 +154,7 @@ contains
 #else
             comm = 0
 #endif
-        call run_polychord(loglikelihood,prior,dumper,settings,comm)
+        call run_polychord(loglikelihood,prior_transform,dumper,settings,comm)
     contains
         subroutine dumper(live, dead, logweights, logZ, logZerr)
             real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
@@ -186,14 +186,14 @@ contains
 #else
             comm = 0
 #endif
-        call run_polychord(loglikelihood,prior,settings, comm)
+        call run_polychord(loglikelihood,prior_transform,settings, comm)
     contains
-        function prior(cube) result(theta)
+        function prior_transform(cube) result(theta)
             implicit none
             real(dp), intent(in), dimension(:) :: cube
             real(dp), dimension(size(cube))    :: theta
             theta = cube
-        end function prior
+        end function prior_transform
         subroutine dumper(live, dead, logweights, logZ, logZerr)
             real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
             real(dp), intent(in) :: logZ, logZerr
@@ -433,14 +433,14 @@ contains
         call c_f_procpointer(c_prior_ptr, f_prior_ptr)
         call c_f_procpointer(c_dumper_ptr, f_dumper_ptr)
 
-        call run_polychord(fort_loglikelihood,fort_prior,fort_dumper,settings,comm)
+        call run_polychord(loglikelihood,prior_transform,dumper,settings,comm)
 
     contains
-        function fort_loglikelihood(theta,phi)
+        function loglikelihood(theta,phi)
             implicit none
             real(dp), intent(in),  dimension(:) :: theta
             real(dp), intent(out),  dimension(:) :: phi
-            real(dp) :: fort_loglikelihood
+            real(dp) :: loglikelihood
 
             real (c_double),dimension(size(theta)) :: c_theta
             integer (c_int)                        :: c_nDims
@@ -453,11 +453,11 @@ contains
             c_theta = theta
             c_loglike = f_loglikelihood_ptr(c_theta,c_nDims,c_phi,c_nDerived)
             phi = c_phi
-            fort_loglikelihood = c_loglike
+            loglikelihood = c_loglike
 
-        end function fort_loglikelihood
+        end function loglikelihood
 
-        function fort_prior(cube) result(theta)
+        function prior_transform(cube) result(theta)
             implicit none
             real(dp), intent(in), dimension(:) :: cube
             real(dp), dimension(size(cube))    :: theta
@@ -471,9 +471,9 @@ contains
             call f_prior_ptr(c_cube,c_theta,c_nDims)
             theta = c_theta
 
-        end function fort_prior
+        end function prior_transform
 
-        subroutine fort_dumper(live, dead, logweights, logZ, logZerr)
+        subroutine dumper(live, dead, logweights, logZ, logZerr)
             implicit none
             real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
             real(dp), intent(in) :: logZ, logZerr
@@ -491,7 +491,7 @@ contains
             c_logZ = logZ
             c_logZerr = logZerr
             call f_dumper_ptr(c_ndead, c_nlive, c_npars, c_live, c_dead, c_logweights, c_logZ, c_logZerr)
-        end subroutine fort_dumper
+        end subroutine dumper
 
 
     end subroutine polychord_c_interface
