@@ -4,8 +4,6 @@ CC = mpicc
 CXX = mpicxx
 else
 FC = gfortran
-CC = gcc
-CXX = g++
 endif
 
 LD = $(FC)
