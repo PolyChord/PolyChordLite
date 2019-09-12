@@ -49,7 +49,6 @@ addons:
 before_install:
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]];
       then 
-          brew link gcc;
           pip install virtualenv;
           virtualenv venv -p $PYTHON_VERSION;
           source venv/bin/activate;
