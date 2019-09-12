@@ -84,7 +84,7 @@ pypolychord: $(LIB_DIR)/libchord.so
 	@echo "======================================================================================="
 	@echo " now run:"
 	@echo ""
-	@echo "    CC=$(CC) CXX=$(CXX) python setup.py install --user"
+	@echo "    CFLAGS=-std=c++11 CC=$(CC) CXX=$(CXX) python setup.py install --user"
 
 # Examples
 # --------

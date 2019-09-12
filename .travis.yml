@@ -2,6 +2,7 @@
 language: python
 os: linux
 python:
+    - "3.7"
     - "3.6"
     - "3.5"
     - "3.4"
@@ -14,11 +15,17 @@ env:
 matrix:
     include:
         - os: osx
-          osx_image: xcode10.1
           language: generic
           env: PYTHON_VERSION=python2 MPI=
         - os: osx
-          osx_image: xcode10.1
+          language: generic
+          env: PYTHON_VERSION=python3 MPI=
+        - os: osx
+          osx_image: xcode11.0
+          language: generic
+          env: PYTHON_VERSION=python2 MPI=
+        - os: osx
+          osx_image: xcode11.0
           language: generic
           env: PYTHON_VERSION=python3 MPI=
 
@@ -37,12 +44,12 @@ addons:
             - gcc
             - python2
             - python3
+        update: true
 
 # OSX setup
 before_install:
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]];
       then 
-          brew link gcc;
           pip install virtualenv;
           virtualenv venv -p $PYTHON_VERSION;
           source venv/bin/activate;
@@ -54,8 +61,6 @@ install:
     - make MPI=$MPI gaussian
     - if [ "$MPI" ]; then 
           CC=mpicc CXX=mpicxx python setup.py install;
-      elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-          CC=gcc-8 CXX=g++-8 python setup.py install;
       else 
           python setup.py install;
       fi

@@ -3,15 +3,7 @@ FC = mpif90
 CC = mpicc
 CXX = mpicxx
 else
-ifeq ($(shell uname), Linux)
 FC = gfortran
-CC = gcc
-CXX = g++
-else ifeq ($(shell uname), Darwin) 
-FC = gfortran-8
-CC = gcc-8
-CXX = g++-8
-endif
 endif
 
 LD = $(FC)
@@ -29,7 +21,11 @@ FFLAGS += -ffree-line-length-none -cpp -fPIC -fno-stack-arrays
 CXXFLAGS += -std=c++11 -fPIC
 CFLAGS += -fPIC
 
+ifeq ($(shell uname), Linux)
 LDLIBS += -lstdc++
+else ifeq ($(shell uname), Darwin) 
+LDLIBS += -lc++
+endif
 
 ifdef DEBUG
 # Debugging mode
