@@ -1,0 +1,49 @@
+version: 2
+jobs:
+  run_tests:
+    docker:
+      - image: circleci/python:3.6.4
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - run:
+          name: install Debian dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install gfortran libblas3 liblapack3
+
+      - run:
+          name: PolyChord compile gaussian
+          command: make MPI= gaussian
+
+      - run: 
+          name: PolyChord test gaussian
+          command: ./bin/gaussian ini/gaussian.ini;
+
+      - run:
+          name: setup Python venv
+          command: python3 -m venv venv
+
+      - run:
+          name: pypolychord compile
+          command: |
+            . venv/bin/activate
+            make MPI= pypolychord
+            pip install -r requirements.txt
+            python setup.py install
+
+      - run: 
+          name: pypolychord tests
+          command: |
+            . venv/bin/activate
+            python run_pypolychord.py; 
+
+
+workflows:
+  version: 2
+  circle-ci:
+    jobs:
+      - run_tests
