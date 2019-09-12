@@ -61,8 +61,6 @@ install:
     - make MPI=$MPI gaussian
     - if [ "$MPI" ]; then 
           CC=mpicc CXX=mpicxx python setup.py install;
-      elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-          CFLAGS=-std=c++11 python setup.py install;
       else 
           python setup.py install;
       fi

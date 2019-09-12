@@ -171,14 +171,6 @@ the library with:
     make pypolychord
     python setup.py install --user
 
-or on OSX:
-
-.. code:: bash
-
-    make pypolychord
-    CFLAGS=-std=c++11 python setup.py install
-
-
 You can then import pypolychord from anywhere with the lines:
 
 .. code:: python

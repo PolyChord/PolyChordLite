@@ -23,12 +23,13 @@ pypolychord_module = Extension(
         runtime_library_dirs=[os.path.join(os.getcwd(), 'lib')],
         libraries=['chord'],
         sources=[os.path.join(os.getcwd(),
-                 'pypolychord/_pypolychord.cpp')]
+                 'pypolychord/_pypolychord.cpp')],
+        extra_compile_args=["-std=c++11"]
         )
 
 setup(name='pypolychord',
       version=get_version(),
-      description='Python interface to PolyChord 1.14',
+      description='Python interface to PolyChord ' + get_version(),
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
       author='Will Handley',
       author_email='wh260@cam.ac.uk',
