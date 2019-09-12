@@ -37,6 +37,7 @@ addons:
             - gcc
             - python2
             - python3
+        update: true
 
 # OSX setup
 before_install:

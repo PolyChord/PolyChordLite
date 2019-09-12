@@ -3,15 +3,9 @@ FC = mpif90
 CC = mpicc
 CXX = mpicxx
 else
-ifeq ($(shell uname), Linux)
 FC = gfortran
 CC = gcc
 CXX = g++
-else ifeq ($(shell uname), Darwin) 
-FC = gfortran-8
-CC = gcc-8
-CXX = g++-8
-endif
 endif
 
 LD = $(FC)
