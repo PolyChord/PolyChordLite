@@ -530,18 +530,19 @@ module generate_module
         if(linear_mode(mpi_information)) then
             !===================== LINEAR MODE =========================
 
+            live_point = settings%seed_point
             do while(RTI%nlive(1)<nprior)
-                live_point = settings%seed_point
                 do i_repeat = 1,settings%nprior_repeat
-                    i_dim = 1+mod(i_repeat,settings%nDims)
-                    i_grade = grade(i_dim)
-                    nhat = 0d0
-                    nhat(i_dim) = 1d0
+                    do i_dim=1,settings%nDims
+                        i_grade = grade(i_dim)
+                        nhat = 0d0
+                        nhat(i_dim) = 1d0
 
-                    time0 = time()
-                    live_point = slice_sample(loglikelihood,prior,settings%logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
-                    time1 = time()
-                    times(i_grade) = times(i_grade) + time1 - time0
+                        time0 = time()
+                        live_point = slice_sample(loglikelihood,prior,settings%logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
+                        time1 = time()
+                        times(i_grade) = times(i_grade) + time1 - time0
+                    end do
                 end do
 
                 call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
@@ -603,7 +604,7 @@ module generate_module
                 ! The slaves simply generate and send points until they're told to stop by the master
                 live_point = settings%seed_point
                 do while(.true.)
-                    do i_repeat = 1,5
+                    do i_repeat = 1,settings%nprior_repeat
                         do i_dim=1,settings%nDims
                             i_grade = grade(i_dim)
                             nhat = 0d0
