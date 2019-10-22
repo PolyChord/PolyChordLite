@@ -12,10 +12,39 @@ import os, sys, subprocess, shutil
 
 import numpy
 
+def check_compiler(default_CC="gcc"):
+    CC = default_CC if "CC" not in os.environ else os.environ["CC"]
+    CC_version = subprocess.run([CC, "-v"], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stderr.decode("utf-8").lower()
+
+    if "clang" in CC_version:
+        CC_family = "clang"
+    elif "icc" in CC_version:
+        CC_family = "intel"
+    elif "gcc" in CC_version:
+        CC_family = "gcc"
+    else:
+        print("Warning: unrecognised compiler: {}".format(CC_version))
+        CC_family = ""
+
+    return CC_family
+
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 NAME = 'pypolychord'
 DOCLINES = (__doc__ or '').split("\n")
+
+
+CC_FAMILY = check_compiler()
+CPPRUNTIMELIB_FLAG = []
+RPATH_FLAG = []
+
+if CC_FAMILY == "clang":
+    CPPRUNTIMELIB_FLAG += ["-stdlib=libc++"]
+    if sys.platform == "darwin":
+        CPPRUNTIMELIB_FLAG += ["-mmacosx-version-min=10.9"]
+
+if sys.platform != "darwin":
+    RPATH_FLAG += ["-Wl,-rpath,$ORIGIN/pypolychord/lib"]
 
 def readme():
     with open('pypolychord_README.rst') as f:
@@ -45,16 +74,14 @@ class CustomBuildPy(_build_py):
         if self.distribution.no_mpi is None:
             env["MPI"] = "1"
             # These need to be set so that build_ext uses the right compilers
-            if "CC" not in os.environ: os.environ["CC"] = "mpicc"
-            if "CXX" not in os.environ: os.environ["CXX"] = "mpicxx"
+            # if "CC" not in os.environ: os.environ["CC"] = "mpicc"
+            # if "CXX" not in os.environ: os.environ["CXX"] = "mpicxx"
         else:
             env["MPI"] = "0"
 
         if self.distribution.debug_flags is not None:
+            self.distribution.ext_modules[0].extra_compile_args += ["-g", "-O0"]
             env["DEBUG"] = "1"
-
-        if sys.platform == "darwin":
-            os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
         
         env["PWD"] = BASE_PATH
         # print(env)
@@ -80,8 +107,8 @@ pypolychord_module = Extension(
         include_dirs=[os.path.join(BASE_PATH, 'src/polychord'),
                       numpy.get_include()],
         libraries=['chord',],
-        extra_link_args=["-Wl,-rpath,$ORIGIN/pypolychord/lib"],
-        extra_compile_args=["-Wl,-rpath,$ORIGIN/pypolychord/lib", "-std=c++11"],
+        extra_link_args=RPATH_FLAG + CPPRUNTIMELIB_FLAG,
+        extra_compile_args= ["-std=c++11"] + RPATH_FLAG + CPPRUNTIMELIB_FLAG,
         runtime_library_dirs=[os.path.join(BASE_PATH, 'lib')],
         sources=['pypolychord/_pypolychord.cpp']
         )
