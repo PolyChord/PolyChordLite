@@ -70,12 +70,11 @@ class CustomBuildPy(_build_py):
     def run(self):
         env = {}
         env["PATH"] = os.environ["PATH"]
-        env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
         if self.distribution.no_mpi is None:
             env["MPI"] = "1"
             # These need to be set so that build_ext uses the right compilers
-            # if "CC" not in os.environ: os.environ["CC"] = "mpicc"
-            # if "CXX" not in os.environ: os.environ["CXX"] = "mpicxx"
+            if "CC" not in os.environ: os.environ["CC"] = "mpicc"
+            if "CXX" not in os.environ: os.environ["CXX"] = "mpicxx"
         else:
             env["MPI"] = "0"
 
@@ -85,6 +84,7 @@ class CustomBuildPy(_build_py):
         
         env["PWD"] = BASE_PATH
         # print(env)
+        env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
         subprocess.run(["make", "libchord.so"], check=True, env=env, cwd=BASE_PATH)
         os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"), exist_ok=True)
         shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"), 
