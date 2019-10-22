@@ -58,11 +58,8 @@ addons:
         packages: 
             - gcc
             - python3
-<<<<<<< HEAD
             - openmpi
-=======
         update: true
->>>>>>> master
 
 # OSX setup
 before_install:
@@ -76,11 +73,7 @@ before_install:
 install:
     - pip install numpy
     - if [ "$MPI" ]; then 
-<<<<<<< HEAD
           FC=mpif90 CC=mpicc CXX=mpicxx python setup.py install;
-=======
-          CC=mpicc CXX=mpicxx python setup.py install;
->>>>>>> master
       else 
           python setup.py --no-mpi install;
       fi
