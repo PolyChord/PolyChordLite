@@ -28,8 +28,8 @@ except ImportError as e:
         raise e
 
 
-def default_prior(cube, theta):
-    theta[:] = cube
+def default_prior(cube):
+    return cube.copy()
 
 
 def default_dumper(live, dead, logweights, logZ, logZerr):
