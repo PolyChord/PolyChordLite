@@ -115,8 +115,7 @@ pypolychord_module = Extension(
 
 setup(name=NAME,
       version=get_version(),
-      description=DOCLINES[1],
-      long_description = "\n".join(DOCLINES[3:-1]),
+      description='Python interface to PolyChord ' + get_version(),
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
       author='Will Handley',
       author_email='wh260@cam.ac.uk',
