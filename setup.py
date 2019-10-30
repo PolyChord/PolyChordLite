@@ -32,6 +32,10 @@ def check_compiler(default_CC="gcc"):
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
+NAME = 'pypolychord'
+DOCLINES = (__doc__ or '').split("\n")
+
+
 # Deal with annoying differences between clang and the other compilers
 CC_FAMILY = check_compiler()
 CPPRUNTIMELIB_FLAG = []
@@ -59,16 +63,16 @@ def get_version(short=False):
             if 'version' in line:
                 return line.split(': ')[1].split('"')[0]
 
-class DistributionWithOption(Distribution):
+class DistributionWithOption(Distribution, object):
     def __init__(self, *args, **kwargs):
         self.global_options = self.global_options \
                                 + [("no-mpi", None, "Don't compile with MPI support."),
                                    ("debug-flags", None, "Compile in debug mode.")]
         self.no_mpi = None
         self.debug_flags = None
-        super().__init__(*args, **kwargs)
+        super(DistributionWithOption, self).__init__(*args, **kwargs)
 
-class CustomBuildPy(_build_py):
+class CustomBuildPy(_build_py, object):
     def run(self):
         env = {}
         env["PATH"] = os.environ["PATH"]
@@ -85,25 +89,23 @@ class CustomBuildPy(_build_py):
             env["DEBUG"] = "1"
         
         env["PWD"] = BASE_PATH
-        # Make sure env and os.environ have consistent sets of compilers
         env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
-
-        # Build the library
-        subprocess.run(["make", "libchord.so"], check=True, env=env, cwd=BASE_PATH)
-
-        # And move it to the correct location in the package
-        os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"), exist_ok=True)
+        subprocess.check_call(["make", "libchord.so"], env=env, cwd=BASE_PATH)
+        if not os.path.isdir("pypolychord/lib/"):
+            os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"))
         shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"), 
                     os.path.join(BASE_PATH, "pypolychord/lib/"))
-
-        # Now build the pypolychord extension
         self.run_command("build_ext")
-        return super().run()
+        return super(CustomBuildPy, self).run()
 
 class CustomClean(_clean):
     def run(self):
         subprocess.run(["make", "veryclean"], check=True, env=os.environ)
         return super().run()
+
+if "--no-mpi" in sys.argv:
+    NAME += '_nompi'
+    DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
 
 pypolychord_module = Extension(
         name='_pypolychord',
@@ -117,7 +119,7 @@ pypolychord_module = Extension(
         sources=['pypolychord/_pypolychord.cpp']
         )
 
-setup(name="pypolychord",
+setup(name=NAME,
       version=get_version(),
       description='Python interface to PolyChord ' + get_version(),
       url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
