@@ -5,6 +5,8 @@ python:
     - "3.7"
     - "3.6"
     - "3.5"
+    - "3.4"
+    - "2.7"
 env:
   - MPI=
   - MPI=1
@@ -15,34 +17,18 @@ matrix:
     include:
         - os: osx
           language: generic
-          env: PYTHON_VERSION=python3 MPI= MACOSX_DEPLOYMENT_TARGET=10.9
+          env: PYTHON_VERSION=python2 MPI= MACOSX_DEPLOYMENT_TARGET=10.9
         - os: osx
           language: generic
-          env: PYTHON_VERSION=python3 MPI=
-        - os: osx
-          osx_image: xcode11.0
-          language: generic
-          env: PYTHON_VERSION=python2 MPI=
+          env: PYTHON_VERSION=python3 MPI= MACOSX_DEPLOYMENT_TARGET=10.9 
         - os: osx
           osx_image: xcode11.0
           language: generic
-          env: PYTHON_VERSION=python3 MPI=
-
-    allow_failures:
-        - os: osx
-          language: generic
-          env: PYTHON_VERSION=python2 MPI=
-        - os: osx
-          language: generic
-          env: PYTHON_VERSION=python3 MPI=
+          env: PYTHON_VERSION=python2 MPI=1 MACOSX_DEPLOYMENT_TARGET=10.9 
         - os: osx
           osx_image: xcode11.0
           language: generic
-          env: PYTHON_VERSION=python2 MPI=
-        - os: osx
-          osx_image: xcode11.0
-          language: generic
-          env: PYTHON_VERSION=python3 MPI=1 MACOSX_DEPLOYMENT_TARGET=10.9
+          env: PYTHON_VERSION=python3 MPI=1 MACOSX_DEPLOYMENT_TARGET=10.9  
 
 
 # System packages
@@ -57,6 +43,7 @@ addons:
     homebrew:
         packages: 
             - gcc
+            - python2
             - python3
             - openmpi
         update: true
@@ -72,15 +59,8 @@ before_install:
 
 install:
     - pip install numpy
-    - if [ "$MPI" ]; then 
-          FC=mpif90 CC=mpicc CXX=mpicxx python setup.py install;
-      else 
-          python setup.py --no-mpi install;
-      fi
+    - pip install .
     - make FC=mpif90 MPI=$MPI gaussian
-
-    # requirements install
-    - pip install -r requirements.txt
     - if [ "$MPI" ]; then pip install mpi4py; fi
 
 # Run tests
