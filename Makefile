@@ -44,7 +44,7 @@ endif
 ifeq ($(CC),cc)
 	CC :=
 endif
-ifeq ($(CXX),c++)
+ifeq ($(CXX),g++)
 	CXX :=
 endif
 
