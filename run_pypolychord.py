@@ -50,14 +50,3 @@ output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior,
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)
-
-#| Make a getdist plot
-
-try:
-    import getdist.plots
-    posterior = output.posterior
-    g = getdist.plots.getSubplotPlotter()
-    g.triangle_plot(posterior, filled=True)
-    g.export('posterior.pdf')
-except ImportError:
-    print("Install matplotlib and getdist for plotting examples")
