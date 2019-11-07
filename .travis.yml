@@ -22,11 +22,9 @@ matrix:
           language: generic
           env: PYTHON_VERSION=python3 MPI= MACOSX_DEPLOYMENT_TARGET=10.9 
         - os: osx
-          osx_image: xcode11.0
           language: generic
           env: PYTHON_VERSION=python2 MPI=1 MACOSX_DEPLOYMENT_TARGET=10.9 
         - os: osx
-          osx_image: xcode11.0
           language: generic
           env: PYTHON_VERSION=python3 MPI=1 MACOSX_DEPLOYMENT_TARGET=10.9  
 
