@@ -8,7 +8,7 @@ python:
     - "3.4"
     - "2.7"
 env:
-  - MPI=
+  - MPI=0
   - MPI=1
 
 # OSX matrix
@@ -17,10 +17,10 @@ matrix:
     include:
         - os: osx
           language: generic
-          env: PYTHON_VERSION=python2 MPI= MACOSX_DEPLOYMENT_TARGET=10.9
+          env: PYTHON_VERSION=python2 MPI=0 MACOSX_DEPLOYMENT_TARGET=10.9
         - os: osx
           language: generic
-          env: PYTHON_VERSION=python3 MPI= MACOSX_DEPLOYMENT_TARGET=10.9 
+          env: PYTHON_VERSION=python3 MPI=0 MACOSX_DEPLOYMENT_TARGET=10.9 
         - os: osx
           language: generic
           env: PYTHON_VERSION=python2 MPI=1 MACOSX_DEPLOYMENT_TARGET=10.9 
@@ -57,19 +57,24 @@ before_install:
 
 install:
     - pip install numpy
-    - pip install .
-    - make FC=mpif90 MPI=$MPI gaussian
-    - if [ "$MPI" ]; then pip install mpi4py; fi
+    - if [ "$MPI" -eq 1 ];
+      then
+          pip install . ;
+          pip install mpi4py;
+      else
+          python setup.py --no-mpi install;
+      fi
+    - make MPI=$MPI gaussian
 
 # Run tests
 script:
-    - if [ "$MPI" ];
+    - if [ "$MPI" -eq 1 ];
       then 
           mpirun -np 2 python run_pypolychord.py;
       else 
           python run_pypolychord.py; 
       fi
-    - if [ "$MPI" ];
+    - if [ "$MPI" -eq 1 ];
       then 
           mpirun -np 2 ./bin/gaussian ini/gaussian.ini;
       else 
