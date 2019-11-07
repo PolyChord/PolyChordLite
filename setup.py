@@ -30,7 +30,6 @@ def check_compiler(default_CC="gcc"):
 
     return CC_family
 
-BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 NAME = 'pypolychord'
 DOCLINES = (__doc__ or '').split("\n")
@@ -88,6 +87,7 @@ class CustomBuildPy(_build_py, object):
             self.distribution.ext_modules[0].extra_compile_args += ["-g", "-O0"]
             env["DEBUG"] = "1"
         
+        BASE_PATH = os.path.dirname(os.path.abspath(__file__))
         env["PWD"] = BASE_PATH
         env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
         subprocess.check_call(["make", "libchord.so"], env=env, cwd=BASE_PATH)
@@ -109,13 +109,12 @@ if "--no-mpi" in sys.argv:
 
 pypolychord_module = Extension(
         name='_pypolychord',
-        library_dirs=[os.path.join(BASE_PATH, 'lib'),],
-        include_dirs=[os.path.join(BASE_PATH, 'src/polychord'),
-                      numpy.get_include()],
+        library_dirs=['lib'],
+        include_dirs=['src/polychord', numpy.get_include()],
         libraries=['chord',],
         extra_link_args=RPATH_FLAG + CPPRUNTIMELIB_FLAG,
         extra_compile_args= ["-std=c++11"] + RPATH_FLAG + CPPRUNTIMELIB_FLAG,
-        runtime_library_dirs=[os.path.join(BASE_PATH, 'lib')],
+        runtime_library_dirs=['lib'],
         sources=['pypolychord/_pypolychord.cpp']
         )
 
@@ -127,7 +126,7 @@ setup(name=NAME,
       author_email='wh260@cam.ac.uk',
       license='PolyChord',
       packages=find_packages(),
-      install_requires=['numpy',],
+      install_requires=['numpy','scipy'],
       extras_require={'plotting': 'getdist'},
       distclass=DistributionWithOption,
       ext_modules=[pypolychord_module],
