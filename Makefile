@@ -44,6 +44,11 @@ endif
 ifeq ($(CC),cc)
 	CC :=
 endif
+# macOS default
+ifeq ($(CXX),c++)
+	CXX :=
+endif
+# Linux default
 ifeq ($(CXX),g++)
 	CXX :=
 endif
