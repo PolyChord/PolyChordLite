@@ -1,11 +1,11 @@
 ifeq ($(MPI),1)
-	FC := $(if $(FC),$(FC),mpifort)
-	CC := $(if $(CC),$(CC),mpicc)
-	CXX := $(if $(CXX),$(CXX),mpicxx)
+FC = mpif90
+CC = mpicc
+CXX = mpicxx
 else
-	FC := $(if $(FC),$(FC),gfortran)
-	CC := $(if $(CC),$(CC),gcc)
-	CXX := $(if $(CXX),$(CXX),g++)
+FC = gfortran
+CC = gcc
+CXX = g++
 endif
 
 LD = $(FC)
@@ -23,42 +23,35 @@ FFLAGS += -ffree-line-length-none -cpp -fPIC -fno-stack-arrays
 CXXFLAGS += -std=c++11 -fPIC
 CFLAGS += -fPIC
 
-# clang uses a different libstdc++ than GCC
-ifneq (,$(findstring clang,$(shell '$(CXX)' -v 2>&1)))
-	LDLIBS += -lc++
-else
-	LDLIBS += -lstdc++
-endif
-
-
-detected_OS := $(shell uname -s)
-ifeq ($(detected_OS),Darwin)
-	RPATH=-install_name @loader_path/pypolychord/lib/libchord.so
-else
-	RPATH= 
+ifeq ($(shell uname -s), Linux)
+LDLIBS += -lstdc++
+RPATH= 
+else ifeq ($(shell uname -s), Darwin) 
+LDLIBS += -lc++
+RPATH=-install_name @loader_path/pypolychord/lib/libchord.so
 endif
 
 ifeq ($(DEBUG),1)
-	# Debugging mode
-	# --------------
-	# g             : enable gnu debugger compatibility
-	# O0            : no optimisation
-	# Wall          : all warnings
-	# Wextra        : even more warnings
-	# pedantic      : check for language features not part of f95 standard
-	# implicit-none : specify no implicit typing (breaks for bobyqa.f90)
-	# backtrace     : produce backtrace of error
-	# fpe-trap      : search for floating point exceptions (dividing by zero etc)
-	# fbounds-check : check array indices
-	FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fbacktrace -ffpe-trap=zero,overflow 
-	#
-	CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
-	CFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
+# Debugging mode
+# --------------
+# g             : enable gnu debugger compatibility
+# O0            : no optimisation
+# Wall          : all warnings
+# Wextra        : even more warnings
+# pedantic      : check for language features not part of f95 standard
+# implicit-none : specify no implicit typing 
+# backtrace     : produce backtrace of error
+# fpe-trap      : search for floating point exceptions (dividing by zero etc)
+# fbounds-check : check array indices
+FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
+#
+CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
+CFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
 else
-	# Optimised mode
-	# --------------
-	# Ofast : maximum optimisation
-	FFLAGS += -Ofast
-	CXXFLAGS += -Ofast
-	CXFLAGS += -Ofast
+# Optimised mode
+# --------------
+# Ofast : maximum optimisation
+FFLAGS += -Ofast
+CXXFLAGS += -Ofast
+CXFLAGS += -Ofast
 endif
