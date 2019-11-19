@@ -18,9 +18,9 @@ PYTHON=python
 
 # Whether to use MPI (default to MPI on Linux)
 ifeq "$(shell uname)" "Linux"
-MPI ?= 1
+	MPI ?= 1
 else
-MPI ?= 0
+	MPI ?= 0
 endif
 
 # Whether to compile in debugging mode (default: false)
@@ -32,21 +32,32 @@ export MPI DEBUG
 # make COMPILER_TYPE=<your type>
 # where <your type> is gnu or intel
 ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
-COMPILER_TYPE=intel
+	COMPILER_TYPE=intel
 else ifeq "$(shell which gfortran >/dev/null 2>&1; echo $$?)" "0"
-COMPILER_TYPE=gnu
+	COMPILER_TYPE=gnu
+endif
+
+# Reset default values because the get set later
+ifeq ($(FC),f77)
+	FC :=
+endif
+ifeq ($(CC),cc)
+	CC :=
+endif
+ifeq ($(CXX),g++)
+	CXX :=
 endif
 
 ifeq ($(COMPILER_TYPE),intel)
-include Makefile_intel
+	include Makefile_intel
 else ifeq ($(COMPILER_TYPE),gnu) 
-include Makefile_gnu
+	include Makefile_gnu
 endif
 
 
 ifeq ($(MPI),1)
-FFLAGS += -DMPI
-CXXFLAGS += -DUSE_MPI
+	FFLAGS += -DMPI
+	CXXFLAGS += -DUSE_MPI
 endif
 
 # Remove command
