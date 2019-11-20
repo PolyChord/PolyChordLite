@@ -1,11 +1,11 @@
 ifeq ($(MPI),1)
-	FC := $(if $(FC),$(FC),mpiifort)
-	CC := $(if $(CC),$(CC),mpiicc)
-	CXX := $(if $(CXX),$(CXX),mpiicpc)
+FC = mpiifort
+CC = mpiicc
+CXX = mpiicpc
 else
-	FC := $(if $(FC),$(FC),ifort)
-	CC := $(if $(CC),$(CC),icc)
-	CXX := $(if $(CXX),$(CXX),icpc)
+FC = ifort
+CXX = icpc
+CC = icc
 endif
 
 CPP = $(CC)
@@ -29,39 +29,39 @@ LDFLAGS += -nofor-main
 LDLIBS += -cxxlib
 
 ifeq ($(DEBUG),1)
-	# Debugging mode
-	# --------------
-	# g              : enable gnu debugger compatibility
-	# O0             : no optimisation
-	# traceback      : create a backtrace on system failure
-	# check all      : all checks (whilst compiling)
-	# warn all       : all warnings (whilst running)
-	# ftrapuv        : Traps uninitialized variables by setting them to very large values
-	# debug all      : additional debugging information
-	# gen-interfaces : generate an interface block for each routine
-	# warn-interfaces: warn on these interface blocks
-	# fpe0           : halts program if dividing by zero, etc
-	FFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces
-	CXXFLAGS += -g -O0 -traceback -Wcheck -Wremarks -Wall -Weffc++ -ftrapuv -debug all
-	LDFLAGS += -g
+# Debugging mode
+# --------------
+# g              : enable gnu debugger compatibility
+# O0             : no optimisation
+# traceback      : create a backtrace on system failure
+# check all      : all checks (whilst compiling)
+# warn all       : all warnings (whilst running)
+# ftrapuv        : Traps uninitialized variables by setting them to very large values
+# debug all      : additional debugging information
+# gen-interfaces : generate an interface block for each routine
+# warn-interfaces: warn on these interface blocks
+# fpe0           : halts program if dividing by zero, etc
+FFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces
+CXXFLAGS += -g -O0 -traceback -Wcheck -Wremarks -Wall -Weffc++ -ftrapuv -debug all
+LDFLAGS += -g
 else
-	# Optimised mode
-	# --------------
-	#   ipo          : interprocedural optimization (optimize entire program)
-	#   O3           : maximum optimisation
-	#   no-prec-div  : slightly less precise floating point divides, but speeds up
-	#   static       : link intel libraries statically
-	#   xHost        : maximise architecture usage
-	#   w            : turn off all warnings
-	#   vec-report0  : disables printing of vectorizer diagnostic information
-	#   opt-report0  : disables printing of optimization reports
-	IPO = -ipo
-	FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
-	CXXFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
+# Optimised mode
+# --------------
+#   ipo          : interprocedural optimization (optimize entire program)
+#   O3           : maximum optimisation
+#   no-prec-div  : slightly less precise floating point divides, but speeds up
+#   static       : link intel libraries statically
+#   xHost        : maximise architecture usage
+#   w            : turn off all warnings
+#   vec-report0  : disables printing of vectorizer diagnostic information
+#   opt-report0  : disables printing of optimization reports
+IPO = -ipo
+FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
+CXXFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
 
-	ifdef IPO
-		# Archive tool for compiling with ipo.
-		AR = xiar rv
-	endif
+ifdef IPO
+# Archive tool for compiling with ipo.
+AR = xiar rv
+endif
 
 endif

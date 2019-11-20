@@ -90,7 +90,7 @@ class CustomBuildPy(_build_py, object):
         BASE_PATH = os.path.dirname(os.path.abspath(__file__))
         env["PWD"] = BASE_PATH
         env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
-        subprocess.check_call(["make", "libchord.so"], env=env, cwd=BASE_PATH)
+        subprocess.check_call(["make", "-e", "libchord.so"], env=env, cwd=BASE_PATH)
         if not os.path.isdir("pypolychord/lib/"):
             os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"))
         shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"), 
