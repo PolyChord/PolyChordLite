@@ -61,7 +61,8 @@ install:
           pip install . ;
           pip install mpi4py;
       else
-          python setup.py --no-mpi install;
+          pip install scipy;
+          pip install . --global-option="--no-mpi"
       fi
     - make MPI=$MPI gaussian
 
