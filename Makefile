@@ -14,17 +14,12 @@ BIN_DIR = $(PWD)/bin
 LIB_DIR = $(PWD)/lib
 export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
 
-PYTHON=python
-
-# Whether to use MPI (default to MPI on Linux)
-ifeq "$(shell uname)" "Linux"
+# Whether to use MPI 
 MPI=1
-else
-MPI=0
-endif
 
 # Whether to compile in debugging mode (default: false)
 DEBUG=0
+
 export MPI DEBUG
 
 # We can autodetect the compiler type on unix systems via the shell.
@@ -79,12 +74,6 @@ $(LIB_DIR)/libchord.a:
 # shared library
 $(LIB_DIR)/libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
-
-pypolychord: $(LIB_DIR)/libchord.so
-	@echo "======================================================================================="
-	@echo " now run:"
-	@echo ""
-	@echo "    python setup.py install --user"
 
 # Examples
 # --------

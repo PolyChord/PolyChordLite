@@ -2,22 +2,6 @@ from .output import PolyChordOutput
 import sys
 import os
 
-err = 'libchord.so: cannot open shared object file: No such file or directory'
-try:
-    import _pypolychord
-except ImportError as e:
-    if str(e) == err:
-        print('PolyChord: Could not find libchord.so')
-        print('           Did you move/remove your polychord library?')
-        print('           Go back to your PolyChord directory and run: ')
-        print('')
-        print('           $  make')
-        print('           $  python setup.py install --user ')
-        print('')
-        sys.exit(1)
-    else:
-        raise e
-
 
 def default_prior(cube):
     return cube.copy()
