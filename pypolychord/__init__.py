@@ -1,15 +1,6 @@
 from .output import PolyChordOutput
 import sys
 import os
-from ctypes import CDLL, RTLD_GLOBAL
-
-# Preloading MPI
-try:
-    CDLL("libmpi.so", mode=RTLD_GLOBAL)
-except OSError:
-    print("WARNING: Could not preload libmpi.so."
-          "If you are running with MPI, this may cause segfaults")
-    pass
 
 err = 'libchord.so: cannot open shared object file: No such file or directory'
 try:
