@@ -76,6 +76,9 @@ module utils_module
     !> unit for writing max file
     integer, parameter :: write_max_unit = 26
 
+    !> unit for properties file
+    integer, parameter :: properties_unit = 27
+
     ! All series used to approximate F are computed with relative
     ! tolerance:
     real(dp) eps
