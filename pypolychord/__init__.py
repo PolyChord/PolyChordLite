@@ -1,6 +1,7 @@
 from .output import PolyChordOutput
 import sys
 import os
+import _pypolychord
 
 
 def default_prior(cube):
