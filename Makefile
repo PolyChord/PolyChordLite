@@ -18,13 +18,13 @@ PYTHON=python
 
 # Whether to use MPI (default to MPI on Linux)
 ifeq "$(shell uname)" "Linux"
-MPI = 1
+MPI=1
 else
-MPI = 0
+MPI=0
 endif
 
 # Whether to compile in debugging mode (default: false)
-DEBUG = 0
+DEBUG=0
 export MPI DEBUG
 
 # We can autodetect the compiler type on unix systems via the shell.
