@@ -163,14 +163,14 @@ please email Will (wh260@mrao.cam.ac.uk).
 
 Python likelihoods (pypolychord)
 --------------------------------
-Being python, this interface is much more self-explanatory. You need to compile
-the library with:
+Being python, this interface is much more self-explanatory. You can install
+locally with the command:
 
 .. code:: bash
 
-    make pypolychord
     python setup.py install --user
 
+However, you may wish to consider installing pypolychord in a `virtual environment <https://packaging.python.org/guides/installing-using-pip-and-virtual-environments>`.
 You can then import pypolychord from anywhere with the lines:
 
 .. code:: python
