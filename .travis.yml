@@ -43,7 +43,7 @@ addons:
             - python2
             - python3
             - openmpi
-        #update: true
+        update: true
 
 # OSX setup
 before_install:
