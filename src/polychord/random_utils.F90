@@ -52,9 +52,6 @@ module random_module
         myrank = 0
 #endif
 
-        call random_seed(size = size_seed)
-        allocate(seed(size_seed))
-
         if (present(seed_input)) then
             ! If the seed argument is present, initialise stream with this
             t = seed_input
@@ -75,7 +72,7 @@ module random_module
             end if
 
         end if
-
+        ! write(*,*) "t before bc:", t
 #ifdef MPI
         ! Broadcast the system time to all nodes
         call MPI_BCAST(t,1,MPI_INTEGER,0,mpi_communicator,mpierror)      
@@ -83,15 +80,27 @@ module random_module
         ! Augment the seed on each node by adding 1 to it
         t = ieor(t, int(myrank, kind(t)))
 #endif
+        ! write(*,*) "t after bc:", t
+
+        call random_seed(size=size_seed)
+        ! size_seed = 64
+        allocate(seed(size_seed))
 
         ! set up the seeds for the better generator
         do i=1,size_seed
             seed(i) = basic_random(t)
         end do
 
+        ! do i=1,size_seed
+            ! write(*,*) seed(i)
+        ! end do
+        write(*,*) "size_seed:", size_seed
+        write(*,*) "sahpe(seed):", shape(seed)
         ! Seed the better generator
         call random_seed(put=seed)
+        deallocate (seed)
 
+        write(*,*) "random seed not actually the problem."
         contains
 
         function basic_random(s)
