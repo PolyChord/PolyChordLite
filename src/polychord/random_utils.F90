@@ -95,7 +95,8 @@ module random_module
             ! write(*,*) seed(i)
         ! end do
         write(*,*) "size_seed:", size_seed
-        write(*,*) "sahpe(seed):", shape(seed)
+        write(*,*) "shape(seed):", shape(seed)
+        write(*,*) "seed:", seed
         ! Seed the better generator
         call random_seed(put=seed)
         deallocate (seed)
