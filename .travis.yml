@@ -40,7 +40,7 @@ addons:
     homebrew:
         packages: 
             - gcc
-            #- python2
+            - python2
             - python3
             - openmpi
         update: true
@@ -58,7 +58,7 @@ install:
     - pip install numpy
     - if [ "$MPI" -eq 1 ];
       then
-          pip install -v . ;
+          pip install -v . --global-option="--debug-flags";
           pip install mpi4py;
       else
           pip install scipy;
