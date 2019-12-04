@@ -86,8 +86,11 @@ module random_module
         call random_seed(size=size_seed)
         ! size_seed = 64
         allocate(seed(size_seed), stat=ierr, errmsg=serr)
+        write(*,*) "seed allocation status:", ierr
         if(ierr /= 0) then
             write(*,*) "Could not allocate seed:", ierr, serr
+        else
+            write(*,*) "seed allocated successfully. shape(seed):", shape(seed)
         end if
 
         ! set up the seeds for the better generator
