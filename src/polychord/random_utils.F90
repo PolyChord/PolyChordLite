@@ -41,7 +41,8 @@ module random_module
         integer :: size_seed
         integer :: dt(8)
         integer(int64) :: t
-        integer :: i
+        integer :: i, ierr
+        character(len=512) :: serr
 
 
 
@@ -84,7 +85,10 @@ module random_module
 
         call random_seed(size=size_seed)
         ! size_seed = 64
-        allocate(seed(size_seed))
+        allocate(seed(size_seed), stat=ierr, errmsg=serr)
+        if(ierr /= 0) then
+            write(*,*) "Could not allocate seed:", ierr, serr
+        end if
 
         ! set up the seeds for the better generator
         do i=1,size_seed
