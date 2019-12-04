@@ -14,15 +14,15 @@
 matrix:
     fast_finish: true
     include:
-        #- os: osx
-        #  language: generic
-        #  env: PYTHON_VERSION=python2 MPI=0
-        #- os: osx
-        #  language: generic
-        #  env: PYTHON_VERSION=python3 MPI=0
-        #- os: osx
-        #  language: generic
-        #  env: PYTHON_VERSION=python2 MPI=1
+        # - os: osx
+        #   language: generic
+        #   env: PYTHON_VERSION=python2 MPI=0
+        - os: osx
+          language: generic
+          env: PYTHON_VERSION=python3 MPI=0
+        # - os: osx
+        #   language: generic
+        #   env: PYTHON_VERSION=python2 MPI=1
         - os: osx
           language: generic
           env: PYTHON_VERSION=python3 MPI=1
@@ -63,14 +63,14 @@ install:
       else
           pip install . --global-option="--no-mpi";
       fi
-    #- make MPI=$MPI gaussian
+    - make MPI=$MPI gaussian
 
 # Run tests
 script:
     - if [ "$MPI" -eq 1 ];
       then
           mpirun --version; 
-          mpirun -v -np 2 python run_pypolychord.py;
+          mpirun -v -np 2 -mca mpi_abort_print_stack 1 python run_pypolychord.py;
       else 
           python run_pypolychord.py; 
       fi
