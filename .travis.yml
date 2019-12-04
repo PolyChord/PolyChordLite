@@ -70,7 +70,7 @@ script:
     - if [ "$MPI" -eq 1 ];
       then
           mpirun --version; 
-          mpiexec -n 5 python -m mpi4py.bench helloworld;
+          mpiexec -n 2 python -m mpi4py.bench helloworld;
           mpirun -v -np 2 -mca mpi_abort_print_stack 1 python run_pypolychord.py;
       else 
           python run_pypolychord.py; 
