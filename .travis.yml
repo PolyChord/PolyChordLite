@@ -17,9 +17,9 @@ matrix:
         # - os: osx
         #   language: generic
         #   env: PYTHON_VERSION=python2 MPI=0
-        - os: osx
-          language: generic
-          env: PYTHON_VERSION=python3 MPI=0
+        #- os: osx
+        #  language: generic
+        #  env: PYTHON_VERSION=python3 MPI=0
         # - os: osx
         #   language: generic
         #   env: PYTHON_VERSION=python2 MPI=1
@@ -70,6 +70,7 @@ script:
     - if [ "$MPI" -eq 1 ];
       then
           mpirun --version; 
+          mpiexec -n 5 python -m mpi4py.bench helloworld;
           mpirun -v -np 2 -mca mpi_abort_print_stack 1 python run_pypolychord.py;
       else 
           python run_pypolychord.py; 
