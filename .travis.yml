@@ -20,9 +20,9 @@ matrix:
         #- os: osx
         #  language: generic
         #  env: PYTHON_VERSION=python3 MPI=0
-        - os: osx
-          language: generic
-          env: PYTHON_VERSION=python2 MPI=1
+        #- os: osx
+        #  language: generic
+        #  env: PYTHON_VERSION=python2 MPI=1
         - os: osx
           language: generic
           env: PYTHON_VERSION=python3 MPI=1
@@ -40,9 +40,9 @@ addons:
     homebrew:
         packages: 
             - gcc
-            - python2
+            #- python2
             - python3
-            - mpich
+            - openmpi
         update: true
 
 # OSX setup
@@ -64,7 +64,7 @@ install:
           pip install scipy;
           pip install . --global-option="--no-mpi";
       fi
-    - make MPI=$MPI gaussian
+    #- make MPI=$MPI gaussian
 
 # Run tests
 script:
