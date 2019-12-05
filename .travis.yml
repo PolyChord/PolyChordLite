@@ -17,9 +17,9 @@ matrix:
         # - os: osx
         #   language: generic
         #   env: PYTHON_VERSION=python2 MPI=0
-        #- os: osx
-        #  language: generic
-        #  env: PYTHON_VERSION=python3 MPI=0
+        - os: osx
+          language: generic
+          env: PYTHON_VERSION=python3 MPI=0
         # - os: osx
         #   language: generic
         #   env: PYTHON_VERSION=python2 MPI=1
