@@ -3,7 +3,6 @@
 
 module random_module
     use utils_module, only: dp
-    use mt19937_64, only: init_genrand64, genrand64_real2
 
 #ifdef MPI
     use mpi_module
@@ -39,10 +38,11 @@ module random_module
 
         integer :: myrank
 
+        integer :: size_seed
         integer :: dt(8)
         integer(int64) :: t
+        integer :: i
 
-        return
 
 
         ! Get the global ranking
@@ -51,6 +51,9 @@ module random_module
 #else
         myrank = 0
 #endif
+
+        call random_seed(size = size_seed)
+        allocate(seed(size_seed))
 
         if (present(seed_input)) then
             ! If the seed argument is present, initialise stream with this
@@ -72,7 +75,7 @@ module random_module
             end if
 
         end if
-        ! write(*,*) "t before bc:", t
+
 #ifdef MPI
         ! Broadcast the system time to all nodes
         call MPI_BCAST(t,1,MPI_INTEGER,0,mpi_communicator,mpierror)      
@@ -81,7 +84,27 @@ module random_module
         t = ieor(t, int(myrank, kind(t)))
 #endif
         
-        call init_genrand64(t)
+        ! set up the seeds for the better generator
+        do i=1,size_seed
+            seed(i) = basic_random(t)
+        end do
+
+        ! Seed the better generator
+        call random_seed(put=seed)
+
+        contains
+
+        function basic_random(s)
+          integer :: basic_random
+          integer(int64) :: s
+          if (s == 0) then
+             s = 104729
+          else
+             s = mod(s, 4294967296_int64)
+          end if
+          s = mod(s * 279470273_int64, 4294967291_int64)
+          basic_random = int(mod(s, int(huge(0), int64)), kind(0))
+        end function basic_random
 
     end subroutine initialise_random
 
@@ -102,11 +125,7 @@ module random_module
         ! The output nDims coordinate
         real(dp), dimension(nDims) :: reals
 
-        integer :: i
-
-        do i=1, nDims
-            reals(i) = genrand64_real2()
-        end do
+        call random_number(reals)
 
 
     end function random_reals

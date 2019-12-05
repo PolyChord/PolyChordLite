@@ -98,7 +98,6 @@ priors.o : \
 	utils.o 
 
 random_utils.o : \
-	mersenne.o \
 	mpi_utils.o \
 	utils.o 
 
@@ -122,4 +121,3 @@ settings.o : \
 	utils.o 
 
 utils.o : 
-mersenne.o:
