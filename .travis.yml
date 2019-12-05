@@ -42,7 +42,7 @@ addons:
             - gcc
             - python2
             - python3
-            - openmpi
+            - mpich
         update: true
 
 # OSX setup
