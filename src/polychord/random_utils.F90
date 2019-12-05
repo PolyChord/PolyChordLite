@@ -44,6 +44,7 @@ module random_module
         integer :: i, ierr
         character(len=512) :: serr
 
+        return
 
 
         ! Get the global ranking
@@ -110,8 +111,8 @@ module random_module
         write(*,*) "seed:", seed
         write(*,*) "here is some more printing"
         ! Seed the better generator
-        !call random_seed(put=seed)
-        !deallocate (seed)
+        call random_seed(put=seed)
+        deallocate (seed)
 
         write(*,*) "random seed not actually the problem."
         contains
