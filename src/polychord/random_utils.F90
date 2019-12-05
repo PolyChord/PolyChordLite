@@ -98,7 +98,7 @@ module random_module
         ! set up the seeds for the better generator
         write(*,*) "printing random inputs"
         do i=1,size_seed
-            seed(i) = i!basic_random(t)
+            seed(i) = basic_random(t)
             write(*,*) seed(i)
         end do
 
@@ -108,6 +108,7 @@ module random_module
         write(*,*) "size_seed:", size_seed
         write(*,*) "size(seed):", size(seed)
         write(*,*) "seed:", seed
+        write(*,*)
         ! Seed the better generator
         call random_seed(put=seed)
         deallocate (seed)
