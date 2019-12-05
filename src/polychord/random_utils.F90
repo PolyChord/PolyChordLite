@@ -108,7 +108,7 @@ module random_module
         write(*,*) "size_seed:", size_seed
         write(*,*) "size(seed):", size(seed)
         write(*,*) "seed:", seed
-        write(*,*)
+        write(*,*) "here is some more printing"
         ! Seed the better generator
         call random_seed(put=seed)
         deallocate (seed)
