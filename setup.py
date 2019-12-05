@@ -77,6 +77,9 @@ class CustomBuildPy(_build_py, object):
         env["PATH"] = os.environ["PATH"]
         if self.distribution.no_mpi is None:
             env["MPI"] = "1"
+            # These need to be set so that build_ext uses the right compilers
+            if "CC" not in os.environ: os.environ["CC"] = "mpicc"
+            if "CXX" not in os.environ: os.environ["CXX"] = "mpicxx"
         else:
             env["MPI"] = "0"
 
