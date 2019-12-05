@@ -83,7 +83,7 @@ module random_module
 #endif
         ! write(*,*) "t after bc:", t
 
-        call random_seed(size=size_seed)
+        call random_seed(size_seed)
         ! size_seed = 64
         allocate(seed(size_seed), stat=ierr, errmsg=serr)
         write(*,*) "seed allocation status:", ierr
