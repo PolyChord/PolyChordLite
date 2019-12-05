@@ -91,19 +91,22 @@ module random_module
         if(ierr /= 0) then
             write(*,*) "Could not allocate seed:", ierr, serr
         else
-            write(*,*) "seed allocated successfully. shape(seed):", shape(seed)
+            write(*,*) "seed allocated successfully"
+            write(*,*) "size(seed):", size(seed)
         end if
 
         ! set up the seeds for the better generator
+        write(*,*) "printing random inputs"
         do i=1,size_seed
-            seed(i) = basic_random(t)
+            seed(i) = i!basic_random(t)
+            write(*,*) seed(i)
         end do
 
         ! do i=1,size_seed
             ! write(*,*) seed(i)
         ! end do
         write(*,*) "size_seed:", size_seed
-        write(*,*) "shape(seed):", shape(seed)
+        write(*,*) "size(seed):", size(seed)
         write(*,*) "seed:", seed
         ! Seed the better generator
         call random_seed(put=seed)
