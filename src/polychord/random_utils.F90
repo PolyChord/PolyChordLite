@@ -3,6 +3,7 @@
 
 module random_module
     use utils_module, only: dp
+    use mt19937_64, only: init_genrand64, genrand64_real2
 
 #ifdef MPI
     use mpi_module
@@ -38,11 +39,8 @@ module random_module
 
         integer :: myrank
 
-        integer :: size_seed
         integer :: dt(8)
         integer(int64) :: t
-        integer :: i, ierr
-        character(len=512) :: serr
 
         return
 
@@ -82,52 +80,8 @@ module random_module
         ! Augment the seed on each node by adding 1 to it
         t = ieor(t, int(myrank, kind(t)))
 #endif
-        ! write(*,*) "t after bc:", t
-
-        call random_seed(size=size_seed)
-        write(*,*) "Got seed size:", size_seed
-        ! size_seed = 64
-        allocate(seed(size_seed), stat=ierr, errmsg=serr)
-        write(*,*) "seed allocation status:", ierr
-        if(ierr /= 0) then
-            write(*,*) "Could not allocate seed:", ierr, serr
-        else
-            write(*,*) "seed allocated successfully"
-            write(*,*) "size(seed):", size(seed)
-        end if
-
-        ! set up the seeds for the better generator
-        write(*,*) "printing random inputs"
-        do i=1,size_seed
-            seed(i) = basic_random(t)
-            write(*,*) seed(i)
-        end do
-
-        ! do i=1,size_seed
-            ! write(*,*) seed(i)
-        ! end do
-        write(*,*) "size_seed:", size_seed
-        write(*,*) "size(seed):", size(seed)
-        write(*,*) "seed:", seed
-        write(*,*) "here is some more printing"
-        ! Seed the better generator
-        call random_seed(put=seed)
-        deallocate (seed)
-
-        write(*,*) "random seed not actually the problem."
-        contains
-
-        function basic_random(s)
-          integer :: basic_random
-          integer(int64) :: s
-          if (s == 0) then
-             s = 104729
-          else
-             s = mod(s, 4294967296_int64)
-          end if
-          s = mod(s * 279470273_int64, 4294967291_int64)
-          basic_random = int(mod(s, int(huge(0), int64)), kind(0))
-        end function basic_random
+        
+        call init_genrand64(t)
 
     end subroutine initialise_random
 
@@ -148,7 +102,11 @@ module random_module
         ! The output nDims coordinate
         real(dp), dimension(nDims) :: reals
 
-        call random_number(reals)
+        integer :: i
+
+        do i=1, nDims
+            reals(i) = genrand64_real2()
+        end do
 
 
     end function random_reals
