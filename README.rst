@@ -200,7 +200,7 @@ run_pypolychord.py, and consult the docstring if you need help:
     help(pypolychord.run_polychord)
     help(PolyChordSettings)
 
-There is also a demo `python notebook <https://github.com/williamjameshandley/py2nb/blob/master/run_pypolychord.ipynb>`_.
+There is also a demo `python notebook <https://github.com/PolyChord/PolyChordLite/blob/master/run_pypolychord.ipynb>`_.
 
 Output files 
 =============
