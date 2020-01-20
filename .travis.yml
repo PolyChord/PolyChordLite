@@ -88,6 +88,7 @@ install:
 
 # Run tests
 script:
+    - rm -rf /tmp/getdist_cache
     - if [ "$MPI" ];
       then 
           mpirun -np 2 python run_pypolychord.py;
