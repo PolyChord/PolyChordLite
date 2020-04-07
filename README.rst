@@ -11,7 +11,7 @@ arXiv:1502.01856
 
 arXiv:1506.00171
 
-Released Mar 2019
+Latest version Released Apr 2020
 
 
 PolyChord Licence
