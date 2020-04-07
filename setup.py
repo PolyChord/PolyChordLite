@@ -12,8 +12,7 @@ def get_version(short=False):
     with open('src/polychord/feedback.f90') as f:
         for line in f:
             if 'version' in line:
-                return line[44:48]
-
+                return line[44:50]
 
 pypolychord_module = Extension(
         name='_pypolychord',
