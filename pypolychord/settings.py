@@ -24,11 +24,13 @@ class PolyChordSettings:
         The number of live points.
         Increasing nlive increases the accuracy of posteriors and evidences,
         and proportionally increases runtime ~ O(nlive).
+        Must be positive.
 
     num_repeats : int
         (Default: nDims*5)
         The number of slice slice-sampling steps to generate a new point.
         Increasing num_repeats increases the reliability of the algorithm.
+        -1 is equivalent to default.
         Typically
         * for reliable evidences need num_repeats ~ O(5*nDims).
         * for reliable posteriors need num_repeats ~ O(nDims)
@@ -130,7 +132,7 @@ class PolyChordSettings:
 
     grade_frac : List[float]
         (Default: [1])
-        The amount of time to spend in each speed. 
+        The amount of time to spend in each speed.
         If any of grade_frac are <= 1, then polychord will time each sub-speed,
         and then choose num_repeats for the number of slowest repeats, and
         spend the proportion of time indicated by grade_frac. Otherwise this
@@ -154,6 +156,7 @@ class PolyChordSettings:
         milliseconds
 
     """
+
     def __init__(self, nDims, nDerived, **kwargs):
 
         self.nlive = kwargs.pop('nlive', nDims*25)
@@ -199,3 +202,49 @@ class PolyChordSettings:
     @property
     def cluster_dir(self):
         return os.path.join(self.base_dir, 'clusters')
+
+    @property
+    def nDims(self):
+        return sum(self.grade_dims)
+
+    @property
+    def grade_dims(self):
+        return self._grade_dims
+
+    @grade_dims.setter
+    def grade_dims(self, value):
+        if value is None or value is []:
+            self._grade_dims = [self.nDims]
+        else:
+            self._grade_dims = [__natnum(x) for x in value]
+        try:
+            self.grade_frac = self.grade_frac[:len(self.grade_dims)]
+        except ValueError:
+            self.grade_frac = self.grade_frac[:len(self.grade_dims)] + \
+                [1.0]*(len(self.grade_dims) - len(self.grade_frac))
+
+    @property
+    def grade_frac(self):
+        if len(self.grade_dims) != self._grade_frac:
+            raise ValueError(
+                'grade_dims and  grade_frac of incompatible sizes: %i vs %i' %
+                ((len(self.grade_dims), len(self._grade_frac))))
+        else:
+            return self._grade_frac
+
+    @grade_frac.setter
+    def grade_frac(self, value):
+        if len(value) >= len(self.grade_dims):
+            self._grade_frac = value[:len(self.grade_dims)]
+        else:
+            raise ValueError('Insufficient values to set grade_frac.'
+                             'Need %i, got %i' % (len(value),
+                                                  len(self.grade_dims)))
+
+
+def __natnum(x: int, minimum=1):
+    """Helper function to prevent negative or zero numbers being passed in."""
+    if x < minimum:
+        raise ValueError("Expecting a non-zero positive integer: got %i." % x)
+    else:
+        return x
