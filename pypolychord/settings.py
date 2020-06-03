@@ -1,5 +1,10 @@
 import os
 import numpy
+import warnings
+
+def warn(msg):
+    warnings.warn(msg)
+    warnings.warn('This will raise an exception in the future.')
 
 
 class PolyChordSettings:
@@ -190,14 +195,12 @@ class PolyChordSettings:
         self.grade_frac = list(kwargs.pop('grade_frac',
                                           [1.0]*len(self.grade_dims)))
         self.nlives = kwargs.pop('nlives', {})
-
         if kwargs:
-            raise TypeError('Unexpected **kwargs in Contours constructor: %r'
-                            % kwargs)
-
+            warn('Unexpected **kwargs in Contours constructor: %r' % kwargs)
+            
         if sum(self.grade_dims) != nDims:
             raise ValueError('grade_dims must sum to the total dimensionality:'
-                             'sum(%i) /= %i' % (self.grade_dims, nDims))
+                             'sum(grade_dims) = %i /= %i' % (len(self.grade_dims), nDims))
 
     @property
     def cluster_dir(self):
@@ -213,38 +216,35 @@ class PolyChordSettings:
 
     @grade_dims.setter
     def grade_dims(self, value):
-        if value is None or value is []:
+        if value is None or value == []:
+            warn('invalid grade_dims. Defaulting.')
             self._grade_dims = [self.nDims]
         else:
             self._grade_dims = [__natnum(x) for x in value]
-        try:
-            self.grade_frac = self.grade_frac[:len(self.grade_dims)]
-        except ValueError:
-            self.grade_frac = self.grade_frac[:len(self.grade_dims)] + \
-                [1.0]*(len(self.grade_dims) - len(self.grade_frac))
+        # try:
+        #     self.grade_frac = self.grade_frac[:len(self.grade_dims)]
+        # except ValueError:
+        #     self.grade_frac = self.grade_frac[:len(self.grade_dims)] + \
+        #         [1.0]*(len(self.grade_dims) - len(self.grade_frac))
 
     @property
     def grade_frac(self):
         if len(self.grade_dims) != self._grade_frac:
-            raise ValueError(
-                'grade_dims and  grade_frac of incompatible sizes: %i vs %i' %
-                ((len(self.grade_dims), len(self._grade_frac))))
-        else:
-            return self._grade_frac
+            warn('grade_dims doesn\'t match grade_frac.')
+        return self._grade_frac
 
     @grade_frac.setter
     def grade_frac(self, value):
         if len(value) >= len(self.grade_dims):
             self._grade_frac = value[:len(self.grade_dims)]
         else:
-            raise ValueError('Insufficient values to set grade_frac.'
-                             'Need %i, got %i' % (len(value),
-                                                  len(self.grade_dims)))
+            warn('Insufficient values to set grade_frac.'
+                 'Need %i, got %i' % (len(value), len(self.grade_dims)))
+            warn('Defaulting to set, but this will raise in the future.')
 
 
 def __natnum(x: int, minimum=1):
     """Helper function to prevent negative or zero numbers being passed in."""
     if x < minimum:
-        raise ValueError("Expecting a non-zero positive integer: got %i." % x)
-    else:
-        return x
+        warn("Expecting a non-zero positive integer: got %i." % x)
+    return x
