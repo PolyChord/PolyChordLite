@@ -207,6 +207,18 @@ class PolyChordSettings:
             raise ValueError('grade_dims must sum to the total dimensionality:'
                              'sum(grade_dims) = %i /= %i' %
                              (len(self.grade_dims), nDims))
+        if not (isinstance(self.grade_dims, list)
+                or not all([isinstance(x, int) for x in self.grade_dims])):
+            raise ValueError('grade_dims must be a list of integers.')
+        if not (isinstance(self.grade_frac, list)
+                or not all(
+                    [isinstance(x, int) or isinstance(x, float)
+                     for x in self.grade_frac]):
+                raise ValueError('grade_dims must be a list of doubles.')
+        if not (len(self.grade_dims) == len(self.grade_frac)):
+                raise ValueError('grade_dims and grade_frac must have the same'
+                                 'len.')
+
 
     @property
     def cluster_dir(self):
