@@ -24,7 +24,7 @@ class PolyChordSettings:
 
     Keyword arguments
     -----------------
-    nlive: int
+    nlive: positive int
         (Default: nDims*25)
         The number of live points.
         Increasing nlive increases the accuracy of posteriors and evidences,
@@ -43,10 +43,13 @@ class PolyChordSettings:
     nprior : int
         (Default: nlive)
         The number of prior samples to draw before starting compression.
+        -1 is equivalent to default.
 
     nfail : int
         (Default: nlive)
         The number of failed spawns before stopping nested sampling.
+        -1 is equivalent to default.
+
 
     do_clustering : boolean
         (Default: True)
@@ -71,6 +74,7 @@ class PolyChordSettings:
         (Default: -1)
         Alternative termination criterion. Stop after max_ndead iterations.
         Set negative to ignore (default).
+
 
     boost_posterior : float
         (Default: 0.0)
@@ -135,17 +139,19 @@ class PolyChordSettings:
         (Default: 'test')
         Root name of the files produced.
 
-    grade_frac : List[float]
+    grade_frac : List[positive float]
         (Default: [1])
         The amount of time to spend in each speed.
         If any of grade_frac are <= 1, then polychord will time each sub-speed,
         and then choose num_repeats for the number of slowest repeats, and
         spend the proportion of time indicated by grade_frac. Otherwise this
         indicates the number of repeats to spend in each speed.
+        Must be positive.
 
-    grade_dims : List[int]
+    grade_dims : List[positive int]
         (Default: nDims)
         The number of parameters within each speed.
+        Must be positive.
 
     nlives : dict {double:int}
         (Default: {})
@@ -153,6 +159,7 @@ class PolyChordSettings:
         between loglike contours and nlive.
         You should still set nlive to be a sensible number, as this indicates
         how often to update the clustering, and to define the default value.
+
     seed : positive int
         (Default: system time in milliseconds)
         Choose the seed to seed the random number generator.
@@ -163,7 +170,6 @@ class PolyChordSettings:
     """
 
     def __init__(self, nDims, nDerived, **kwargs):
-
         self.nlive = kwargs.pop('nlive', nDims*25)
         self.num_repeats = kwargs.pop('num_repeats', nDims*5)
         self.nprior = kwargs.pop('nprior', -1)
@@ -197,10 +203,10 @@ class PolyChordSettings:
         self.nlives = kwargs.pop('nlives', {})
         if kwargs:
             warn('Unexpected **kwargs in Contours constructor: %r' % kwargs)
-            
         if sum(self.grade_dims) != nDims:
             raise ValueError('grade_dims must sum to the total dimensionality:'
-                             'sum(grade_dims) = %i /= %i' % (len(self.grade_dims), nDims))
+                             'sum(grade_dims) = %i /= %i' %
+                             (len(self.grade_dims), nDims))
 
     @property
     def cluster_dir(self):
