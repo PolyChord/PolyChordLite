@@ -175,6 +175,9 @@ class PolyChordSettings:
         self.nprior = kwargs.pop('nprior', -1)
         self.nfail = kwargs.pop('nfail', -1)
         self.do_clustering = kwargs.pop('do_clustering', True)
+        self.cluster_posteriors = kwargs.pop('cluster_posteriors', True)
+        if not self.do_clustering and self.cluster_posteriors:
+            warnings.warn('Not doing clustering, yet cluster posteriors is set.')
         self.feedback = kwargs.pop('feedback', 1)
         self.precision_criterion = kwargs.pop('precision_criterion', 0.001)
         self.logzero = kwargs.pop('logzero', -1e30)
@@ -182,7 +185,6 @@ class PolyChordSettings:
         self.boost_posterior = kwargs.pop('boost_posterior', 0.0)
         self.posteriors = kwargs.pop('posteriors', True)
         self.equals = kwargs.pop('equals', True)
-        self.cluster_posteriors = kwargs.pop('cluster_posteriors', True)
         self.write_resume = kwargs.pop('write_resume', True)
         self.write_paramnames = kwargs.pop('write_paramnames', False)
         self.read_resume = kwargs.pop('read_resume', True)
@@ -213,12 +215,11 @@ class PolyChordSettings:
         if not (isinstance(self.grade_frac, list)
                 or not all(
                     [isinstance(x, int) or isinstance(x, float)
-                     for x in self.grade_frac]):
-                raise ValueError('grade_dims must be a list of doubles.')
+                     for x in self.grade_frac])):
+            raise ValueError('grade_dims must be a list of doubles.')
         if not (len(self.grade_dims) == len(self.grade_frac)):
-                raise ValueError('grade_dims and grade_frac must have the same'
-                                 'len.')
-
+            raise ValueError('grade_dims and grade_frac must have the same'
+                             'len.')
 
     @property
     def cluster_dir(self):
