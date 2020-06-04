@@ -14,6 +14,7 @@ def get_version(short=False):
             if 'version' in line:
                 return line[44:50]
 
+
 pypolychord_module = Extension(
         name='_pypolychord',
         library_dirs=[os.path.join(os.getcwd(), 'lib')],
