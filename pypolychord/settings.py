@@ -175,22 +175,23 @@ class PolyChordSettings:
                  logzero=-1e30, boost_posterior=0.0,
                  write_paramnames=False, maximise=False,
                  base_dir='chains', file_root='test',
-                 compression_factor=numpy.exp(-1), seed=-1,
-                 nlives={}, **kwargs):
+                 compression_factor=numpy.exp(-1), seed=-1, nlives={},
+                 posteriors=True, equals=True, write_resume=True,
+                 read_resume=True, write_prior=True, write_dead=True,
+                 write_live=True, write_stats=True,
+                 cluster_posteriors=True, do_clustering=True,
+                 **kwargs):
         args = locals()
         args = {k: args[k] for k in args
                 if k not in ['self', 'nDims', 'nDerived', 'kwargs']}
-
         for k in args:
             setattr(self, k, args[k])
         self.nlive = kwargs.pop('nlive', nDims*25)
         self.num_repeats = kwargs.pop('num_repeats', nDims*5)
-        true_flags = {'posteriors', 'equals', 'write_resume',
-                      'read_resume', 'write_prior', 'write_dead',
-                      'write_live', 'write_stats', 'write_dead',
-                      'cluster_posteriors', 'do_clustering'}
-        for f in true_flags:
-            setattr(self, f, kwargs.pop(f, True))
+        self.grade_dims = list(kwargs.pop('grade_dims',
+                                          [nDims]))
+        self.grade_frac = list(kwargs.pop('grade_frac',
+                                          [1.0]*len(self.grade_dims)))
         # # This is the old way in which we did it.
         # self.nprior = kwargs.pop('nprior', -1)
         # self.nfail = kwargs.pop('nfail', -1)
@@ -217,10 +218,7 @@ class PolyChordSettings:
         # self.file_root = kwargs.pop('file_root', 'test')
         # self.seed = kwargs.pop('seed', -1)
         # self.nlives = kwargs.pop('nlives', {})
-        self.grade_dims = list(kwargs.pop('grade_dims',
-                                          [nDims]))
-        self.grade_frac = list(kwargs.pop('grade_frac',
-                                          [1.0]*len(self.grade_dims)))
+        
         if kwargs:
             warn('Unexpected **kwargs in Contours constructor: %r.' % kwargs)
         self.validate(nDims)
