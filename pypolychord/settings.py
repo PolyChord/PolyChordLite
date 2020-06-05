@@ -283,8 +283,8 @@ class PolyChordSettings:
             self._grade_frac = value[:len(self.grade_dims)]
         else:
             warn('Insufficient values to set grade_frac. '
-                 'Need %i, got %i' % (len(value), len(self.grade_dims))
-                 'Defaulting to set [1.0]*len(self.grade_dims).')
+                 'Need %i, got %i' % (len(value), len(self.grade_dims)))
+            warn('Defaulting to set [1.0]*len(self.grade_dims).')
             self._grade_frac = [1.0]*len(self.grade_dims)
 
 
@@ -295,4 +295,4 @@ def _natnum(x, minimum=1):
     return x
 
 
-a = PolyChordSettings(2, 2, grade_dims=[1, 1], grade_frac=[1])
+# a = PolyChordSettings(2, 2, grade_dims=[1, 1], grade_frac=[1])
