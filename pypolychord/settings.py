@@ -2,9 +2,10 @@ import os
 import numpy
 import warnings
 
+
 def warn(msg):
-    warnings.warn(msg)
-    warnings.warn('This will raise an exception in the future.')
+    warnings.warn(msg + ' This will raise an exception in the future.')
+    # raise ValueError (msg)
 
 
 class PolyChordSettings:
@@ -169,42 +170,65 @@ class PolyChordSettings:
 
     """
 
-    def __init__(self, nDims, nDerived, **kwargs):
+    def __init__(self, nDims, nDerived, nprior=-1, nfail=-1,
+                 feedback=1, max_ndead=-1, precision_criterion=0.001,
+                 logzero=-1e30, boost_posterior=0.0,
+                 write_paramnames=False, maximise=False,
+                 base_dir='chains', file_root='test',
+                 compression_factor=numpy.exp(-1), seed=-1,
+                 nlives={}, **kwargs):
+        args = locals()
+        args = {k: args[k] for k in args
+                if k not in ['self', 'nDims', 'nDerived', 'kwargs']}
+
+        for k in args:
+            setattr(self, k, args[k])
         self.nlive = kwargs.pop('nlive', nDims*25)
         self.num_repeats = kwargs.pop('num_repeats', nDims*5)
-        self.nprior = kwargs.pop('nprior', -1)
-        self.nfail = kwargs.pop('nfail', -1)
-        self.do_clustering = kwargs.pop('do_clustering', True)
-        self.cluster_posteriors = kwargs.pop('cluster_posteriors', True)
-        if not self.do_clustering and self.cluster_posteriors:
-            warnings.warn('Not doing clustering, yet cluster posteriors is set.')
-        self.feedback = kwargs.pop('feedback', 1)
-        self.precision_criterion = kwargs.pop('precision_criterion', 0.001)
-        self.logzero = kwargs.pop('logzero', -1e30)
-        self.max_ndead = kwargs.pop('max_ndead', -1)
-        self.boost_posterior = kwargs.pop('boost_posterior', 0.0)
-        self.posteriors = kwargs.pop('posteriors', True)
-        self.equals = kwargs.pop('equals', True)
-        self.write_resume = kwargs.pop('write_resume', True)
-        self.write_paramnames = kwargs.pop('write_paramnames', False)
-        self.read_resume = kwargs.pop('read_resume', True)
-        self.write_stats = kwargs.pop('write_stats', True)
-        self.write_live = kwargs.pop('write_live', True)
-        self.write_dead = kwargs.pop('write_dead', True)
-        self.write_prior = kwargs.pop('write_prior', True)
-        self.maximise = kwargs.pop('maximise', False)
-        self.compression_factor = kwargs.pop('compression_factor',
-                                             numpy.exp(-1))
-        self.base_dir = kwargs.pop('base_dir', 'chains')
-        self.file_root = kwargs.pop('file_root', 'test')
-        self.seed = kwargs.pop('seed', -1)
+        true_flags = {'posteriors', 'equals', 'write_resume',
+                      'read_resume', 'write_prior', 'write_dead',
+                      'write_live', 'write_stats', 'write_dead',
+                      'cluster_posteriors', 'do_clustering'}
+        for f in true_flags:
+            setattr(self, f, kwargs.pop(f, True))
+        # # This is the old way in which we did it.
+        # self.nprior = kwargs.pop('nprior', -1)
+        # self.nfail = kwargs.pop('nfail', -1)
+        # self.feedback = kwargs.pop('feedback', 1)
+        # self.max_ndead = kwargs.pop('max_ndead', -1)
+        # self.precision_criterion = kwargs.pop('precision_criterion', 0.001)
+        # self.logzero = kwargs.pop('logzero', -1e30)
+        # self.boost_posterior = kwargs.pop('boost_posterior', 0.0)
+        # self.posteriors = kwargs.pop('posteriors', True)
+        # self.equals = kwargs.pop('equals', True)
+        # self.write_resume = kwargs.pop('write_resume', True)
+        # self.read_resume = kwargs.pop('read_resume', True)
+        # self.write_stats = kwargs.pop('write_stats', True)
+        # self.write_live = kwargs.pop('write_live', True)
+        # self.write_dead = kwargs.pop('write_dead', True)
+        # self.write_prior = kwargs.pop('write_prior', True)
+        # self.cluster_posteriors = kwargs.pop('cluster_posteriors', True)
+        # self.do_clustering = kwargs.pop('do_clustering', True)
+        # self.write_paramnames = kwargs.pop('write_paramnames', False)
+        # self.maximise = kwargs.pop('maximise', False)
+        # self.compression_factor = kwargs.pop('compression_factor',
+            # numpy.exp(-1))
+        # self.base_dir = kwargs.pop('base_dir', 'chains')
+        # self.file_root = kwargs.pop('file_root', 'test')
+        # self.seed = kwargs.pop('seed', -1)
+        # self.nlives = kwargs.pop('nlives', {})
         self.grade_dims = list(kwargs.pop('grade_dims',
                                           [nDims]))
         self.grade_frac = list(kwargs.pop('grade_frac',
                                           [1.0]*len(self.grade_dims)))
-        self.nlives = kwargs.pop('nlives', {})
         if kwargs:
-            warn('Unexpected **kwargs in Contours constructor: %r' % kwargs)
+            warn('Unexpected **kwargs in Contours constructor: %r.' % kwargs)
+        self.validate(nDims)
+
+    def validate(self, nDims):
+        if not self.do_clustering and self.cluster_posteriors:
+            warnings.warn(
+                'Not doing clustering, yet cluster posteriors is set.')
         if sum(self.grade_dims) != nDims:
             raise ValueError('grade_dims must sum to the total dimensionality:'
                              'sum(grade_dims) = %i /= %i' %
@@ -239,7 +263,8 @@ class PolyChordSettings:
             warn('invalid grade_dims. Defaulting.')
             self._grade_dims = [self.nDims]
         else:
-            self._grade_dims = [__natnum(x) for x in value]
+            self._grade_dims = [_natnum(x) for x in value]
+        # # Uncomment if raising exceptions instead of warning.
         # try:
         #     self.grade_frac = self.grade_frac[:len(self.grade_dims)]
         # except ValueError:
@@ -248,7 +273,7 @@ class PolyChordSettings:
 
     @property
     def grade_frac(self):
-        if len(self.grade_dims) != self._grade_frac:
+        if len(self.grade_dims) != len(self._grade_frac):
             warn('grade_dims doesn\'t match grade_frac.')
         return self._grade_frac
 
@@ -257,13 +282,17 @@ class PolyChordSettings:
         if len(value) >= len(self.grade_dims):
             self._grade_frac = value[:len(self.grade_dims)]
         else:
-            warn('Insufficient values to set grade_frac.'
-                 'Need %i, got %i' % (len(value), len(self.grade_dims)))
-            warn('Defaulting to set, but this will raise in the future.')
+            warn('Insufficient values to set grade_frac. '
+                 'Need %i, got %i' % (len(value), len(self.grade_dims))
+                 'Defaulting to set [1.0]*len(self.grade_dims).')
+            self._grade_frac = [1.0]*len(self.grade_dims)
 
 
-def __natnum(x: int, minimum=1):
+def _natnum(x, minimum=1):
     """Helper function to prevent negative or zero numbers being passed in."""
     if x < minimum:
         warn("Expecting a non-zero positive integer: got %i." % x)
     return x
+
+
+a = PolyChordSettings(2, 2, grade_dims=[1, 1], grade_frac=[1])
