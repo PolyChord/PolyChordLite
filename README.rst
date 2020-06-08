@@ -1,7 +1,7 @@
 .. image:: https://travis-ci.org/PolyChord/PolyChordLite.svg?branch=master
     :target: https://travis-ci.org/PolyChord/PolyChordLite
 
-PolyChord v 1.16
+PolyChord v 1.17.1
 
 Will Handley, Mike Hobson & Anthony Lasenby
 
@@ -11,7 +11,7 @@ arXiv:1502.01856
 
 arXiv:1506.00171
 
-Released Mar 2019
+Latest version Released Apr 2020
 
 
 PolyChord Licence
@@ -200,7 +200,7 @@ run_pypolychord.py, and consult the docstring if you need help:
     help(pypolychord.run_polychord)
     help(PolyChordSettings)
 
-There is also a demo `python notebook <https://github.com/williamjameshandley/py2nb/blob/master/run_pypolychord.ipynb>`_.
+There is also a demo `python notebook <https://github.com/PolyChord/PolyChordLite/blob/master/run_pypolychord.ipynb>`_.
 
 Output files 
 =============

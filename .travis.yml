@@ -67,11 +67,10 @@ install:
 
 # Run tests
 script:
-    - if [ "$MPI" -eq 1 ];
-      then
-          mpirun --version; 
-          mpiexec -n 2 python -m mpi4py.bench helloworld;
-          mpirun -v -np 2 -mca mpi_abort_print_stack 1 python run_pypolychord.py;
+    - rm -rf /tmp/getdist_cache
+    - if [ "$MPI" ];
+      then 
+          mpirun -np 2 python run_pypolychord.py;
       else 
           python run_pypolychord.py; 
       fi

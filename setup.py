@@ -60,7 +60,8 @@ def get_version(short=False):
     with open('src/polychord/feedback.f90') as f:
         for line in f:
             if 'version' in line:
-                return line.split(': ')[1].split('"')[0]
+                return line[44:50]
+
 
 class DistributionWithOption(Distribution, object):
     def __init__(self, *args, **kwargs):
