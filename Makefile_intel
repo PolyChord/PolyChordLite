@@ -8,6 +8,15 @@ CXX = icpc
 CC = icc
 endif
 
+
+ifneq ($(NERSC_HOST),)
+#setting for Edison/Cori on NERSC
+FC = ftn
+MPIF90C = ftn
+CXX = cc
+endif
+
+
 CPP = $(CC)
 LD = $(FC)
 LDSHARED = $(LD) -shared
@@ -58,6 +67,12 @@ else
 IPO = -ipo
 FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
 CXXFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
+
+ifneq ($(NERSC_HOST),)
+#setting for Edison/Cori on NERSC
+FFLAGS = -fpp -qopenmp -dynamic -axMIC-AVX512,CORE-AVX2
+CXXFLAGS = -fpp -qopenmp -dynamic -axMIC-AVX512,CORE-AVX2
+endif
 
 ifdef IPO
 # Archive tool for compiling with ipo.
