@@ -1,0 +1,69 @@
+FC = ftn
+MPIF90C = ftn
+CXX = cc
+CXX = cc
+
+CPP = $(CC)
+LD = $(FC)
+LDSHARED = $(LD) -shared
+
+# Archive tool
+AR = ar rv
+
+
+# default flags
+# --------------
+# fpp                    : perform preprocessing
+# fpic                   : shared object libraries
+# assume noold_maxminloc : in intel v16 compilers, they changed the default behavior of minloc (ffs).
+# 						   this flag is necessary to ensure consistent behavior across compilers
+FFLAGS += -fpp -fpic -assume noold_maxminloc -heap-arrays
+CXXFLAGS += -std=c++11 -fpic
+# nofor_main 	         : essential for linking c++ and fortran
+LDFLAGS += -nofor-main
+LDLIBS += -cxxlib
+
+ifdef DEBUG
+# Debugging mode
+# --------------
+# g              : enable gnu debugger compatibility
+# O0             : no optimisation
+# traceback      : create a backtrace on system failure
+# check all      : all checks (whilst compiling)
+# warn all       : all warnings (whilst running)
+# ftrapuv        : Traps uninitialized variables by setting them to very large values
+# debug all      : additional debugging information
+# gen-interfaces : generate an interface block for each routine
+# warn-interfaces: warn on these interface blocks
+# fpe0           : halts program if dividing by zero, etc
+FFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces
+CXXFLAGS += -g -O0 -traceback -Wcheck -Wremarks -Wall -Weffc++ -ftrapuv -debug all
+LDFLAGS += -g
+else
+# Optimised mode
+# --------------
+#   ipo          : interprocedural optimization (optimize entire program)
+#   O3           : maximum optimisation
+#   no-prec-div  : slightly less precise floating point divides, but speeds up
+#   static       : link intel libraries statically
+#   xHost        : maximise architecture usage
+#   w            : turn off all warnings
+#   vec-report0  : disables printing of vectorizer diagnostic information
+#   opt-report0  : disables printing of optimization reports
+IPO = -ipo
+FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
+CXXFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
+
+ifneq ($(NERSC_HOST),)
+#setting for Edison/Cori on NERSC
+FFLAGS = -fpp -fpic -qopenmp -dynamic -axMIC-AVX512,CORE-AVX2
+CXXFLAGS = -fpic -qopenmp -dynamic -axMIC-AVX512,CORE-AVX2
+CFLAGS += -fpic
+endif
+
+ifdef IPO
+# Archive tool for compiling with ipo.
+AR = xiar rv
+endif
+
+endif
