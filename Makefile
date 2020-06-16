@@ -31,7 +31,9 @@ export MPI DEBUG
 # if you want to override this then just run make with
 # make COMPILER_TYPE=<your type>
 # where <your type> is gnu or intel
-ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
+ifeq "$(shell which ftn >/dev/null 2>&1; echo $$?)" "0"
+COMPILER_TYPE=cray
+else ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
 COMPILER_TYPE=intel
 else ifeq "$(shell which gfortran >/dev/null 2>&1; echo $$?)" "0"
 COMPILER_TYPE=gnu
@@ -41,6 +43,8 @@ ifeq ($(COMPILER_TYPE),intel)
 include Makefile_intel
 else ifeq ($(COMPILER_TYPE),gnu) 
 include Makefile_gnu
+else ifeq ($(COMPILER_TYPE),cray)
+include Makefile_cray
 endif
 
 
