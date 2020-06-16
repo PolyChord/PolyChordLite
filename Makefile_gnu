@@ -19,9 +19,14 @@ AR = ar rv
 # free-line-length-none : turn of line length limitation (why is this not a default??)
 # cpp  					: perform preprocessing
 # fPIC                  : for compiling a shared object library
-FFLAGS += -ffree-line-length-none -cpp -fPIC -fno-stack-arrays
+FFLAGS += -ffree-line-length-none -cpp -fPIC -fno-stack-arrays 
 CXXFLAGS += -std=c++11 -fPIC
 CFLAGS += -fPIC
+
+# This is now needed for gfortran versions >=10
+ifeq "$(shell expr `gfortran -dumpversion | cut -f1 -d.` \>= 10)" "1"
+	FFLAGS += -fallow-argument-mismatch
+endif
 
 # clang uses a different libstdc++ than GCC
 ifneq (,$(findstring clang,$(shell '$(CXX)' -v 2>&1)))
