@@ -1,0 +1,26 @@
+FC = ftn
+MPIF90C = ftn
+CXX = cc
+CXX = cc
+
+CPP = $(CC)
+LD = $(FC)
+LDSHARED = $(LD) -shared
+
+# Archive tool
+AR = ar rv
+
+FFLAGS += -fpp -fpic -qopenmp -dynamic
+CXXFLAGS += -fpic -qopenmp -dynamic
+CFLAGS += -fpic
+#setting for Edison/Cori on NERSC
+ifneq ($(NERSC_HOST),)
+FFLAGS += -axMIC-AVX512,CORE-AVX2
+CXXFLAGS += -axMIC-AVX512,CORE-AVX2
+endif
+
+ifdef IPO
+# Archive tool for compiling with ipo.
+AR = xiar rv
+endif
+
