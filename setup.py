@@ -81,12 +81,10 @@ class CustomBuildPy(_build_py, object):
             # These need to be set so that build_ext uses the right compilers
             cc_compiler = subprocess.run(["make", "print_CC"], stdout=subprocess.PIPE)
             cc_compiler = cc_compiler.stdout.decode('utf-8').strip()
-            print(">>>>>>>>>>>>>", cc_compiler)
             os.environ["CC"] = cc_compiler
 
             cxx_compiler = subprocess.run(["make", "print_CC"], stdout=subprocess.PIPE)
             cxx_compiler = cxx_compiler.stdout.decode('utf-8').strip()
-            print(">>>>>>>>>>>>>", cxx_compiler)
             os.environ["CXX"] = cxx_compiler
         else:
             env["MPI"] = "0"
