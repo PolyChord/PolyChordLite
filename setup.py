@@ -82,7 +82,7 @@ class CustomBuildPy(_build_py, object):
             cc_compiler = subprocess.check_output(["make", "print_CC"]).decode('utf-8').strip()
             os.environ["CC"] = cc_compiler
 
-            cxx_compiler = subprocess.check_output(["make", "print_CC"]).decode('utf-8').strip()
+            cxx_compiler = subprocess.check_output(["make", "print_CXX"]).decode('utf-8').strip()
             os.environ["CXX"] = cxx_compiler
         else:
             env["MPI"] = "0"
