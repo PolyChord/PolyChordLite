@@ -31,7 +31,7 @@ export MPI DEBUG
 # if you want to override this then just run make with
 # make COMPILER_TYPE=<your type>
 # where <your type> is gnu or intel
-ifneq ($(NERSC_HOST),)
+ifeq "$(shell which ftn >/dev/null 2>&1; echo $$?)" "0"
 COMPILER_TYPE=cray
 else ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
 COMPILER_TYPE=intel
