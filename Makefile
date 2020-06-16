@@ -97,9 +97,13 @@ $(patsubst polychord_%,$(LIB_DIR)/lib%_likelihood.a,$(PROGRAMS)): $(LIB_DIR)/lib
 $(patsubst %,$(DRIVERS_DIR)/%.o,$(PROGRAMS)):
 	$(MAKE) -C $(DRIVERS_DIR) $@
 
+print_CC:
+	@echo $(CC)
+print_CXX:
+	@echo $(CXX)
 
 CLEANDIRS = $(POLYCHORD_DIR) $(PYPOLYCHORD_DIR) $(LIKELIHOOD_DIR) $(BIN_DIR) $(LIB_DIR) $(DRIVERS_DIR) 
-.PHONY: clean veryclean $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS))
+.PHONY: clean veryclean print_CC print_CXX $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS)) 
 
 clean: $(addsuffix clean,$(CLEANDIRS))
 	$(RM) *.o *.mod *.MOD
