@@ -31,9 +31,7 @@ jobs:
           name: pypolychord compile
           command: |
             . venv/bin/activate
-            make MPI= pypolychord
-            pip install -r requirements.txt
-            python setup.py install
+            pip install .
 
       - run: 
           name: pypolychord tests
