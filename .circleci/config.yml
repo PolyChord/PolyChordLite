@@ -32,6 +32,7 @@ jobs:
           name: pypolychord compile
           command: |
             . venv/bin/activate
+            pip install numpy
             pip install .
 
       - run: 
