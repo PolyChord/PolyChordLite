@@ -64,8 +64,6 @@ before_install:
       fi
 
 install:
-
-    - pip install numpy scipy
     - if [ "$MPI" -eq 1 ];
       then
           pip install -v .;
