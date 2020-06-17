@@ -14,24 +14,21 @@ BIN_DIR = $(PWD)/bin
 LIB_DIR = $(PWD)/lib
 export DRIVERS_DIR POLYCHORD_DIR PYPOLYCHORD_DIR LIKELIHOOD_DIR EXAMPLES_DIR BIN_DIR LIB_DIR 
 
-PYTHON=python
-
-# Whether to use MPI
-ifeq "$(shell uname)" "Linux"
+# Whether to use MPI 
 MPI=1
-else
-MPI= 
-endif
 
-# Whether to compile in debugging mode
-DEBUG=
+# Whether to compile in debugging mode (default: false)
+DEBUG=0
+
 export MPI DEBUG
 
 # We can autodetect the compiler type on unix systems via the shell.
 # if you want to override this then just run make with
 # make COMPILER_TYPE=<your type>
 # where <your type> is gnu or intel
-ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
+ifeq "$(shell which ftn >/dev/null 2>&1; echo $$?)" "0"
+COMPILER_TYPE=cray
+else ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
 COMPILER_TYPE=intel
 else ifeq "$(shell which gfortran >/dev/null 2>&1; echo $$?)" "0"
 COMPILER_TYPE=gnu
@@ -41,10 +38,12 @@ ifeq ($(COMPILER_TYPE),intel)
 include Makefile_intel
 else ifeq ($(COMPILER_TYPE),gnu) 
 include Makefile_gnu
+else ifeq ($(COMPILER_TYPE),cray)
+include Makefile_cray
 endif
 
 
-ifdef MPI
+ifeq ($(MPI),1)
 FFLAGS += -DMPI
 CXXFLAGS += -DUSE_MPI
 endif
@@ -58,7 +57,7 @@ LDFLAGS += -L$(LIB_DIR)
 
 # Export all of the necessary variables
 export CC CXX FC LD LDSHARED RM AR 
-export CFLAGS CXXFLAGS FFLAGS LDLIBS
+export CFLAGS CXXFLAGS FFLAGS LDLIBS RPATH
 export EXAMPLES PROGRAMS
 
 
@@ -79,12 +78,6 @@ $(LIB_DIR)/libchord.a:
 # shared library
 $(LIB_DIR)/libchord.so:
 	$(MAKE) -C $(POLYCHORD_DIR) $@
-
-pypolychord: $(LIB_DIR)/libchord.so
-	@echo "======================================================================================="
-	@echo " now run:"
-	@echo ""
-	@echo "    CFLAGS=-std=c++11 CC=$(CC) CXX=$(CXX) python setup.py install --user"
 
 # Examples
 # --------
@@ -108,9 +101,13 @@ $(patsubst polychord_%,$(LIB_DIR)/lib%_likelihood.a,$(PROGRAMS)): $(LIB_DIR)/lib
 $(patsubst %,$(DRIVERS_DIR)/%.o,$(PROGRAMS)):
 	$(MAKE) -C $(DRIVERS_DIR) $@
 
+print_CC:
+	@echo $(CC)
+print_CXX:
+	@echo $(CXX)
 
 CLEANDIRS = $(POLYCHORD_DIR) $(PYPOLYCHORD_DIR) $(LIKELIHOOD_DIR) $(BIN_DIR) $(LIB_DIR) $(DRIVERS_DIR) 
-.PHONY: clean veryclean $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS))
+.PHONY: clean veryclean print_CC print_CXX $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS)) 
 
 clean: $(addsuffix clean,$(CLEANDIRS))
 	$(RM) *.o *.mod *.MOD
@@ -118,7 +115,7 @@ $(addsuffix clean,$(CLEANDIRS)): %clean:
 	$(MAKE) -C $* clean
 
 veryclean: clean $(addsuffix veryclean,$(CLEANDIRS))  
-	$(RM) *~ build dist pypolychord.egg-info pypolychord/*.pyc pypolychord/__pycache__ __pycache__
+	$(RM) *~ build dist pypolychord.egg-info pypolychord/*.pyc pypolychord/__pycache__ __pycache__ pypolychord/lib/*.so
 $(addsuffix veryclean,$(CLEANDIRS))  : %veryclean: 
 	$(MAKE) -C $* veryclean
 	
