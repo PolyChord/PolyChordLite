@@ -2,6 +2,11 @@ from numpy import pi, log, sqrt
 import pypolychord
 from pypolychord.settings import PolyChordSettings
 from pypolychord.priors import UniformPrior
+try:
+    from mpi4py import MPI
+except ImportError:
+    pass
+
 
 #| Define a four-dimensional spherical gaussian likelihood,
 #| width sigma=0.1, centered on the 0 with one derived parameter.
@@ -51,13 +56,21 @@ paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)
 
-#| Make a getdist plot
-
+#| Make an anesthetic plot (could also use getdist)
 try:
-    import getdist.plots
-    posterior = output.posterior
-    g = getdist.plots.getSubplotPlotter()
-    g.triangle_plot(posterior, filled=True)
-    g.export('posterior.pdf')
+    from anesthetic import NestedSamples
+    samples = NestedSamples(root= settings.base_dir + '/' + settings.file_root)
+    fig, axes = samples.plot_2d(['p0','p1','p2','p3','r'])
+    fig.savefig('posterior.pdf')
+
 except ImportError:
-    print("Install matplotlib and getdist for plotting examples")
+    try:
+        import getdist.plots
+        posterior = output.posterior
+        g = getdist.plots.getSubplotPlotter()
+        g.triangle_plot(posterior, filled=True)
+        g.export('posterior.pdf')
+    except ImportError:
+        print("Install matplotlib and getdist for plotting examples")
+
+    print("Install anesthetic or getdist  for for plotting examples")

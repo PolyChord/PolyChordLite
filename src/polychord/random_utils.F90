@@ -83,7 +83,7 @@ module random_module
         ! Augment the seed on each node by adding 1 to it
         t = ieor(t, int(myrank, kind(t)))
 #endif
-
+        
         ! set up the seeds for the better generator
         do i=1,size_seed
             seed(i) = basic_random(t)
