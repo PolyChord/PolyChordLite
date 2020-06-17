@@ -1,7 +1,7 @@
 .. image:: https://travis-ci.org/PolyChord/PolyChordLite.svg?branch=master
     :target: https://travis-ci.org/PolyChord/PolyChordLite
 
-PolyChord v 1.17.1
+PolyChord v 1.18.0
 
 Will Handley, Mike Hobson & Anthony Lasenby
 
@@ -163,15 +163,22 @@ please email Will (wh260@mrao.cam.ac.uk).
 
 Python likelihoods (pypolychord)
 --------------------------------
-Being python, this interface is much more self-explanatory. You can install
-locally with the command:
+Being python, this interface is much more self-explanatory. 
+You can install from pypi using
 
 .. code:: bash
 
-    python setup.py install --user
+    pip install pypolychord
 
-However, you may wish to consider installing pypolychord in a `virtual environment <https://packaging.python.org/guides/installing-using-pip-and-virtual-environments>`.
-You can then import pypolychord from anywhere with the lines:
+or you can install locally with the command:
+
+.. code:: bash
+
+    pip install . --user
+                                                             
+However, you may wish to consider installing pypolychord in a `virtual environment <https://packaging.python.org/guides/installing-using-pip-and-virtual-environments>`, in which case you don't need the --user argument.
+
+Once installed, you can then import pypolychord from anywhere with the lines:
 
 .. code:: python
 
