@@ -5,7 +5,6 @@ import warnings
 
 def warn(msg):
     warnings.warn(msg + ' This will raise an exception in the future.')
-    # raise ValueError (msg)
 
 
 class PolyChordSettings:
@@ -192,33 +191,6 @@ class PolyChordSettings:
                                           [nDims]))
         self.grade_frac = list(kwargs.pop('grade_frac',
                                           [1.0]*len(self.grade_dims)))
-        # # This is the old way in which we did it.
-        # self.nprior = kwargs.pop('nprior', -1)
-        # self.nfail = kwargs.pop('nfail', -1)
-        # self.feedback = kwargs.pop('feedback', 1)
-        # self.max_ndead = kwargs.pop('max_ndead', -1)
-        # self.precision_criterion = kwargs.pop('precision_criterion', 0.001)
-        # self.logzero = kwargs.pop('logzero', -1e30)
-        # self.boost_posterior = kwargs.pop('boost_posterior', 0.0)
-        # self.posteriors = kwargs.pop('posteriors', True)
-        # self.equals = kwargs.pop('equals', True)
-        # self.write_resume = kwargs.pop('write_resume', True)
-        # self.read_resume = kwargs.pop('read_resume', True)
-        # self.write_stats = kwargs.pop('write_stats', True)
-        # self.write_live = kwargs.pop('write_live', True)
-        # self.write_dead = kwargs.pop('write_dead', True)
-        # self.write_prior = kwargs.pop('write_prior', True)
-        # self.cluster_posteriors = kwargs.pop('cluster_posteriors', True)
-        # self.do_clustering = kwargs.pop('do_clustering', True)
-        # self.write_paramnames = kwargs.pop('write_paramnames', False)
-        # self.maximise = kwargs.pop('maximise', False)
-        # self.compression_factor = kwargs.pop('compression_factor',
-            # numpy.exp(-1))
-        # self.base_dir = kwargs.pop('base_dir', 'chains')
-        # self.file_root = kwargs.pop('file_root', 'test')
-        # self.seed = kwargs.pop('seed', -1)
-        # self.nlives = kwargs.pop('nlives', {})
-        
         if kwargs:
             warn('Unexpected **kwargs in Contours constructor: %r.' % kwargs)
         self.validate(nDims)
@@ -233,15 +205,14 @@ class PolyChordSettings:
                              (len(self.grade_dims), nDims))
         if not (isinstance(self.grade_dims, list)
                 or not all([isinstance(x, int) for x in self.grade_dims])):
-            raise ValueError('grade_dims must be a list of integers.')
+            warnings.warn('grade_dims must be a list of integers.')
         if not (isinstance(self.grade_frac, list)
                 or not all(
                     [isinstance(x, int) or isinstance(x, float)
                      for x in self.grade_frac])):
-            raise ValueError('grade_dims must be a list of doubles.')
-        if not (len(self.grade_dims) == len(self.grade_frac)):
-            raise ValueError('grade_dims and grade_frac must have the same'
-                             'len.')
+            warnings.warn('grade_dims must be a list of doubles.')
+        if not len(self.grade_frac) == sum(self.grade_dims):
+            warnings.warn('grade_frac doesn\' match grade_dims.')
 
     @property
     def cluster_dir(self):
@@ -293,4 +264,3 @@ def _natnum(x, minimum=1):
     return x
 
 
-# a = PolyChordSettings(2, 2, grade_dims=[1, 1], grade_frac=[1])
