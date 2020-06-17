@@ -14,6 +14,7 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt-get install gfortran libblas3 liblapack3
+            mkdir -p chains/clusters
 
       - run:
           name: PolyChord compile gaussian
