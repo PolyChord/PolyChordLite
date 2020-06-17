@@ -33,7 +33,7 @@ jobs:
           command: |
             . venv/bin/activate
             pip install numpy
-            pip install .
+            pip install -v .
 
       - run: 
           name: pypolychord tests
