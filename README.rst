@@ -1,7 +1,7 @@
 .. image:: https://travis-ci.org/PolyChord/PolyChordLite.svg?branch=master
     :target: https://travis-ci.org/PolyChord/PolyChordLite
 
-PolyChord v 1.17.1
+PolyChord v 1.18.0
 
 Will Handley, Mike Hobson & Anthony Lasenby
 
@@ -27,15 +27,28 @@ Users are also required to cite the PolyChord papers:
 
 in their publications.
 
+Python quickstart
+=================
+
+For Python users in a hurry:
+
+.. code:: bash
+
+    pip install https://github.com/PolyChord/PolyChordLite/archive/master.zip
+    wget https://raw.githubusercontent.com/PolyChord/PolyChordLite/master/run_pypolychord.py
+    python run_pypolychord.py
+
+You can then modify the file run_pypolychord.py to your needs. If you have mpi compilers available, this version can be run in parallel with mpi
+
 MPI Support
 ===========
 
 The code is MPI compatible with openMPI. To disable the MPI parallelization, 
-set MPI= in ./Makefile, or compile with
+set MPI=0 in ./Makefile, or compile with
 
 .. code::
 
-    make <target>  MPI=
+    make <target>  MPI=0
 
 Additional Libraries  
 ====================
@@ -163,15 +176,25 @@ please email Will (wh260@mrao.cam.ac.uk).
 
 Python likelihoods (pypolychord)
 --------------------------------
-Being python, this interface is much more self-explanatory. You need to compile
-the library with:
+Being python, this interface is the most self-explanatory. 
+You can install direct from the git repository using:
 
 .. code:: bash
 
-    make pypolychord
-    python setup.py install --user
+    pip install https://github.com/PolyChord/PolyChordLite/archive/master.zip
 
-You can then import pypolychord from anywhere with the lines:
+(N.B. PyPi coming soon)
+or you can install locally with the command:
+
+.. code:: bash
+
+   git clone https://github.com/PolyChord/PolyChordLite.git
+   cd PolyChordLite
+   pip install . --user
+
+This has the advantage of using intel compilers if you have them (e.g. on a HPC machine). You may wish to consider installing pypolychord in a `virtual environment <https://packaging.python.org/guides/installing-using-pip-and-virtual-environments>`, in which case you don't need the --user argument.
+
+Once installed, you can then import pypolychord from anywhere with the lines:
 
 .. code:: python
 

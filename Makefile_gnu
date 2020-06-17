@@ -1,9 +1,11 @@
-ifdef MPI
-FC = mpif90
+ifeq ($(MPI),1)
+FC = mpifort
 CC = mpicc
 CXX = mpicxx
 else
 FC = gfortran
+CC = gcc
+CXX = g++
 endif
 
 LD = $(FC)
@@ -17,17 +19,31 @@ AR = ar rv
 # free-line-length-none : turn of line length limitation (why is this not a default??)
 # cpp  					: perform preprocessing
 # fPIC                  : for compiling a shared object library
-FFLAGS += -ffree-line-length-none -cpp -fPIC -fno-stack-arrays
+FFLAGS += -ffree-line-length-none -cpp -fPIC -fno-stack-arrays 
 CXXFLAGS += -std=c++11 -fPIC
 CFLAGS += -fPIC
 
-ifeq ($(shell uname), Linux)
-LDLIBS += -lstdc++
-else ifeq ($(shell uname), Darwin) 
-LDLIBS += -lc++
+# This is now needed for gfortran versions >=10
+ifeq "$(shell expr `gfortran -dumpversion | cut -f1 -d.` \>= 10)" "1"
+	FFLAGS += -fallow-argument-mismatch
 endif
 
-ifdef DEBUG
+# clang uses a different libstdc++ than GCC
+ifneq (,$(findstring clang,$(shell '$(CXX)' -v 2>&1)))
+LDLIBS += -lc++
+else
+LDLIBS += -lstdc++
+endif
+
+
+detected_OS := $(shell uname -s)
+ifeq ($(detected_OS),Darwin)
+RPATH=-install_name @loader_path/pypolychord/lib/libchord.so
+else
+RPATH= 
+endif
+
+ifeq ($(DEBUG),1)
 # Debugging mode
 # --------------
 # g             : enable gnu debugger compatibility
@@ -35,7 +51,7 @@ ifdef DEBUG
 # Wall          : all warnings
 # Wextra        : even more warnings
 # pedantic      : check for language features not part of f95 standard
-# implicit-none : specify no implicit typing
+# implicit-none : specify no implicit typing 
 # backtrace     : produce backtrace of error
 # fpe-trap      : search for floating point exceptions (dividing by zero etc)
 # fbounds-check : check array indices

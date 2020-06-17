@@ -1,4 +1,4 @@
-ifdef MPI
+ifeq ($(MPI),1)
 FC = mpiifort
 CC = mpiicc
 CXX = mpiicpc
@@ -28,7 +28,7 @@ CXXFLAGS += -std=c++11 -fpic
 LDFLAGS += -nofor-main
 LDLIBS += -cxxlib
 
-ifdef DEBUG
+ifeq ($(DEBUG),1)
 # Debugging mode
 # --------------
 # g              : enable gnu debugger compatibility

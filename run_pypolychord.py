@@ -2,6 +2,11 @@ from numpy import pi, log, sqrt
 import pypolychord
 from pypolychord.settings import PolyChordSettings
 from pypolychord.priors import UniformPrior
+try:
+    from mpi4py import MPI
+except ImportError:
+    pass
+
 
 #| Define a four-dimensional spherical gaussian likelihood,
 #| width sigma=0.1, centered on the 0 with one derived parameter.
