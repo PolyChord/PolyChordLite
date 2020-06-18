@@ -13,7 +13,7 @@ jobs:
           name: install Debian dependencies
           command: |
             sudo apt-get update
-            sudo apt-get install gfortran libblas3 liblapack3 libopenmpi-dev
+            sudo apt-get install gfortran libblas3 liblapack3 openmpi-bin libopenmpi-dev
             mkdir -p chains/clusters
 
       - run:
@@ -33,7 +33,7 @@ jobs:
           command: |
             . venv/bin/activate
             pip install numpy
-            pip install -v .
+            FC=mpif90 pip install .
 
       - run: 
           name: pypolychord tests
