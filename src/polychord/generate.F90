@@ -101,8 +101,8 @@ module generate_module
 
         type(mpi_bundle),intent(in) :: mpi_information
 #ifdef MPI
-        integer             :: active_slaves    !  Number of currently working slaves
-        integer             :: slave_id         !  Slave identifier to signal who to throw back to
+        integer             :: active_workers    !  Number of currently working workers
+        integer             :: worker_id         !  Worker identifier to signal who to throw back to
 #endif
 
         real(dp), dimension(settings%nTotal) :: live_point ! Temporary live point array
@@ -189,12 +189,12 @@ module generate_module
                 ! The root node just recieves data from all other processors
 
 
-                active_slaves=mpi_information%nprocs-1 ! Set the number of active processors to the number of slaves
+                active_workers=mpi_information%nprocs-1 ! Set the number of active processors to the number of workers
 
-                do while(active_slaves>0) 
+                do while(active_workers>0) 
 
-                    ! Recieve a point from any slave
-                    slave_id = catch_point(live_point,mpi_information)
+                    ! Recieve a point from any worker
+                    worker_id = catch_point(live_point,mpi_information)
 
                     ! If its valid, and we need more points, add it to the array
                     if(live_point(settings%l0)>settings%logzero .and. RTI%nlive(1)<nprior) then
@@ -215,10 +215,10 @@ module generate_module
 
 
                     if(RTI%nlive(1)<nprior) then
-                        call request_point(mpi_information,slave_id)  ! If we still need more points, send a signal to have another go
+                        call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
                     else
-                        call no_more_points(mpi_information,slave_id) ! Otherwise, send a signal to stop
-                        active_slaves=active_slaves-1                  ! decrease the active slave counter
+                        call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
+                        active_workers=active_workers-1                ! decrease the active worker counter
                     end if
 
                 end do
@@ -228,7 +228,7 @@ module generate_module
 
             else
 
-                ! The slaves simply generate and send points until they're told to stop by the master
+                ! The workers simply generate and send points until they're told to stop by the administrator
                 do while(.true.)
         
                     live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
@@ -479,8 +479,8 @@ module generate_module
 
         type(mpi_bundle),intent(in) :: mpi_information
 #ifdef MPI
-        integer             :: active_slaves    !  Number of currently working slaves
-        integer             :: slave_id         !  Slave identifier to signal who to throw back to
+        integer             :: active_workers    !  Number of currently working workers
+        integer             :: worker_id         !  Worker identifier to signal who to throw back to
 #endif
 
         real(dp), dimension(settings%nTotal) :: live_point ! Temporary live point array
@@ -562,12 +562,12 @@ module generate_module
             if(is_root(mpi_information)) then
                 ! The root node just recieves data from all other processors
 
-                active_slaves=mpi_information%nprocs-1 ! Set the number of active processors to the number of slaves
+                active_workers=mpi_information%nprocs-1 ! Set the number of active processors to the number of workers
 
-                do while(active_slaves>0) 
+                do while(active_workers>0) 
 
-                    ! Recieve a point from any slave
-                    slave_id = catch_point(live_point,mpi_information)
+                    ! Recieve a point from any worker
+                    worker_id = catch_point(live_point,mpi_information)
 
                     ! If its valid, and we need more points, add it to the array
                     if(RTI%nlive(1)<nprior) then
@@ -588,10 +588,10 @@ module generate_module
 
 
                     if(RTI%nlive(1)<nprior) then
-                        call request_point(mpi_information,slave_id)  ! If we still need more points, send a signal to have another go
+                        call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
                     else
-                        call no_more_points(mpi_information,slave_id) ! Otherwise, send a signal to stop
-                        active_slaves=active_slaves-1                  ! decrease the active slave counter
+                        call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
+                        active_workers=active_workers-1                ! decrease the active worker counter
                     end if
 
                 end do
@@ -601,7 +601,7 @@ module generate_module
 
             else
 
-                ! The slaves simply generate and send points until they're told to stop by the master
+                ! The workers simply generate and send points until they're told to stop by the administrator
                 live_point = settings%seed_point
                 do while(.true.)
                     do i_repeat = 1,settings%nprior_repeat
