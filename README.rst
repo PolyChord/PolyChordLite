@@ -1,5 +1,5 @@
-.. image:: https://travis-ci.org/PolyChord/PolyChordLite.svg?branch=master
-    :target: https://travis-ci.org/PolyChord/PolyChordLite
+.. image:: https://travis-ci.com/PolyChord/PolyChordLite.svg?branch=master
+    :target: https://travis-ci.com/PolyChord/PolyChordLite
 
 PolyChord v 1.18.0
 
