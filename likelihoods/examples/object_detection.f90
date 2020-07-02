@@ -11,7 +11,7 @@ module loglikelihood_module
     contains
 
     function loglikelihood(theta,phi)
-        use utils_module, only: logzero, logincexp,logTwoPi
+        use utils_module, only: logincexp,logTwoPi
         implicit none
         double precision, intent(in),  dimension(:) :: theta         !> Input parameters
         double precision, intent(out), dimension(:) :: phi           !> Output derived parameters

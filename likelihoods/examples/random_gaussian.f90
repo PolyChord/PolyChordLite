@@ -52,10 +52,10 @@ module loglikelihood_module
         mu = 0.5d0
 
         ! Generate a random covariance matrix, its inverse and logdet on the root node
-        call initialise_mpi(settings%feedback)
         call random_inverse_covmat(invcovmat,logdetcovmat,sigma,nDims)
 
 #ifdef MPI
+        call initialise_mpi(settings%feedback)
         ! Broadcast the covariance matrix and normalisation data to the
         ! rest of the nodes
         ! Covariance matrix:
