@@ -3,8 +3,8 @@ language: python
 os: linux
 python:
     - "3.8"
-    - "3.7"
-    - "3.6"
+#   - "3.7"
+#   - "3.6"
     - "2.7"
 env:
   - MPI=0
@@ -63,7 +63,7 @@ before_install:
       fi
 
 install:
-    - echo python --version
+    - python --version
     - pip install numpy scipy
     - if [ "$MPI" -eq 1 ];
       then
