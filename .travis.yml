@@ -57,8 +57,11 @@ addons:
 before_install:
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]];
       then 
-          brew unlink python;
-          brew link $PYTHON_VERSION;
+          if [[ "PYTHON_VERSION" == "python3" ]];
+          then
+              brew unlink python@2;
+              brew link python@3;
+          fi;
           $PYTHON_VERSION -m pip install virtualenv;
           virtualenv venv -p $PYTHON_VERSION;
           source venv/bin/activate;
