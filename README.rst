@@ -1,7 +1,7 @@
 .. image:: https://travis-ci.com/PolyChord/PolyChordLite.svg?branch=master
     :target: https://travis-ci.com/PolyChord/PolyChordLite
 
-PolyChord v 1.18.0
+PolyChord v 1.18.1
 
 Will Handley, Mike Hobson & Anthony Lasenby
 
