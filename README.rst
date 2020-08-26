@@ -38,7 +38,9 @@ For Python users in a hurry:
     wget https://raw.githubusercontent.com/PolyChord/PolyChordLite/master/run_pypolychord.py
     python run_pypolychord.py
 
-You can then modify the file run_pypolychord.py to your needs. If you have mpi compilers available, this version can be run in parallel with mpi
+You can then modify the file run_pypolychord.py to your needs. If you have mpi compilers available, this version can be run in parallel with mpi.
+
+You should make sure that you have gfortran (or equivalent) fortran compilers installed. 
 
 MPI Support
 ===========
