@@ -42,6 +42,16 @@ You can then modify the file run_pypolychord.py to your needs. If you have mpi c
 
 You should make sure that you have gfortran (or equivalent) fortran compilers installed. 
 
+If any of the above steps fail (this can in general happen for certain Mac OSX versions), then try installing without pip:
+
+.. code:: bash
+
+    git clone https://github.com/PolyChord/PolyChordLite.git
+    cd PolyChordLite
+    python setup.py install
+
+If you do not have sudo access/virtual environments/anaconda, then appending `--user` to the install command may be necessary.
+
 MPI Support
 ===========
 
