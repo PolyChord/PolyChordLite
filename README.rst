@@ -1,5 +1,8 @@
 .. image:: https://travis-ci.com/PolyChord/PolyChordLite.svg?branch=master
     :target: https://travis-ci.com/PolyChord/PolyChordLite
+.. image:: https://img.shields.io/badge/arXiv-1506.00171-b31b1b.svg
+   :target: https://arxiv.org/abs/1506.00171
+   :alt: Open-access paper
 
 PolyChord v 1.18.1
 
