@@ -256,10 +256,12 @@ module generate_module
         ! ----------------------------------------------- !
         if(is_root(mpi_information)) then
             call write_finished_generating(settings%feedback)  
-            open(1990,file=trim(prior_info_file(settings)), action='write', position="append" ) 
-            write(1990,'("nprior = ", I12)') nprior
-            write(1990,'("ndiscarded = ", I12)') ndiscarded
-            close(1990)
+            if(settings%write_prior) then
+                open(1990,file=trim(prior_info_file(settings)), action='write', position="append" ) 
+                write(1990,'("nprior = ", I12)') nprior
+                write(1990,'("ndiscarded = ", I12)') ndiscarded
+                close(1990)
+            endif
         end if
         ! ----------------------------------------------- !
         ! Find the average time taken
