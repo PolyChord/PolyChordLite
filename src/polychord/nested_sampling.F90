@@ -128,6 +128,12 @@ module nested_sampling_module
         ! has reorganised the cluster indices
         integer ::  worker_epoch
         integer ::  administrator_epoch
+
+        ! Nursary for storing babies in synchronous parallel mode
+        real(dp), allocatable, dimension(:,:,:) :: nursary
+        integer :: i_nursary
+        integer, allocatable, dimension(:) :: worker_epochs
+        integer, allocatable, dimension(:,:) :: nlikes
 #endif
 
 
@@ -143,6 +149,7 @@ module nested_sampling_module
         ! worker switch
         worker_epoch=0
         administrator_epoch=0
+        i_nursary=0
 #endif
 
         ! Rolling loglikelihood calculation
@@ -217,6 +224,8 @@ module nested_sampling_module
         end if
 #ifdef MPI
         call broadcast_integers(num_repeats,mpi_information)
+        allocate(nursary(settings%nTotal,sum(num_repeats), mpi_information%nprocs-1))
+        allocate(worker_epochs(mpi_information%nprocs-1), nlikes(size(settings%grade_dims),mpi_information%nprocs-1))
 #endif
         allocate(baby_points(settings%nTotal,sum(num_repeats)))
 
@@ -253,6 +262,29 @@ module nested_sampling_module
                     ! Generate a new set of points within the likelihood bound of the late point
                     baby_points = SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)
 #ifdef MPI
+                else if(settings%synchronous) then
+                    if(i_nursary == 0) then
+                        do worker_id=1,mpi_information%nprocs-1
+                            seed_point = GenerateSeed(settings,RTI,cluster_id)
+                            cholesky = RTI%cholesky(:,:,cluster_id)
+                            logL = RTI%logLp(cluster_id)
+                            call throw_seed(seed_point,cholesky,logL,mpi_information,worker_id,administrator_epoch,.true.)
+                            worker_cluster(worker_id) = cluster_id
+                        end do
+                        do i_worker=1,mpi_information%nprocs-1
+                            i_nursary = catch_babies(baby_points,nlike,worker_epoch,mpi_information)
+                            nursary(:,:,i_nursary) = baby_points
+                            worker_epochs(i_nursary) = worker_epoch
+                            nlikes(:,i_nursary) = nlike
+                        end do
+                        i_nursary = mpi_information%nprocs-1
+                    end if
+                    baby_points = nursary(:,:,i_nursary)
+                    cluster_id = worker_cluster(i_nursary)
+                    worker_epoch = worker_epochs(i_nursary)
+                    nlike = nlikes(:,i_nursary)
+                    i_nursary = i_nursary-1
+
                 else
                     ! Parallel mode
                     ! -------------
@@ -391,18 +423,23 @@ module nested_sampling_module
             ! Kill off the final workers.
             ! If we're done, then clean up by receiving the last piece of
             ! data from each node (and throw it away) and then send a kill signal back to it
-            do i_worker=mpi_information%nprocs-1,1,-1
+            if (settings%synchronous) then
+                do worker_id=mpi_information%nprocs-1,1,-1
+                    call throw_seed(seed_point,cholesky,logL,mpi_information,worker_id,administrator_epoch,.false.) 
+                end do
+            else
+                do i_worker=mpi_information%nprocs-1,1,-1
 
-                ! Recieve baby point from worker worker_id
-                worker_id = catch_babies(baby_points,nlike,worker_epoch,mpi_information)
+                    ! Recieve baby point from worker worker_id
+                    worker_id = catch_babies(baby_points,nlike,worker_epoch,mpi_information)
 
-                ! Add the likelihood calls to our counter
-                RTI%nlike = RTI%nlike + nlike
+                    ! Add the likelihood calls to our counter
+                    RTI%nlike = RTI%nlike + nlike
 
-                ! Send kill signal to worker worker_id (note that we no longer care about seed_point, so we'll just use the last one
-                call throw_seed(seed_point,cholesky,logL,mpi_information,worker_id,administrator_epoch,.false.) 
-
-            end do
+                    ! Send kill signal to worker worker_id (note that we no longer care about seed_point, so we'll just use the last one
+                    call throw_seed(seed_point,cholesky,logL,mpi_information,worker_id,administrator_epoch,.false.) 
+                end do
+            end if
 
 
         else !(myrank/=root)
@@ -421,10 +458,12 @@ module nested_sampling_module
             ! On the first loop, send a nonsense set of baby_points
             ! to indicate that we're ready to start receiving
 
-            baby_points = 0d0                              ! Avoid sending nonsense
-            baby_points(settings%l0,:) = settings%logzero  ! zero contour to ensure these are all thrown away
-            nlike = 0                                      ! no likelihood calls in this round
-            call throw_babies(baby_points,nlike,worker_epoch,mpi_information)
+            if (.not. settings%synchronous) then
+                baby_points = 0d0                              ! Avoid sending nonsense
+                baby_points(settings%l0,:) = settings%logzero  ! zero contour to ensure these are all thrown away
+                nlike = 0                                      ! no likelihood calls in this round
+                call throw_babies(baby_points,nlike,worker_epoch,mpi_information)
+            end if
             wait_time = 0
             slice_time = 0
             time1 = time()

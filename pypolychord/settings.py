@@ -120,6 +120,10 @@ class PolyChordSettings:
         (Default: exp(-1))
         How often to update the files and do clustering
 
+    synchronous : boolean
+        (Default: True)
+        Parallelise with synchronous workers.
+
     base_dir : string
         (Default: 'chains')
         Where to store output files.
@@ -179,6 +183,7 @@ class PolyChordSettings:
         self.maximise = kwargs.pop('maximise', False)
         self.compression_factor = kwargs.pop('compression_factor',
                                              numpy.exp(-1))
+        self.synchronous = kwargs.pop('synchronous', True)
         self.base_dir = kwargs.pop('base_dir', 'chains')
         self.file_root = kwargs.pop('file_root', 'test')
         self.seed = kwargs.pop('seed', -1)
