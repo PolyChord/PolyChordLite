@@ -4,7 +4,7 @@
    :target: https://arxiv.org/abs/1506.00171
    :alt: Open-access paper
 
-PolyChord v 1.18.2
+PolyChord v 1.19.0
 
 Will Handley, Mike Hobson & Anthony Lasenby
 

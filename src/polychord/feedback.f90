@@ -28,8 +28,8 @@ module feedback_module
             write(stdout_unit,'("")')
             write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
             write(stdout_unit,'("copyright: Will Handley, Mike Hobson & Anthony Lasenby")')
-            write(stdout_unit,'("  version: 1.18.2")')
-            write(stdout_unit,'("  release: 7th April 2020")')
+            write(stdout_unit,'("  version: 1.19.0")')
+            write(stdout_unit,'("  release: 25th January 2021")')
             write(stdout_unit,'("    email: wh260@mrao.cam.ac.uk")')
             write(stdout_unit,'("")')
         end if
