@@ -32,7 +32,7 @@ jobs:
     - name: Install dependencies (macOS)
       run: |
         brew install openmpi
-        brew link gcc
+        brew unlink gcc && brew link gcc
       if: matrix.os == 'macos-latest'
 
     - name: Install dependencies
