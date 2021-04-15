@@ -30,7 +30,9 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
 
     - name: Install dependencies (macOS)
-      run: brew install gcc openmpi
+      run: |
+        brew install --cask gfortran
+        brew install openmpi
       if: matrix.os == 'macos-latest'
 
     - name: Install dependencies
