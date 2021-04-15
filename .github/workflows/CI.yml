@@ -31,8 +31,8 @@ jobs:
 
     - name: Install dependencies (macOS)
       run: |
-        brew install --cask gfortran
         brew install openmpi
+        brew link gcc
       if: matrix.os == 'macos-latest'
 
     - name: Install dependencies
