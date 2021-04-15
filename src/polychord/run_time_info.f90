@@ -750,6 +750,7 @@ module run_time_module
 
             if( point(settings%l0) > logL ) then ! (1)
                 if( identify_cluster(settings,RTI,point) == cluster_add) then !(2)
+                    point(settings%b0) = logL ! Note the moment it is born at
                     call add_point(point,RTI%phantom,RTI%nphantom,cluster_add)  ! Add the new phantom point
                 end if
             end if
@@ -812,10 +813,38 @@ module run_time_module
         RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
 
     end subroutine delete_outermost_point 
+    
+    function phantom_dir(settings) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
 
+        character(STR_LENGTH) :: file_name
+
+        file_name = trim(settings%base_dir) // '/phantoms'
+
+    end function phantom_dir
+
+    function phantom_file(settings,i) result(file_name)
+        use settings_module, only: program_settings
+        use utils_module,    only: STR_LENGTH
+        implicit none
+        type(program_settings), intent(in) :: settings
+        integer,intent(in) :: i
+
+        character(STR_LENGTH) :: file_name
+
+        character(STR_LENGTH) :: iteration_num
+
+        write(iteration_num,'(I12)') i
+        file_name = trim(phantom_dir(settings)) // '/' // trim(settings%file_root) &
+            // '_' // trim(adjustl(iteration_num)) //'.txt'
+
+    end function phantom_file
 
     subroutine clean_phantoms(settings,RTI)
-        use utils_module, only: logsumexp,logincexp,minpos
+        use utils_module, only: logsumexp,logincexp,minpos, write_phantom_unit, DB_FMT, fmt_len
         use settings_module, only: program_settings
         use calculate_module, only: calculate_posterior_point
         use random_module, only: bernoulli_trial
@@ -832,8 +861,13 @@ module run_time_module
         integer :: i_phantom  ! phantom iterator
         integer :: i_stack(1) ! phantom iterator
         integer,dimension(size(RTI%nposterior_stack)) :: nposterior_stack ! original size of array (just live posteriors)
+        character(len=fmt_len) :: fmt_dbl
 
         nposterior_stack = RTI%nposterior_stack
+        if(settings%write_phantom) then
+            open(write_phantom_unit,file=trim(phantom_file(settings,RTI%ndead)), action='write')
+            write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+2, DB_FMT
+        end if
 
         ! Now we delete the phantoms
         do i_cluster=1,RTI%ncluster
@@ -853,28 +887,36 @@ module run_time_module
                     deleted_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom,i_cluster)
 
                     ! Calculate the posterior point and add it to the array
-                    if(settings%equals .or. settings%posteriors ) then
+                    if(settings%equals .or. settings%posteriors .or. settings%write_phantom ) then
                         if(bernoulli_trial(RTI%thin_posterior)) then
-                            posterior_point = calculate_posterior_point(settings,deleted_point,&
-                                    RTI%posterior_stack(settings%pos_w,i_stack(1),i_cluster), &!logweight
-                                    RTI%posterior_stack(settings%pos_Z,i_stack(1),i_cluster), &!RTI%logZ
-                                    RTI%posterior_stack(settings%pos_X,i_stack(1),i_cluster)  &!logsumexp(RTI%logXp))
-                                    )
+                            if(settings%write_phantom) then
+                                write(write_phantom_unit,fmt_dbl) &
+                                    deleted_point(settings%p0:settings%d1), &
+                                    deleted_point(settings%l0), &
+                                    deleted_point(settings%b0)
+                            end if
+                            if(settings%equals .or. settings%posteriors) then
+                                posterior_point = calculate_posterior_point(settings,deleted_point,&
+                                        RTI%posterior_stack(settings%pos_w,i_stack(1),i_cluster), &!logweight
+                                        RTI%posterior_stack(settings%pos_Z,i_stack(1),i_cluster), &!RTI%logZ
+                                        RTI%posterior_stack(settings%pos_X,i_stack(1),i_cluster)  &!logsumexp(RTI%logXp))
+                                        )
 
-                            call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,i_cluster )
-                            RTI%maxlogweight(i_cluster) = max(RTI%maxlogweight(i_cluster),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
-                            RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(i_cluster))
+                                call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack,i_cluster )
+                                RTI%maxlogweight(i_cluster) = max(RTI%maxlogweight(i_cluster),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
+                                RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(i_cluster))
+                            end if
                         end if
                     end if
                 end if
 
             end do
         end do
+        if(settings%write_phantom) then
+            close(write_phantom_unit)
+        end if
 
     end subroutine clean_phantoms
-
-
-
 
 
     subroutine find_min_loglikelihoods(settings,RTI)

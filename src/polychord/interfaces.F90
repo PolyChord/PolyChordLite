@@ -279,6 +279,7 @@ contains
             write_stats,&
             write_live,&
             write_dead,&
+            write_phantom,&
             write_prior,&
             maximise,&
             compression_factor,&
@@ -357,6 +358,7 @@ contains
         logical(c_bool), intent(in), value  :: write_stats
         logical(c_bool), intent(in), value  :: write_live
         logical(c_bool), intent(in), value  :: write_dead
+        logical(c_bool), intent(in), value  :: write_phantom
         logical(c_bool), intent(in), value  :: write_prior
         logical(c_bool), intent(in), value  :: maximise
         real(c_double),  intent(in), value  :: compression_factor
@@ -404,6 +406,7 @@ contains
         settings%write_stats         = write_stats          
         settings%write_live          = write_live           
         settings%write_dead          = write_dead           
+        settings%write_phantom       = write_phantom        
         settings%write_prior         = write_prior
         settings%maximise            = maximise
         settings%compression_factor  = compression_factor         

@@ -79,6 +79,9 @@ module utils_module
     !> unit for properties file
     integer, parameter :: properties_unit = 27
 
+    !> unit for phantom points file
+    integer, parameter :: write_phantom_unit = 28
+
     ! All series used to approximate F are computed with relative
     ! tolerance:
     real(dp) eps

@@ -28,6 +28,7 @@ struct Settings
     bool write_stats;
     bool write_live;
     bool write_dead;
+    bool write_phantom;
     bool write_prior;
     bool maximise;
     double compression_factor;

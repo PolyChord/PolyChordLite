@@ -23,6 +23,7 @@ int main()
     settings.read_resume   = false;
     settings.write_live    = true;
     settings.write_dead    = false;
+    settings.write_phantom = false;
     settings.write_stats   = false;
 
     settings.equals        = false;

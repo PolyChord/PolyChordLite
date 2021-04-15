@@ -161,6 +161,14 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     try:
         if rank == 0:
             os.makedirs(settings.cluster_dir)
+        if rank == 0 and settings.write_phantom:
+            os.makedirs(settings.phantom_dir)
+    except OSError:
+        pass
+
+    try:
+        if rank == 0 and settings.write_phantom:
+            os.makedirs(settings.phantom_dir)
     except OSError:
         pass
 
@@ -196,6 +204,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
                      settings.write_stats,
                      settings.write_live,
                      settings.write_dead,
+                     settings.write_phantom,
                      settings.write_prior,
                      settings.maximise,
                      settings.compression_factor,
