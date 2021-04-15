@@ -15,8 +15,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
-        python-version: [3.6]
+        os: [ubuntu-latest]
+        python-version: [3.6, 3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -27,13 +27,6 @@ jobs:
 
     - name: Install dependencies (Linux)
       run: sudo apt-get install gfortran libopenmpi-dev
-      if: matrix.os == 'ubuntu-latest'
-
-    - name: Install dependencies (macOS)
-      run: |
-        brew install openmpi
-        sudo ln -sf $(which gfortran-10) /usr/local/bin/gfortran-10
-      if: matrix.os == 'macos-latest'
 
     - name: Install dependencies
       run: |
