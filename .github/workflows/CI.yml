@@ -30,7 +30,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
 
     - name: Install dependencies (macOS)
-      run: brew install gfortran openmpi
+      run: brew install gcc openmpi
       if: matrix.os == 'macos-latest'
 
     - name: Install dependencies
@@ -41,8 +41,8 @@ jobs:
 
     - name: check fortran
       run: |
-        which gfortran
         gfortran --version
+        which gfortran
         echo $FC
 
     - name: Install pypolychord
