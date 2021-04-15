@@ -27,11 +27,11 @@ jobs:
 
     - name: Install dependencies (Linux)
       run: sudo apt-get install gfortran lib-openmpi-dev
-      if: matrix.os == ubuntu-latest
+      if: matrix.os == 'ubuntu-latest'
 
     - name: Install dependencies (macOS)
       run: brew install gcc python3 openmpi
-      if: matrix.os == macos-latest
+      if: matrix.os == 'macos-latest'
 
     - name: Install dependencies
       run: |
