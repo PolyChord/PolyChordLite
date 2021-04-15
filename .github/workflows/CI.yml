@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [macos-latest]
         python-version: [3.6]
 
     steps:
@@ -38,6 +38,12 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements.txt
         python -m pip install mpi4py
+
+    - name: check fortran
+      run: |
+        which gfortran
+        gfortran --version
+        echo $FC
 
     - name: Install pypolychord
       run: pip install -v .
