@@ -35,17 +35,6 @@ jobs:
         sudo ln -sf $(which gfortran-10) /usr/local/bin/gfortran-10
       if: matrix.os == 'macos-latest'
 
-    - name: check fortran
-      run: |
-        which gfortran-10
-        which gfortran-9
-        which gfortran-8
-        which gfortran
-        which gcc
-        gfortran --version
-        gcc --version
-
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
