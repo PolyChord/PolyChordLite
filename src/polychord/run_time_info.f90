@@ -608,8 +608,6 @@ module run_time_module
         type(run_time_info),intent(inout) :: RTI        !> Run time information
 
         integer :: i_cluster ! cluster iterator
-        real(dp), dimension(settings%nDims) :: mean ! The mean of a given cluster
-
         ! For each cluster:
         do i_cluster = 1,RTI%ncluster
             RTI%covmat(:,:,i_cluster) = calc_covmat(concat(RTI%live(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster),&

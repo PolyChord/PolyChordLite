@@ -464,7 +464,7 @@ module array_module
         real(dp), dimension(size(a,1),size(a,2)+size(b,2)) :: c
 
         c(:,:size(a,2)) = a
-        c(:,size(a,2):) = b
+        c(:,size(a,2)+1:) = b
 
     end function concat
 
