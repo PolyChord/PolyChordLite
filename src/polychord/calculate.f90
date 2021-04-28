@@ -28,21 +28,27 @@ module calculate_module
 
         real(dp),dimension(settings%nDims)    :: cube   ! Hypercube coordinate
         real(dp),dimension(settings%nDims)    :: theta  ! Physical parameters
+        real(dp),dimension(settings%nDims)    :: mn, mx ! Min and max bounds
         real(dp),dimension(settings%nDerived) :: phi    ! derived parameters
         real(dp)                              :: logL
+        
+        mn = merge(-1d0,0d0,settings%wraparound)
+        mx = merge(2d0,1d0,settings%wraparound)
 
         cube = point(settings%h0:settings%h1)
 
-        if ( any(cube<0) .or. any(cube>1) )  then
+        if ( any(cube<mn) .or. any(cube>mx) )  then
             theta = 0
             logL  = settings%logzero
         else
+            where(settings%wraparound) cube = mod(cube,1d0)
             theta = prior(cube)
             logL  = loglikelihood(theta,phi)
         end if
 
         if(logL>settings%logzero) nlike = nlike+1
 
+        point(settings%h0:settings%h1) = cube
         point(settings%p0:settings%p1) = theta
         point(settings%d0:settings%d1) = phi
         point(settings%l0) = logL

@@ -238,7 +238,8 @@ module settings_module
 
         if(.not. allocated(settings%wraparound)) then
             allocate(settings%wraparound(settings%nDims))
-            settings%wraparound = .false.
+            !settings%wraparound = .false.
+            settings%wraparound = .true.
         end if
 
     end subroutine initialise_settings
