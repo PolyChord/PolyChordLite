@@ -91,20 +91,22 @@ module calculate_module
     !! The final term can be written as a data_array^T data_array, and the first
     !! two are easy to write. We can therefore calculate this in two lines with
     !! instrisic functions
-    function calculate_similarity_matrix(data_array) result(similarity_matrix)
+    function calculate_similarity_matrix(data_array, wraparound) result(similarity_matrix)
 
         real(dp), intent(in), dimension(:,:) :: data_array
+        logical, intent(in), dimension(size(data_array,1)) :: wraparound
 
         real(dp), dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
+        real(dp), dimension(size(data_array,1)) :: v
 
-        integer :: i
-
-
-        similarity_matrix = spread( &
-            [ ( dot_product(data_array(:,i),data_array(:,i)), i=1,size(data_array,2) ) ], &
-            dim=2,ncopies=size(data_array,2) )
-
-        similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(data_array),data_array )
+        integer :: i, j
+        do i=1, size(data_array,2)
+            do j=1, size(data_array,2)
+                v = data_array(:,i) - data_array(:,j)
+                where(wraparound) v = v - nint(v)
+                similarity_matrix(i,j) = sum(v**2)
+            end do
+        end do
 
     end function calculate_similarity_matrix
 

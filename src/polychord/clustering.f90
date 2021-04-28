@@ -294,10 +294,10 @@ module cluster_module
                 ! Calculate the similarity matrix for this cluster
                 if(present(sub_dimensions)) then
                     similarity_matrix(:nlive,:nlive) =&
-                        calculate_similarity_matrix(RTI%live(sub_dimensions,:nlive,i_cluster))
+                        calculate_similarity_matrix(RTI%live(sub_dimensions,:nlive,i_cluster), settings%wraparound(sub_dimensions))
                 else 
                     similarity_matrix(:nlive,:nlive) =&
-                        calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
+                        calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster), settings%wraparound)
                 end if
 
                 clusters(:nlive) = NN_clustering(similarity_matrix(:nlive,:nlive),num_clusters)
