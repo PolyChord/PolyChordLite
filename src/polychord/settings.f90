@@ -140,8 +140,11 @@ module settings_module
 
         integer,  dimension(:), allocatable :: nlives     !> The number of live points per contour
         real(dp), dimension(:), allocatable :: loglikes   !> The contours for nlive_list
+
+        logical, dimension(:), allocatable :: wraparound
         
         real(dp) :: compression_factor = exp(-1d0)
+
 
     end type program_settings
 
@@ -233,7 +236,10 @@ module settings_module
         settings%nlives = settings%nlives(sort_doubles(settings%loglikes))
         settings%loglikes = settings%loglikes(sort_doubles(settings%loglikes))
 
-
+        if(.not. allocated(settings%wraparound)) then
+            allocate(settings%wraparound(settings%nDims))
+            settings%wraparound = .false.
+        end if
 
     end subroutine initialise_settings
 
