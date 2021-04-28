@@ -648,29 +648,34 @@ module utils_module
 
     end function calc_cholesky
 
-    function calc_covmat(lives,phantoms) result(covmat)
+    function calc_covmat(x,wraparound) result(covmat)
         implicit none
-        real(dp), intent(in), dimension(:,:) :: lives
-        real(dp), intent(in), dimension(:,:) :: phantoms
+        real(dp), intent(in), dimension(:,:) :: x
+        logical, intent(in), dimension(size(x,1)) :: wraparound
 
-        real(dp), dimension(size(lives,1),size(lives,1)) :: covmat
+        real(dp), dimension(size(x,1),size(x,1)) :: covmat
 
-        real(dp), dimension(size(lives,1)) :: mean
+        real(dp), dimension(size(x,1),size(x,2)) :: dx
+        real(dp), dimension(size(x,1)) :: mu, circle_mu
 
-        integer :: nDims,nlive,nphantom
+        integer :: nDims,n
 
-        nDims = size(lives,1)
-        nlive = size(lives,2)
-        nphantom = size(phantoms,2)
+        nDims = size(x,1)
+        n = size(x,2)
+
+        ! Compute the circle mean
+        circle_mu = 0d0
+        where(wraparound) circle_mu = atan2(sum(sin(x*TwoPi),dim=2),sum(cos(x*TwoPi),dim=2))/TwoPi
 
         ! Compute the mean 
-        mean = ( sum(lives,dim=2) + sum(phantoms,dim=2) ) 
-        mean = mean / (nlive + nphantom)
+        dx = x - spread(circle_mu,dim=2,ncopies=n)  
+        where(spread(wraparound,dim=2,ncopies=n)) dx = dx - nint(dx)
+        mu = mod(sum(dx,dim=2)/n + circle_mu, 1d0)
 
         ! Compute the covariance matrix
-        covmat = matmul(lives    - spread(mean,dim=2,ncopies=nlive) ,    transpose(lives    - spread(mean,dim=2,ncopies=nlive)    ) ) &
-            +    matmul(phantoms - spread(mean,dim=2,ncopies=nphantom) , transpose(phantoms - spread(mean,dim=2,ncopies=nphantom) ) )   
-        covmat = covmat / (nlive + nphantom -1)
+        dx = dx - spread(mu,dim=2,ncopies=n) 
+        where(spread(wraparound,dim=2,ncopies=n)) dx = dx - nint(dx)
+        covmat = matmul(dx,transpose(dx) )/(n-1)
 
     end function calc_covmat
 

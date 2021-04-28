@@ -458,6 +458,16 @@ module array_module
     end function delete_point_2d
 
 
+    function concat(a, b) result(c)
+        implicit none
+        real(dp), dimension(:,:), intent(in) :: a,b
+        real(dp), dimension(size(a,1),size(a,2)+size(b,2)) :: c
+
+        c(:,:size(a,2)) = a
+        c(:,size(a,2):) = b
+
+    end function concat
+
 
 
 end module array_module
