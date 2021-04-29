@@ -41,7 +41,7 @@ module calculate_module
             theta = 0
             logL  = settings%logzero
         else
-            where(settings%wraparound) cube = mod(cube,1d0)
+            where(settings%wraparound) cube = modulo(cube,1d0)
             theta = prior(cube)
             logL  = loglikelihood(theta,phi)
         end if

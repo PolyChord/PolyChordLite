@@ -34,6 +34,7 @@ Settings::Settings(int _nDims,int _nDerived):
     grade_dims          {nDims},
     loglikes            {},
     nlives              {},
+    wraparound          (false, nDims),
     seed                {-1}
 {}
 
@@ -68,6 +69,11 @@ void run_polychord(
 #else
 	 int fortran_comm = 0;
 #endif
+
+    // Even more ridiculous gubbins for passing std::vector<bool> associated with ludicrous C++ standard
+    bool * wraparound = new bool[s.nDims];
+    for (int i=0;i<s.nDims;i++) wraparound[i] = s.wraparound[i];
+
 
     polychord_c_interface( 
             c_loglikelihood_ptr, 
@@ -105,12 +111,14 @@ void run_polychord(
             s.loglikes.size(),
             &s.loglikes[0],
             &s.nlives[0],
+            &wraparound[0],
             s.seed,
 				fortran_comm
                 );
 
     delete[] base_dir;
     delete[] file_root;
+    delete[] wraparound;
 }
 
 #ifdef USE_MPI

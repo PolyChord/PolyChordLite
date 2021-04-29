@@ -145,7 +145,6 @@ module settings_module
         
         real(dp) :: compression_factor = exp(-1d0)
 
-
     end type program_settings
 
     contains
@@ -238,8 +237,7 @@ module settings_module
 
         if(.not. allocated(settings%wraparound)) then
             allocate(settings%wraparound(settings%nDims))
-            !settings%wraparound = .false.
-            settings%wraparound = .true.
+            settings%wraparound = .false.
         end if
 
     end subroutine initialise_settings

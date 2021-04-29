@@ -34,6 +34,18 @@ inline std::vector<int> list_Py2C_int(PyObject* list) {
     }
     return array;
 }
+inline std::vector<bool> list_Py2C_bool(PyObject* list) {
+    std::vector<bool> array;
+    int i;
+    for (i=0; i<PyList_Size(list); i++) 
+    {
+        PyObject *obj = PyList_GET_ITEM(list, i);
+        if (obj==NULL) throw PythonException();
+        if(!PyBool_Check(obj)) throw PythonException();
+        array.push_back(obj);
+    }
+    return array;
+}
 
 inline void dict_Py2C(PyObject* dict, std::vector<double>& loglikes, std::vector<int>& nlives) {
     PyObject *key, *value;

@@ -121,12 +121,12 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
     Settings S;
 
     PyObject *temp_logl, *temp_prior, *temp_dumper;
-    PyObject* py_grade_dims, *py_grade_frac, *py_nlives;
+    PyObject* py_grade_dims, *py_grade_frac, *py_nlives, *py_wraparound;
     char* base_dir, *file_root;
         
 
     if (!PyArg_ParseTuple(args,
-                "OOOiiiiiiiiddidiiiiiiiiiiidssO!O!O!i:run",
+                "OOOiiiiiiiiddidiiiiiiiiiiidssO!O!O!O!i:run",
                 &temp_logl,
                 &temp_prior,
                 &temp_dumper,
@@ -162,6 +162,8 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
                 &py_grade_dims,
                 &PyDict_Type,
                 &py_nlives,
+                &PyList_Type,
+                &py_wraparound,
                 &S.seed
                 )
             )
@@ -202,6 +204,20 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
         return NULL;
     }
 
+
+    Py_INCREF(py_wraparound);
+    try{ S.wraparound = list_Py2C_bool(py_wraparound); }
+    catch (PythonException& e){
+        Py_DECREF(py_wraparound);
+        PyErr_SetString(PyExc_TypeError,"wraparound must be a list of bools");
+        return NULL;
+    }
+    if (S.wraparound.size() != S.nDims) {
+        PyErr_SetString(PyExc_ValueError,"wraparound must be of length nDims");
+        return NULL;
+    }
+
+
     Py_XINCREF(temp_logl);
     Py_XDECREF(python_loglikelihood);
     python_loglikelihood = temp_logl;
@@ -218,7 +234,7 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
     try{ run_polychord(loglikelihood, prior, dumper, S); }
     catch (PythonException& e)
     { 
-        Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);
+        Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(py_wraparound);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);
         return NULL; 
     }
 

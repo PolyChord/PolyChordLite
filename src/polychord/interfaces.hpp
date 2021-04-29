@@ -37,6 +37,7 @@ struct Settings
     std::vector<int> grade_dims;
     std::vector<double> loglikes;
     std::vector<int> nlives;
+    std::vector<bool> wraparound;
     int seed;
 
     Settings(int _nDims=0,int _nDerived=0);

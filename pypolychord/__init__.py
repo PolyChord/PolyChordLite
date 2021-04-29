@@ -204,6 +204,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
                      settings.grade_frac,
                      settings.grade_dims,
                      settings.nlives,
+                     settings.wraparound,
                      settings.seed)
 
     return PolyChordOutput(settings.base_dir, settings.file_root)

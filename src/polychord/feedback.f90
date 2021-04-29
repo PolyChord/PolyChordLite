@@ -52,6 +52,8 @@ module feedback_module
                 end if
                 write(*,*) settings%sub_clustering_dimensions
             end if
+            if(any(settings%wraparound)) write(stdout_unit,'("Using wraparound parameters")')
+            if(any(settings%wraparound)) write(stdout_unit,*) settings%wraparound
 
             write(stdout_unit,'("")')
         end if

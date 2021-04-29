@@ -146,6 +146,13 @@ class PolyChordSettings:
         between loglike contours and nlive.
         You should still set nlive to be a sensible number, as this indicates
         how often to update the clustering, and to define the default value.
+
+    wraparound : List[bool]
+        (default [False]*nDims)
+        Whether to give a parameter periodic boundary conditions on the unit
+        hypercube. Useful e.g. if parameters represent an angle where 0 and 2
+        pi are identified.
+
     seed : positive int
         (Default: system time in milliseconds)
         Choose the seed to seed the random number generator.
@@ -187,6 +194,8 @@ class PolyChordSettings:
         self.grade_frac = list(kwargs.pop('grade_frac',
                                           [1.0]*len(self.grade_dims)))
         self.nlives = kwargs.pop('nlives', {})
+
+        self.wraparound = list(kwargs.pop('wraparound', [False]*nDims))
 
         if kwargs:
             raise TypeError('Unexpected **kwargs in Contours constructor: %r'

@@ -292,6 +292,7 @@ contains
             n_nlives,&
             loglikes,&
             nlives,&
+            wraparound,&
             seed,&
             comm) &
             bind(c,name='polychord_c_interface')
@@ -372,6 +373,7 @@ contains
         integer(c_int), intent(in), value               :: n_nlives
         real(c_double), intent(in), dimension(n_nlives) :: loglikes
         integer(c_int), intent(in), dimension(n_nlives) :: nlives
+        logical(c_bool), intent(in), dimension(nDims)   :: wraparound
         integer(c_int), intent(in), value               :: seed
 
         type(program_settings)    :: settings  ! The program settings 
@@ -422,6 +424,9 @@ contains
         allocate(settings%loglikes(n_nlives),settings%nlives(n_nlives))
         settings%loglikes = loglikes
         settings%nlives = nlives
+
+        allocate(settings%wraparound(nDims))
+        settings%wraparound = wraparound
 
         if(settings%write_paramnames) then
             params = default_params(settings%nDims,'theta','\theta')
