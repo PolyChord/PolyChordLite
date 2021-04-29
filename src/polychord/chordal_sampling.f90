@@ -206,7 +206,7 @@ module chordal_module
 
         real(dp) :: temp_random
 
-        integer :: i_step
+        integer :: i_step, i
         real(dp) :: x0Rd, x0Ld
 
         ! Select initial start and end points
@@ -239,9 +239,9 @@ module chordal_module
         ! Sample within this bound
         do i_step=0,100
             ! Find the distance between x0 and L 
-            x0Ld= distance(x0(S%h0:S%h1),L(S%h0:S%h1))
+            x0Ld= distance(x0(S%h0:S%h1),L(S%h0:S%h1), [(.false., i=1,S%nDims)])
             ! Find the distance between x0 and R 
-            x0Rd= distance(x0(S%h0:S%h1),R(S%h0:S%h1))
+            x0Rd= distance(x0(S%h0:S%h1),R(S%h0:S%h1), [(.false., i=1,S%nDims)])
 
             ! Draw a random point within L and R
             baby_point(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 
@@ -261,6 +261,7 @@ module chordal_module
                     L = baby_point
                 end if
             else
+                where(S%wraparound) baby_point(S%h0:S%h1) = modulo(baby_point(S%h0:S%h1),1d0)
                 return
             end if
         end do

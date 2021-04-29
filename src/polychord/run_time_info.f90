@@ -915,7 +915,7 @@ module run_time_module
         ! Find the cluster this point is nearest to
         do i_cluster=1,RTI%ncluster
             do i_live=1,RTI%nlive(i_cluster)
-                temp_distance2 = distance2(point(settings%h0:settings%h1),RTI%live(settings%h0:settings%h1,i_live,i_cluster) )
+                temp_distance2 = distance2(point(settings%h0:settings%h1),RTI%live(settings%h0:settings%h1,i_live,i_cluster),settings%wraparound)
                 if(temp_distance2 < closest_distance2) then
                     cluster = i_cluster
                     closest_distance2 = temp_distance2

@@ -48,7 +48,6 @@ module calculate_module
 
         if(logL>settings%logzero) nlike = nlike+1
 
-        point(settings%h0:settings%h1) = cube
         point(settings%p0:settings%p1) = theta
         point(settings%d0:settings%d1) = phi
         point(settings%l0) = logL

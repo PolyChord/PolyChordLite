@@ -159,33 +159,40 @@ module utils_module
     !> Euclidean distance of two coordinates
     !!
     !! returns \f$\sqrt{\sum_i (a_i-b_i)^2 } \f$
-    function distance(a,b)
+    function distance(a,b,w)
         implicit none
         !> First vector
         real(dp), dimension(:) :: a
         !> Second vector
         real(dp), dimension(:) :: b
+        !> Wraparound parameters
+        logical, dimension(:) :: w
 
         real(dp) :: distance
 
-        distance = sqrt(distance2(a,b))
+        distance = sqrt(distance2(a,b,w))
 
     end function distance
 
     !> Euclidean distance squared of two coordinates
     !!
     !! returns \f$\sum_i (a_i-b_i)^2 \f$
-    function distance2(a,b)
+    function distance2(a,b,w)
         implicit none
         !> First vector
         real(dp), dimension(:) :: a
         !> Second vector
         real(dp), dimension(:) :: b
+        !> Wraparound parameters
+        logical, dimension(:) :: w
+
+        real(dp), dimension(size(a)) :: dx
 
         real(dp) :: distance2
 
-        distance2 = dot_product(a-b,a-b) 
-
+        dx = a-b
+        where(w) dx = dx - nint(dx)
+        distance2 = dot_product(dx, dx) 
     end function distance2
 
     function loggamma(n)
@@ -214,11 +221,13 @@ module utils_module
 
     !> Mutual proximity 
     !!
-    function MP(a,b,live_data)
+    function MP(a,b,live_data,w)
         implicit none
         real(dp), dimension(:)   :: a
         real(dp), dimension(:)   :: b
         real(dp), dimension(:,:) :: live_data
+        !> Wraparound parameters
+        logical, dimension(:) :: w
 
         real(dp) :: MP
 
@@ -228,21 +237,23 @@ module utils_module
 
         MP=0d0
 
-        dab2 = distance2(a,b)
+        dab2 = distance2(a,b,w)
 
         do i=1,size(live_data,2)
-            if(distance2(live_data(:,i),a) > dab2 .and. distance2(live_data(:,i),b) > dab2 ) MP = MP+1d0
+            if(distance2(live_data(:,i),a,w) > dab2 .and. distance2(live_data(:,i),b,w) > dab2 ) MP = MP+1d0
         end do
 
         MP = MP/(size(live_data,2)+0d0)
 
     end function MP
 
-    function MP2(seed,baby,live_data)
+    function MP2(seed,baby,live_data,w)
         implicit none
         real(dp), dimension(:)   :: seed
         real(dp), dimension(:)   :: baby
         real(dp), dimension(:,:) :: live_data
+        !> Wraparound parameters
+        logical, dimension(:) :: w
 
         real(dp) :: MP2
 
@@ -252,10 +263,10 @@ module utils_module
 
         MP2=0d0
 
-        dab2 = distance2(seed,baby)
+        dab2 = distance2(seed,baby,w)
 
         do i=1,size(live_data,2)
-            if(distance2(live_data(:,i),seed) > dab2 ) MP2 = MP2+1d0
+            if(distance2(live_data(:,i),seed,w) > dab2 ) MP2 = MP2+1d0
         end do
 
         MP2 = MP2/(size(live_data,2)+0d0)
