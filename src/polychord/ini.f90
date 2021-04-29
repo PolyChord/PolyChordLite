@@ -72,6 +72,7 @@ contains
         settings%write_stats        = get_logical(file_name,'write_stats',.true.)
         settings%write_live         = get_logical(file_name,'write_live',.false.)
         settings%write_dead         = get_logical(file_name,'write_dead',.true.)
+        settings%write_phantom      = get_logical(file_name,'write_phantom',.false.)
         settings%write_prior        = get_logical(file_name,'write_prior',.false.)
         settings%maximise           = get_logical(file_name,'maximise',.false.)
         settings%compression_factor = get_double(file_name,'compression_factor',exp(-1d0))

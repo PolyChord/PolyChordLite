@@ -126,7 +126,7 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
         
 
     if (!PyArg_ParseTuple(args,
-                "OOOiiiiiiiiddidiiiiiiiiiiidssO!O!O!O!i:run",
+                "OOOiiiiiiiiddidiiiiiiiiiiiidssO!O!O!O!i:run",
                 &temp_logl,
                 &temp_prior,
                 &temp_dumper,
@@ -151,6 +151,7 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
                 &S.write_stats,
                 &S.write_live,
                 &S.write_dead,
+                &S.write_phantom,
                 &S.write_prior,
                 &S.maximise,
                 &S.compression_factor,

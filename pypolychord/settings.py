@@ -107,6 +107,10 @@ class PolyChordSettings:
         (Default: True)
         Write a dead points file.
 
+    write_phantom : boolean
+        (Default: True)
+        Write a phantom points file.
+
     write_prior : boolean
         (Default: True)
         Write a prior points file.
@@ -182,6 +186,7 @@ class PolyChordSettings:
         self.write_stats = kwargs.pop('write_stats', True)
         self.write_live = kwargs.pop('write_live', True)
         self.write_dead = kwargs.pop('write_dead', True)
+        self.write_phantom = kwargs.pop('write_phantom', False)
         self.write_prior = kwargs.pop('write_prior', True)
         self.maximise = kwargs.pop('maximise', False)
         self.compression_factor = kwargs.pop('compression_factor',
@@ -208,3 +213,7 @@ class PolyChordSettings:
     @property
     def cluster_dir(self):
         return os.path.join(self.base_dir, 'clusters')
+
+    @property
+    def phantom_dir(self):
+        return os.path.join(self.base_dir, 'phantoms')

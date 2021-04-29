@@ -45,6 +45,10 @@ settings.file_root = 'gaussian'
 settings.nlive = 200
 settings.do_clustering = True
 settings.read_resume = False
+settings.write_phantom = True
+settings.equals = False
+settings.posteriors = False
+settings.boost_posterior = 10
 
 #| Run PolyChord
 

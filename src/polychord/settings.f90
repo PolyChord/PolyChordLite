@@ -44,6 +44,7 @@ module settings_module
         logical :: write_stats = .true.       !> Whether or not to write stats file
         logical :: write_live = .true.        !> Whether or not to write phys_live points
         logical :: write_dead = .true.        !> Whether or not to write dead points
+        logical :: write_phantom = .true.     !> Whether or not to write dead phantom points
 
         integer, allocatable,dimension(:) :: grade_dims          !> The number of parameters in each grade
         real(dp), allocatable,dimension(:) :: grade_frac !> The fraction of time spent in each grade
