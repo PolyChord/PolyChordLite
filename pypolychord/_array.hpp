@@ -42,7 +42,7 @@ inline std::vector<bool> list_Py2C_bool(PyObject* list) {
         PyObject *obj = PyList_GET_ITEM(list, i);
         if (obj==NULL) throw PythonException();
         if(!PyBool_Check(obj)) throw PythonException();
-        array.push_back(obj);
+        array.push_back(PyObject_IsTrue(obj));
     }
     return array;
 }
