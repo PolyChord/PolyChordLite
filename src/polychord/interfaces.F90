@@ -293,6 +293,7 @@ contains
             loglikes,&
             nlives,&
             seed,&
+            logLstop,&
             comm) &
             bind(c,name='polychord_c_interface')
 
@@ -348,6 +349,7 @@ contains
         real(c_double), intent(in), value   :: logzero
         integer(c_int), intent(in), value   :: max_ndead
         real(c_double), intent(in), value   :: boost_posterior
+        real(c_double), intent(in), value   :: logLstop
         logical(c_bool), intent(in), value  :: posteriors
         logical(c_bool), intent(in), value  :: equals
         logical(c_bool), intent(in), value  :: cluster_posteriors
@@ -395,6 +397,7 @@ contains
         settings%logzero             = logzero  
         settings%max_ndead           = max_ndead            
         settings%boost_posterior     = boost_posterior      
+        settings%logLstop            = logLstop
         settings%posteriors          = posteriors           
         settings%equals              = equals               
         settings%cluster_posteriors  = cluster_posteriors   

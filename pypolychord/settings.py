@@ -153,6 +153,12 @@ class PolyChordSettings:
         a negative seed indicates that you should use the system time in
         milliseconds
 
+    logLstop : float
+        (Default: 1e30)
+        Stopping conditon based on the loglikelihood. Run stops once the
+        smallest loglikelihood amongst the active live points exceeds this
+        value.
+
     """
     def __init__(self, nDims, nDerived, **kwargs):
 
@@ -187,6 +193,7 @@ class PolyChordSettings:
         self.grade_frac = list(kwargs.pop('grade_frac',
                                           [1.0]*len(self.grade_dims)))
         self.nlives = kwargs.pop('nlives', {})
+        self.logLstop = kwargs.pop('logLstop', 1e30)
 
         if kwargs:
             raise TypeError('Unexpected **kwargs in Contours constructor: %r'

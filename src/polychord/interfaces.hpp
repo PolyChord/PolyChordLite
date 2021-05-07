@@ -38,6 +38,7 @@ struct Settings
     std::vector<double> loglikes;
     std::vector<int> nlives;
     int seed;
+    double logLstop;
 
     Settings(int _nDims=0,int _nDerived=0);
 };

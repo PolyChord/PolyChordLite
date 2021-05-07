@@ -473,6 +473,7 @@ module nested_sampling_module
     function more_samples_needed(settings,RTI)
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info,live_logZ
+        use utils_module, only: stdout_unit,logsumexp
         implicit none
 
         type(program_settings), intent(in) :: settings
@@ -498,6 +499,12 @@ module nested_sampling_module
             more_samples_needed = .false.
         end if
 
+       ! Reached required threshold
+
+       if ( settings%logLstop < MINVAL(RTI%logLp) ) then
+          write(stdout_unit, *) 'reached ', MINVAL(RTI%logLp), '. threshold ', settings%logLstop,  '. stopping at ', RTI%nlike, ' calls, ', RTI%ndead, 'iterations'
+          more_samples_needed = .false.
+       end if
 
     end function more_samples_needed
 
