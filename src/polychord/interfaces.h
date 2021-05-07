@@ -36,6 +36,7 @@ extern "C" void polychord_c_interface(
         double*,
         int*,
         int,
+        double,
 #ifdef USE_MPI
 		  MPI_Fint&
 #else

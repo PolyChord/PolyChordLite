@@ -5,7 +5,6 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 
-
 /* Initialize the module */
 #ifdef PYTHON3
 PyMODINIT_FUNC PyInit__pypolychord(void)
@@ -126,7 +125,7 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
         
 
     if (!PyArg_ParseTuple(args,
-                "OOOiiiiiiiiddidiiiiiiiiiiidssO!O!O!i:run",
+                "OOOiiiiiiiiddidiiiiiiiiiiidssO!O!O!id:run",
                 &temp_logl,
                 &temp_prior,
                 &temp_dumper,
@@ -162,7 +161,8 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
                 &py_grade_dims,
                 &PyDict_Type,
                 &py_nlives,
-                &S.seed
+                &S.seed,
+                &S.logLstop
                 )
             )
         return NULL;

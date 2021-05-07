@@ -34,6 +34,7 @@ Settings::Settings(int _nDims,int _nDerived):
     grade_dims          {nDims},
     loglikes            {},
     nlives              {},
+    logLstop            {1e30},
     seed                {-1}
 {}
 
@@ -106,6 +107,7 @@ void run_polychord(
             &s.loglikes[0],
             &s.nlives[0],
             s.seed,
+            s.logLstop,
 				fortran_comm
                 );
 

@@ -12,6 +12,7 @@ module settings_module
     !> Type to contain all of the parameters involved in a nested sampling run
     Type :: program_settings
 
+        real(dp) :: logLstop = 1d30             !> Stop at this threshold
         integer :: nlive = 500                  !> The number of live points
         integer :: num_repeats = -1             !> The number of slow chords to draw
         logical :: do_clustering = .false.      !> Whether to do clustering or not
