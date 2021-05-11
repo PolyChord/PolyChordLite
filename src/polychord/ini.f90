@@ -380,6 +380,8 @@ contains
 
         integer                                  :: sub_cluster     ! whether or not to do sub clustering on this parameter
         character(1),parameter                   :: sc='*'          ! indicator for sub clustering
+        integer                                  :: wraparound      ! whether or not to wraparound
+        character(1),parameter                   :: wr='.'          ! indicator for sub clustering
 
 
         integer :: i_param
@@ -397,6 +399,13 @@ contains
             sub_cluster = index(paramname,sc)
             if(sub_cluster>0) then
                 paramname=trim(paramname(:sub_cluster-1))
+            else
+                paramname=trim(paramname)     !trim string
+            end if
+
+            wraparound = index(paramname,wr)
+            if(wraparound>0) then
+                paramname=trim(paramname(:wraparound-1))
             else
                 paramname=trim(paramname)     !trim string
             end if
@@ -430,11 +439,7 @@ contains
             call get_prior_params(prior_params,line_buffer) ! get the prior params
 
             ! Add this parameter to the array
-            if(sub_cluster==0) then
-                call add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params) 
-            else
-                call add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params,.true.) 
-            end if
+            call add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params,sub_cluster/=0,wraparound/=0) 
 
         end do
 
