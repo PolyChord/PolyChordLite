@@ -741,6 +741,11 @@ module priors_module
         settings%sub_clustering_dimensions = pack(hypercube_indices, [ (params(i_params)%sub_cluster, i_params=1,num_params) ] ) 
 
 
+        if(allocated(settings%wraparound)) deallocate(settings%wraparound)
+        allocate(settings%wraparound(num_params))
+        settings%wraparound = [ (params(i_params)%wraparound, i_params=1,num_params) ] 
+
+
         ! Finally, add each of the parameters to the prior blocks, coupled with the hypercube information
         do i_params=1,num_params
             call add_param_to_prior(priors(prior_blocks(i_params)),params(i_params),i_params,hypercube_indices(i_params))

@@ -10,6 +10,7 @@ module params_module
         integer                   :: prior_type  ! type of prior
         integer                   :: prior_block ! prior block
         logical                   :: sub_cluster ! sub_clustering?
+        logical                   :: wraparound  ! wraparound?
 
         ! Parameters in the prior
         real(dp), dimension(:), allocatable :: prior_params
@@ -17,7 +18,7 @@ module params_module
 
     contains
 
-    subroutine assign_parameter(param,paramname,latex,speed,prior_type,prior_block,prior_params,sub_cluster)
+    subroutine assign_parameter(param,paramname,latex,speed,prior_type,prior_block,prior_params,sub_cluster,wraparound)
         implicit none
         type(param_type),intent(out):: param       ! Parameter to be returned
         character(len=*),intent(in) :: paramname   ! Name of parameter
@@ -26,6 +27,7 @@ module params_module
         integer         ,intent(in) :: prior_type  ! type of prior
         integer         ,intent(in) :: prior_block ! prior block
         logical,optional,intent(in) :: sub_cluster ! sub clustering?
+        logical,optional,intent(in) :: wraparound ! sub clustering?
 
         ! Parameters in the prior
         real(dp), dimension(:),intent(in) :: prior_params
@@ -43,10 +45,15 @@ module params_module
         else 
             param%sub_cluster = .false.
         end if
+        if(present(wraparound)) then
+            param%wraparound = wraparound
+        else 
+            param%wraparound = .false.
+        end if
 
     end subroutine assign_parameter
 
-    subroutine add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params,sub_cluster)
+    subroutine add_parameter(params,paramname,latex,speed,prior_type,prior_block,prior_params,sub_cluster,wraparound)
         implicit none
         ! Parameter array
         type(param_type),dimension(:),allocatable,intent(inout) :: params
@@ -57,6 +64,9 @@ module params_module
         integer         ,intent(in),optional :: prior_type  ! type of prior
         integer         ,intent(in),optional :: prior_block ! prior block
         logical         ,intent(in),optional :: sub_cluster ! sub cluster on this?
+        logical         ,intent(in),optional :: wraparound  ! wrap the parameter around
+
+        logical :: wraparound_, sub_cluster_
 
         ! Parameters in the prior
         real(dp), dimension(:),intent(in),optional :: prior_params 
@@ -78,13 +88,19 @@ module params_module
 
         params(1:num_params) = temp_params
 
+        if(.not. present(sub_cluster)) then
+            sub_cluster_ = .false.
+        else
+            sub_cluster_ = sub_cluster
+        end if
+        if(.not. present(wraparound)) then
+            wraparound_ = .false.
+        else
+            wraparound_ = wraparound
+        end if
 
         if(present(speed) .and. present(prior_type) .and. present(prior_block) .and. present(prior_params) ) then
-            if(present(sub_cluster)) then
-                call assign_parameter(params(num_params+1),paramname,latex,speed,prior_type,prior_block,prior_params,.true.) 
-            else
-                call assign_parameter(params(num_params+1),paramname,latex,speed,prior_type,prior_block,prior_params) 
-            end if
+            call assign_parameter(params(num_params+1),paramname,latex,speed,prior_type,prior_block,prior_params,sub_cluster_,wraparound_) 
         else
             call assign_parameter(params(num_params+1),paramname,latex,1,0,0,blank_params) 
         end if
