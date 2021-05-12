@@ -381,7 +381,7 @@ contains
         integer                                  :: sub_cluster     ! whether or not to do sub clustering on this parameter
         character(1),parameter                   :: sc='*'          ! indicator for sub clustering
         integer                                  :: wraparound      ! whether or not to wraparound
-        character(1),parameter                   :: wr='.'          ! indicator for sub clustering
+        character(1),parameter                   :: wr='@'          ! indicator for sub clustering
 
 
         integer :: i_param
