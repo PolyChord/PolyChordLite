@@ -63,6 +63,7 @@ def get_version(short=False):
                 return line[44:50]
 
 
+
 class DistributionWithOption(Distribution, object):
     def __init__(self, *args, **kwargs):
         self.global_options = self.global_options \
@@ -110,6 +111,7 @@ class CustomClean(_clean):
 if "--no-mpi" in sys.argv:
     NAME += '_nompi'
     DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
+
 
 pypolychord_module = Extension(
         name='_pypolychord',
