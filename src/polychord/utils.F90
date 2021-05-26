@@ -684,7 +684,7 @@ module utils_module
         mu = mod(sum(dx,dim=2)/n + circle_mu, 1d0)
 
         ! Compute the covariance matrix
-        dx = dx - spread(mu,dim=2,ncopies=n) 
+        dx = x - spread(mu,dim=2,ncopies=n) 
         where(spread(wraparound,dim=2,ncopies=n)) dx = dx - nint(dx)
         covmat = matmul(dx,transpose(dx) )/(n-1)
 
