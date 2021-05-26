@@ -97,6 +97,8 @@ module calculate_module
     !! two are easy to write. We can therefore calculate this in two lines with
     !! instrisic functions
     function calculate_similarity_matrix(data_array, wraparound) result(similarity_matrix)
+        use utils_module, only: distance2
+        implicit none
 
         real(dp), intent(in), dimension(:,:) :: data_array
         logical, intent(in), dimension(size(data_array,1)) :: wraparound
@@ -107,9 +109,7 @@ module calculate_module
         integer :: i, j
         do i=1, size(data_array,2)
             do j=1, size(data_array,2)
-                v = data_array(:,i) - data_array(:,j)
-                where(wraparound) v = v - nint(v)
-                similarity_matrix(i,j) = sum(v**2)
+                similarity_matrix(i,j) = distance2(data_array(:,i),data_array(:,j),wraparound)
             end do
         end do
 

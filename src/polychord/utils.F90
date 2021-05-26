@@ -681,12 +681,12 @@ module utils_module
         ! Compute the mean 
         dx = x - spread(circle_mu,dim=2,ncopies=n)  
         where(spread(wraparound,dim=2,ncopies=n)) dx = dx - nint(dx)
-        mu = mod(sum(dx,dim=2)/n + circle_mu, 1d0)
+        mu = modulo(sum(dx,dim=2)/n + circle_mu, 1d0)
 
         ! Compute the covariance matrix
         dx = x - spread(mu,dim=2,ncopies=n) 
         where(spread(wraparound,dim=2,ncopies=n)) dx = dx - nint(dx)
-        covmat = matmul(dx,transpose(dx) )/(n-1)
+        covmat = matmul(dx,transpose(dx))/(n-1)
 
     end function calc_covmat
 
