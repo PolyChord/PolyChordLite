@@ -611,7 +611,7 @@ module run_time_module
         ! For each cluster:
         do i_cluster = 1,RTI%ncluster
             RTI%covmat(:,:,i_cluster) = calc_covmat(concat(RTI%live(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster),&
-                                                           RTI%phantom(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster)),&
+                                                           RTI%phantom(settings%h0:settings%h1,:RTI%nphantom(i_cluster),i_cluster)),&
                                                     settings%wraparound)
             ! Calculate the cholesky decomposition
             RTI%cholesky(:,:,i_cluster) = calc_cholesky(RTI%covmat(:,:,i_cluster))
