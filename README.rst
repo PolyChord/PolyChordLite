@@ -55,6 +55,14 @@ If any of the above steps fail (this can in general happen for certain Mac OSX v
 
 If you do not have sudo access/virtual environments/anaconda, then appending `--user` to the install command may be necessary.
 
+Post Processing
+===============
+
+We recommend the tool `anesthetic <https://github.com/williamjameshandley/anesthetic>`_ for post-processing your nested sampling runs. A plot gallery can be found `here <http://htmlpreview.github.io/?https://github.com/williamjameshandley/cosmo_example/blob/master/demos/demo.html>`_
+
+
+https://github.com/williamjameshandley/anesthetic
+
 MPI Support
 ===========
 
