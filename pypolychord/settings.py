@@ -122,7 +122,11 @@ class PolyChordSettings:
 
     synchronous : boolean
         (Default: True)
-        Parallelise with synchronous workers.
+        Parallelise with synchronous workers, rather than asynchronous ones.
+        This can be set to False if the likelihood speed is known to be
+        approximately constant across the parameter space. Synchronous
+        parallelisation is less effective than asynchronous by a factor ~O(1)
+        for large parallelisation.
 
     base_dir : string
         (Default: 'chains')

@@ -103,7 +103,6 @@ module generate_module
 #ifdef MPI
         integer             :: active_workers    !  Number of currently working workers
         integer             :: worker_id         !  Worker identifier to signal who to throw back to
-        integer             :: i_worker
 #endif
 
         real(dp), dimension(settings%nTotal) :: live_point ! Temporary live point array
@@ -192,68 +191,37 @@ module generate_module
 
                 active_workers=mpi_information%nprocs-1 ! Set the number of active processors to the number of workers
 
-                if (settings%synchronous) then
-                    do while(RTI%nlive(1)<nprior) 
-                        do i_worker=1,active_workers
-                            ! Recieve a point from any worker
-                            worker_id = catch_point(live_point,mpi_information)
+                do while(active_workers>0) 
 
-                            ! If its valid, add it to the array
-                            if(live_point(settings%l0)>settings%logzero) then
+                    ! Recieve a point from any worker
+                    worker_id = catch_point(live_point,mpi_information)
 
-                                call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
+                    ! If its valid, add it to the array
+                    if(live_point(settings%l0)>settings%logzero) then
 
-                                !-------------------------------------------------------------------------------!
-                                call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
-                                !-------------------------------------------------------------------------------!
+                        call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
-                                if(settings%write_live) then
-                                    ! Write the live points to the live_points file
-                                    write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                                    flush(write_phys_unit) ! flush the unit to force write
-                                end if
+                        !-------------------------------------------------------------------------------!
+                        call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
+                        !-------------------------------------------------------------------------------!
 
-                            end if
-                        end do
-                        do i_worker=1,active_workers
-                            call request_point(mpi_information,i_worker)  ! If we still need more points, send a signal to have another go
-                        end do
-                    end do
-                    do i_worker=1,active_workers
-                        call no_more_points(mpi_information,i_worker) ! Otherwise, send a signal to stop
-                    end do
-                else
-                    do while(active_workers>0) 
-                        ! Recieve a point from any worker
-                        worker_id = catch_point(live_point,mpi_information)
-
-                        ! If its valid, and we need more points, add it to the array
-                        if(live_point(settings%l0)>settings%logzero .and. RTI%nlive(1)<nprior) then
-
-                            call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
-
-                            !-------------------------------------------------------------------------------!
-                            call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
-                            !-------------------------------------------------------------------------------!
-
-                            if(settings%write_live) then
-                                ! Write the live points to the live_points file
-                                write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                                flush(write_phys_unit) ! flush the unit to force write
-                            end if
-
+                        if(settings%write_live) then
+                            ! Write the live points to the live_points file
+                            write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
+                            flush(write_phys_unit) ! flush the unit to force write
                         end if
 
+                    end if
 
-                        if(RTI%nlive(1)<nprior) then
-                            call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
-                        else
-                            call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
-                            active_workers=active_workers-1                ! decrease the active worker counter
-                        end if
 
-                    end do
-                end if
+                    if(RTI%nlive(1)<nprior) then
+                        call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
+                    else
+                        call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
+                        active_workers=active_workers-1                ! decrease the active worker counter
+                    end if
+
+                end do
 
 
 

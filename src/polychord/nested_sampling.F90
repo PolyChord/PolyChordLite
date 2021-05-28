@@ -263,6 +263,9 @@ module nested_sampling_module
                     baby_points = SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)
 #ifdef MPI
                 else if(settings%synchronous) then
+                    ! Parallel synchronous mode
+                    ! -------------------------
+
                     if(i_nursary == 0) then
                         do worker_id=1,mpi_information%nprocs-1
                             seed_point = GenerateSeed(settings,RTI,cluster_id)
