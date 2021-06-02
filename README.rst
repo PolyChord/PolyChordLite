@@ -1,5 +1,6 @@
-.. image:: https://travis-ci.com/PolyChord/PolyChordLite.svg?branch=master
-    :target: https://travis-ci.com/PolyChord/PolyChordLite
+.. image:: https://github.com/PolyChord/PolyChordLite/workflows/CI/badge.svg?branch=master
+   :target: https://github.com/PolyChord/PolyChordLite/actions?query=workflow%3ACI+branch%3Amaster
+   :alt: Build Status
 .. image:: https://img.shields.io/badge/arXiv-1506.00171-b31b1b.svg
    :target: https://arxiv.org/abs/1506.00171
    :alt: Open-access paper
