@@ -464,6 +464,7 @@ module nested_sampling_module
             if (.not. settings%synchronous) then
                 baby_points = 0d0                              ! Avoid sending nonsense
                 baby_points(settings%l0,:) = settings%logzero  ! zero contour to ensure these are all thrown away
+                baby_points(settings%b0,:) = settings%logzero  ! zero birth contour
                 nlike = 0                                      ! no likelihood calls in this round
                 call throw_babies(baby_points,nlike,worker_epoch,mpi_information)
             end if
@@ -480,6 +481,7 @@ module nested_sampling_module
                 time0 = time()
                 ! 2) Generate a new set of baby points
                 baby_points = SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)
+                baby_points(settings%b0,:) = logL ! Note the moment it is born at
 
 
                 wait_time = wait_time + time0-time1

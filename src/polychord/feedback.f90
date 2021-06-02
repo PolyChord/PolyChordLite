@@ -40,6 +40,7 @@ module feedback_module
             write(stdout_unit,'("nDims    :",I8)')   settings%nDims
             write(stdout_unit,'("nDerived :",I8)')   settings%nDerived
             if(settings%do_clustering) write(stdout_unit,'("Doing Clustering")')
+            if(settings%synchronous) write(stdout_unit,'("Synchronous parallelisation")')
             if(settings%equals) write(stdout_unit,'("Generating equally weighted posteriors")')
             if(settings%posteriors) write(stdout_unit,'("Generating weighted posteriors")')
             if((settings%equals.or.settings%posteriors).and.settings%cluster_posteriors.and.settings%do_clustering) write(stdout_unit,'("Clustering on posteriors")')
