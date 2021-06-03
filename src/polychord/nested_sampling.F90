@@ -261,6 +261,7 @@ module nested_sampling_module
 
                     ! Generate a new set of points within the likelihood bound of the late point
                     baby_points = SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)
+                    baby_points(settings%b0,:) = logL ! Note the moment it is born at
 #ifdef MPI
                 else if(settings%synchronous) then
                     ! Parallel synchronous mode
