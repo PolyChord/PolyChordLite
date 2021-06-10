@@ -781,7 +781,7 @@ module run_time_module
         else
             call add_point(point,RTI%dead,RTI%ndead)
             if (RTI%ndead > size(RTI%logweights)) call reallocate(RTI%logweights,RTI%ndead*2)
-            RTI%logweights(RTI%ndead) = -huge(1d0)
+            RTI%logweights(RTI%ndead) = settings%logzero
         end if
 
     end function replace_point
