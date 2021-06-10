@@ -717,7 +717,7 @@ module run_time_module
         use utils_module, only: logsumexp,logincexp
         use settings_module, only: program_settings
         use random_module, only: bernoulli_trial
-        use array_module, only: add_point
+        use array_module, only: add_point, reallocate
 
         implicit none
         type(program_settings), intent(in) :: settings !> Program settings
@@ -774,11 +774,14 @@ module run_time_module
                     replace_point = .true.                                                           ! Mark this as a replaced live point
                 end if
                 if (sum(RTI%nlive) < nlive) then
-                    point(settings%b0) = logL                                                        ! Note the moment it is born at
                     call add_point(point,RTI%live,RTI%nlive,cluster_add)                             ! Add the new live point to the live points
                     call find_min_loglikelihoods(settings,RTI)                                       ! Find the new minimum likelihoods
                 end if
             end if
+        else
+            call add_point(point,RTI%dead,RTI%ndead)
+            if (RTI%ndead > size(RTI%logweights)) call reallocate(RTI%logweights,RTI%ndead*2)
+            RTI%logweights(RTI%ndead) = settings%logzero
         end if
 
     end function replace_point

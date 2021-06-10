@@ -31,6 +31,7 @@ int main()
 
     settings.feedback      = 1;
     settings.compression_factor  = 0.36787944117144233;
+    settings.synchronous   = true;
 
     settings.boost_posterior= 5.0;
 

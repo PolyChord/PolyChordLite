@@ -31,6 +31,7 @@ struct Settings
     bool write_prior;
     bool maximise;
     double compression_factor;
+    bool synchronous;
     std::string base_dir;
     std::string file_root;
     std::vector<double> grade_frac;

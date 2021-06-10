@@ -28,8 +28,8 @@ module feedback_module
             write(stdout_unit,'("")')
             write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
             write(stdout_unit,'("copyright: Will Handley, Mike Hobson & Anthony Lasenby")')
-            write(stdout_unit,'("  version: 1.18.2")')
-            write(stdout_unit,'("  release: 7th April 2020")')
+            write(stdout_unit,'("  version: 1.20.0")')
+            write(stdout_unit,'("  release: 1st June 2021")')
             write(stdout_unit,'("    email: wh260@mrao.cam.ac.uk")')
             write(stdout_unit,'("")')
         end if
@@ -40,6 +40,7 @@ module feedback_module
             write(stdout_unit,'("nDims    :",I8)')   settings%nDims
             write(stdout_unit,'("nDerived :",I8)')   settings%nDerived
             if(settings%do_clustering) write(stdout_unit,'("Doing Clustering")')
+            if(settings%synchronous) write(stdout_unit,'("Synchronous parallelisation")')
             if(settings%equals) write(stdout_unit,'("Generating equally weighted posteriors")')
             if(settings%posteriors) write(stdout_unit,'("Generating weighted posteriors")')
             if((settings%equals.or.settings%posteriors).and.settings%cluster_posteriors.and.settings%do_clustering) write(stdout_unit,'("Clustering on posteriors")')
