@@ -17,6 +17,7 @@ struct Settings
     int feedback;
     double precision_criterion;
     double logzero;
+    double logalmostzero;
     int max_ndead;
     double boost_posterior;
     bool posteriors;

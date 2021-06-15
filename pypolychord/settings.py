@@ -58,7 +58,13 @@ class PolyChordSettings:
     logzero : float
         (Default: -1e30)
         The loglikelihood value at which PolyChord considers points
-        'unphysical', and excludes them at the prior level.
+        'invalid', and excludes them at the prior level.
+
+    logalmostzero : float
+        (Default: -1e30)
+        The loglikelihood value at which PolyChord considers points
+        'unphysical', but will still rejection sample from the prior to
+        generate nprior points larger than this value.
 
     max_ndead : int
         (Default: -1)
@@ -172,6 +178,7 @@ class PolyChordSettings:
         self.feedback = kwargs.pop('feedback', 1)
         self.precision_criterion = kwargs.pop('precision_criterion', 0.001)
         self.logzero = kwargs.pop('logzero', -1e30)
+        self.logalmostzero = kwargs.pop('logalmostzero', -1e30)
         self.max_ndead = kwargs.pop('max_ndead', -1)
         self.boost_posterior = kwargs.pop('boost_posterior', 0.0)
         self.posteriors = kwargs.pop('posteriors', True)

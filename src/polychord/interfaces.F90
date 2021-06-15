@@ -268,6 +268,7 @@ contains
             feedback, &
             precision_criterion,&
             logzero,&
+            logalmostzero,&
             max_ndead,&
             boost_posterior,&
             posteriors,&
@@ -347,6 +348,7 @@ contains
         integer(c_int), intent(in), value   :: feedback
         real(c_double), intent(in), value   :: precision_criterion
         real(c_double), intent(in), value   :: logzero
+        real(c_double), intent(in), value   :: logalmostzero
         integer(c_int), intent(in), value   :: max_ndead
         real(c_double), intent(in), value   :: boost_posterior
         logical(c_bool), intent(in), value  :: posteriors
@@ -395,6 +397,7 @@ contains
         settings%feedback            = feedback             
         settings%precision_criterion = precision_criterion  
         settings%logzero             = logzero  
+        settings%logalmostzero       = logalmostzero  
         settings%max_ndead           = max_ndead            
         settings%boost_posterior     = boost_posterior      
         settings%posteriors          = posteriors           

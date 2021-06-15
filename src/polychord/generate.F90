@@ -111,7 +111,7 @@ module generate_module
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
         integer :: nlike ! number of likelihood calls
-        integer :: nprior, ndiscarded
+        integer :: nprior, ndiscarded, ngenerated
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -119,7 +119,7 @@ module generate_module
 
         ! Initialise number of likelihood calls to zero here
         nlike = 0
-
+        ngenerated = 0
 
         if(is_root(mpi_information)) then
             ! ---------------------------------------------- !
@@ -148,7 +148,7 @@ module generate_module
         if(linear_mode(mpi_information)) then
             !===================== LINEAR MODE =========================
 
-            do while(RTI%nlive(1)<nprior)
+            do while(ngenerated<nprior)
 
                 ! Generate a random coordinate
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
@@ -162,6 +162,9 @@ module generate_module
 
                 ! If its valid, and we need more points, add it to the array
                 if(live_point(settings%l0)>settings%logzero) then
+                    if (live_point(settings%l0)>settings%logalmostzero) then
+                        ngenerated = ngenerated+1
+                    end if
                     total_time =total_time+ time1-time0
 
                     call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
@@ -198,6 +201,9 @@ module generate_module
 
                     ! If its valid, add it to the array
                     if(live_point(settings%l0)>settings%logzero) then
+                        if (live_point(settings%l0)>settings%logalmostzero) then
+                            ngenerated = ngenerated+1
+                        end if
 
                         call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
@@ -214,7 +220,7 @@ module generate_module
                     end if
 
 
-                    if(RTI%nlive(1)<nprior) then
+                    if(ngenerated<nprior) then
                         call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
                     else
                         call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop

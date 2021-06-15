@@ -20,6 +20,7 @@ module settings_module
 
         real(dp) :: precision_criterion = 1d-3  !> The stopping criterion
         real(dp) :: logzero = -1d30             !> The threshold for 'log(0) values'
+        real(dp) :: logalmostzero = -1d30       !> The threshold for 'log(0) values'
 
         !> The maximum number of dead points/samples
         !!
