@@ -17,7 +17,7 @@ add_library(${PROJECT_NAME} STATIC $<TARGET_OBJECTS:objlib>)
 add_library(${PROJECT_NAME}_shared SHARED $<TARGET_OBJECTS:objlib>)
 set_target_properties(${PROJECT_NAME}_shared PROPERTIES OUTPUT_NAME ${PROJECT_NAME} CLEAN_DIRECT_OUTPUT 1)
 
-# this seems to be standard stuff
+# standard: where to put the targets
 install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION ${target_bin_dir}
         LIBRARY DESTINATION ${target_lib_dir}
