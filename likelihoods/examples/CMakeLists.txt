@@ -7,6 +7,11 @@ foreach (filename ${${PROJECT_NAME}_sources})
     # strip the file name
     get_filename_component(archive_name ${filename} NAME_WE)
 
+    if (${archive_name} STREQUAL "polychord_examples")
+        # make sure this is not turned into an object & executable alone
+        continue()
+    endif ()
+
     # compile once into object -> use in lib and exec as well
     add_library(objlib_${archive_name} OBJECT ${filename})
     set_property(TARGET objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
@@ -14,8 +19,8 @@ foreach (filename ${${PROJECT_NAME}_sources})
     # static library
     add_library(${archive_name} STATIC $<TARGET_OBJECTS:objlib_${archive_name}>)
 
-    # executable + linking
-    add_executable(${archive_name}_exec $<TARGET_OBJECTS:objlib_${archive_name}> $<TARGET_OBJECTS:polychord_examples>)
+    # executable + linking, uses the program and one of the likelihood implementations
+    add_executable(${archive_name}_exec $<TARGET_OBJECTS:objlib_${archive_name}> polychord_examples.f90)
     target_link_libraries(${archive_name}_exec chord) # link libchoord.a to it
     set_target_properties(${archive_name}_exec PROPERTIES OUTPUT_NAME ${archive_name} CLEAN_DIRECT_OUTPUT 1)
 

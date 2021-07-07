@@ -1,6 +1,5 @@
 !> This is the main driving routine of the nested sampling algorithm
-! TKS: this was relocated to likelihoods/examples for the CMake build system.
-!      delete here when the Makefiles are updated or outdated
+! TKS: copied from src/drivers for the CMake build system, only kept there to not break the old build system
 program PolyChord
 
     ! ~~~~~~~ Loaded Modules ~~~~~~~
