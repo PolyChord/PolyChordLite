@@ -7,7 +7,12 @@ enable_language(Fortran)
 enable_language(CXX)
 
 # flags for gfortran todo: compiler dependence
-set (CMAKE_Fortran_FLAGS "-ffree-line-length-none -cpp -fPIC -fno-stack-arrays")
+set(CMAKE_Fortran_FLAGS "-ffree-line-length-none -cpp -fPIC -fno-stack-arrays")
+
+# find MPI & link to everything from now on
+find_package(MPI REQUIRED)
+message(STATUS "MPI_Fortran_COMPILER: ${MPI_Fortran_COMPILER}")
+link_libraries(MPI::MPI_Fortran)
 
 # this will be module building directory, allows linking
 set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/generated/mods)
