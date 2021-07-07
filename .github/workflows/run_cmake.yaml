@@ -1,0 +1,23 @@
+# This workflow carries out the build of the package with CMake
+
+name: CMake build
+
+on: [ push ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # check out
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: sudo apt-get install gfortran libopenmpi-dev cmake
+
+      - name: Run CMake builid
+        run: |
+          mkdir BUILD
+          cd BUILD
+          cmake ..
+          make install
