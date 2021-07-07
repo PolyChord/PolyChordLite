@@ -19,6 +19,6 @@ set_target_properties(${PROJECT_NAME}_shared PROPERTIES OUTPUT_NAME ${PROJECT_NA
 
 # this seems to be standard stuff
 install(TARGETS ${PROJECT_NAME}
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib/static)
+        RUNTIME DESTINATION ${target_bin_dir}
+        LIBRARY DESTINATION ${target_lib_dir}
+        ARCHIVE DESTINATION ${target_lib_dir})
