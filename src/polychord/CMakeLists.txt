@@ -1,8 +1,9 @@
-project(polychord Fortran)
+project(chord Fortran)
 
-# manual add one
-add_library(${PROJECT_NAME} STATIC utils.F90 abort.F90)
-message("manually added STATIC utils.F90 into `polychord` module in ${CMAKE_CURRENT_SOURCE_DIR}")
+## original: glob -> sources -> static library
+file(GLOB ${PROJECT_NAME}_sources "*.f90" "*.F90" "*.cpp")
+message(STATUS "Sources for project ${PROJECT_NAME}: ${${PROJECT_NAME}_sources}")
+add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_sources})
 
 # this seems to be standard stuff
 install(TARGETS ${PROJECT_NAME}
