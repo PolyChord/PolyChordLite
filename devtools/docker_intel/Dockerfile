@@ -25,6 +25,13 @@ apt-get install -y --no-install-recommends -o=Dpkg::Use-Pty=0 \
     vim git wget ca-certificates \
 --
 
+# reinstall newer cmake
+ARG cmake_url=https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-x86_64.sh
+ADD $cmake_url /
+RUN file=$(basename "$cmake_url") && \
+    bash $file --prefix=/usr --skip-license && \
+    rm $file
+
 # from Intel HPC toolkit
 # setvars.sh environment variables
 ENV ACL_BOARD_VENDOR_PATH='/opt/Intel/OpenCLFPGA/oneAPI/Boards'

@@ -19,6 +19,12 @@ RUN apt-get -q update && \
         g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# reinstall newer cmake, same as in the Intel image
+ARG cmake_url=https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-x86_64.sh
+ADD $cmake_url /
+RUN file=$(basename "$cmake_url") && \
+   bash $file --prefix=/usr --skip-license && \
+   rm $file
 
 # DEV use: oh-my-zsh instead of bash
 # Uses "robbyrussell" theme (original Oh My Zsh theme), with no plugins
