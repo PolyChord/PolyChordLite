@@ -28,6 +28,10 @@ elseif ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "GNU")
     set(CMAKE_Fortran_FLAGS "-ffree-line-length-none -cpp -fPIC -fno-stack-arrays -Ofast")
     set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC -Ofast")
 
+    # for GitHub actions MacOS -- debug only
+    add_compile_options("-lstdc++")
+    link_libraries("-lstdc++")
+
 elseif ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "Cray")
     message("Using Cray compilers")
 

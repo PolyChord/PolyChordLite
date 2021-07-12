@@ -37,3 +37,26 @@ jobs:
           cd BUILD_Intel
           cmake -DCMAKE_CXX_COMPILER=icpc ..
           make install
+
+  build-MacOS:
+    runs-on: macos-latest
+
+    steps:
+      # check out
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: brew install cmake gcc openmpi
+
+      - name: Check versions
+        run: |
+          cmake --version
+          gcc-11 --version
+          gfortran-11 --version
+
+      - name: Run CMake builid
+        run: |
+          mkdir BUILD_GNU_MacOS
+          cd BUILD_GNU_MacOS
+          cmake -DCMAKE_Fortran_COMPILER=gfortran-11 -DCMAKE_CXX_COMPILER=gcc-11 ..
+          make VERBOSE=1 install
