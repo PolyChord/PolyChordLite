@@ -5,7 +5,7 @@ name: CMake build
 on: [ push ]
 
 jobs:
-  build:
+  build-GNU:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,7 +17,23 @@ jobs:
 
       - name: Run CMake builid
         run: |
-          mkdir BUILD
-          cd BUILD
+          mkdir BUILD_GNU
+          cd BUILD_GNU
+          cmake ..
+          make install
+
+  build-Intel:
+    runs-on: ubuntu-latest
+    container:
+      image: intel/oneapi-hpckit
+
+    steps:
+      # check out
+      - uses: actions/checkout@v2
+
+      - name: Run CMake builid
+        run: |
+          mkdir BUILD_Intel
+          cd BUILD_Intel
           cmake ..
           make install
