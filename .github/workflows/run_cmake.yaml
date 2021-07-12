@@ -35,5 +35,5 @@ jobs:
         run: |
           mkdir BUILD_Intel
           cd BUILD_Intel
-          cmake ..
+          cmake -DCMAKE_CXX_COMPILER=icpc ..
           make install
