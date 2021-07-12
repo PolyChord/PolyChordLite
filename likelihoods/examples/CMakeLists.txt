@@ -1,4 +1,4 @@
-project(examples)
+project(examples Fortran)
 
 # parse each example separately
 file(GLOB ${PROJECT_NAME}_sources "*.f90" "*.F90")
@@ -14,7 +14,8 @@ foreach (filename ${${PROJECT_NAME}_sources})
 
     # compile once into object -> use in lib and exec as well
     add_library(objlib_${archive_name} OBJECT ${filename})
-    set_property(TARGET objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
+    set_target_properties(objlib_${archive_name} PROPERTIES POSITION_INDEPENDENT_CODE 1 LINKER_LANGUAGE Fortran)
+    target_link_libraries(objlib_${archive_name} chord)
 
     # static library
     add_library(${archive_name} STATIC $<TARGET_OBJECTS:objlib_${archive_name}>)
@@ -22,7 +23,7 @@ foreach (filename ${${PROJECT_NAME}_sources})
     # executable + linking, uses the program and one of the likelihood implementations
     add_executable(${archive_name}_exec $<TARGET_OBJECTS:objlib_${archive_name}> polychord_examples.f90)
     target_link_libraries(${archive_name}_exec chord) # link libchoord.a to it
-    set_target_properties(${archive_name}_exec PROPERTIES OUTPUT_NAME ${archive_name} CLEAN_DIRECT_OUTPUT 1)
+    set_target_properties(${archive_name}_exec PROPERTIES OUTPUT_NAME ${archive_name} CLEAN_DIRECT_OUTPUT 1 LINKER_LANGUAGE Fortran)
 
     # add to target list
     list(APPEND ${PROJECT_NAME}_library_list ${archive_name})
