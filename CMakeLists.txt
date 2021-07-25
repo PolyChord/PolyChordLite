@@ -66,7 +66,7 @@ find_package (Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 
 # find out the suffix for the current python version
 EXECUTE_PROCESS(
-    COMMAND ${Python3_EXECUTABLE} "-c" "from importlib.machinery import EXTENSION_SUFFIXES;print(EXTENSION_SUFFIXES[0])"
+    COMMAND ${Python3_EXECUTABLE} "-c" "import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))"
     OUTPUT_VARIABLE python_so_suffix
 )
 STRING(REPLACE "\n" "" python_so_suffix ${python_so_suffix})
