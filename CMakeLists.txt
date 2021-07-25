@@ -54,7 +54,38 @@ set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
 # target directories -> stuff installed in these directories
 set(target_lib_dir ${PROJECT_BINARY_DIR}/lib)
 set(target_bin_dir ${PROJECT_BINARY_DIR}/bin)
+set(target_python_dir ${PROJECT_BINARY_DIR}/python)
 
 # directories where we want to make things
 add_subdirectory(src)
 add_subdirectory(likelihoods)
+
+# PyPolyChord stuff
+message(STATUS "Enabling Python package build")
+find_package (Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+
+# find out the suffix for the current python version
+EXECUTE_PROCESS(
+    COMMAND ${Python3_EXECUTABLE} "-c" "from importlib.machinery import EXTENSION_SUFFIXES;print(EXTENSION_SUFFIXES[0])"
+    OUTPUT_VARIABLE python_so_suffix
+)
+STRING(REPLACE "\n" "" python_so_suffix ${python_so_suffix})
+message(STATUS "Python shared object suffix is: ${python_so_suffix}")
+
+# the extension module
+add_library(_pypolychord SHARED pypolychord/_pypolychord.cpp)
+set_target_properties(_pypolychord
+    PROPERTIES
+        OUTPUT_NAME _pypolychord
+        PREFIX ""
+        SUFFIX "${python_so_suffix}"
+    )
+# dependencies and includes
+target_link_libraries(_pypolychord chord_shared Python3::Python Python3::NumPy)
+target_include_directories(_pypolychord PUBLIC src/polychord) # PolyChord headers for python extensions
+
+# place all outputs in one place
+install(TARGETS _pypolychord
+        RUNTIME DESTINATION ${target_python_dir}
+        LIBRARY DESTINATION ${target_python_dir}
+        ARCHIVE DESTINATION ${target_python_dir})
