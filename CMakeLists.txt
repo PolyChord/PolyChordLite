@@ -60,32 +60,38 @@ set(target_python_dir ${PROJECT_BINARY_DIR}/python)
 add_subdirectory(src)
 add_subdirectory(likelihoods)
 
-# PyPolyChord stuff
-message(STATUS "Enabling Python package build")
-find_package (Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 
-# find out the suffix for the current python version
-EXECUTE_PROCESS(
-    COMMAND ${Python3_EXECUTABLE} "-c" "import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))"
-    OUTPUT_VARIABLE python_so_suffix
-)
-STRING(REPLACE "\n" "" python_so_suffix ${python_so_suffix})
-message(STATUS "Python shared object suffix is: ${python_so_suffix}")
+option(python "Build PyPolyChord package" ON)
 
-# the extension module
-add_library(_pypolychord SHARED pypolychord/_pypolychord.cpp)
-set_target_properties(_pypolychord
-    PROPERTIES
-        OUTPUT_NAME _pypolychord
-        PREFIX ""
-        SUFFIX "${python_so_suffix}"
+
+if (python)
+    # PyPolyChord stuff
+    message(STATUS "Enabling Python package build")
+    find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+
+    # find out the suffix for the current python version
+    EXECUTE_PROCESS(
+            COMMAND ${Python3_EXECUTABLE} "-c" "import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))"
+            OUTPUT_VARIABLE python_so_suffix
     )
-# dependencies and includes
-target_link_libraries(_pypolychord chord_shared Python3::Python Python3::NumPy)
-target_include_directories(_pypolychord PUBLIC src/polychord) # PolyChord headers for python extensions
+    STRING(REPLACE "\n" "" python_so_suffix ${python_so_suffix})
+    message(STATUS "Python shared object suffix is: ${python_so_suffix}")
 
-# place all outputs in one place
-install(TARGETS _pypolychord
-        RUNTIME DESTINATION ${target_python_dir}
-        LIBRARY DESTINATION ${target_python_dir}
-        ARCHIVE DESTINATION ${target_python_dir})
+    # the extension module
+    add_library(_pypolychord SHARED pypolychord/_pypolychord.cpp)
+    set_target_properties(_pypolychord
+            PROPERTIES
+            OUTPUT_NAME _pypolychord
+            PREFIX ""
+            SUFFIX "${python_so_suffix}"
+            )
+    # dependencies and includes
+    target_link_libraries(_pypolychord chord_shared Python3::Python Python3::NumPy)
+    target_include_directories(_pypolychord PUBLIC src/polychord) # PolyChord headers for python extensions
+
+    # place all outputs in one place
+    install(TARGETS _pypolychord
+            RUNTIME DESTINATION ${target_python_dir}
+            LIBRARY DESTINATION ${target_python_dir}
+            ARCHIVE DESTINATION ${target_python_dir})
+endif (python)
