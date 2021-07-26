@@ -16,10 +16,12 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY LINKER_LANGUAGE Fortran)
 
 # libcoord.so as well -> needs a different target name, but the same lib name
 add_library(${PROJECT_NAME}_shared SHARED $<TARGET_OBJECTS:objlib_${PROJECT_NAME}>)
-set_target_properties(${PROJECT_NAME}_shared PROPERTIES OUTPUT_NAME ${PROJECT_NAME} CLEAN_DIRECT_OUTPUT 1 LINKER_LANGUAGE Fortran)
+set_target_properties(${PROJECT_NAME}_shared
+        PROPERTIES
+        OUTPUT_NAME ${PROJECT_NAME}
+        CLEAN_DIRECT_OUTPUT 1
+        LINKER_LANGUAGE Fortran)
 
 # standard: where to put the targets
-install(TARGETS ${PROJECT_NAME}
-        RUNTIME DESTINATION ${target_bin_dir}
-        LIBRARY DESTINATION ${target_lib_dir}
-        ARCHIVE DESTINATION ${target_lib_dir})
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_shared
+        LIBRARY DESTINATION ${target_lib_dir})
