@@ -17,10 +17,16 @@ from setuptools import Extension
 from setuptools.command.build_ext import build_ext
 
 
+def readme():
+    with open('README.rst') as f:
+        return f.read()
+
+
 class MyBuildExtension(build_ext):
     """This class 'builds' the extension module, by
     copying it from the place where CMake placed it.
     """
+
     def build_extension(self, ext):
 
         # _pypolychord.ARCH.so
@@ -32,6 +38,17 @@ class MyBuildExtension(build_ext):
 
 
 setup(name='pypolychord',
+      description='Python interface to PolyChord ${PACKAGE_VERSION}',
+      long_description=readme(),
+      long_description_content_type='text/x-rst',
+      url='https://ccpforge.cse.rl.ac.uk/gf/project/polychord/',
+      author='Will Handley',
+      author_email='wh260@cam.ac.uk',
+      license='PolyChord',
+      install_requires=['numpy', 'scipy'],
+      extras_require={'plotting': 'getdist'},
+
+      # Don't touch anything below here - CMake fills this in
       version='${PACKAGE_VERSION}',
       package_dir={'pypolychord': '${CMAKE_CURRENT_SOURCE_DIR}/pypolychord'},
       packages=['pypolychord'],
