@@ -16,7 +16,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install gfortran libopenmpi-dev cmake python3-dev pip
-          pip install scipy matplotlib getdist anesthetic ipython
+          pip install scipy matplotlib getdist anesthetic ipython mpi4py
 
       - name: Run CMake builid
         run: |
@@ -24,6 +24,12 @@ jobs:
           cd BUILD_GNU
           cmake ..
           make install
+
+      - name: Test pypolychord
+        run: python run_pypolychord.py
+
+      - name: Test pypolychord (MPI)
+        run: mpirun -np 2 python run_pypolychord.py
 
   build-Intel:
     runs-on: ubuntu-latest
@@ -40,6 +46,11 @@ jobs:
           cd BUILD_Intel
           cmake -DCMAKE_CXX_COMPILER=icpc -DCMAKE_Fortran_COMPILER=ifort ..
           make install
+      - name: Test pypolychord
+        run: python run_pypolychord.py
+
+      - name: Test pypolychord (MPI)
+        run: mpirun -np 2 python run_pypolychord.py
 
   build-MacOS:
     runs-on: macos-latest
@@ -51,7 +62,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew install cmake gcc openmpi
-          pip install scipy matplotlib getdist anesthetic ipython
+          pip3 install scipy matplotlib getdist anesthetic ipython mpi4py
 
       - name: Check versions
         run: |
@@ -65,3 +76,9 @@ jobs:
           cd BUILD_GNU_MacOS
           cmake -DCMAKE_Fortran_COMPILER=gfortran-11 -DCMAKE_CXX_COMPILER=gcc-11 ..
           make VERBOSE=1 install
+
+      - name: Test pypolychord
+        run: python run_pypolychord.py
+
+      - name: Test pypolychord (MPI)
+        run: mpirun -np 2 python run_pypolychord.py
