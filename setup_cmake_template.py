@@ -18,7 +18,7 @@ from setuptools.command.build_ext import build_ext
 
 
 def readme():
-    with open('README.rst') as f:
+    with open('${CMAKE_CURRENT_SOURCE_DIR}/README.rst') as f:
         return f.read()
 
 
