@@ -48,6 +48,28 @@ setup(name='pypolychord',
       install_requires=['numpy', 'scipy'],
       extras_require={'plotting': 'getdist'},
 
+      classifiers=[
+          "Development Status :: 5 - Production/Stable",
+
+          "Intended Audience :: Education",
+
+          "Operating System :: MacOS :: MacOS X",
+          "Operating System :: Unix",
+
+          "Topic :: Scientific/Engineering :: Astronomy",
+          "Topic :: Scientific/Engineering :: Physics",
+
+          "Programming Language :: C++",
+          "Programming Language :: Fortran",
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9',
+          "Programming Language :: Python :: 3.10",
+
+      ],
+
       # Don't touch anything below here - CMake fills this in
       version='${PACKAGE_VERSION}',
       package_dir={'pypolychord': '${CMAKE_CURRENT_SOURCE_DIR}/pypolychord'},
