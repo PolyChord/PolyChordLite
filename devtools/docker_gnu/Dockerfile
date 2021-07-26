@@ -17,7 +17,10 @@ RUN apt-get -q update && \
         # cmake and tools
         cmake vim git wget ca-certificates \
         g++ \
+        python3-dev pip \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install scipy matplotlib getdist anesthetic ipython
 
 # reinstall newer cmake, same as in the Intel image
 ARG cmake_url=https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-x86_64.sh
@@ -32,3 +35,6 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
     -t robbyrussell
 ENTRYPOINT "/usr/bin/zsh"
 WORKDIR /work
+
+# python executable
+RUN echo "alias python=python3" >> /root/.zshrc
