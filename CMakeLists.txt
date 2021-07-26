@@ -61,6 +61,7 @@ add_subdirectory(likelihoods)
 
 
 option(python "Build PyPolyChord package" ON)
+option(python_user_install "Install Python package for user (--user)" ON)
 
 
 if (python)
@@ -122,6 +123,10 @@ if (python)
     add_custom_target(target ALL DEPENDS ${OUTPUT})
 
     # installation with setup.py
-    install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} ${SETUP_PY} install)")
+    if (python_user_install)
+        install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} ${SETUP_PY} install)")
+    else(python_user_install)
+        install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} ${SETUP_PY} install --user)")
+    endif(python_user_install)
 
 endif (python)

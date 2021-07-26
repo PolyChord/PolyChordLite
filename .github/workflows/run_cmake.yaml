@@ -62,7 +62,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew install cmake gcc openmpi
-          pip3 install scipy matplotlib getdist anesthetic ipython mpi4py
+          pip3 install numpy scipy matplotlib getdist anesthetic ipython mpi4py
 
       - name: Check versions
         run: |
