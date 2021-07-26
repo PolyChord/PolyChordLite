@@ -20,7 +20,7 @@ RUN apt-get -q update && \
         python3-dev pip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install scipy matplotlib getdist anesthetic ipython
+RUN pip3 install scipy matplotlib getdist anesthetic ipython mpi4py
 
 # reinstall newer cmake, same as in the Intel image
 ARG cmake_url=https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-x86_64.sh

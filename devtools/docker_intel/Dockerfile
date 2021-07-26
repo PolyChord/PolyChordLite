@@ -17,6 +17,7 @@ apt-get install -y --no-install-recommends -o=Dpkg::Use-Pty=0 \
     intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic \
     intel-oneapi-mpi-devel \
     intel-oneapi-compiler-fortran \
+    intel-oneapi-python python3-pip \
     # other tools and libraries
     libblas-dev \
     liblapack-dev \
@@ -24,6 +25,8 @@ apt-get install -y --no-install-recommends -o=Dpkg::Use-Pty=0 \
     make \
     vim git wget ca-certificates \
 --
+
+RUN pip3 install scipy matplotlib getdist anesthetic ipython mpi4py
 
 # reinstall newer cmake
 ARG cmake_url=https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-x86_64.sh
