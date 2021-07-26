@@ -54,7 +54,6 @@ set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
 # target directories -> stuff installed in these directories
 set(target_lib_dir ${PROJECT_BINARY_DIR}/lib)
 set(target_bin_dir ${PROJECT_BINARY_DIR}/bin)
-set(target_python_dir ${PROJECT_BINARY_DIR}/python)
 
 # directories where we want to make things
 add_subdirectory(src)
@@ -82,7 +81,7 @@ if (python)
     message(STATUS "Python shared object suffix is: ${python_so_suffix}")
 
     # the extension module
-    add_library(_pypolychord SHARED pypolychord/_pypolychord.cpp)
+    add_library(_pypolychord SHARED pypolychord/_pypolychord.cpp $<TARGET_OBJECTS:objlib_chord>)
     set_target_properties(_pypolychord
             PROPERTIES
             OUTPUT_NAME _pypolychord
@@ -90,12 +89,15 @@ if (python)
             SUFFIX "${python_so_suffix}"
             )
     # dependencies and includes
-    target_link_libraries(_pypolychord chord_shared Python3::Python Python3::NumPy)
+    target_link_libraries(_pypolychord Python3::Python Python3::NumPy)
     target_include_directories(_pypolychord PUBLIC src/polychord) # PolyChord headers for python extensions
+
+    # remember the place of this
+    set(target_python_so ${CMAKE_CURRENT_BINARY_DIR}/_pypolychord${python_so_suffix})
 
     # place all outputs in one place
     install(TARGETS _pypolychord
-            LIBRARY DESTINATION ${target_python_dir})
+            LIBRARY DESTINATION ${target_lib_dir})
 
     #################################################################
     # The simple python module
