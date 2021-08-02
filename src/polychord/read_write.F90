@@ -825,7 +825,7 @@ module read_write_module
         real(dp), dimension(settings%nDims+settings%nDerived) :: mu,sig
         real(dp)                           :: update_files
 
-        integer :: p, i_dims
+        integer :: p, i_dims, i_char
 
         character(len=fmt_len) :: fmt_Z,fmt_nlike
 
@@ -854,13 +854,16 @@ module read_write_module
         write(write_stats_unit, '("----------------")')
         write(write_stats_unit,'("")')
 
-        write(fmt_Z,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, """ (Still Active)"")")') 'I2',DB_FMT,DB_FMT
+
         do p=1,RTI%ncluster
-            write(write_stats_unit,fmt_Z) p, logZp(p), sqrt(abs(varlogZp(p)))
+            i_char = ceiling(log10(float(p+1)))
+            write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= "",", A, ","" +/- "",", A, """ (Still Active)"")")') i_char,6-i_char,DB_FMT,DB_FMT
+            write(write_stats_unit,fmt_Z) p, '', logZp(p), sqrt(abs(varlogZp(p)))
         end do
-        write(fmt_Z,'("(""log(Z_"",",A,","")  = "",", A, ","" +/- "",", A, ")")') 'I2',DB_FMT,DB_FMT
         do p=1,RTI%ncluster_dead
-            write(write_stats_unit,fmt_Z) p+RTI%ncluster, logZp_dead(p), sqrt(abs(varlogZp_dead(p)))
+            i_char = ceiling(log10(float(p+RTI%ncluster+1)))
+            write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= "",", A, ","" +/- "",", A, ")")') i_char,6-i_char,DB_FMT,DB_FMT
+            write(write_stats_unit,fmt_Z) p+RTI%ncluster, '', logZp_dead(p), sqrt(abs(varlogZp_dead(p)))
         end do
 
         write(write_stats_unit,'("")')
