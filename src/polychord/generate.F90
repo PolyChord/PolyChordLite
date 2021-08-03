@@ -65,7 +65,7 @@ module generate_module
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file, prior_info_file
         use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
-        use run_time_module,   only: run_time_info,initialise_run_time_info
+        use run_time_module,   only: run_time_info,initialise_run_time_info, find_min_loglikelihoods
         use array_module,     only: add_point
         use abort_module
 #ifdef MPI
@@ -300,6 +300,8 @@ module generate_module
                 RTI%thin_posterior = (settings%boost_posterior+0d0)/(sum(RTI%num_repeats)+0d0)
             end if
 
+            ! Calculate the minimum loglikelihood for future use
+            call find_min_loglikelihoods(settings,RTI)
         end if
 
 
@@ -444,7 +446,7 @@ module generate_module
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file
         use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
-        use run_time_module,   only: run_time_info,initialise_run_time_info
+        use run_time_module,   only: run_time_info,initialise_run_time_info, find_min_loglikelihoods
         use array_module,     only: add_point
         use abort_module
         use chordal_module, only: slice_sample
@@ -672,6 +674,9 @@ module generate_module
             else
                 RTI%thin_posterior = (settings%boost_posterior+0d0)/(sum(RTI%num_repeats)+0d0)
             end if
+
+            ! Calculate the minimum loglikelihood for future use
+            call find_min_loglikelihoods(settings,RTI)
 
         end if
 
