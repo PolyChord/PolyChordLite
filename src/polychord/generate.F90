@@ -68,7 +68,7 @@ module generate_module
         use run_time_module,   only: run_time_info,initialise_run_time_info, find_min_loglikelihoods
         use array_module,     only: add_point
         use abort_module
-#ifdef MPI
+#ifdef USE_MPI
         use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points
 #else
         use mpi_module, only: mpi_bundle,is_root,linear_mode
@@ -100,7 +100,7 @@ module generate_module
         type(run_time_info) :: RTI
 
         type(mpi_bundle),intent(in) :: mpi_information
-#ifdef MPI
+#ifdef USE_MPI
         integer             :: active_workers    !  Number of currently working workers
         integer             :: worker_id         !  Worker identifier to signal who to throw back to
 #endif
@@ -181,7 +181,7 @@ module generate_module
             end do
 
 
-#ifdef MPI
+#ifdef USE_MPI
         else 
             !===================== PARALLEL MODE =======================
 
@@ -246,7 +246,7 @@ module generate_module
 #endif
         end if !(nprocs case)
 
-#ifdef MPI
+#ifdef USE_MPI
         nlike = sum_integers(nlike,mpi_information) ! Gather the likelihood calls onto one node
         ndiscarded = sum_integers(ndiscarded,mpi_information) ! Gather the likelihood calls onto one node
         total_time = sum_doubles(total_time,mpi_information) ! Sum up the total time taken
@@ -319,7 +319,7 @@ module generate_module
         use utils_module,    only: normal_fb,stdout_unit,fancy_fb,time
         use calculate_module, only: calculate_point
         use abort_module
-#ifdef MPI
+#ifdef USE_MPI
         use mpi_module, only: mpi_bundle,is_root,sum_doubles,sum_integers
 #else
         use mpi_module, only: mpi_bundle,is_root
@@ -419,7 +419,7 @@ module generate_module
                 end if
 
             end do
-#ifdef MPI
+#ifdef USE_MPI
             total_time=sum_doubles(total_time,mpi_information)
             i_live = sum_integers(i_live,mpi_information)
             nlike = sum_integers(nlike,mpi_information)
@@ -450,7 +450,7 @@ module generate_module
         use array_module,     only: add_point
         use abort_module
         use chordal_module, only: slice_sample
-#ifdef MPI
+#ifdef USE_MPI
         use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points
 #else
         use mpi_module, only: mpi_bundle,is_root,linear_mode
@@ -482,7 +482,7 @@ module generate_module
         type(run_time_info) :: RTI
 
         type(mpi_bundle),intent(in) :: mpi_information
-#ifdef MPI
+#ifdef USE_MPI
         integer             :: active_workers    !  Number of currently working workers
         integer             :: worker_id         !  Worker identifier to signal who to throw back to
 #endif
@@ -559,7 +559,7 @@ module generate_module
 
             end do
 
-#ifdef MPI
+#ifdef USE_MPI
         else 
             !===================== PARALLEL MODE =======================
 
@@ -629,7 +629,7 @@ module generate_module
 #endif
         end if !(nprocs case)
 
-#ifdef MPI
+#ifdef USE_MPI
         do i_grade=1,size(settings%grade_dims)
             nlikes(i_grade) = sum_integers(nlikes(i_grade),mpi_information) ! Gather the likelihood calls onto one node
             times(i_grade) = sum_doubles(times(i_grade),mpi_information) ! Sum up the total time taken

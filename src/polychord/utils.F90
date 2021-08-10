@@ -1,7 +1,7 @@
 
 module utils_module
     implicit none
-#ifdef MPI
+#ifdef USE_MPI
     include 'mpif.h'
 #endif
     integer, parameter :: dp = kind(1.d0)
@@ -1050,12 +1050,12 @@ module utils_module
     !> This gets the wallclock timer from the mpi library
     function time() 
         implicit none
-#ifdef MPI
+#ifdef USE_MPI
         include 'mpif.h'
 #endif
         real(dp) :: time
 
-#ifdef MPI
+#ifdef USE_MPI
         time = MPI_Wtime()
 #else 
         call cpu_time(time)

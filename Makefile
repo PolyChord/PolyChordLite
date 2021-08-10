@@ -44,7 +44,7 @@ endif
 
 
 ifeq ($(MPI),1)
-FFLAGS += -DMPI
+FFLAGS += -DUSE_MPI
 CXXFLAGS += -DUSE_MPI
 endif
 

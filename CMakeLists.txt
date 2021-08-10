@@ -6,6 +6,11 @@ project(PolyChordLite Fortran)
 enable_language(CXX)
 enable_language(Fortran)
 
+# options
+option(MPI "Build with MPI" ON)
+option(python "Build PyPolyChord package" ON)
+option(python_user_install "Install Python package for user (--user)" ON)
+
 # enforce matching of the CXX and Fortran compilers
 if (NOT "${CMAKE_Fortran_COMPILER_ID}" MATCHES "${CMAKE_CXX_COMPILER_ID}")
     message(FATAL_ERROR "You need to use the same vendor for your C++ and Fortran compiler")
@@ -41,9 +46,15 @@ elseif ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "Cray")
 endif ()
 
 # find MPI & link to everything from now on
-find_package(MPI REQUIRED)
-message(STATUS "MPI_Fortran_COMPILER: ${MPI_Fortran_COMPILER}")
-link_libraries(MPI::MPI_Fortran)
+if (MPI)
+    find_package(MPI REQUIRED)
+    message(STATUS "MPI_Fortran_COMPILER: ${MPI_Fortran_COMPILER}")
+    link_libraries(MPI::MPI_Fortran)
+    link_libraries(MPI::MPI_CXX)
+
+    # definitions
+    add_compile_definitions(USE_MPI)
+endif (MPI)
 
 # this will be module building directory, allows linking
 set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/generated/mods)
@@ -58,11 +69,6 @@ set(target_bin_dir ${PROJECT_BINARY_DIR}/bin)
 # directories where we want to make things
 add_subdirectory(src)
 add_subdirectory(likelihoods)
-
-
-option(python "Build PyPolyChord package" ON)
-option(python_user_install "Install Python package for user (--user)" ON)
-
 
 if (python)
     #################################################################
@@ -125,8 +131,8 @@ if (python)
     # installation with setup.py
     if (python_user_install)
         install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} ${SETUP_PY} install)")
-    else(python_user_install)
+    else (python_user_install)
         install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} ${SETUP_PY} install --user)")
-    endif(python_user_install)
+    endif (python_user_install)
 
 endif (python)

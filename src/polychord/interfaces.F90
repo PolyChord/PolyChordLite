@@ -2,7 +2,7 @@
 module interfaces_module
     use utils_module, only: dp
     implicit none
-#ifdef MPI
+#ifdef USE_MPI
     include 'mpif.h'
 #endif
     interface run_polychord
@@ -16,11 +16,11 @@ contains
         use settings_module,          only: program_settings,initialise_settings
         use random_module,            only: initialise_random
         use nested_sampling_module,   only: NestedSampling
-#ifdef MPI
+#ifdef USE_MPI
         use mpi_module,               only: initialise_mpi, finalise_mpi
 #endif
         implicit none
-#ifdef MPI
+#ifdef USE_MPI
         include 'mpif.h'
 #endif
 
@@ -56,7 +56,7 @@ contains
 
         real(dp), dimension(4) :: output_info
 
-#ifdef MPI
+#ifdef USE_MPI
         if (present(mpi_communicator)) then
             comm = mpi_communicator
         else 
@@ -73,7 +73,7 @@ contains
         end if
         settings = settings_in
         call initialise_settings(settings)   
-#ifdef MPI
+#ifdef USE_MPI
         output_info = NestedSampling(loglikelihood,prior_transform,dumper,settings,comm) 
         call finalise_mpi
 #else
@@ -105,7 +105,7 @@ contains
         type(program_settings),intent(in)    :: settings  ! The program settings 
         integer, intent(in), optional :: mpi_communicator
         integer :: comm
-#ifdef MPI
+#ifdef USE_MPI
         if (present(mpi_communicator)) then
             comm = mpi_communicator
         else 
@@ -145,7 +145,7 @@ contains
         type(program_settings),intent(in)    :: settings  ! The program settings 
         integer, intent(in), optional :: mpi_communicator
         integer :: comm
-#ifdef MPI
+#ifdef USE_MPI
         if (present(mpi_communicator)) then
             comm = mpi_communicator
         else 
@@ -177,7 +177,7 @@ contains
         !> MPI handle
         integer, intent(in), optional :: mpi_communicator
         integer :: comm
-#ifdef MPI
+#ifdef USE_MPI
         if (present(mpi_communicator)) then
             comm = mpi_communicator
         else 
@@ -231,7 +231,7 @@ contains
         end interface
         integer, intent(in), optional :: mpi_communicator
         integer :: comm
-#ifdef MPI
+#ifdef USE_MPI
         if (present(mpi_communicator)) then
             comm = mpi_communicator
         else 

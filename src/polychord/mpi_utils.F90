@@ -2,7 +2,7 @@ module mpi_module
     use utils_module, only: dp, normal_fb
 
     implicit none
-#ifdef MPI
+#ifdef USE_MPI
     include 'mpif.h'
 #endif
 
@@ -83,7 +83,7 @@ module mpi_module
         integer, intent(in) :: mpi_communicator
         integer :: nprocs
 
-#ifdef MPI
+#ifdef USE_MPI
         call MPI_COMM_SIZE(  & 
             mpi_communicator,&!handle
             nprocs,          &!return number of processors
@@ -103,7 +103,7 @@ module mpi_module
         integer, intent(in) :: mpi_communicator
         integer :: myrank
 
-#ifdef MPI
+#ifdef USE_MPI
         call MPI_COMM_RANK(  & 
             mpi_communicator,&!handle
             myrank,          &!return rank of calling processor 
@@ -132,7 +132,7 @@ module mpi_module
         ! Get the rank of the process
         myrank = get_rank(mpi_communicator)
 
-#ifdef MPI
+#ifdef USE_MPI
         call MPI_ALLREDUCE(  &
             myrank,          &!send buffer 
             root,            &!recieve buffer
@@ -149,7 +149,7 @@ module mpi_module
     end function get_root
 
 
-#ifdef MPI
+#ifdef USE_MPI
     !> Procedure to initialise mpi
     subroutine initialise_mpi(feedback)
         implicit none
@@ -217,7 +217,7 @@ module mpi_module
         implicit none
         type(mpi_bundle), intent(in) :: mpi_information
 
-#ifdef MPI
+#ifdef USE_MPI
         call MPI_BARRIER(mpi_information%communicator,mpierror)
 #endif 
 
