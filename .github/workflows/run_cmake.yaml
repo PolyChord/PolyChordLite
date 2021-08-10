@@ -3,6 +3,7 @@
 name: CMake build
 
 on: [ push ]
+  workflow_dispatch:
 
 jobs:
   build-GNU:
