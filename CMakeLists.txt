@@ -37,6 +37,11 @@ elseif ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "GNU")
     add_compile_options("-lstdc++")
     link_libraries("-lstdc++")
 
+    if (CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER 10.0)
+        # GCC 10 is complaining about MPI interfaces, turn this to warnings
+        SET(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fallow-argument-mismatch")
+    endif ()
+
 elseif ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "Cray")
     message("Using Cray compilers")
 
