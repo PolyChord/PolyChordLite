@@ -2,7 +2,8 @@
 
 name: CMake build
 
-on: [ push ]
+on:
+  push:
   workflow_dispatch:
 
 jobs:
@@ -10,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # check out
       - uses: actions/checkout@v2
 
       - name: Install dependencies
@@ -19,12 +19,11 @@ jobs:
           sudo apt-get install gfortran libopenmpi-dev cmake python3-dev pip
           pip install scipy matplotlib getdist anesthetic ipython mpi4py
 
-      - name: Run CMake builid
-        run: |
-          mkdir BUILD_GNU
-          cd BUILD_GNU
-          cmake ..
-          make install
+      - name: Run CMake
+        run: cmake -B build
+
+      - name: Build
+        run: make -C build install
 
       - name: Test pypolychord
         run: python run_pypolychord.py
@@ -38,15 +37,14 @@ jobs:
       image: intel/oneapi-hpckit
 
     steps:
-      # check out
       - uses: actions/checkout@v2
 
-      - name: Run CMake builid
-        run: |
-          mkdir BUILD_Intel
-          cd BUILD_Intel
-          cmake -DCMAKE_CXX_COMPILER=icpc -DCMAKE_Fortran_COMPILER=ifort ..
-          make install
+      - name: Run CMake
+        run: cmake -B build -DCMAKE_Fortran_COMPILER=ifort -DCMAKE_CXX_COMPILER=icpc
+
+      - name: Build
+        run: make -C build install
+
       - name: Test pypolychord
         run: python run_pypolychord.py
 
@@ -57,7 +55,6 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # check out
       - uses: actions/checkout@v2
 
       - name: Install dependencies
@@ -65,18 +62,12 @@ jobs:
           brew install cmake gcc openmpi
           pip3 install numpy scipy matplotlib getdist anesthetic ipython mpi4py
 
-      - name: Check versions
-        run: |
-          cmake --version
-          gcc-11 --version
-          gfortran-11 --version
+      # make sure the compiler is from the same vendor here, this is not the default
+      - name: Run CMake
+        run: cmake -B build -DCMAKE_Fortran_COMPILER=gfortran-11 -DCMAKE_CXX_COMPILER=gcc-11
 
-      - name: Run CMake builid
-        run: |
-          mkdir BUILD_GNU_MacOS
-          cd BUILD_GNU_MacOS
-          cmake -DCMAKE_Fortran_COMPILER=gfortran-11 -DCMAKE_CXX_COMPILER=gcc-11 ..
-          make VERBOSE=1 install
+      - name: Build
+        run: make -C build install
 
       - name: Test pypolychord
         run: python run_pypolychord.py
