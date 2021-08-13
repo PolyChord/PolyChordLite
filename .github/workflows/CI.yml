@@ -5,8 +5,9 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-  schedule:
-    - cron: "0 0 * * *"
+# don't run the CRON part in my fork
+#  schedule:
+#    - cron: "0 0 * * *"
 
   workflow_dispatch:
 
