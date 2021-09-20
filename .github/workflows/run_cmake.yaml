@@ -53,6 +53,9 @@ jobs:
 
   build-MacOS:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        cc: [ gcc, clang ]
 
     steps:
       - uses: actions/checkout@v2
@@ -62,9 +65,13 @@ jobs:
           brew install cmake gcc openmpi
           pip3 install numpy scipy matplotlib getdist anesthetic ipython mpi4py
 
-      # make sure the compiler is from the same vendor here, this is not the default
-      - name: Run CMake
+      - name: Run CMake - GCC
+        if: matrix.cc == "gcc"
         run: cmake -B build -DCMAKE_Fortran_COMPILER=gfortran-11 -DCMAKE_CXX_COMPILER=gcc-11
+
+      - name: Run CMake - AppleClang
+        if: matrix.cc == "clang"
+        run: cmake -B build -DCMAKE_Fortran_COMPILER=gfortran-11
 
       - name: Build
         run: make -C build install
