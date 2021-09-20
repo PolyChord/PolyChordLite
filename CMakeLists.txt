@@ -12,7 +12,9 @@ option(python "Build PyPolyChord package" ON)
 option(python_user_install "Install Python package for user (--user)" ON)
 
 # enforce matching of the CXX and Fortran compilers
-if (NOT "${CMAKE_Fortran_COMPILER_ID}" MATCHES "${CMAKE_CXX_COMPILER_ID}")
+if (NOT "${CMAKE_Fortran_COMPILER_ID}" MATCHES "${CMAKE_CXX_COMPILER_ID}"
+        AND NOT ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "GNU" AND
+        "${CMAKE_CXX_COMPILER_ID}" MATCHES "AppleClang"))
     message(FATAL_ERROR "You need to use the same vendor for your C++ and Fortran compiler")
 endif ()
 
