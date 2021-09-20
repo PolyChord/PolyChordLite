@@ -70,8 +70,8 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/generated/mods)
 set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
 
 # target directories -> stuff installed in these directories
-set(target_lib_dir ${PROJECT_BINARY_DIR}/lib)
-set(target_bin_dir ${PROJECT_BINARY_DIR}/bin)
+set(target_lib_dir ${PROJECT_SOURCE_DIR}/lib)
+set(target_bin_dir ${PROJECT_SOURCE_DIR}/bin)
 
 # directories where we want to make things
 add_subdirectory(src)
