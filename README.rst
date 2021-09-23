@@ -38,7 +38,7 @@ For Python users in a hurry:
 
 .. code:: bash
 
-    pip install https://github.com/PolyChord/PolyChordLite/archive/master.zip
+    pip install git+https://github.com/PolyChord/PolyChordLite@master
     wget https://raw.githubusercontent.com/PolyChord/PolyChordLite/master/run_pypolychord.py
     python run_pypolychord.py
 
