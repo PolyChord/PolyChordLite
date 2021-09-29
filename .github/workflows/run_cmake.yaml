@@ -66,11 +66,11 @@ jobs:
           pip3 install numpy scipy matplotlib getdist anesthetic ipython mpi4py
 
       - name: Run CMake - GCC
-        if: matrix.cc == "gcc"
+        if: ${{ env.cc == 'gcc' }}
         run: cmake -B build -DCMAKE_Fortran_COMPILER=gfortran-11 -DCMAKE_CXX_COMPILER=gcc-11
 
       - name: Run CMake - AppleClang
-        if: matrix.cc == "clang"
+        if: ${{ env.cc == 'clang' }}
         run: cmake -B build -DCMAKE_Fortran_COMPILER=gfortran-11
 
       - name: Build
