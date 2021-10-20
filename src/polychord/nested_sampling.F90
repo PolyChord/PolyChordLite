@@ -501,7 +501,7 @@ module nested_sampling_module
 
        ! Reached required threshold
 
-       if ( settings%logLstop < MINVAL(RTI%logLp) ) then
+       if ( settings%logLstop < MINVAL(RTI%logLp) .and. RTI%nlive(1) .ge. settings%nlive) then
           write(stdout_unit, *) 'reached ', MINVAL(RTI%logLp), '. threshold ', settings%logLstop,  '. stopping at ', RTI%nlike, ' calls, ', RTI%ndead, 'iterations'
           more_samples_needed = .false.
        end if
