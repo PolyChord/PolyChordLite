@@ -282,6 +282,7 @@ contains
             write_prior,&
             maximise,&
             compression_factor,&
+            synchronous,&
             nDims,&
             nDerived, &
             base_dir,&
@@ -360,6 +361,7 @@ contains
         logical(c_bool), intent(in), value  :: write_prior
         logical(c_bool), intent(in), value  :: maximise
         real(c_double),  intent(in), value  :: compression_factor
+        logical(c_bool), intent(in), value  :: synchronous
         integer(c_int), intent(in), value   :: nDims
         integer(c_int), intent(in), value   :: nDerived
         character(len=1,kind=c_char), intent(in), dimension(STR_LENGTH) :: base_dir
@@ -407,6 +409,7 @@ contains
         settings%write_prior         = write_prior
         settings%maximise            = maximise
         settings%compression_factor  = compression_factor         
+        settings%synchronous         = synchronous         
         settings%nDims               = nDims
         settings%nDerived            = nDerived
 
