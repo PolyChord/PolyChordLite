@@ -154,6 +154,7 @@ class PolyChordSettings:
         between loglike contours and nlive.
         You should still set nlive to be a sensible number, as this indicates
         how often to update the clustering, and to define the default value.
+
     seed : positive int
         (Default: system time in milliseconds)
         Choose the seed to seed the random number generator.
@@ -161,6 +162,13 @@ class PolyChordSettings:
         a negative seed indicates that you should use the system time in
         milliseconds
 
+    timeout : float
+        (Default: None)
+        If set to a float, the likelihood will terminate after this amount of
+        time, returning an invalid point. This can prove useful if the code is
+        getting stuck in previously untested regions of parameter space in
+        the initial live point generation. Only works on UNIX systems. At the
+        moment only implemented in the python interface.
     """
     def __init__(self, nDims, nDerived, **kwargs):
 
@@ -196,6 +204,7 @@ class PolyChordSettings:
         self.grade_frac = list(kwargs.pop('grade_frac',
                                           [1.0]*len(self.grade_dims)))
         self.nlives = kwargs.pop('nlives', {})
+        self.timeout = kwargs.pop('timeout', None)
 
         if kwargs:
             raise TypeError('Unexpected **kwargs in Contours constructor: %r'

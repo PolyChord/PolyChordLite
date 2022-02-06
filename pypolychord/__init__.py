@@ -1,4 +1,5 @@
 from .output import PolyChordOutput
+from .timeout import timeout, TimeoutError
 import sys
 import os
 import _pypolychord
@@ -164,9 +165,13 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     except OSError:
         pass
 
+    @timeout(settings.timeout)
     def wrap_loglikelihood(theta, phi):
-        logL, phi[:] = loglikelihood(theta)
-        return logL
+        try:
+            logL, phi[:] = loglikelihood(theta)
+            return logL
+        except TimeoutError:
+            return settings.logzero
 
     def wrap_prior(cube, theta):
         theta[:] = prior(cube)
