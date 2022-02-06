@@ -165,10 +165,10 @@ class PolyChordSettings:
     timeout : float
         (Default: None)
         If set to a float, the likelihood will terminate after this amount of
-        time, returning an invalid point. This can prove useful if the code is
-        getting stuck in previously untested regions of parameter space in
-        the initial live point generation. Only works on UNIX systems. At the
-        moment only implemented in the python interface.
+        time (in seconds), returning an invalid point. This can prove useful if
+        the code is getting stuck in previously untested regions of parameter
+        space in the initial live point generation. Only works on UNIX systems.
+        At the moment only implemented in the python interface.
     """
     def __init__(self, nDims, nDerived, **kwargs):
 
