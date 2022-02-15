@@ -12,10 +12,19 @@ jobs:
         echo "readme_version=$(grep 'PolyChord v' README.rst | grep -oe '[0-9]\+\.[0-9]\+\.[0-9]')" >> $GITHUB_ENV
     - name: Check python matches fortran version number
       if:  env.python_version != env.fortran_version
-      run: exit 1
+      run: |
+        echo "python_version: $python_version"
+        echo "fortran_version: $fortran_version"
+        exit 1
     - name: Check fortran matches readme version number
       if:  env.fortran_version != env.readme_version
-      run: exit 1
+      run: |
+        echo "fortran_version: $fortran_version"
+        echo "readme_version: $readme_version"
+        exit 1
     - name: Check readme matches python version number
       if:  env.readme_version != env.python_version
-      run: exit 1
+      run: |
+        echo "readme_version: $readme_version"
+        echo "python_version: $python_version"
+        exit 1
