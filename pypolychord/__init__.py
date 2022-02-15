@@ -1,4 +1,6 @@
+__version__ = "1.20.0"
 from .output import PolyChordOutput
+from .settings import PolyChordSettings
 import sys
 import os
 import _pypolychord
