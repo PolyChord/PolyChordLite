@@ -13,18 +13,18 @@ jobs:
     - name: Check python matches fortran version number
       if:  env.python_version != env.fortran_version
       run: |
-        echo "python_version: $python_version"
-        echo "fortran_version: $fortran_version"
+        echo "python version:  $python_version"
+        echo "fortran version: $fortran_version"
         exit 1
     - name: Check fortran matches readme version number
       if:  env.fortran_version != env.readme_version
       run: |
-        echo "fortran_version: $fortran_version"
-        echo "readme_version: $readme_version"
+        echo "fortran version: $fortran_version"
+        echo "readme version:  $readme_version"
         exit 1
     - name: Check readme matches python version number
       if:  env.readme_version != env.python_version
       run: |
-        echo "readme_version: $readme_version"
-        echo "python_version: $python_version"
+        echo "readme version:  $readme_version"
+        echo "python version:  $python_version"
         exit 1
