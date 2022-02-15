@@ -1,5 +1,5 @@
 name: check_version
-on: [push, pull_request]
+on: pull_request
 jobs:
   check_version_numbers:
     runs-on: ubuntu-latest
