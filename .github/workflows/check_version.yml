@@ -11,8 +11,8 @@ jobs:
         echo "python_version=$(grep '__version__' pypolychord/__init__.py | grep -oe '[0-9]\+\.[0-9]\+\.[0-9]')" >> $GITHUB_ENV
         echo "readme_version=$(grep 'PolyChord v' README.rst | grep -oe '[0-9]\+\.[0-9]\+\.[0-9]')" >> $GITHUB_ENV
     - name: Check python matches fortran version number
-      run: [ $python_version = $fortran_version ]
+      run: [[ $python_version == $fortran_version ]]
     - name: Check fortran matches readme version number
-      run: [ $fortran_version = $readme_version ]
+      run: [[ $fortran_version == $readme_version ]]
     - name: Check readme matches fortran version number
-      run: [ $readme_version = $fortran_version ]
+      run: [[ $readme_version == $fortran_version ]]
