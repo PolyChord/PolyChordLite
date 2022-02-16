@@ -6,12 +6,58 @@ import os
 import _pypolychord
 
 
+
 def default_prior(cube):
     return cube.copy()
 
 
 def default_dumper(live, dead, logweights, logZ, logZerr):
     pass
+
+def run_polychord_from_sample(sample, loglikelihood, nDims, nDerived, settings, prior=default_prior, dumper=default_dumper):
+    #first a false start
+    tmp_settings = PolyChordSettings(nDims=nDims, nDerived=nDerived, **settings.__dict__)
+    tmp_settings.max_ndead=0
+    tmp_settings.read_resume=False
+    tmp_settings.write_resume=True
+    #settings.max_ndead=-1
+    run_polychord(loglikelihood, nDims, nDerived, tmp_settings, prior, dumper)
+
+    import fortranformat as ff
+    import numpy as np
+
+    physical=prior(sample)
+
+    #can't vectorize as not sure what logl is
+    #loglike,derived=np.vectorize(loglikelihood)(physical)
+    ll,d=zip(*[loglikelihood(x) for x in physical])
+    loglike=np.asarray(ll)[:,None]
+    derived=np.asarray(d)
+    logbirth=np.ones_like(loglike)*settings.logzero
+
+    resume_file_loc=os.path.join(settings.base_dir, settings.file_root)+".resume"
+
+    with open(resume_file_loc,"r") as f:
+        resume_contents=f.readlines()
+    start_idx=resume_contents.index('=== live points ===\n')+2
+    end_idx = resume_contents.index('=== dead points ===\n')
+
+
+    records = np.concatenate([sample, physical, derived, logbirth, loglike],axis=-1)
+
+    fmt = '(%iE24.15E3)' % records.shape[-1]
+    ffwriter = ff.FortranRecordWriter(fmt)
+    for i,j in enumerate(range(start_idx,end_idx)):
+        resume_contents[j]=ffwriter.write(records[i])+"\n"
+
+
+    with open(resume_file_loc,"w") as f:
+        f.writelines(resume_contents)
+
+    settings.read_resume=True
+    output=run_polychord(loglikelihood, nDims, nDerived, settings, prior, dumper)
+
+    return output
 
 
 def run_polychord(loglikelihood, nDims, nDerived, settings,
