@@ -160,7 +160,7 @@ class PolyChordSettings:
         Note **Positive seeds only**
         a negative seed indicates that you should use the system time in
         milliseconds
-    prior_samples: array-like
+    cube_samples: array-like
         (Default: None)
         samples from the unit hypercube to start nested sampling from. This is
         useful if the prior is hard to rejection sample directly from the unit
@@ -207,7 +207,7 @@ class PolyChordSettings:
         self.grade_frac = list(kwargs.pop('grade_frac',
                                           [1.0]*len(self.grade_dims)))
         self.nlives = kwargs.pop('nlives', {})
-        self.prior_samples = kwargs.pop('prior_samples', None)
+        self.cube_samples = kwargs.pop('cube_samples', None)
 
         if kwargs:
             raise TypeError('Unexpected **kwargs in Contours constructor: %r'

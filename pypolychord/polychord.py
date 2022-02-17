@@ -164,7 +164,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     except OSError:
         pass
 
-    if settings.prior_samples is not None:
+    if settings.cube_samples is not None:
         make_resume_file(settings, loglikelihood, prior)
         read_resume = settings.read_resume
         settings.read_resume=True
@@ -214,7 +214,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
                      settings.nlives,
                      settings.seed)
 
-    if settings.prior_samples is not None:
+    if settings.cube_samples is not None:
         settings.read_resume = read_resume
 
     return PolyChordOutput(settings.base_dir, settings.file_root)
@@ -236,8 +236,8 @@ def make_resume_file(settings, loglikelihood, prior):
 
     lives = []
     logL_birth = settings.logzero
-    for i in np.array_split(np.arange(len(settings.prior_samples)), size)[rank]:
-        cube = settings.prior_samples[i]
+    for i in np.array_split(np.arange(len(settings.cube_samples)), size)[rank]:
+        cube = settings.cube_samples[i]
         theta = prior(cube)
         logL, derived = loglikelihood(theta)
         nDims = len(theta)
@@ -253,7 +253,7 @@ def make_resume_file(settings, loglikelihood, prior):
             recvbuf = None
         comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=root)
 
-        lives = np.reshape(sendbuf, (len(settings.prior_samples), len(lives[0])))
+        lives = np.reshape(sendbuf, (len(settings.cube_samples), len(lives[0])))
     except NameError:
         lives = np.array(lives)
                 
