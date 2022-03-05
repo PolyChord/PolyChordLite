@@ -6,7 +6,6 @@
    :alt: Open-access paper
 
 PolyChord v 1.21.0
-
 Will Handley, Mike Hobson & Anthony Lasenby
 
 wh260@mrao.cam.ac.uk
