@@ -347,6 +347,7 @@ module run_time_module
         integer, dimension(RTI%ncluster-1)   :: old_target
         integer, dimension(num_new_clusters) :: new_target
         integer                              :: num_old_clusters
+        integer :: loc
 
 
 
@@ -424,10 +425,12 @@ module run_time_module
         ! 3) Assign the new live points to their new clusters
 
         RTI%nlive = 0
+        loc = 1
         do i_live=1,nlive
             i_old = nint(RTI%live(settings%c0,i_live))
             if (i_old==p) then
-                i_new = new_target(cluster_list(i_live)) 
+                i_new = new_target(cluster_list(loc)) 
+                loc = loc + 1
             else if (i_old<p) then
                 i_new = i_old
             else
