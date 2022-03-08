@@ -569,7 +569,7 @@ module nested_sampling_module
         real(dp), dimension(RTI%ndead) :: logweights
         real(dp) :: logZ, varlogZ
 
-        integer i_cluster, nlive,n0,n1
+        integer i_cluster, nlive
 
         dead(1:settings%nDims,:) = RTI%dead(settings%p0:settings%p1,:RTI%ndead)
         dead(settings%nDims+1:settings%nDims+settings%nDerived,:) = RTI%dead(settings%d0:settings%d1,:RTI%ndead)
@@ -580,10 +580,10 @@ module nested_sampling_module
         logweights = logweights - logsumexp(logweights)
 
         nlive = sum(RTI%nlive)
-        live(1:settings%nDims,n0:n1) = RTI%live(settings%p0:settings%p1,:nlive)
-        live(settings%nDims+1:settings%nDims+settings%nDerived,n0:n1) = RTI%live(settings%d0:settings%d1,:nlive)
-        live(settings%nDims+settings%nDerived+1,n0:n1) = RTI%live(settings%b0,:nlive)
-        live(settings%nDims+settings%nDerived+2,n0:n1) = RTI%live(settings%l0,:nlive)
+        live(1:settings%nDims,:) = RTI%live(settings%p0:settings%p1,:nlive)
+        live(settings%nDims+1:settings%nDims+settings%nDerived,:) = RTI%live(settings%d0:settings%d1,:nlive)
+        live(settings%nDims+settings%nDerived+1,:) = RTI%live(settings%b0,:nlive)
+        live(settings%nDims+settings%nDerived+2,:) = RTI%live(settings%l0,:nlive)
         call calculate_logZ_estimate(RTI,logZ,varlogZ)
         call dumper(live, dead, logweights, logZ, sqrt(varlogZ))
 

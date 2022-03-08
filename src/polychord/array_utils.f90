@@ -428,7 +428,7 @@ module array_module
         implicit none
         logical, dimension(:) :: mask
         integer i
-        integer, dimension(size(mask)) :: sel
+        integer, dimension(count(mask)) :: sel
         sel = pack([(i,i=1,size(mask))],mask)
     end function
 

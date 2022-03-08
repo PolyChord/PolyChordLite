@@ -927,7 +927,7 @@ module run_time_module
                 ! Find the location of the live point which this point belongs to
                 i_stack = minloc( RTI%posterior_stack(settings%pos_l,:nposterior_stack), 1, &
                         RTI%posterior_stack(settings%pos_l,:nposterior_stack) > RTI%phantom(settings%l0,i_phantom) &
-                        .and. nint(RTI%posterior_stack(settings%pos_c0,:)) == i_cluster)
+                        .and. nint(RTI%posterior_stack(settings%pos_c0,:nposterior_stack)) == i_cluster)
 
                 if(i_stack<=0) then
                     i_phantom=i_phantom+1
@@ -1106,7 +1106,7 @@ module run_time_module
         end if
 
         ! Add new posterior points from the stack
-        do i_post=1,RTI%nposterior_stack(i_cluster)
+        do i_post=1,sum(RTI%nposterior_stack)
             i_cluster = nint(RTI%posterior_stack(settings%p_c0,i_post))
 
             if(settings%equals) then
