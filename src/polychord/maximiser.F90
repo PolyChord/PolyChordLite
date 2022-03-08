@@ -64,7 +64,7 @@ module maximise_module
 
     function do_maximisation(loglikelihood,prior,settings,RTI, posterior) result(max_point)
         use calculate_module, only: calculate_point
-        use utils_module, only: stdout_unit, fmt_len, sort_doubles
+        use utils_module, only: sort_doubles
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
         use read_write_module,   only: write_max_file, mean
@@ -100,10 +100,10 @@ module maximise_module
 
 
         real(dp) :: max_loglike
-        integer :: imax, cluster_id
+        integer :: cluster_id
         real(dp), dimension(settings%nTotal) :: max_point
         integer :: nlike, j
-        real(dp), dimension(settings%nDims)   :: xl, xu, x
+        real(dp), dimension(settings%nDims)   :: x
         real(dp), dimension(settings%nDims,settings%nDims+1) :: simplex
         real(dp), dimension(settings%nDims+1) :: f
         real(dp), dimension(settings%nlive) :: l

@@ -196,8 +196,8 @@ module generate_module
                     ! Recieve a point from any worker
                     worker_id = catch_point(live_point,mpi_information)
 
-                    ! If its valid, and we need more points, add it to the array
-                    if(live_point(settings%l0)>settings%logzero .and. RTI%nlive(1)<nprior) then
+                    ! If its valid, add it to the array
+                    if(live_point(settings%l0)>settings%logzero) then
 
                         call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
 
