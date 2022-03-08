@@ -1,12 +1,6 @@
 module array_module
     use utils_module, only: dp
 
-    interface add_point
-        module procedure add_point_3d, add_point_2d
-    end interface add_point
-    interface delete_point
-        module procedure delete_point_3d, delete_point_2d
-    end interface delete_point
     interface reallocate
         module procedure reallocate_1_d, reallocate_2_d, reallocate_3_d, reallocate_1_i
     end interface reallocate
@@ -72,6 +66,7 @@ module array_module
         a = array                           ! Save the old array 
         deallocate(array)                   ! Deallocate it      
         allocate(array(n1))                 ! Re-allocate with new size
+        array = 0
         array(t1) = a(s1)                   ! Reassign the old values
 
     end subroutine reallocate_1_d
@@ -170,6 +165,7 @@ module array_module
         a = array                           ! Save the old array 
         deallocate(array)                   ! Deallocate it      
         allocate(array(n1,n2))              ! Re-allocate with new size
+        array = 0
         array(t1,t2)= a(s1,s2)              ! Reassign the old values
 
     end subroutine reallocate_2_d
@@ -302,6 +298,7 @@ module array_module
         a = array                           ! Save the old array 
         deallocate(array)                   ! Deallocate it      
         allocate(array(n1,n2,n3))           ! Re-allocate with new size
+        array = 0
         array(t1,t2,t3)= a(s1,s2,s3)        ! Reassign the old values
 
     end subroutine reallocate_3_d
@@ -369,95 +366,71 @@ module array_module
         a = array                           ! Save the old array 
         deallocate(array)                   ! Deallocate it      
         allocate(array(n1))                 ! Re-allocate with new size
+        array = 0
         array(t1) = a(s1)                   ! Reassign the old values
 
     end subroutine reallocate_1_i
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    subroutine add_point_3d(point,array,narray,cluster_id)
-        implicit none
-        real(dp), dimension(:), intent(in) :: point                     !> Point to be added to end of array
-        real(dp), dimension(:,:,:), allocatable, intent(inout) :: array !> Array to be added to
-        integer,dimension(:), allocatable, intent(inout) :: narray              !> number of points in array (second index)
-        integer, intent(in) :: cluster_id                                       !> cluster identity (third index)
-        integer :: newsize2
-
-        narray(cluster_id) = narray(cluster_id) + 1         ! Increase the number of points in the cluster
-
-        ! If this takes us over the size of the array, then double it
-        newsize2 = max(1,size(array,2)*2)
-        if(narray(cluster_id) > size(array,2) ) call reallocate(array, new_size2=newsize2 )
-
-        array(:,narray(cluster_id),cluster_id) = point       ! Add the point to the end position
-
-    end subroutine add_point_3d
-
-    subroutine add_point_2d(point,array,narray)
+    subroutine add_point(point,array,narray,nfixed)
         implicit none
         real(dp), dimension(:), intent(in) :: point                   !> Point to be added to end of array
         real(dp), dimension(:,:), allocatable, intent(inout) :: array !> Array to be added to
-        integer, intent(inout) :: narray                                      !> number of points in array (second index)
-        integer :: newsize2
+        integer, intent(inout) :: narray                              !> number of points in array 
+        integer, intent(in), optional :: nfixed                       !> number of points in array (unincrementable -- useful for clusters)
 
         narray = narray + 1         ! Increase the number of points
+        if (present(nfixed)) then
+            ! If this takes us over the size of the array, then double it
+            if(nfixed+1 > size(array,2) ) call reallocate(array, new_size2=max(1,size(array,2)*2) )
+            array(:,nfixed+1) = point       ! Add the point to the end position
+        else
+            ! If this takes us over the size of the array, then double it
+            if(narray > size(array,2) ) call reallocate(array, new_size2=max(1,size(array,2)*2) )
+            array(:,narray) = point       ! Add the point to the end position
+        end if
 
-        ! If this takes us over the size of the array, then double it
-        newsize2 = max(1,size(array,2)*2)
-        if(narray > size(array,2) ) call reallocate(array, new_size2=newsize2 )
-
-        array(:,narray) = point       ! Add the point to the end position
-
-    end subroutine add_point_2d
+    end subroutine add_point
 
 
-
-    function delete_point_3d(i_point,array,narray,cluster_id) result(point)
+    function delete_point(i_point,array,narray,nfixed) result(point)
         implicit none
-        integer, intent(in) :: i_point                                          !> Position of point to be deleted from array
-        real(dp), dimension(:,:,:), allocatable, intent(inout) :: array !> Array to be delete from
-        integer,dimension(:), allocatable, intent(inout) :: narray              !> number of points in array (second index)
-        integer, intent(in) :: cluster_id                                       !> cluster identity (third index)
-        real(dp), dimension(size(array,1)) :: point                     ! The point we have just deleted
-
-        point = array(:,i_point,cluster_id)                                  ! Output the point to be deleted
-        array(:,i_point,cluster_id) = array(:,narray(cluster_id),cluster_id) ! delete the point by overwriting it with the point at the end 
-        narray(cluster_id) = narray(cluster_id) - 1                          ! reduce the number of points in the cluster
-
-    end function delete_point_3d
-
-    function delete_point_2d(i_point,array,narray) result(point)
-        implicit none
-        integer, intent(in) :: i_point                                          !> Position of point to be deleted from array
+        integer, intent(in) :: i_point                                  !> Position of point to be deleted from array
         real(dp), dimension(:,:), allocatable, intent(inout) :: array   !> Array to be delete from
-        integer, intent(inout) :: narray                                        !> number of points in array (second index)
+        integer, intent(inout) :: narray                                !> number of points in array (second index)
+        integer, intent(in), optional :: nfixed                         !> number of points in array (undecrementable -- useful for clusters)
         real(dp), dimension(size(array,1)) :: point                     ! The point we have just deleted
 
         point = array(:,i_point)           ! Output the point to be deleted
-        array(:,i_point) = array(:,narray) ! delete the point by overwriting it with the point at the end 
+        if (present(nfixed)) then
+            array(:,i_point) = array(:,nfixed) ! delete the point by overwriting it with the point at the end 
+            array(:,nfixed) = 0
+        else
+            array(:,i_point) = array(:,narray) ! delete the point by overwriting it with the point at the end 
+            array(:,narray) = 0
+        end if
         narray = narray - 1                ! reduce the number of points in the cluster
 
-    end function delete_point_2d
+    end function delete_point
 
 
+    function concat(a, b) result(c)
+        implicit none
+        real(dp), dimension(:,:), intent(in) :: a,b
+        real(dp), dimension(size(a,1),size(a,2)+size(b,2)) :: c
+
+        c(:,:size(a,2)) = a
+        c(:,size(a,2)+1:) = b
+
+    end function concat
+
+
+    function sel(mask) 
+        implicit none
+        logical, dimension(:) :: mask
+        integer i
+        integer, dimension(size(mask)) :: sel
+        sel = pack([(i,i=1,size(mask))],mask)
+    end function
 
 
 end module array_module

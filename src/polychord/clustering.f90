@@ -255,6 +255,7 @@ module cluster_module
         use run_time_module,   only: run_time_info,add_cluster
         use calculate_module,  only: calculate_similarity_matrix
         use KNN_clustering,    only: NN_clustering
+        use array_module,      only: sel
         implicit none
 
         !> Program settings
@@ -294,10 +295,10 @@ module cluster_module
                 ! Calculate the similarity matrix for this cluster
                 if(present(sub_dimensions)) then
                     similarity_matrix(:nlive,:nlive) =&
-                        calculate_similarity_matrix(RTI%live(sub_dimensions,:nlive,i_cluster))
+                        calculate_similarity_matrix(RTI%live(sub_dimensions,sel(nint(RTI%live(settings%c0,:))==i_cluster)))
                 else 
                     similarity_matrix(:nlive,:nlive) =&
-                        calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
+                        calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,sel(nint(RTI%live(settings%c0,:))==i_cluster)))
                 end if
 
                 clusters(:nlive) = NN_clustering(similarity_matrix(:nlive,:nlive),num_clusters)

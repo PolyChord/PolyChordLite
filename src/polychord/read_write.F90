@@ -271,15 +271,15 @@ module read_write_module
         call write_doubles(RTI%covmat,             "=== covariance matrices ===")
         call write_doubles(RTI%cholesky,           "=== cholesky decompositions ===")
   
-        call write_doubles(RTI%live,                  "=== live points ===",                               RTI%nlive )
+        call write_doubles(RTI%live,                  "=== live points ===",                               sum(RTI%nlive) )
         call write_doubles(RTI%dead,                  "=== dead points ===",                               RTI%ndead )
         call write_doubles(RTI%logweights(:RTI%ndead),"=== logweights of dead points ===")
-        call write_doubles(RTI%phantom,               "=== phantom points ===",                            RTI%nphantom )
-        call write_doubles(RTI%posterior,             "=== weighted posterior points ===",                 RTI%nposterior )
-        call write_doubles(RTI%posterior_dead,        "=== dead weighted posterior points ===",            RTI%nposterior_dead )
+        call write_doubles(RTI%phantom,               "=== phantom points ===",                            sum(RTI%nphantom) )
+        call write_doubles(RTI%posterior,             "=== weighted posterior points ===",                 sum(RTI%nposterior) )
+        call write_doubles(RTI%posterior_dead,        "=== dead weighted posterior points ===",            sum(RTI%nposterior_dead) )
         call write_doubles(RTI%posterior_global,      "=== global weighted posterior points ===",          RTI%nposterior_global )
-        call write_doubles(RTI%equals,                "=== equally weighted posterior points ===",         RTI%nequals )
-        call write_doubles(RTI%equals_dead,           "=== dead equally weighted posterior points ===",    RTI%nequals_dead )
+        call write_doubles(RTI%equals,                "=== equally weighted posterior points ===",         sum(RTI%nequals) )
+        call write_doubles(RTI%equals_dead,           "=== dead equally weighted posterior points ===",    sum(RTI%nequals_dead) )
         call write_doubles(RTI%equals_global,         "=== global equally weighted posterior points ===",  RTI%nequals_global )
 
         ! Close the writing file
@@ -451,24 +451,24 @@ module read_write_module
         call read_doubles(RTI%covmat,'-',settings%nDims,settings%nDims,RTI%ncluster)
         call read_doubles(RTI%cholesky,'-',settings%nDims,settings%nDims,RTI%ncluster)
   
-        call read_doubles(RTI%live,'-',settings%nTotal,maxval(RTI%nlive),RTI%ncluster,RTI%nlive)
+        call read_doubles(RTI%live,'-',settings%nTotal,sum(RTI%nlive))
         call read_doubles(RTI%dead,'-',settings%nTotal,RTI%ndead)
         call read_doubles(RTI%logweights,'-',RTI%ndead)
-        call read_doubles(RTI%phantom,'-',settings%nTotal,maxval(RTI%nphantom),RTI%ncluster,RTI%nphantom)
+        call read_doubles(RTI%phantom,'-',settings%nTotal,sum(RTI%nphantom))
   
-        call read_doubles(RTI%posterior,'-',settings%nposterior,maxval(RTI%nposterior),RTI%ncluster,RTI%nposterior)
-        call read_doubles(RTI%posterior_dead,'-',settings%nposterior,maxval(RTI%nposterior_dead),RTI%ncluster_dead,RTI%nposterior_dead)
+        call read_doubles(RTI%posterior,'-',settings%nposterior,sum(RTI%nposterior))
+        call read_doubles(RTI%posterior_dead,'-',settings%nposterior,sum(RTI%nposterior_dead))
         call read_doubles(RTI%posterior_global,'-',settings%nposterior,RTI%nposterior_global)
   
-        call read_doubles(RTI%equals,'-',settings%np,maxval(RTI%nequals),RTI%ncluster,RTI%nequals)
-        call read_doubles(RTI%equals_dead,'-',settings%np,maxval(RTI%nequals_dead),RTI%ncluster_dead,RTI%nequals_dead)
+        call read_doubles(RTI%equals,'-',settings%np,sum(RTI%nequals))
+        call read_doubles(RTI%equals_dead,'-',settings%np,sum(RTI%nequals_dead))
         call read_doubles(RTI%equals_global,'-',settings%np,RTI%nequals_global)
 
         ! Close the reading unit
         close(read_resume_unit)
 
         ! Allocate the posterior stack if we're calculating this
-        allocate(RTI%posterior_stack(settings%nposterior,settings%nlive,RTI%ncluster),RTI%nposterior_stack(RTI%ncluster))
+        allocate(RTI%posterior_stack(settings%nposterior,settings%nlive),RTI%nposterior_stack(RTI%ncluster))
         RTI%nposterior_stack = 0 ! Initialise number of posterior points at 0
 
         RTI%maxlogweight_global = maxval(RTI%maxlogweight)
@@ -527,8 +527,10 @@ module read_write_module
                         open(write_equals_unit,file=trim(posterior_file(settings,.false.,.true.,i_cluster)))
 
                         ! Print out the posterior for the active clusters
-                        do i_post = 1,RTI%nequals(ordering(i_cluster))
-                            write(write_equals_unit,fmt_dbl) exp(RTI%logZp(ordering(i_cluster))-RTI%logZ),RTI%equals(settings%p_2l:,i_post,ordering(i_cluster))
+                        do i_post = 1,sum(RTI%nequals)
+                            if(nint(RTI%equals(settings%p_c0,i_post))==ordering(i_cluster)) then
+                                write(write_equals_unit,fmt_dbl) exp(RTI%logZp(ordering(i_cluster))-RTI%logZ),RTI%equals(settings%p_2l:,i_post)
+                            end if
                         end do
 
                     else
@@ -536,8 +538,10 @@ module read_write_module
                         open(write_equals_unit,file=trim(posterior_file(settings,.false.,.true.,i_cluster)))
 
                         ! Print out the posterior for the dead clusters
-                        do i_post = 1,RTI%nequals_dead(ordering(i_cluster)-RTI%ncluster)
-                            write(write_equals_unit,fmt_dbl) exp(RTI%logZp_dead(ordering(i_cluster)-RTI%ncluster)-RTI%logZ),RTI%equals_dead(settings%p_2l:,i_post,ordering(i_cluster)-RTI%ncluster)
+                        do i_post = 1,sum(RTI%nequals_dead)
+                            if(nint(RTI%equals_dead(settings%p_c0,i_post))==ordering(i_cluster)-RTI%ncluster) then
+                                write(write_equals_unit,fmt_dbl) exp(RTI%logZp_dead(ordering(i_cluster)-RTI%ncluster)-RTI%logZ),RTI%equals_dead(settings%p_2l:,i_post)
+                            end if
                         end do
                     end if
 
@@ -575,9 +579,11 @@ module read_write_module
                         open(write_posterior_unit,file=trim(posterior_file(settings,.true.,.true.,i_cluster)))
 
                         ! Print out the posterior for the active clusters
-                        do i_post = 1,RTI%nposterior(ordering(i_cluster))
-                            weight = exp(RTI%posterior(settings%pos_w,i_post,ordering(i_cluster)) + RTI%posterior(settings%pos_l,i_post,ordering(i_cluster)) - RTI%maxlogweight(ordering(i_cluster)) +RTI%logZp(ordering(i_cluster))-RTI%logZ)
-                            if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior(settings%pos_l,i_post,ordering(i_cluster)),RTI%posterior(settings%pos_p0:,i_post,ordering(i_cluster)) 
+                        do i_post = 1,sum(RTI%nposterior)
+                            if(nint(RTI%posterior(settings%pos_c0,i_post))==ordering(i_cluster)) then
+                                weight = exp(RTI%posterior(settings%pos_w,i_post) + RTI%posterior(settings%pos_l,i_post) - RTI%maxlogweight(ordering(i_cluster)) +RTI%logZp(ordering(i_cluster))-RTI%logZ)
+                                if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior(settings%pos_l,i_post),RTI%posterior(settings%pos_p0:,i_post) 
+                            end if
                         end do
                     else
 
@@ -585,9 +591,11 @@ module read_write_module
                         open(write_posterior_unit,file=trim(posterior_file(settings,.true.,.true.,i_cluster+RTI%ncluster)))
 
                         ! Print out the posterior for the dead clusters
-                        do i_post = 1,RTI%nposterior_dead(ordering(i_cluster)-RTI%ncluster)
-                            weight = exp(RTI%posterior_dead(settings%pos_w,i_post,ordering(i_cluster)-RTI%ncluster) + RTI%posterior_dead(settings%pos_l,i_post,ordering(i_cluster)-RTI%ncluster) - RTI%maxlogweight_dead(ordering(i_cluster)-RTI%ncluster) +RTI%logZp_dead(ordering(i_cluster)-RTI%ncluster)-RTI%logZ)
-                            if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior_dead(settings%pos_l,i_post,ordering(i_cluster)-RTI%ncluster),RTI%posterior_dead(settings%pos_p0:,i_post,ordering(i_cluster)-RTI%ncluster) 
+                        do i_post = 1,sum(RTI%nposterior_dead)
+                            if(nint(RTI%posterior(settings%pos_c0,i_post))==ordering(i_cluster)-RTI%ncluster) then
+                                weight = exp(RTI%posterior_dead(settings%pos_w,i_post) + RTI%posterior_dead(settings%pos_l,i_post) - RTI%maxlogweight_dead(ordering(i_cluster)-RTI%ncluster) +RTI%logZp_dead(ordering(i_cluster)-RTI%ncluster)-RTI%logZ)
+                                if( weight>0d0  ) write(write_posterior_unit,fmt_dbl) weight,-2*RTI%posterior_dead(settings%pos_l,i_post),RTI%posterior_dead(settings%pos_p0:,i_post) 
+                            end if
                         end do
 
                     end if
@@ -647,22 +655,23 @@ module read_write_module
 
             if(settings%do_clustering) open(write_phys_cluster_unit,file=trim(phys_live_file(settings,i_cluster)), action='write') 
 
-            do i_live=1,RTI%nlive(i_cluster)
-                write(write_phys_unit,fmt_dbl) &
-                    RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
-                    RTI%live(settings%l0,i_live,i_cluster)
+            do i_live=1,sum(RTI%nlive)
+                if (nint(RTI%live(settings%c0,i_live))==i_cluster) then
+                    write(write_phys_unit,fmt_dbl) &
+                        RTI%live(settings%p0:settings%d1,i_live), &
+                        RTI%live(settings%l0,i_live)
 
-                write(write_live_birth_unit,fmt_dbl_1) &
-                    RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
-                    RTI%live(settings%l0,i_live,i_cluster), &
-                    RTI%live(settings%b0,i_live,i_cluster)
+                    write(write_live_birth_unit,fmt_dbl_1) &
+                        RTI%live(settings%p0:settings%d1,i_live), &
+                        RTI%live(settings%l0,i_live), &
+                        RTI%live(settings%b0,i_live)
 
-                if(settings%do_clustering) then
-                    write(write_phys_cluster_unit,fmt_dbl) &
-                        RTI%live(settings%p0:settings%d1,i_live,i_cluster), &
-                        RTI%live(settings%l0,i_live,i_cluster)
+                    if(settings%do_clustering) then
+                        write(write_phys_cluster_unit,fmt_dbl) &
+                            RTI%live(settings%p0:settings%d1,i_live), &
+                            RTI%live(settings%l0,i_live)
+                    end if
                 end if
-
             end do
 
             if(settings%do_clustering) close(write_phys_cluster_unit)
@@ -742,8 +751,8 @@ module read_write_module
         do i_prior=1,RTI%nlive(1)
             write(write_prior_unit,fmt_dbl) &
                 1d0,&
-                -2*RTI%live(settings%l0,i_prior,1), &
-                RTI%live(settings%p0:settings%d1,i_prior,1)
+                -2*RTI%live(settings%l0,i_prior), &
+                RTI%live(settings%p0:settings%d1,i_prior)
         end do
 
         close(write_prior_unit)

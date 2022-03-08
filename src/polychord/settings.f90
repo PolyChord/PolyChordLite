@@ -103,6 +103,11 @@ module settings_module
         !! This is the likelihood evaluated at the position of the live point
         integer :: l0          
 
+        !> likelihood index
+        !!
+        !! This is the index of the cluster the point belongs to
+        integer :: c0          
+
 
         ! Posterior indices
 
@@ -120,6 +125,8 @@ module settings_module
         ! derived parameter indices
         integer :: pos_d0
         integer :: pos_d1
+        ! Cluster indices
+        integer :: pos_c0
 
         ! Number of posterior parameters
         integer :: nposterior
@@ -131,6 +138,7 @@ module settings_module
         integer :: p_p1
         integer :: p_d0
         integer :: p_d1
+        integer :: p_c0
         integer :: np
 
 
@@ -179,8 +187,11 @@ module settings_module
         ! Loglikelihood index
         settings%l0=settings%b0+1
 
+        ! Cluster index
+        settings%c0 = settings%l0+1
+
         ! Total number of parameters
-        settings%nTotal = settings%l0
+        settings%nTotal = settings%c0
 
 
 
@@ -200,9 +211,10 @@ module settings_module
         ! derived parameter indices
         settings%pos_d0= settings%pos_p1+1
         settings%pos_d1= settings%pos_p1+settings%nDerived
+        settings%pos_c0 = settings%pos_d1
 
         ! Number of posterior parameters
-        settings%nposterior = settings%pos_d1
+        settings%nposterior = settings%pos_c0
 
 
         settings%p_w = 1
@@ -211,8 +223,9 @@ module settings_module
         settings%p_p1 = settings%p_2l+settings%nDims
         settings%p_d0 = settings%p_p1+1
         settings%p_d1 = settings%p_p1+settings%nDerived
+        settings%p_c0   = settings%p_d1
 
-        settings%np   = settings%p_d1
+        settings%np   = settings%p_c0
 
         if( settings%num_repeats < 1 ) call halt_program("You need to set num_repeats. Suggestion: 5*nDims")
 
