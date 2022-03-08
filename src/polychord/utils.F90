@@ -359,22 +359,16 @@ module utils_module
     !! One does it with the 'log-sum-exp' trick, by subtracting off the maximum
     !! value so that at least the maxmimum value doesn't underflow, and then add
     !! it back on at the end:
-    function logsumexp(vector, mask)
+    function logsumexp(vector)
         implicit none
         !> vector of log(w
         real(dp), dimension(:),intent(in) :: vector
-        logical, dimension(size(vector)), intent(in), optional :: mask
 
         real(dp) :: logsumexp
         real(dp) :: maximumlog
 
-        if (present(mask)) then
-            maximumlog = maxval(vector, mask)
-            logsumexp  =  maximumlog + log(sum(exp(vector - maximumlog), mask))
-        else
-            maximumlog = maxval(vector)
-            logsumexp  =  maximumlog + log(sum(exp(vector - maximumlog)))
-        end if
+        maximumlog = maxval(vector)
+        logsumexp  =  maximumlog + log(sum(exp(vector - maximumlog)))
 
     end function logsumexp
 

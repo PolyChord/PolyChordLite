@@ -114,7 +114,7 @@ module generate_module
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
         integer :: nlike ! number of likelihood calls
-        integer :: nprior, ndiscarded, nlive
+        integer :: nprior, ndiscarded
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -167,9 +167,8 @@ module generate_module
                 if(live_point(settings%l0)>settings%logzero) then
                     total_time =total_time+ time1-time0
 
-                    nlive = sum(RTI%nlive)
-                    call add_point(live_point,RTI%live,nlive) ! Add this point to the array
-                    RTI%nlive(1) = RTI%nlive(1) + 1
+                    live_point(settings%c0) = 1
+                    call add_point(live_point,RTI%live,RTI%nlive(1)) ! Add this point to the array
 
                     !-------------------------------------------------------------------------------!
                     call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
@@ -204,10 +203,8 @@ module generate_module
                     ! If its valid, add it to the array
                     if(live_point(settings%l0)>settings%logzero) then
 
-                        nlive = sum(RTI%nlive)
                         live_point(settings%c0) = 1
-                        call add_point(live_point,RTI%live,nlive) ! Add this point to the array
-                        RTI%nlive(1) = RTI%nlive(1) + 1
+                        call add_point(live_point,RTI%live,RTI%nlive(1)) ! Add this point to the array
 
                         !-------------------------------------------------------------------------------!
                         call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
@@ -501,7 +498,6 @@ module generate_module
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
         integer :: nprior
-        integer :: nlive
 
         real(dp) :: time0,time1
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -558,10 +554,8 @@ module generate_module
                     end do
                 end do
 
-                nlive = sum(RTI%nlive)
                 live_point(settings%c0) = 1
-                call add_point(live_point,RTI%live,nlive) ! Add this point to the array
-                RTI%nlive(1) = RTI%nlive(1) + 1
+                call add_point(live_point,RTI%live,RTI%nlive(1)) ! Add this point to the array
                 call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
                 if(settings%write_live) then
                     ! Write the live points to the live_points file
@@ -588,10 +582,8 @@ module generate_module
                     ! If its valid, and we need more points, add it to the array
                     if(RTI%nlive(1)<nprior) then
 
-                        nlive = sum(RTI%nlive)
                         live_point(settings%c0) = 1
-                        call add_point(live_point,RTI%live,nlive) ! Add this point to the array
-                        RTI%nlive(1) = RTI%nlive(1) + 1
+                        call add_point(live_point,RTI%live,RTI%nlive(1)) ! Add this point to the array
 
                         !-------------------------------------------------------------------------------!
                         call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
