@@ -211,7 +211,7 @@ module settings_module
         ! derived parameter indices
         settings%pos_d0= settings%pos_p1+1
         settings%pos_d1= settings%pos_p1+settings%nDerived
-        settings%pos_c0 = settings%pos_d1
+        settings%pos_c0 = settings%pos_d1+1
 
         ! Number of posterior parameters
         settings%nposterior = settings%pos_c0
@@ -223,7 +223,7 @@ module settings_module
         settings%p_p1 = settings%p_2l+settings%nDims
         settings%p_d0 = settings%p_p1+1
         settings%p_d1 = settings%p_p1+settings%nDerived
-        settings%p_c0   = settings%p_d1
+        settings%p_c0   = settings%p_d1+1
 
         settings%np   = settings%p_c0
 
