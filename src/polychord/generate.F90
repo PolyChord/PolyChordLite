@@ -21,6 +21,7 @@ module generate_module
         use run_time_module,   only: run_time_info
         use random_module,     only: random_integer,random_integer_P,bernoulli_trial
         use utils_module,      only: logsumexp
+        use array_module,      only: sel
         implicit none
 
         !> Program settings
@@ -37,6 +38,7 @@ module generate_module
         integer :: seed_choice
 
         real(dp), dimension(RTI%ncluster) :: probs
+        integer, dimension(:), allocatable :: i
 
         ! 0) Calculate an array proportional to the volumes
         probs = RTI%logXp                 ! prob_p = log( X_p )
@@ -50,7 +52,8 @@ module generate_module
         seed_choice = random_integer(RTI%nlive(seed_cluster))
 
         ! 4) Select the live point at index 'seed_choice' in cluster 'p' for the seed point
-        seed_point = RTI%live(:,seed_choice,seed_cluster)
+        i = sel(nint(RTI%live(settings%c0,:))==seed_cluster)
+        seed_point = RTI%live(:,i(seed_choice))
 
     end function GenerateSeed
 
@@ -164,7 +167,8 @@ module generate_module
                 if(live_point(settings%l0)>settings%logzero) then
                     total_time =total_time+ time1-time0
 
-                    call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
+                    live_point(settings%c0) = 1
+                    call add_point(live_point,RTI%live,RTI%nlive(1)) ! Add this point to the array
 
                     !-------------------------------------------------------------------------------!
                     call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
@@ -199,7 +203,8 @@ module generate_module
                     ! If its valid, add it to the array
                     if(live_point(settings%l0)>settings%logzero) then
 
-                        call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
+                        live_point(settings%c0) = 1
+                        call add_point(live_point,RTI%live,RTI%nlive(1)) ! Add this point to the array
 
                         !-------------------------------------------------------------------------------!
                         call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
@@ -279,8 +284,8 @@ module generate_module
             RTI%nlike(1) = nlike
 
             ! Set the local and global loglikelihood bounds
-            RTI%i(1)  = minpos(RTI%live(settings%l0,:,1)) ! Find the position of the minimum loglikelihood
-            RTI%logLp = RTI%live(settings%l0,RTI%i(1),1)  ! Store the value of the minimum loglikelihood 
+            RTI%i(1)  = minloc(RTI%live(settings%l0,:),1) ! Find the position of the minimum loglikelihood
+            RTI%logLp = RTI%live(settings%l0,RTI%i(1))  ! Store the value of the minimum loglikelihood 
 
             ! Close the file
             if(settings%write_live) close(write_phys_unit)
@@ -549,7 +554,8 @@ module generate_module
                     end do
                 end do
 
-                call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
+                live_point(settings%c0) = 1
+                call add_point(live_point,RTI%live,RTI%nlive(1)) ! Add this point to the array
                 call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
                 if(settings%write_live) then
                     ! Write the live points to the live_points file
@@ -576,7 +582,8 @@ module generate_module
                     ! If its valid, and we need more points, add it to the array
                     if(RTI%nlive(1)<nprior) then
 
-                        call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
+                        live_point(settings%c0) = 1
+                        call add_point(live_point,RTI%live,RTI%nlive(1)) ! Add this point to the array
 
                         !-------------------------------------------------------------------------------!
                         call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
@@ -654,8 +661,8 @@ module generate_module
             RTI%nlike = nlikes
 
             ! Set the local and global loglikelihood bounds
-            RTI%i(1)  = minpos(RTI%live(settings%l0,:,1)) ! Find the position of the minimum loglikelihood
-            RTI%logLp = RTI%live(settings%l0,RTI%i(1),1)  ! Store the value of the minimum loglikelihood 
+            RTI%i(1)  = minloc(RTI%live(settings%l0,:),1) ! Find the position of the minimum loglikelihood
+            RTI%logLp = RTI%live(settings%l0,RTI%i(1))  ! Store the value of the minimum loglikelihood 
 
             ! Close the file
             if(settings%write_live) close(write_phys_unit)

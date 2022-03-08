@@ -55,7 +55,7 @@ module calculate_module
     end subroutine calculate_point
 
     !> Calculate a posterior point from a live/phantom point
-    function calculate_posterior_point(settings,point,logweight,evidence,volume) result(posterior_point)
+    function calculate_posterior_point(settings,point,logweight,evidence,volume,cluster) result(posterior_point)
         use settings_module,   only: program_settings
         use utils_module,      only: logincexp
         implicit none
@@ -65,6 +65,7 @@ module calculate_module
         real(dp),intent(in) :: logweight
         real(dp),intent(in) :: evidence
         real(dp),intent(in) :: volume
+        integer, intent(in) :: cluster
         real(dp), dimension(settings%nposterior) :: posterior_point
 
 
@@ -80,6 +81,8 @@ module calculate_module
         posterior_point(settings%pos_p0:settings%pos_p1) = point(settings%p0:settings%p1)
         ! Derived parameters
         posterior_point(settings%pos_d0:settings%pos_d1) = point(settings%d0:settings%d1)
+        ! Cluster
+        posterior_point(settings%pos_c0) = cluster
 
     end function calculate_posterior_point
 

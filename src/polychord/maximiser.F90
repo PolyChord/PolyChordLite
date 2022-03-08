@@ -70,6 +70,7 @@ module maximise_module
         use read_write_module,   only: write_max_file, mean
         use chordal_module, only: generate_nhats, slice_sample
         use nelder_mead_module, only: nelder_mead
+        use array_module, only: sel
 #ifdef MPI
         use mpi_module, only: mpi_bundle,is_root, throw_point, catch_point, mpi_synchronise, throw_seed, catch_seed
 #else
@@ -106,25 +107,26 @@ module maximise_module
         real(dp), dimension(settings%nDims)   :: x
         real(dp), dimension(settings%nDims,settings%nDims+1) :: simplex
         real(dp), dimension(settings%nDims+1) :: f
-        real(dp), dimension(settings%nlive) :: l
-        integer, dimension(settings%nlive) :: i
+        real(dp), dimension(sum(RTI%nlive)) :: l
+        integer, dimension(sum(RTI%nlive)) :: i,k
         ! f needs to be the posterior, not the likelihood
 
         ! Get highest likelihood points
         max_loglike = settings%logzero
         do cluster_id=1,RTI%ncluster
             if (RTI%nlive(cluster_id) >= settings%nDims +1) then
-                l = RTI%live(settings%l0,:RTI%nlive(cluster_id), cluster_id)
+                k(:RTI%nlive(cluster_id)) = sel(nint(RTI%live(settings%c0,:))==cluster_id)
+                l = RTI%live(settings%l0,k(:RTI%nlive(cluster_id)))
                 if (posterior) then
                     do j=1,RTI%nlive(cluster_id)
-                        l(j) = l(j) + dXdtheta(prior, RTI%live(settings%h0:settings%h1,j, cluster_id))
+                        l(j) = l(j) + dXdtheta(prior, RTI%live(settings%h0:settings%h1,k(j)))
                     end do
                 end if
                 i(:RTI%nlive(cluster_id)) = sort_doubles(l(:RTI%nlive(cluster_id)))
 
                 if (l(i(RTI%nlive(cluster_id))) > max_loglike) then
                     max_loglike = l(i(RTI%nlive(cluster_id)))
-                    simplex = RTI%live(settings%h0:settings%h1,i(RTI%nlive(cluster_id)-settings%nDims:RTI%nlive(cluster_id)),cluster_id)
+                    simplex = RTI%live(settings%h0:settings%h1,k(i(RTI%nlive(cluster_id)-settings%nDims:RTI%nlive(cluster_id))))
                     f = l(i(RTI%nlive(cluster_id)-settings%nDims:RTI%nlive(cluster_id)))
                 end if
             end if

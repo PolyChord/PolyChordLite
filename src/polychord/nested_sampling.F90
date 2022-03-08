@@ -340,11 +340,12 @@ module nested_sampling_module
 
                     end if
 
-                    if(delete_cluster(settings,RTI)) then
+                    do while(delete_cluster(settings,RTI))
 #ifdef MPI
-                        administrator_epoch = administrator_epoch+1
+                            administrator_epoch = administrator_epoch+1
 #endif
-                    end if! Delete any clusters as necessary
+                    end do
+
                     if (RTI%ncluster == 0) exit
 
                     if(update) then
@@ -355,7 +356,7 @@ module nested_sampling_module
                         if(settings%do_clustering) then
 
                             ! If we want to cluster on sub dimensions, then do this first
-                            if(allocated(settings%sub_clustering_dimensions)) then
+                            if(allocated(settings%sub_clustering_dimensions) .and. size(settings%sub_clustering_dimensions)>0) then
                                 if( do_clustering(settings,RTI,settings%sub_clustering_dimensions) )  then
 #ifdef MPI
                                     administrator_epoch = administrator_epoch+1
@@ -568,7 +569,7 @@ module nested_sampling_module
         real(dp), dimension(RTI%ndead) :: logweights
         real(dp) :: logZ, varlogZ
 
-        integer i_cluster, nlive,n0,n1
+        integer i_cluster, nlive
 
         dead(1:settings%nDims,:) = RTI%dead(settings%p0:settings%p1,:RTI%ndead)
         dead(settings%nDims+1:settings%nDims+settings%nDerived,:) = RTI%dead(settings%d0:settings%d1,:RTI%ndead)
@@ -578,15 +579,11 @@ module nested_sampling_module
         logweights = RTI%logweights(:RTI%ndead) + RTI%dead(settings%l0,:RTI%ndead)
         logweights = logweights - logsumexp(logweights)
 
-        do i_cluster=1,RTI%ncluster
-            nlive = RTI%nlive(i_cluster)
-            n0 = 1+sum(RTI%nlive(:i_cluster-1))
-            n1 = sum(RTI%nlive(:i_cluster))
-            live(1:settings%nDims,n0:n1) = RTI%live(settings%p0:settings%p1,:nlive,i_cluster)
-            live(settings%nDims+1:settings%nDims+settings%nDerived,n0:n1) = RTI%live(settings%d0:settings%d1,:nlive,i_cluster)
-            live(settings%nDims+settings%nDerived+1,n0:n1) = RTI%live(settings%b0,:nlive,i_cluster)
-            live(settings%nDims+settings%nDerived+2,n0:n1) = RTI%live(settings%l0,:nlive,i_cluster)
-        end do
+        nlive = sum(RTI%nlive)
+        live(1:settings%nDims,:) = RTI%live(settings%p0:settings%p1,:nlive)
+        live(settings%nDims+1:settings%nDims+settings%nDerived,:) = RTI%live(settings%d0:settings%d1,:nlive)
+        live(settings%nDims+settings%nDerived+1,:) = RTI%live(settings%b0,:nlive)
+        live(settings%nDims+settings%nDerived+2,:) = RTI%live(settings%l0,:nlive)
         call calculate_logZ_estimate(RTI,logZ,varlogZ)
         call dumper(live, dead, logweights, logZ, sqrt(varlogZ))
 
