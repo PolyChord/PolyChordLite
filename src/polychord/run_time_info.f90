@@ -612,7 +612,6 @@ module run_time_module
 
             ! Delete the phantoms for this cluster
             i_phantom = 1
-            write(*,*) count(nint(RTI%phantom(settings%c0,:))==p), RTI%nphantom(p)
             do while(RTI%nphantom(p)>0)
                 if (nint(RTI%phantom(settings%c0,i_phantom))==p) then
                     phantom_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom(p),sum(RTI%nphantom))
@@ -625,6 +624,19 @@ module run_time_module
             RTI%logZp_dead(RTI%ncluster_dead)  = RTI%logZp(p)
             RTI%logZp2_dead(RTI%ncluster_dead) = RTI%logZp2(p)
             RTI%maxlogweight_dead(RTI%ncluster_dead) = RTI%maxlogweight(p)
+
+            do i=1,sum(RTI%nlive)
+                if (RTI%live(settings%c0,i) > p) RTI%live(settings%c0,i) = RTI%live(settings%c0,i) - 1
+            end do
+            do i=1,sum(RTI%nposterior)
+                if (RTI%posterior(settings%c0,i) > p) RTI%posterior(settings%c0,i) = RTI%posterior(settings%c0,i) - 1
+            end do
+            do i=1,sum(RTI%nequals)
+                if (RTI%equals(settings%c0,i) > p) RTI%equals(settings%c0,i) = RTI%equals(settings%c0,i) - 1
+            end do
+            do i=1,sum(RTI%nphantom)
+                if (RTI%phantom(settings%c0,i) > p) RTI%phantom(settings%c0,i) = RTI%phantom(settings%c0,i) - 1
+            end do
 
 
             ! Reallocate the live,phantom and posterior points
