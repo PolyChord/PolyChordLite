@@ -935,7 +935,7 @@ module run_time_module
         do i_cluster=1,RTI%ncluster
 
             ! Find the position of the lowest point in this cluster
-            RTI%i(i_cluster)     = minpos(RTI%live(settings%l0,sel(nint(RTI%live(settings%c0,:)) == i_cluster)))
+            RTI%i(i_cluster)     = minloc(RTI%live(settings%l0,:),1,nint(RTI%live(settings%c0,:)) == i_cluster)
 
             if(RTI%i(i_cluster) == 0) then
                 ! If the cluster is empty, we need to signal to delete all points
