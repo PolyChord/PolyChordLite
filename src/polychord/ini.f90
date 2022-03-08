@@ -226,7 +226,6 @@ contains
     end function get_string
 
     function get_double(file_name,key_word,dflt)
-        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -247,7 +246,6 @@ contains
     end function get_double
 
     subroutine get_doubles(file_name,key_word,doubles)
-        use utils_module,  only: STR_LENGTH
         use array_module,  only: reallocate
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -274,7 +272,6 @@ contains
     end subroutine get_doubles
 
     subroutine get_integers(file_name,key_word,integers)
-        use utils_module,  only: STR_LENGTH
         use array_module,  only: reallocate
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -301,7 +298,6 @@ contains
     end subroutine get_integers
 
     function get_integer(file_name,key_word,dflt)
-        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -324,7 +320,6 @@ contains
     end function get_integer
 
     function get_logical(file_name,key_word,dflt)
-        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -467,7 +462,6 @@ contains
 
 
     subroutine next_element(line_buffer,delimiter) 
-        use utils_module,  only: STR_LENGTH
         implicit none
         character(len=:), allocatable, intent(inout)  :: line_buffer ! Line buffer
         character :: delimiter
@@ -475,7 +469,6 @@ contains
     end subroutine next_element
 
     subroutine get_prior_params(prior_params,line_buffer)
-        use utils_module,  only: STR_LENGTH
         implicit none
         character(len=:), allocatable,intent(inout)               :: line_buffer ! Line buffer
         real(dp),allocatable,dimension(:),intent(out) :: prior_params      ! prior parameters
