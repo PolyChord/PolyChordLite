@@ -316,7 +316,7 @@ module run_time_module
     subroutine add_cluster(settings,RTI,p,cluster_list,num_new_clusters) 
         use settings_module, only: program_settings
         use utils_module, only: logsumexp,logaddexp
-        use array_module, only: reallocate,add_point,sel
+        use array_module, only: reallocate,add_point,sel,delete_point
         implicit none
 
         type(program_settings), intent(in) :: settings  !> Program settings
@@ -339,6 +339,7 @@ module run_time_module
 
         ! Constructor
         integer :: i
+        integer :: i_old, i_new
 
         integer :: nlive, nposterior, nequals, nphantom
 
@@ -371,6 +372,8 @@ module run_time_module
         real(dp) :: logXp2
         real(dp) :: logZXp
         real(dp) :: logZpXp
+
+        real(dp),dimension(settings%nposterior) :: phantom_point   ! temporary posterior point
 
         ! 1) Save the old points as necessary
         old_live  = RTI%live(:,sel(nint(RTI%live(settings%c0,:))==p))                 ! Save the old live points
@@ -430,12 +433,20 @@ module run_time_module
 
         ! 3) Assign the new live points to their new clusters
 
-        RTI%nlive(new_target) = 0 ! Zero the number of live points in the new clusters
-        do i_live=1,old_nlive
-            ! Insert the new points in the correct positions
-            i_cluster = new_target(cluster_list(i_live))
-            old_live(settings%c0,i_live) = i_cluster
-            call add_point(old_live(:,i_live),RTI%live,RTI%nlive(i_cluster),sum(RTI%nlive))
+        !RTI%nlive(new_target) = 0 ! Zero the number of live points in the new clusters
+        nlive = sum(RTI%nlive)
+        RTI%nlive = 0
+        do i_live=1,nlive
+            i_old = nint(RTI%live(settings%c0,i_live))
+            if (i_old==p) then
+                i_new = new_target(cluster_list(i_live)) 
+            else if (i_old<p) then
+                i_new = i_old
+            else
+                i_new = i_old-1
+            end if 
+            RTI%live(settings%c0,i_live) = i_new
+            RTI%nlive(i_new) = RTI%nlive(i_new) + 1
         end do
 
         ! Find the new minimum loglikelihoods
@@ -444,31 +455,53 @@ module run_time_module
         ! 4) Reassign the posterior points
         RTI%nposterior_stack(new_target) = 0
 
-        do i_posterior=1, old_nposterior
-            i_cluster = identify_cluster(settings, RTI, old_posterior(:,i_posterior))
-            old_posterior(settings%c0,i_posterior) = i_cluster
-            call add_point(old_posterior(:,i_posterior),RTI%posterior,nposterior)
-            RTI%nposterior(i_cluster) = RTI%nposterior(i_cluster) + 1
+        nposterior = sum(RTI%nposterior)
+        RTI%nposterior = 0
+        do i_posterior=1,nposterior
+            i_old = nint(RTI%posterior(settings%c0,i_posterior))
+            if (i_old==p) then
+                i_new = new_target(cluster_list(i_posterior)) 
+            else if (i_old<p) then
+                i_new = i_old
+            else
+                i_new = i_old-1
+            end if 
+            RTI%posterior(settings%c0,i_posterior) = i_new
+            RTI%nposterior(i_new) = RTI%nposterior(i_new) + 1
         end do
 
-        do i_equals=1, old_nequals
-            i_cluster = identify_cluster(settings, RTI, old_equals(:,i_equals))
-            old_equals(settings%c0,i_equals) = i_cluster
-            call add_point(old_equals(:,i_equals),RTI%equals,nequals)
-            RTI%nequals(i_cluster) = RTI%nequals(i_cluster) + 1
+
+        nequals = sum(RTI%nequals)
+        RTI%nequals = 0
+        do i_equals=1,nequals
+            i_old = nint(RTI%equals(settings%c0,i_equals))
+            if (i_old==p) then
+                i_new = new_target(cluster_list(i_equals)) 
+            else if (i_old<p) then
+                i_new = i_old
+            else
+                i_new = i_old-1
+            end if 
+            RTI%equals(settings%c0,i_equals) = i_new
+            RTI%nequals(i_new) = RTI%nequals(i_new) + 1
         end do
 
         RTI%maxlogweight(new_target) = old_maxlogweight
 
 
         ! 4) Reassign all the phantom points 
-        RTI%nphantom = 0
-        do i_phantom=1,sum(old_nphantom)
-            ! Reallocate all of the phantom points
-            j_phantom = identify_cluster(settings,RTI,old_phantom(:,i_phantom))
-            if(old_phantom(settings%l0,i_phantom) > RTI%logLp(j_phantom) ) then
-                call add_point(old_phantom(:,i_phantom),RTI%phantom,nphantom)
-                RTI%nphantom(j_phantom) = RTI%nphantom(j_phantom) + 1
+
+        i_phantom=1
+        do while(i_phantom < sum(RTI%nphantom))
+            i_old = nint(RTI%phantom(settings%c0,i_phantom))
+            i_new = identify_cluster(settings,RTI,RTI%phantom(:,i_phantom))
+            if(RTI%phantom(settings%l0,i_phantom) > RTI%logLp(i_new)) then
+                RTI%phantom(settings%c0,i_phantom) = i_new
+                i_phantom=i_phantom+1
+                RTI%nphantom(i_old)=RTI%nphantom(i_old)-1
+                RTI%nphantom(i_new)=RTI%nphantom(i_new)+1
+            else
+                phantom_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom(i_new),sum(RTI%nphantom))
             end if
         end do
 
@@ -520,15 +553,16 @@ module run_time_module
 
     function delete_cluster(settings,RTI) 
         use settings_module, only: program_settings
-        use array_module, only: reallocate
+        use array_module, only: reallocate,delete_point,add_point
         implicit none
         !> The variable containing all of the runtime information
         type(run_time_info), intent(inout) :: RTI
         type(program_settings), intent(in) :: settings
         logical :: delete_cluster
+        real(dp),dimension(settings%nposterior) :: posterior_point, equals_point, phantom_point   ! temporary posterior point
 
         !The cluster index to be deleted
-        integer            :: p(1)
+        integer            :: p
 
         integer :: size_n
 
@@ -536,7 +570,7 @@ module run_time_module
         integer,dimension(RTI%ncluster-1) :: indices
 
         ! Contstructor iterator
-        integer :: i
+        integer :: i, i_posterior, i_equals, i_phantom
 
         delete_cluster=.false.
 
@@ -547,10 +581,10 @@ module run_time_module
             ! Update the posterior arrays
             call update_posteriors(settings,RTI) 
 
-            p=minloc(RTI%nlive,RTI%nlive==0)
+            p=minloc(RTI%nlive,1,RTI%nlive==0)
 
             ! Get the positions of the clusters to be saved
-            indices = [(i,i=1,p(1)-1),(i,i=p(1)+1,RTI%ncluster)]
+            indices = [(i,i=1,p-1),(i,i=p+1,RTI%ncluster)]
 
             ! Reduce the number of clusters
             RTI%ncluster=RTI%ncluster-1
@@ -565,21 +599,53 @@ module run_time_module
             call reallocate(RTI%maxlogweight_dead,new_size1=RTI%ncluster_dead)
 
             ! Place the newly dead cluster into this
-            RTI%nposterior_dead(RTI%ncluster_dead) = RTI%nposterior(p(1))
-            !RTI%posterior_dead(:,:RTI%nposterior_dead(RTI%ncluster_dead),RTI%ncluster_dead) = RTI%posterior(:,:RTI%nposterior(p(1)),p(1))
-            RTI%nequals_dead(RTI%ncluster_dead) = RTI%nequals(p(1))
-            !RTI%equals_dead(:,:RTI%nequals_dead(RTI%ncluster_dead),RTI%ncluster_dead) = RTI%equals(:,:RTI%nequals(p(1)),p(1))
-            RTI%logZp_dead(RTI%ncluster_dead)  = RTI%logZp(p(1))
-            RTI%logZp2_dead(RTI%ncluster_dead) = RTI%logZp2(p(1))
-            RTI%maxlogweight_dead(RTI%ncluster_dead) = RTI%maxlogweight(p(1))
+            RTI%nposterior_dead(RTI%ncluster_dead) = RTI%nposterior(p)
+            i_posterior = 1
+            do while(RTI%nposterior(p)>0)
+                if (nint(RTI%posterior(settings%c0,i_posterior))==p) then
+                    posterior_point = delete_point(i_posterior,RTI%posterior,RTI%nposterior(p),sum(RTI%nposterior))
+                    posterior_point(settings%pos_c0) = RTI%ncluster_dead
+                    call add_point(posterior_point,RTI%posterior_dead,RTI%nposterior_dead(RTI%ncluster_dead),sum(RTI%nposterior_dead))
+                else
+                    i_posterior = i_posterior + 1
+                end if
+            end do
+
+            RTI%nequals_dead(RTI%ncluster_dead) = RTI%nequals(p)
+            i_equals = 1
+            do while(RTI%nequals(p)>0)
+                if (nint(RTI%equals(settings%c0,i_equals))==p) then
+                    equals_point = delete_point(i_equals,RTI%equals,RTI%nequals(p),sum(RTI%nequals))
+                    equals_point(settings%pos_c0) = RTI%ncluster_dead
+                    call add_point(equals_point,RTI%equals_dead,RTI%nequals_dead(RTI%ncluster_dead),sum(RTI%nequals_dead))
+                else
+                    i_equals = i_equals + 1
+                end if
+            end do
+
+            ! Delete the phantoms for this cluster
+            i_phantom = 1
+            do while(RTI%nphantom(p)>0)
+                if (nint(RTI%phantom(settings%c0,i_phantom))==p) then
+                    phantom_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom(p),sum(RTI%nphantom))
+                else
+                    i_phantom = i_phantom + 1
+                end if
+            end do
+
+
+            RTI%logZp_dead(RTI%ncluster_dead)  = RTI%logZp(p)
+            RTI%logZp2_dead(RTI%ncluster_dead) = RTI%logZp2(p)
+            RTI%maxlogweight_dead(RTI%ncluster_dead) = RTI%maxlogweight(p)
 
 
             ! Reallocate the live,phantom and posterior points
             call reallocate(RTI%nlive,           new_size1=RTI%ncluster, save_indices1=indices)
-            call reallocate(RTI%nphantom,        new_size1=RTI%ncluster, save_indices1=indices)
-            call reallocate(RTI%nposterior_stack,new_size1=RTI%ncluster, save_indices1=indices)
             call reallocate(RTI%nposterior,      new_size1=RTI%ncluster, save_indices1=indices)
             call reallocate(RTI%nequals,         new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate(RTI%nphantom,        new_size1=RTI%ncluster, save_indices1=indices)
+            call reallocate(RTI%nposterior_stack,new_size1=RTI%ncluster, save_indices1=indices)
+
 
             ! Reallocate the cholesky matrices
             call reallocate(RTI%cholesky, new_size3=RTI%ncluster, save_indices3=indices)
@@ -602,6 +668,32 @@ module run_time_module
 
     end function delete_cluster
 
+!    subroutine reassign_phantom(settings, RTI)
+!        use settings_module, only: program_settings
+!        use array_module, only: reallocate,delete_point,add_point
+!        implicit none
+!
+!        !> The variable containing all of the runtime information
+!        type(run_time_info), intent(inout) :: RTI
+!        type(program_settings), intent(in) :: settings
+!
+!        integer :: i_phantom, i_old, i_new
+!
+!        i_phantom=1
+!        do while(i_phantom < sum(RTI%nphantom))
+!            i_old = nint(RTI%phantom(settings%c0,i_phantom))
+!            i_new = identify_cluster(settings,RTI,RTI%phantom(:,i_phantom))
+!            if(RTI%phantom(settings%l0,i_phantom) > RTI%logLp(i_new)) then
+!                RTI%phantom(settings%c0,i_phantom) = i_new
+!                i_phantom=i_phantom+1
+!                RTI%nphantom(i_old)=RTI%nphantom(i_old)-1
+!                RTI%nphantom(i_new)=RTI%nphantom(i_new)+1
+!            else
+!                delete_point(i_phantom,RTI%phantom,RTI%nphantom(i_new),sum(RTI%nphantom))
+!            end if
+!        end do
+!
+!    end subroutine reassign_phantom
 
     subroutine calculate_covmats(settings,RTI)
         use settings_module, only: program_settings
@@ -797,7 +889,7 @@ module run_time_module
         RTI%logweights(RTI%ndead) = logweight                                            ! Add the logweight to the array
 
         ! Calculate the posterior point and add it to the posterior stack
-        posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp))
+        posterior_point = calculate_posterior_point(settings,deleted_point,logweight,RTI%logZ,logsumexp(RTI%logXp), cluster_del)
         call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack(cluster_del),sum(RTI%nposterior_stack))
         RTI%maxlogweight(cluster_del) = max(RTI%maxlogweight(cluster_del),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
         RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(cluster_del))
@@ -850,7 +942,8 @@ module run_time_module
                             posterior_point = calculate_posterior_point(settings,deleted_point,&
                                     RTI%posterior_stack(settings%pos_w,i_stack), &!logweight
                                     RTI%posterior_stack(settings%pos_Z,i_stack), &!RTI%logZ
-                                    RTI%posterior_stack(settings%pos_X,i_stack)  &!logsumexp(RTI%logXp))
+                                    RTI%posterior_stack(settings%pos_X,i_stack), &!logsumexp(RTI%logXp))
+                                    nint(RTI%posterior_stack(settings%pos_X,i_stack))  &!cluster index
                                     )
 
                             call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack(i_cluster),sum(RTI%nposterior_stack))

@@ -340,11 +340,12 @@ module nested_sampling_module
 
                     end if
 
-                    if(delete_cluster(settings,RTI)) then
+                    do while(delete_cluster(settings,RTI))
 #ifdef MPI
-                        administrator_epoch = administrator_epoch+1
+                            administrator_epoch = administrator_epoch+1
 #endif
-                    end if! Delete any clusters as necessary
+                    end do
+
                     if (RTI%ncluster == 0) exit
 
                     if(update) then
