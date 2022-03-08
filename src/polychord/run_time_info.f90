@@ -447,31 +447,17 @@ module run_time_module
         RTI%nposterior_stack(new_target) = 0
         RTI%nposterior = 0
         do i_posterior=1,nposterior
-            i_old = nint(RTI%posterior(settings%c0,i_posterior))
-            if (i_old==p) then
-                i_new = new_target(cluster_list(i_posterior))  ! Clearly nonsense -- need to be reassigned
-            else if (i_old<p) then
-                i_new = i_old
-            else
-                i_new = i_old-1
-            end if 
-            RTI%posterior(settings%c0,i_posterior) = i_new
-            RTI%nposterior(i_new) = RTI%nposterior(i_new) + 1
+            i_new = identify_cluster(settings,RTI,RTI%posterior(:,i_posterior))
+            RTI%posterior(settings%pos_c0,i_posterior) = i_new
+            RTI%nposterior(i_new) = RTI%nposterior(i_new) +1
         end do
 
 
         RTI%nequals = 0
         do i_equals=1,nequals
-            i_old = nint(RTI%equals(settings%c0,i_equals))
-            if (i_old==p) then
-                i_new = new_target(cluster_list(i_equals))  ! Clearly nonsense -- need to be reassigned
-            else if (i_old<p) then
-                i_new = i_old
-            else
-                i_new = i_old-1
-            end if 
-            RTI%equals(settings%c0,i_equals) = i_new
-            RTI%nequals(i_new) = RTI%nequals(i_new) + 1
+            i_new = identify_cluster(settings,RTI,RTI%equals(:,i_equals))
+            RTI%equals(settings%p_c0,i_equals) = i_new
+            RTI%nequals(i_new) = RTI%nequals(i_new) +1
         end do
 
         RTI%maxlogweight(new_target) = old_maxlogweight
@@ -545,7 +531,8 @@ module run_time_module
         type(run_time_info), intent(inout) :: RTI
         type(program_settings), intent(in) :: settings
         logical :: delete_cluster
-        real(dp),dimension(settings%nposterior) :: posterior_point, equals_point
+        real(dp),dimension(settings%nposterior) :: posterior_point
+        real(dp),dimension(settings%np) :: equals_point 
         real(dp),dimension(settings%nTotal) :: phantom_point
 
         !The cluster index to be deleted
@@ -586,10 +573,9 @@ module run_time_module
             call reallocate(RTI%maxlogweight_dead,new_size1=RTI%ncluster_dead)
 
             ! Place the newly dead cluster into this
-            RTI%nposterior_dead(RTI%ncluster_dead) = RTI%nposterior(p)
             i_posterior = 1
             do while(RTI%nposterior(p)>0)
-                if (nint(RTI%posterior(settings%c0,i_posterior))==p) then
+                if (nint(RTI%posterior(settings%pos_c0,i_posterior))==p) then
                     posterior_point = delete_point(i_posterior,RTI%posterior,RTI%nposterior(p),sum(RTI%nposterior))
                     posterior_point(settings%pos_c0) = RTI%ncluster_dead
                     call add_point(posterior_point,RTI%posterior_dead,RTI%nposterior_dead(RTI%ncluster_dead),sum(RTI%nposterior_dead))
@@ -598,12 +584,11 @@ module run_time_module
                 end if
             end do
 
-            RTI%nequals_dead(RTI%ncluster_dead) = RTI%nequals(p)
             i_equals = 1
             do while(RTI%nequals(p)>0)
-                if (nint(RTI%equals(settings%c0,i_equals))==p) then
+                if (nint(RTI%equals(settings%p_c0,i_equals))==p) then
                     equals_point = delete_point(i_equals,RTI%equals,RTI%nequals(p),sum(RTI%nequals))
-                    equals_point(settings%pos_c0) = RTI%ncluster_dead
+                    equals_point(settings%p_c0) = RTI%ncluster_dead
                     call add_point(equals_point,RTI%equals_dead,RTI%nequals_dead(RTI%ncluster_dead),sum(RTI%nequals_dead))
                 else
                     i_equals = i_equals + 1
@@ -629,10 +614,10 @@ module run_time_module
                 if (RTI%live(settings%c0,i) > p) RTI%live(settings%c0,i) = RTI%live(settings%c0,i) - 1
             end do
             do i=1,sum(RTI%nposterior)
-                if (RTI%posterior(settings%c0,i) > p) RTI%posterior(settings%c0,i) = RTI%posterior(settings%c0,i) - 1
+                if (RTI%posterior(settings%pos_c0,i) > p) RTI%posterior(settings%pos_c0,i) = RTI%posterior(settings%pos_c0,i) - 1
             end do
             do i=1,sum(RTI%nequals)
-                if (RTI%equals(settings%c0,i) > p) RTI%equals(settings%c0,i) = RTI%equals(settings%c0,i) - 1
+                if (RTI%equals(settings%p_c0,i) > p) RTI%equals(settings%p_c0,i) = RTI%equals(settings%p_c0,i) - 1
             end do
             do i=1,sum(RTI%nphantom)
                 if (RTI%phantom(settings%c0,i) > p) RTI%phantom(settings%c0,i) = RTI%phantom(settings%c0,i) - 1
@@ -914,7 +899,7 @@ module run_time_module
                                 RTI%posterior_stack(settings%pos_w,i_stack), &!logweight
                                 RTI%posterior_stack(settings%pos_Z,i_stack), &!RTI%logZ
                                 RTI%posterior_stack(settings%pos_X,i_stack), &!logsumexp(RTI%logXp))
-                                nint(RTI%posterior_stack(settings%pos_c0,i_stack))  &!cluster index
+                                i_cluster  &!cluster index
                                 )
 
                         call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack(i_cluster),sum(RTI%nposterior_stack))
@@ -971,7 +956,7 @@ module run_time_module
         type(program_settings), intent(in) :: settings
         type(run_time_info), intent(in) :: RTI
 
-        real(dp), dimension(settings%nTotal),intent(in)   :: point
+        real(dp), dimension(:),intent(in)   :: point
 
         integer :: cluster
 
@@ -1077,7 +1062,7 @@ module run_time_module
 
         ! Add new posterior points from the stack
         do i_post=1,sum(RTI%nposterior_stack)
-            i_cluster = nint(RTI%posterior_stack(settings%p_c0,i_post))
+            i_cluster = nint(RTI%posterior_stack(settings%pos_c0,i_post))
 
             if(settings%equals) then
 
@@ -1086,6 +1071,7 @@ module run_time_module
                     posterior_point(settings%p_w) = RTI%maxlogweight_global
                     posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post)
                     posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post)
+                    posterior_point(settings%p_c0) = RTI%posterior_stack(settings%pos_c0,i_post)
                     call add_point(posterior_point,RTI%equals_global,RTI%nequals_global)
                 end if
 
@@ -1096,6 +1082,7 @@ module run_time_module
                         posterior_point(settings%p_w) = RTI%maxlogweight(i_cluster)
                         posterior_point(settings%p_2l) = -2*RTI%posterior_stack(settings%pos_l,i_post)
                         posterior_point(settings%p_p0:settings%p_d1) = RTI%posterior_stack(settings%pos_p0:settings%pos_d1,i_post)
+                        posterior_point(settings%p_c0) = RTI%posterior_stack(settings%pos_c0,i_post)
                         call add_point(posterior_point,RTI%equals,RTI%nequals(i_cluster),sum(RTI%nequals))
                     end if
                 end if
