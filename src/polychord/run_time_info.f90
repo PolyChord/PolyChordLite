@@ -612,6 +612,7 @@ module run_time_module
 
             ! Delete the phantoms for this cluster
             i_phantom = 1
+            write(*,*) count(nint(RTI%phantom(settings%c0,:))==p), RTI%nphantom(p)
             do while(RTI%nphantom(p)>0)
                 if (nint(RTI%phantom(settings%c0,i_phantom))==p) then
                     phantom_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom(p),sum(RTI%nphantom))
@@ -875,46 +876,42 @@ module run_time_module
         integer :: i_cluster  ! cluster iterator
         integer :: i_phantom  ! phantom iterator
         integer :: i_stack    ! phantom iterator
-        integer :: nposterior_stack, nphantom ! total number of posterior points in the stack
 
-        nposterior_stack = sum(RTI%nposterior_stack)
-        nphantom = sum(RTI%nphantom)
 
         ! Now we delete the phantoms
-        do i_cluster=1,RTI%ncluster
-            i_phantom=1
-            do while(i_phantom<=RTI%nphantom(i_cluster))
+        i_phantom=1
+        do while(i_phantom<=sum(RTI%nphantom))
+            i_cluster = RTI%phantom(settings%c0, i_phantom)
 
-                ! Find the location of the live point which this point belongs to
-                i_stack = minloc( RTI%posterior_stack(settings%pos_l,:nposterior_stack), 1, &
-                        RTI%posterior_stack(settings%pos_l,:nposterior_stack) > RTI%phantom(settings%l0,i_phantom) &
-                        .and. nint(RTI%posterior_stack(settings%pos_c0,:nposterior_stack)) == i_cluster)
+            ! Find the location of the live point which this point belongs to
+            i_stack = minloc( RTI%posterior_stack(settings%pos_l,:sum(RTI%nposterior_stack)), 1, &
+                    RTI%posterior_stack(settings%pos_l,:sum(RTI%nposterior_stack)) > RTI%phantom(settings%l0,i_phantom) &
+                    .and. nint(RTI%posterior_stack(settings%pos_c0,:sum(RTI%nposterior_stack))) == i_cluster)
 
-                if(i_stack<=0) then
-                    i_phantom=i_phantom+1
-                else
+            if(i_stack<=0) then
+                i_phantom=i_phantom+1
+            else
 
-                    ! Delete this point
-                    deleted_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom(i_cluster),sum(RTI%nphantom))
+                ! Delete this point
+                deleted_point = delete_point(i_phantom,RTI%phantom,RTI%nphantom(i_cluster),sum(RTI%nphantom))
 
-                    ! Calculate the posterior point and add it to the array
-                    if(settings%equals .or. settings%posteriors ) then
-                        if(bernoulli_trial(RTI%thin_posterior)) then
-                            posterior_point = calculate_posterior_point(settings,deleted_point,&
-                                    RTI%posterior_stack(settings%pos_w,i_stack), &!logweight
-                                    RTI%posterior_stack(settings%pos_Z,i_stack), &!RTI%logZ
-                                    RTI%posterior_stack(settings%pos_X,i_stack), &!logsumexp(RTI%logXp))
-                                    nint(RTI%posterior_stack(settings%pos_X,i_stack))  &!cluster index
-                                    )
+                ! Calculate the posterior point and add it to the array
+                if(settings%equals .or. settings%posteriors ) then
+                    if(bernoulli_trial(RTI%thin_posterior)) then
+                        posterior_point = calculate_posterior_point(settings,deleted_point,&
+                                RTI%posterior_stack(settings%pos_w,i_stack), &!logweight
+                                RTI%posterior_stack(settings%pos_Z,i_stack), &!RTI%logZ
+                                RTI%posterior_stack(settings%pos_X,i_stack), &!logsumexp(RTI%logXp))
+                                nint(RTI%posterior_stack(settings%pos_c0,i_stack))  &!cluster index
+                                )
 
-                            call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack(i_cluster),sum(RTI%nposterior_stack))
-                            RTI%maxlogweight(i_cluster) = max(RTI%maxlogweight(i_cluster),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
-                            RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(i_cluster))
-                        end if
+                        call add_point(posterior_point,RTI%posterior_stack,RTI%nposterior_stack(i_cluster),sum(RTI%nposterior_stack))
+                        RTI%maxlogweight(i_cluster) = max(RTI%maxlogweight(i_cluster),posterior_point(settings%pos_w)+posterior_point(settings%pos_l))
+                        RTI%maxlogweight_global=max(RTI%maxlogweight_global,RTI%maxlogweight(i_cluster))
                     end if
                 end if
+            end if
 
-            end do
         end do
 
     end subroutine clean_phantoms
