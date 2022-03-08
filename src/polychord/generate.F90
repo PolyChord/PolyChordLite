@@ -38,7 +38,7 @@ module generate_module
         integer :: seed_choice
 
         real(dp), dimension(RTI%ncluster) :: probs
-        integer, dimension(sum(RTI%nlive)) :: i
+        integer, dimension(:), allocatable :: i
 
         ! 0) Calculate an array proportional to the volumes
         probs = RTI%logXp                 ! prob_p = log( X_p )
@@ -52,7 +52,7 @@ module generate_module
         seed_choice = random_integer(RTI%nlive(seed_cluster))
 
         ! 4) Select the live point at index 'seed_choice' in cluster 'p' for the seed point
-        i(:RTI%nlive(seed_cluster)) = sel(nint(RTI%live(settings%c0,:))==seed_cluster)
+        i = sel(nint(RTI%live(settings%c0,:))==seed_cluster)
         seed_point = RTI%live(:,i(seed_choice))
 
     end function GenerateSeed
