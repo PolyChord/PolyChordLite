@@ -176,6 +176,10 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     def wrap_prior(cube, theta):
         theta[:] = prior(cube)
 
+    settings.grade_dims = np.array(settings.grade_dims).tolist()
+    settings.num_repeats = np.array(settings.num_repeats).tolist()
+    settings.nlives = {float(logL):int(nlive) for logL, nlive in settings.nlives.items()}
+
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,
                      wrap_prior,
