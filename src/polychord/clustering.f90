@@ -10,7 +10,7 @@ module KNN_clustering
     !! Points belong to the same cluster if they are in either of each others k
     !! nearest neighbor sets. 
     !!
-    !! The algorithm computes the k nearest neihbor sets from the similarity
+    !! The algorithm computes the k nearest neighbor sets from the similarity
     !! matrix, and then tests
     recursive function NN_clustering(similarity_matrix,num_clusters) result(cluster_list)
         use utils_module, only: relabel
@@ -113,7 +113,7 @@ module KNN_clustering
 
                 ! If they're not in the same cluster already...
                 if(c(i)/=c(j)) then
-                    ! ... check to see if they are within each others k nearest neihbors...
+                    ! ... check to see if they are within each others k nearest neighbors...
                     if( neighbors( knn(:,i),knn(:,j) ) ) then
 
                         ! If they are then relabel cluster_i and cluster_j to the smaller of the two
