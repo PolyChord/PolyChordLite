@@ -313,6 +313,7 @@ contains
             c_loglikelihood_ptr,&
             c_prior_ptr,&
             c_dumper_ptr,&
+            c_cluster_ptr,&
             nlive,&
             num_repeats,&
             nprior,&
@@ -388,10 +389,19 @@ contains
                 real(c_double), intent(in), value :: logZ, logZerr
             end subroutine c_dumper
         end interface
+        interface
+            subroutine c_cluster(distance2_matrix,cluster_list,n) bind(c)
+                use iso_c_binding
+                integer(c_int), intent(in), value :: n
+                real(c_double), intent(in),  dimension(n,n) :: distance2_matrix
+                integer(c_int), intent(out), dimension(n) :: cluster_list
+            end subroutine c_cluster
+        end interface
 
         type(c_funptr), intent(in), value   :: c_loglikelihood_ptr
         type(c_funptr), intent(in), value   :: c_prior_ptr
         type(c_funptr), intent(in), value   :: c_dumper_ptr
+        type(c_funptr), intent(in), value   :: c_cluster_ptr
         integer(c_int), intent(in), value   :: nlive
         integer(c_int), intent(in), value   :: num_repeats
         integer(c_int), intent(in), value   :: nprior
@@ -436,7 +446,8 @@ contains
 
         procedure(c_loglikelihood), pointer :: f_loglikelihood_ptr
         procedure(c_prior), pointer         :: f_prior_ptr
-        procedure(c_dumper), pointer         :: f_dumper_ptr
+        procedure(c_cluster), pointer       :: f_cluster_ptr
+        procedure(c_dumper), pointer        :: f_dumper_ptr
 
         integer, intent(in) :: comm
 
@@ -487,9 +498,10 @@ contains
 
         call c_f_procpointer(c_loglikelihood_ptr, f_loglikelihood_ptr)
         call c_f_procpointer(c_prior_ptr, f_prior_ptr)
+        call c_f_procpointer(c_cluster_ptr, f_cluster_ptr)
         call c_f_procpointer(c_dumper_ptr, f_dumper_ptr)
 
-        call run_polychord(loglikelihood,prior_transform,dumper,settings,comm)
+        call run_polychord(loglikelihood,prior_transform,dumper,cluster,settings,comm)
 
     contains
         function loglikelihood(theta,phi)
@@ -548,6 +560,21 @@ contains
             c_logZerr = logZerr
             call f_dumper_ptr(c_ndead, c_nlive, c_npars, c_live, c_dead, c_logweights, c_logZ, c_logZerr)
         end subroutine dumper
+
+        function cluster(distance2_matrix) result(cluster_list)
+            implicit none
+            real(dp), intent(in), dimension(:,:) :: distance2_matrix
+            integer, dimension(size(distance2_matrix,1)) :: cluster_list
+
+            integer(c_int) :: c_n
+            real(c_double),  dimension(size(distance2_matrix,1),size(distance2_matrix,2)) :: c_distance2_matrix
+            integer(c_int), dimension(size(distance2_matrix,1)) :: c_cluster_list
+            c_n = size(c_cluster_list)
+            c_distance2_matrix = distance2_matrix
+            call f_cluster_ptr(c_distance2_matrix,c_cluster_list,c_n)
+            cluster_list = c_cluster_list
+
+        end function cluster
 
 
     end subroutine polychord_c_interface
