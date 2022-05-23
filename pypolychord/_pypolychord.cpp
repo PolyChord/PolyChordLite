@@ -117,7 +117,7 @@ void dumper(int ndead, int nlive, int npars, double* live, double* dead, double*
 /* Callback to the cluster */
 static PyObject *python_cluster = NULL;
 
-void cluster(double* distance2_matrix, double* cluster_list, int n)
+void cluster(double* distance2_matrix, int* cluster_list, int n)
 {
     /* create a python version of distance2_matrix */
     npy_intp shape[] = {n,n};            
@@ -127,7 +127,7 @@ void cluster(double* distance2_matrix, double* cluster_list, int n)
 
     /* create a python version of cluster_list */
     npy_intp shape1[] = {n};            
-    PyObject *array_cluster_list = PyArray_SimpleNewFromData(1, shape1, NPY_DOUBLE, cluster_list);
+    PyObject *array_cluster_list = PyArray_SimpleNewFromData(1, shape1, NPY_INT, cluster_list);
     if (array_cluster_list==NULL) {Py_DECREF(array_distance2_matrix); throw PythonException();}
 
     /* Compute cluster_list from the cluster */
@@ -247,7 +247,7 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
     try{ run_polychord(loglikelihood, prior, dumper, cluster, S); }
     catch (PythonException& e)
     { 
-        Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);Py_DECREF(python_dumper);Py_DECREF(python_cluster); 
+        Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);Py_DECREF(python_cluster); 
         return NULL; 
     }
 
