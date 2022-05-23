@@ -264,6 +264,15 @@ module cluster_module
         type(run_time_info), intent(inout) :: RTI
         !> Dimensions to cluster on
         integer,dimension(:),optional,intent(in) :: sub_dimensions
+
+        interface
+            function cluster(distance2_matrix) result(cluster_list)
+                import :: dp
+                real(dp), intent(in), dimension(:,:) :: distance2_matrix
+                integer, dimension(size(distance2_matrix,1)) :: cluster_list
+            end function
+        end interface
+
         !> Whether or not a cluster has been found
         logical :: do_clustering
 
@@ -301,7 +310,10 @@ module cluster_module
                         calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
                 end if
 
-                clusters(:nlive) = NN_clustering(distance2_matrix(:nlive,:nlive))
+                clusters(:nlive) = cluster(distance2_matrix(:nlive,:nlive))
+                if (any(clusters(:nlive)<=0)) then
+                    clusters(:nlive) = NN_clustering(distance2_matrix(:nlive,:nlive))
+                end if
                 num_clusters = maxval(clusters(:nlive))
 
                 ! Do clustering on this 

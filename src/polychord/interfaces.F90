@@ -6,13 +6,13 @@ module interfaces_module
     include 'mpif.h'
 #endif
     interface run_polychord
-        module procedure run_polychord_full, run_polychord_no_prior, run_polychord_no_dumper, run_polychord_no_prior_no_dumper, run_polychord_ini
+        module procedure run_polychord_full, run_polychord_no_cluster, run_polychord_no_prior, run_polychord_no_dumper, run_polychord_no_prior_no_dumper, run_polychord_ini
     end interface run_polychord
 
 contains
 
 
-    subroutine run_polychord_full(loglikelihood, prior_transform, dumper, settings_in, mpi_communicator)
+    subroutine run_polychord_full(loglikelihood, prior_transform, dumper, cluster, settings_in, mpi_communicator)
         use settings_module,          only: program_settings,initialise_settings
         use random_module,            only: initialise_random
         use nested_sampling_module,   only: NestedSampling
@@ -46,6 +46,13 @@ contains
                 real(dp), intent(in) :: logZ, logZerr
             end subroutine dumper
         end interface
+        interface
+            function cluster(distance2_matrix) result(cluster_list)
+                import :: dp
+                real(dp), intent(in), dimension(:,:) :: distance2_matrix
+                integer, dimension(size(distance2_matrix,1)) :: cluster_list
+            end function
+        end interface
 
         type(program_settings),intent(in)    :: settings_in
         type(program_settings)               :: settings 
@@ -74,16 +81,62 @@ contains
         settings = settings_in
         call initialise_settings(settings)   
 #ifdef MPI
-        output_info = NestedSampling(loglikelihood,prior_transform,dumper,settings,comm) 
+        output_info = NestedSampling(loglikelihood,prior_transform,dumper,cluster,settings,comm) 
         call finalise_mpi
 #else
-        output_info = NestedSampling(loglikelihood,prior_transform,dumper,settings,0) 
+        output_info = NestedSampling(loglikelihood,prior_transform,dumper,cluster,settings,0) 
 #endif
 
     end subroutine run_polychord_full
 
 
     !===================== INTERFACE ===============================================
+    subroutine run_polychord_no_cluster(loglikelihood,prior_transform,dumper,settings,mpi_communicator)
+        use settings_module,          only: program_settings
+        implicit none
+        interface
+            function loglikelihood(theta,phi)
+                import :: dp
+                real(dp), intent(in),  dimension(:) :: theta
+                real(dp), intent(out),  dimension(:) :: phi
+                real(dp) :: loglikelihood
+            end function loglikelihood
+        end interface
+        interface
+            function prior_transform(cube) result(theta)
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
+            end function prior_transform
+        end interface
+        interface
+            subroutine dumper(live, dead, logweights, logZ, logZerr)
+                import :: dp
+                real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
+                real(dp), intent(in) :: logZ, logZerr
+            end subroutine dumper
+        end interface
+        type(program_settings),intent(in)    :: settings  ! The program settings 
+        integer, intent(in), optional :: mpi_communicator
+        integer :: comm
+#ifdef MPI
+        if (present(mpi_communicator)) then
+            comm = mpi_communicator
+        else 
+            comm = MPI_COMM_WORLD
+        end if
+#else
+            comm = 0
+#endif
+        call run_polychord(loglikelihood,prior_transform,dumper,cluster,settings,comm)
+    contains
+        function cluster(distance2_matrix) result(cluster_list)
+            real(dp), intent(in), dimension(:,:) :: distance2_matrix
+            integer, dimension(size(distance2_matrix,1)) :: cluster_list
+            cluster_list = 0
+        end function
+    end subroutine run_polychord_no_cluster
+
     subroutine run_polychord_no_prior(loglikelihood,dumper,settings,mpi_communicator)
         use settings_module,          only: program_settings
         implicit none

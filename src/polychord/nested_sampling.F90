@@ -12,7 +12,7 @@ module nested_sampling_module
     contains
 
     !> Main subroutine for computing a generic nested sampling algorithm
-    function NestedSampling(loglikelihood,prior, dumper, settings, mpi_communicator) result(output_info)
+    function NestedSampling(loglikelihood, prior, dumper, cluster, settings, mpi_communicator) result(output_info)
         use settings_module,   only: program_settings
         use utils_module,      only: logsumexp,calc_similarity_matrix,swap_integers,cyc,time
         use read_write_module
@@ -55,6 +55,13 @@ module nested_sampling_module
                 real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
                 real(dp), intent(in) :: logZ, logZerr
             end subroutine dumper
+        end interface
+        interface
+            function cluster(distance2_matrix) result(cluster_list)
+                import :: dp
+                real(dp), intent(in), dimension(:,:) :: distance2_matrix
+                integer, dimension(size(distance2_matrix,1)) :: cluster_list
+            end function
         end interface
 
         !> Program settings
@@ -356,14 +363,14 @@ module nested_sampling_module
 
                             ! If we want to cluster on sub dimensions, then do this first
                             if(allocated(settings%sub_clustering_dimensions)) then
-                                if( do_clustering(settings,RTI,settings%sub_clustering_dimensions) )  then
+                                if( do_clustering(settings,RTI,cluster,settings%sub_clustering_dimensions) )  then
 #ifdef MPI
                                     administrator_epoch = administrator_epoch+1
 #endif
                                 end if
                             end if
 
-                            if( do_clustering(settings,RTI) )  then
+                            if( do_clustering(settings,RTI,cluster) )  then
 #ifdef MPI
                                 administrator_epoch = administrator_epoch+1
 #endif
