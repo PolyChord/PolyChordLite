@@ -12,8 +12,8 @@ def default_dumper(live, dead, logweights, logZ, logZerr):
     pass
 
 
-def default_cluster(distance2_matrix):
-    return np.zeros(distance2_matrix.shape[0],dtype=int)
+def default_cluster(position_matrix):
+    return np.zeros(position_matrix.shape[0],dtype=int)
 
 
 def run_polychord(loglikelihood, nDims, nDerived, settings,
@@ -112,8 +112,8 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
 
         Parameters
         ----------
-        distance2_matrix: numpy.array
-            squared distances between points. Shape (nPoints, nPoints)
+        position_matrix: numpy.array
+            positions of points. Shape (nPoints, nDims)
 
         Returns
         -------
@@ -197,8 +197,8 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     def wrap_prior(cube, theta):
         theta[:] = prior(cube)
 
-    def wrap_cluster(distance2_matrix, cluster_list):
-        cluster_list[:] = cluster(distance2_matrix)
+    def wrap_cluster(position_matrix, cluster_list):
+        cluster_list[:] = cluster(position_matrix)
 
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,

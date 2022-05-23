@@ -266,10 +266,10 @@ module cluster_module
         integer,dimension(:),optional,intent(in) :: sub_dimensions
 
         interface
-            function cluster(distance2_matrix) result(cluster_list)
+            function cluster(position_matrix) result(cluster_list)
                 import :: dp
-                real(dp), intent(in), dimension(:,:) :: distance2_matrix
-                integer, dimension(size(distance2_matrix,1)) :: cluster_list
+                real(dp), intent(in), dimension(:,:) :: position_matrix
+                integer, dimension(size(position_matrix,1)) :: cluster_list
             end function
         end interface
 
@@ -278,7 +278,7 @@ module cluster_module
 
 
         ! Similarity matrix
-        real(dp),dimension(sum(RTI%nlive),sum(RTI%nlive)) :: distance2_matrix
+        real(dp),dimension(sum(RTI%nlive),sum(RTI%nlive)) :: position_matrix
         integer,dimension(sum(RTI%nlive)) :: clusters
 
         integer :: num_clusters
@@ -286,6 +286,7 @@ module cluster_module
 
         ! number of live points
         integer :: nlive
+        integer :: nDims
 
         integer :: i_cluster
 
@@ -295,24 +296,30 @@ module cluster_module
         ! Get the number of old clusters
         num_old_clusters=RTI%ncluster
 
+        ! get the number of dimensions
+        nDims = settings%nDims
+
         i_cluster = 1
         do while(i_cluster<=num_old_clusters)
 
             nlive = RTI%nlive(i_cluster) ! Get the number of live points in a temp variable
 
             if(nlive>2) then 
-                ! Calculate the similarity matrix for this cluster
+                ! get the position matrix for this cluster
                 if(present(sub_dimensions)) then
-                    distance2_matrix(:nlive,:nlive) =&
-                        calculate_similarity_matrix(RTI%live(sub_dimensions,:nlive,i_cluster))
+                    position_matrix(:nlive,:nDims) =&
+                        RTI%live(sub_dimensions,:nlive,i_cluster)
                 else 
-                    distance2_matrix(:nlive,:nlive) =&
-                        calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
+                    position_matrix(:nlive,:nDims) =&
+                        RTI%live(settings%h0:settings%h1,:nlive,i_cluster)
                 end if
 
-                clusters(:nlive) = cluster(distance2_matrix(:nlive,:nlive))
+                clusters(:nlive) = cluster(position_matrix(:nlive,:nDims))
+
+                ! default to KNN clustering
                 if (any(clusters(:nlive)<=0)) then
-                    clusters(:nlive) = NN_clustering(distance2_matrix(:nlive,:nlive))
+                    clusters(:nlive) = NN_clustering(&
+                        calculate_similarity_matrix(position_matrix(:nlive, :nDims)))
                 end if
                 num_clusters = maxval(clusters(:nlive))
 
