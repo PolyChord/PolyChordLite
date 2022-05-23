@@ -1,4 +1,5 @@
 from numpy import pi, log, sqrt
+import numpy as np
 import pypolychord
 from pypolychord.settings import PolyChordSettings
 from pypolychord.priors import UniformPrior
@@ -38,6 +39,20 @@ def prior(hypercube):
 def dumper(live, dead, logweights, logZ, logZerr):
     print("Last dead point:", dead[-1])
 
+#| Optional cluster function allow user-defined clustering
+
+def cluster(distance2_matrix):
+    npoints = distance2_matrix.shape[0]
+    clusters = np.ones(npoints, dtype=int)
+
+    # <do some clustering algorithm to assign clusters>
+    # - clusters should be an array of cluster labels for each point
+    # - each cluster should have at least one point
+    # - thus max(clusters) should be the number of clusters
+    # - work with the above numpy integer array
+
+    return clusters
+
 #| Initialise the settings
 
 settings = PolyChordSettings(nDims, nDerived)
@@ -48,7 +63,7 @@ settings.read_resume = False
 
 #| Run PolyChord
 
-output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
+output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper, cluster)
 
 #| Create a paramnames file
 
