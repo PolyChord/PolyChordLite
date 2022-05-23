@@ -12,8 +12,12 @@ def default_dumper(live, dead, logweights, logZ, logZerr):
     pass
 
 
+def default_cluster(distance2_matrix):
+    return np.zeros(distance2_matrix.shape[0])
+
+
 def run_polychord(loglikelihood, nDims, nDerived, settings,
-                  prior=default_prior, dumper=default_dumper):
+                  prior=default_prior, dumper=default_dumper,cluster=default_cluster):
     """
     Runs PolyChord.
 
@@ -102,6 +106,23 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         logZerr: float
             The current log-evidence error estimate
 
+    cluster: function
+        This function clusters a subset of the live points.
+        (Default: Use the native KNN clustering by returning zeros )
+
+        Parameters
+        ----------
+        distance2_matrix: numpy.array
+            squared distances between points. Shape (nPoints, nPoints)
+
+        Returns
+        -------
+        cluster_list: array-like
+            cluster labels.  Must start from 1. All clusters must have at least
+            one point, so that max(cluster_list) gives the number of clusters
+            found.  Length nPoints.
+
+
     Returns
     -------
     None. (in Python)
@@ -176,10 +197,14 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     def wrap_prior(cube, theta):
         theta[:] = prior(cube)
 
+    def wrap_cluster(distance2_matrix, cluster_list):
+        cluster_list[:] = cluster(distance2_matrix)
+
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,
                      wrap_prior,
                      dumper,
+                     wrap_cluster,
                      nDims,
                      nDerived,
                      settings.nlive,
