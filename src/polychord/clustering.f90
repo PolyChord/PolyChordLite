@@ -12,7 +12,7 @@ module KNN_clustering
     !!
     !! The algorithm computes the k nearest neihbor sets from the similarity
     !! matrix, and then tests
-    recursive function NN_clustering(distance2_matrix,num_clusters) result(cluster_list)
+    recursive function NN_clustering(distance2_matrix) result(cluster_list)
         use utils_module, only: relabel
         use abort_module, only: halt_program
         implicit none
@@ -20,7 +20,6 @@ module KNN_clustering
         real(dp), intent(in), dimension(:,:) :: distance2_matrix
 
         integer, dimension(size(distance2_matrix,1)) :: cluster_list
-        integer, intent(out):: num_clusters
 
         integer :: num_clusters_new
 
@@ -34,6 +33,7 @@ module KNN_clustering
         integer :: n
         integer :: i_cluster
         integer :: i_point
+        integer :: num_clusters
 
         integer, allocatable, dimension(:) :: points
 
@@ -84,7 +84,8 @@ module KNN_clustering
                 call get_indices_of_cluster(cluster_list,points,i_cluster)
 
                 ! Call this function again on the similarity sub matrix, adding an offset
-                cluster_list(points) = num_clusters + NN_clustering(distance2_matrix(points,points),num_clusters_new)
+                cluster_list(points) = num_clusters + NN_clustering(distance2_matrix(points,points))
+                num_clusters_new = maxval(cluster_list(points))-num_clusters
 
                 ! If we didn't find any new clusters, then move on to the next one
                 if(num_clusters_new==1) i_cluster=i_cluster+1
@@ -250,7 +251,7 @@ module cluster_module
     implicit none
     contains
 
-    function do_clustering(settings,RTI,sub_dimensions)
+    function do_clustering(settings,RTI,cluster,sub_dimensions)
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info,add_cluster
         use calculate_module,  only: calculate_similarity_matrix
@@ -300,7 +301,8 @@ module cluster_module
                         calculate_similarity_matrix(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
                 end if
 
-                clusters(:nlive) = NN_clustering(distance2_matrix(:nlive,:nlive),num_clusters)
+                clusters(:nlive) = NN_clustering(distance2_matrix(:nlive,:nlive))
+                num_clusters = maxval(clusters(:nlive))
 
                 ! Do clustering on this 
                 if ( num_clusters>1 ) then
