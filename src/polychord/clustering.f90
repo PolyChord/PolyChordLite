@@ -278,7 +278,7 @@ module cluster_module
 
 
         ! Similarity matrix
-        real(dp),dimension(sum(RTI%nlive),sum(RTI%nlive)) :: position_matrix
+        real(dp),dimension(settings%nDims,sum(RTI%nlive)) :: position_matrix
         integer,dimension(sum(RTI%nlive)) :: clusters
 
         integer :: num_clusters
@@ -286,6 +286,7 @@ module cluster_module
 
         ! number of live points
         integer :: nlive
+        ! number of dimensions
         integer :: nDims
 
         integer :: i_cluster
@@ -307,19 +308,19 @@ module cluster_module
             if(nlive>2) then 
                 ! get the position matrix for this cluster
                 if(present(sub_dimensions)) then
-                    position_matrix(:nlive,:nDims) =&
+                    position_matrix(:nDims, :nlive) =&
                         RTI%live(sub_dimensions,:nlive,i_cluster)
                 else 
-                    position_matrix(:nlive,:nDims) =&
+                    position_matrix(:nDims, :nlive) =&
                         RTI%live(settings%h0:settings%h1,:nlive,i_cluster)
                 end if
 
-                clusters(:nlive) = cluster(position_matrix(:nlive,:nDims))
+                clusters(:nlive) = cluster(position_matrix(:nDims, :nlive))
 
                 ! default to KNN clustering
                 if (any(clusters(:nlive)<=0)) then
                     clusters(:nlive) = NN_clustering(&
-                        calculate_similarity_matrix(position_matrix(:nlive, :nDims)))
+                        calculate_similarity_matrix(position_matrix(:nDims, :nlive)))
                 end if
                 num_clusters = maxval(clusters(:nlive))
 

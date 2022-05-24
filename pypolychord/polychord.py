@@ -113,7 +113,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         Parameters
         ----------
         position_matrix: numpy.array
-            positions of points. Shape (nPoints, nDims)
+            positions of points. Shape (nDims, nPoints)
 
         Returns
         -------
