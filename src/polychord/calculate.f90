@@ -91,7 +91,7 @@ module calculate_module
     !! The final term can be written as a data_array^T data_array, and the first
     !! two are easy to write. We can therefore calculate this in two lines with
     !! instrisic functions
-    function calculate_similarity_matrix(data_array) result(similarity_matrix)
+    function calculate_distance_matrix(data_array) result(similarity_matrix)
 
         real(dp), intent(in), dimension(:,:) :: data_array
 
@@ -106,7 +106,7 @@ module calculate_module
 
         similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(data_array),data_array )
 
-    end function calculate_similarity_matrix
+    end function calculate_distance_matrix
 
 
 
