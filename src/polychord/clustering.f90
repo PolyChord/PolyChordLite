@@ -254,7 +254,7 @@ module cluster_module
     function do_clustering(settings,RTI,cluster,sub_dimensions)
         use settings_module,   only: program_settings
         use run_time_module,   only: run_time_info,add_cluster
-        use calculate_module,  only: calculate_similarity_matrix
+        use calculate_module,  only: calculate_distance2_matrix
         use KNN_clustering,    only: NN_clustering
         implicit none
 
@@ -320,7 +320,7 @@ module cluster_module
                 ! default to KNN clustering
                 if (any(clusters(:nlive)<=0)) then
                     clusters(:nlive) = NN_clustering(&
-                        calculate_similarity_matrix(position_matrix(:nDims, :nlive)))
+                        calculate_distance2_matrix(position_matrix(:nDims, :nlive)))
                 end if
                 num_clusters = maxval(clusters(:nlive))
 
