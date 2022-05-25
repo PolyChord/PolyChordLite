@@ -13,7 +13,7 @@ def default_dumper(live, dead, logweights, logZ, logZerr):
 
 
 def default_cluster(position_matrix):
-    return np.zeros(position_matrix.shape[0],dtype=int)
+    return np.zeros(position_matrix.shape[1],dtype=int)
 
 
 def run_polychord(loglikelihood, nDims, nDerived, settings,
