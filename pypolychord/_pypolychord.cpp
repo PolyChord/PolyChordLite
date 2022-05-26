@@ -117,10 +117,10 @@ void dumper(int ndead, int nlive, int npars, double* live, double* dead, double*
 /* Callback to the cluster */
 static PyObject *python_cluster = NULL;
 
-void cluster(double* position_matrix, int* cluster_list, int n)
+void cluster(double* position_matrix, int* cluster_list, int m, int n)
 {
     /* create a python version of position_matrix */
-    npy_intp shape[] = {n,n};            
+    npy_intp shape[] = {m,n};            
     PyObject *array_position_matrix = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, position_matrix);
     if (array_position_matrix ==NULL) throw PythonException();
     PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_position_matrix), NPY_ARRAY_WRITEABLE);
