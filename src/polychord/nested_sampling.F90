@@ -60,7 +60,7 @@ module nested_sampling_module
             function cluster(points) result(cluster_list)
                 import :: dp
                 real(dp), intent(in), dimension(:,:) :: points
-                integer, dimension(size(points,1)) :: cluster_list
+                integer, dimension(size(points,2)) :: cluster_list
             end function
         end interface
 
