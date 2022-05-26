@@ -42,7 +42,7 @@ def dumper(live, dead, logweights, logZ, logZerr):
 #| Optional cluster function allow user-defined clustering
 
 def cluster(points):
-    npoints = points.shape[0]
+    npoints = points.shape[1]
     clusters = np.ones(npoints, dtype=int)
 
     # <do some clustering algorithm to assign clusters>
