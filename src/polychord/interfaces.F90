@@ -50,7 +50,7 @@ contains
             function cluster(distance2_matrix) result(cluster_list)
                 import :: dp
                 real(dp), intent(in), dimension(:,:) :: distance2_matrix
-                integer, dimension(size(distance2_matrix,1)) :: cluster_list
+                integer, dimension(size(distance2_matrix,2)) :: cluster_list
             end function
         end interface
 
@@ -132,7 +132,7 @@ contains
     contains
         function cluster(distance2_matrix) result(cluster_list)
             real(dp), intent(in), dimension(:,:) :: distance2_matrix
-            integer, dimension(size(distance2_matrix,1)) :: cluster_list
+            integer, dimension(size(distance2_matrix,2)) :: cluster_list
             cluster_list = 0
         end function
     end subroutine run_polychord_no_cluster
@@ -390,10 +390,10 @@ contains
             end subroutine c_dumper
         end interface
         interface
-            subroutine c_cluster(distance2_matrix,cluster_list,n) bind(c)
+            subroutine c_cluster(distance2_matrix,cluster_list,m,n) bind(c)
                 use iso_c_binding
-                integer(c_int), intent(in), value :: n
-                real(c_double), intent(in),  dimension(n,n) :: distance2_matrix
+                integer(c_int), intent(in), value :: m, n
+                real(c_double), intent(in),  dimension(m,n) :: distance2_matrix
                 integer(c_int), intent(out), dimension(n) :: cluster_list
             end subroutine c_cluster
         end interface
@@ -564,14 +564,15 @@ contains
         function cluster(distance2_matrix) result(cluster_list)
             implicit none
             real(dp), intent(in), dimension(:,:) :: distance2_matrix
-            integer, dimension(size(distance2_matrix,1)) :: cluster_list
+            integer, dimension(size(distance2_matrix,2)) :: cluster_list
 
-            integer(c_int) :: c_n
+            integer(c_int) :: c_n, m !m=ndims except I'm scared of the scope
             real(c_double),  dimension(size(distance2_matrix,1),size(distance2_matrix,2)) :: c_distance2_matrix
-            integer(c_int), dimension(size(distance2_matrix,1)) :: c_cluster_list
+            integer(c_int), dimension(size(distance2_matrix,2)) :: c_cluster_list
+            m = size(distance2_matrix,1)
             c_n = size(c_cluster_list)
             c_distance2_matrix = distance2_matrix
-            call f_cluster_ptr(c_distance2_matrix,c_cluster_list,c_n)
+            call f_cluster_ptr(c_distance2_matrix,c_cluster_list,m,c_n)
             cluster_list = c_cluster_list
 
         end function cluster
