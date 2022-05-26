@@ -50,7 +50,7 @@ contains
             function cluster(points) result(cluster_list)
                 import :: dp
                 real(dp), intent(in), dimension(:,:) :: points
-                integer, dimension(size(points,2)) :: cluster_list
+                integer, dimension(size(points,1)) :: cluster_list
             end function
         end interface
 
@@ -132,7 +132,7 @@ contains
     contains
         function cluster(points) result(cluster_list)
             real(dp), intent(in), dimension(:,:) :: points
-            integer, dimension(size(points,2)) :: cluster_list
+            integer, dimension(size(points,1)) :: cluster_list
             cluster_list = 0
         end function
     end subroutine run_polychord_no_cluster
@@ -390,11 +390,11 @@ contains
             end subroutine c_dumper
         end interface
         interface
-            subroutine c_cluster(points,cluster_list,m,n) bind(c)
+            subroutine c_cluster(points,cluster_list,nDims,nPoints) bind(c)
                 use iso_c_binding
-                integer(c_int), intent(in), value :: m, n
-                real(c_double), intent(in),  dimension(m,n) :: points
-                integer(c_int), intent(out), dimension(n) :: cluster_list
+                integer(c_int), intent(in), value :: nDims, nPoints
+                real(c_double), intent(in),  dimension(nPoints,nDims) :: points
+                integer(c_int), intent(out), dimension(nPoints) :: cluster_list
             end subroutine c_cluster
         end interface
 
@@ -564,12 +564,12 @@ contains
         function cluster(points) result(cluster_list)
             implicit none
             real(dp), intent(in), dimension(:,:) :: points
-            integer, dimension(size(points,2)) :: cluster_list
+            integer, dimension(size(points,1)) :: cluster_list
 
             integer(c_int) :: c_npoints, c_ndims
             real(c_double),  dimension(size(points,1),size(points,2)) :: c_points
-            integer(c_int), dimension(size(points,2)) :: c_cluster_list
-            c_ndims = size(points,1)
+            integer(c_int), dimension(size(points,1)) :: c_cluster_list
+            c_ndims = size(points,2)
             c_npoints = size(c_cluster_list)
             c_points = points
             call f_cluster_ptr(c_points,c_cluster_list,c_ndims,c_npoints)

@@ -120,7 +120,7 @@ static PyObject *python_cluster = NULL;
 void cluster(double* points, int* cluster_list, int nDims, int nPoints)
 {
     /* create a python version of points */
-    npy_intp shape[] = {nDims,nPoints};            
+    npy_intp shape[] = {nPoints,nDims};            
     PyObject *array_points = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, points);
     if (array_points ==NULL) throw PythonException();
     PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_points), NPY_ARRAY_WRITEABLE);

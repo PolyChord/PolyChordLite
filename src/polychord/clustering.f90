@@ -269,7 +269,7 @@ module cluster_module
             function cluster(points) result(cluster_list)
                 import :: dp
                 real(dp), intent(in), dimension(:,:) :: points
-                integer, dimension(size(points,2)) :: cluster_list
+                integer, dimension(size(points,1)) :: cluster_list
             end function
         end interface
 
@@ -308,19 +308,19 @@ module cluster_module
             if(nlive>2) then 
                 ! get the position matrix for this cluster
                 if(present(sub_dimensions)) then
-                    points(:nDims, :nlive) =&
-                        RTI%live(sub_dimensions,:nlive,i_cluster)
+                    points(:nlive, :nDims) =&
+                        transpose(RTI%live(sub_dimensions,:nlive,i_cluster))
                 else 
-                    points(:nDims, :nlive) =&
-                        RTI%live(settings%h0:settings%h1,:nlive,i_cluster)
+                    points(:nlive, :nDims) =&
+                        transpose(RTI%live(settings%h0:settings%h1,:nlive,i_cluster))
                 end if
 
-                clusters(:nlive) = cluster(points(:nDims, :nlive))
+                clusters(:nlive) = cluster(points(:nlive, :nDims))
 
                 ! default to KNN clustering
                 if (any(clusters(:nlive)<=0)) then
                     clusters(:nlive) = NN_clustering(&
-                        calculate_distance2_matrix(points(:nDims, :nlive)))
+                        calculate_distance2_matrix(points(:nlive, :nDims)))
                 end if
                 num_clusters = maxval(clusters(:nlive))
 
