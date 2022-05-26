@@ -200,6 +200,9 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     def wrap_cluster(position_matrix, cluster_list):
         cluster_list[:] = cluster(position_matrix)
 
+    settings.grade_dims = [int(d) for d in settings.grade_dims]
+    settings.nlives = {float(logL):int(nlive) for logL, nlive in settings.nlives.items()}
+
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,
                      wrap_prior,
