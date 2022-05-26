@@ -117,24 +117,24 @@ void dumper(int ndead, int nlive, int npars, double* live, double* dead, double*
 /* Callback to the cluster */
 static PyObject *python_cluster = NULL;
 
-void cluster(double* position_matrix, int* cluster_list, int m, int n)
+void cluster(double* points, int* cluster_list, int nDims, int nPoints)
 {
-    /* create a python version of position_matrix */
-    npy_intp shape[] = {m,n};            
-    PyObject *array_position_matrix = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, position_matrix);
-    if (array_position_matrix ==NULL) throw PythonException();
-    PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_position_matrix), NPY_ARRAY_WRITEABLE);
+    /* create a python version of points */
+    npy_intp shape[] = {nDims,nPoints};            
+    PyObject *array_points = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, points);
+    if (array_points ==NULL) throw PythonException();
+    PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_points), NPY_ARRAY_WRITEABLE);
 
     /* create a python version of cluster_list */
-    npy_intp shape1[] = {n};            
+    npy_intp shape1[] = {nPoints};            
     PyObject *array_cluster_list = PyArray_SimpleNewFromData(1, shape1, NPY_INT, cluster_list);
-    if (array_cluster_list==NULL) {Py_DECREF(array_position_matrix); throw PythonException();}
+    if (array_cluster_list==NULL) {Py_DECREF(array_points); throw PythonException();}
 
     /* Compute cluster_list from the cluster */
-    PyObject_CallFunctionObjArgs(python_cluster,array_position_matrix,array_cluster_list,NULL);
+    PyObject_CallFunctionObjArgs(python_cluster,array_points,array_cluster_list,NULL);
 
     /* Garbage collect */
-    Py_DECREF(array_cluster_list); Py_DECREF(array_position_matrix);
+    Py_DECREF(array_cluster_list); Py_DECREF(array_points);
 }
 
 

@@ -57,10 +57,10 @@ module nested_sampling_module
             end subroutine dumper
         end interface
         interface
-            function cluster(distance2_matrix) result(cluster_list)
+            function cluster(points) result(cluster_list)
                 import :: dp
-                real(dp), intent(in), dimension(:,:) :: distance2_matrix
-                integer, dimension(size(distance2_matrix,1)) :: cluster_list
+                real(dp), intent(in), dimension(:,:) :: points
+                integer, dimension(size(points,1)) :: cluster_list
             end function
         end interface
 

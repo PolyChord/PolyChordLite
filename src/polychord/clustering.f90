@@ -266,10 +266,10 @@ module cluster_module
         integer,dimension(:),optional,intent(in) :: sub_dimensions
 
         interface
-            function cluster(position_matrix) result(cluster_list)
+            function cluster(points) result(cluster_list)
                 import :: dp
-                real(dp), intent(in), dimension(:,:) :: position_matrix
-                integer, dimension(size(position_matrix,1)) :: cluster_list
+                real(dp), intent(in), dimension(:,:) :: points
+                integer, dimension(size(points,1)) :: cluster_list
             end function
         end interface
 
@@ -278,7 +278,7 @@ module cluster_module
 
 
         ! Similarity matrix
-        real(dp),dimension(settings%nDims,sum(RTI%nlive)) :: position_matrix
+        real(dp),dimension(settings%nDims,sum(RTI%nlive)) :: points
         integer,dimension(sum(RTI%nlive)) :: clusters
 
         integer :: num_clusters
@@ -308,19 +308,19 @@ module cluster_module
             if(nlive>2) then 
                 ! get the position matrix for this cluster
                 if(present(sub_dimensions)) then
-                    position_matrix(:nDims, :nlive) =&
+                    points(:nDims, :nlive) =&
                         RTI%live(sub_dimensions,:nlive,i_cluster)
                 else 
-                    position_matrix(:nDims, :nlive) =&
+                    points(:nDims, :nlive) =&
                         RTI%live(settings%h0:settings%h1,:nlive,i_cluster)
                 end if
 
-                clusters(:nlive) = cluster(position_matrix(:nDims, :nlive))
+                clusters(:nlive) = cluster(points(:nDims, :nlive))
 
                 ! default to KNN clustering
                 if (any(clusters(:nlive)<=0)) then
                     clusters(:nlive) = NN_clustering(&
-                        calculate_distance2_matrix(position_matrix(:nDims, :nlive)))
+                        calculate_distance2_matrix(points(:nDims, :nlive)))
                 end if
                 num_clusters = maxval(clusters(:nlive))
 

@@ -41,8 +41,8 @@ def dumper(live, dead, logweights, logZ, logZerr):
 
 #| Optional cluster function allow user-defined clustering
 
-def cluster(position_matrix):
-    npoints = position_matrix.shape[1]
+def cluster(points):
+    npoints = points.shape[1]
     clusters = np.ones(npoints, dtype=int)
 
     # <do some clustering algorithm to assign clusters>

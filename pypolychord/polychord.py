@@ -12,8 +12,8 @@ def default_dumper(live, dead, logweights, logZ, logZerr):
     pass
 
 
-def default_cluster(position_matrix):
-    return np.zeros(position_matrix.shape[1],dtype=int)
+def default_cluster(points):
+    return np.zeros(points.shape[1],dtype=int)
 
 
 def run_polychord(loglikelihood, nDims, nDerived, settings,
@@ -112,7 +112,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
 
         Parameters
         ----------
-        position_matrix: numpy.array
+        points: numpy.array
             positions of points. Shape (nDims, nPoints)
 
         Returns
@@ -197,8 +197,8 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     def wrap_prior(cube, theta):
         theta[:] = prior(cube)
 
-    def wrap_cluster(position_matrix, cluster_list):
-        cluster_list[:] = cluster(position_matrix)
+    def wrap_cluster(points, cluster_list):
+        cluster_list[:] = cluster(points)
 
     settings.grade_dims = [int(d) for d in settings.grade_dims]
     settings.nlives = {float(logL):int(nlive) for logL, nlive in settings.nlives.items()}
