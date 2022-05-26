@@ -79,7 +79,7 @@ module calculate_module
     end function calculate_posterior_point
 
 
-    !> This function computes the similarity matrix of an array of data.
+    !> This function computes the distance^2 matrix of an array of data.
     !!
     !! Assume that the data_array can be considered an indexed array of vectors
     !! V = ( v_i : i=1,n )

@@ -228,5 +228,5 @@ void default_prior(double* cube, double* theta, int nDims)
 
 void default_dumper(int,int,int,double*,double*,double*,double,double) {}
 
-void default_cluster(double* points, int* cluster_list, int m, int n)
-{ for(int i=0;i<n;i++) cluster_list[i] = 0; }
+void default_cluster(double* points, int* cluster_list, int nDims, int nPoints)
+{ for(int i=0;i<nPoints;i++) cluster_list[i] = 0; }

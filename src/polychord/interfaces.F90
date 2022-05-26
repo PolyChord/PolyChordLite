@@ -390,11 +390,11 @@ contains
             end subroutine c_dumper
         end interface
         interface
-            subroutine c_cluster(points,cluster_list,m,n) bind(c)
+            subroutine c_cluster(points,cluster_list,nDims,nPoints) bind(c)
                 use iso_c_binding
-                integer(c_int), intent(in), value :: m, n
-                real(c_double), intent(in),  dimension(m,n) :: points
-                integer(c_int), intent(out), dimension(n) :: cluster_list
+                integer(c_int), intent(in), value :: nDims, nPoints
+                real(c_double), intent(in),  dimension(nDims,nPoints) :: points
+                integer(c_int), intent(out), dimension(nPoints) :: cluster_list
             end subroutine c_cluster
         end interface
 
