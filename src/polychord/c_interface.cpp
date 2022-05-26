@@ -46,14 +46,14 @@ void run_polychord(
         double (*c_loglikelihood_ptr)(double*,int,double*,int), 
         void (*c_prior_ptr)(double*,double*,int), 
         void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
-        void (*c_cluster_ptr)(double*,int*,int),
+        void (*c_cluster_ptr)(double*,int*,int,int),
         Settings s, MPI_Comm& comm)
 #else
 void run_polychord( 
         double (*c_loglikelihood_ptr)(double*,int,double*,int), 
         void (*c_prior_ptr)(double*,double*,int), 
         void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
-        void (*c_cluster_ptr)(double*,int*,int),
+        void (*c_cluster_ptr)(double*,int*,int,int),
         Settings s)
 #endif
 {
@@ -125,7 +125,7 @@ void run_polychord(
         double (*c_loglikelihood_ptr)(double*,int,double*,int), 
         void (*c_prior_ptr)(double*,double*,int), 
         void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
-        void (*c_cluster_ptr)(double*,int*,int), 
+        void (*c_cluster_ptr)(double*,int*,int,int), 
         Settings s)
 {
 	int flag;
@@ -228,5 +228,5 @@ void default_prior(double* cube, double* theta, int nDims)
 
 void default_dumper(int,int,int,double*,double*,double*,double,double) {}
 
-void default_cluster(double* distance2_matrix, int* cluster_list, int n)
+void default_cluster(double* distance2_matrix, int* cluster_list, int m, int n)
 { for(int i=0;i<n;i++) cluster_list[i] = 0; }
