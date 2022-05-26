@@ -47,7 +47,7 @@ void run_polychord(
         double (*c_loglikelihood_ptr)(double*,int,double*,int), 
         void (*c_prior_ptr)(double*,double*,int), 
         void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
-        void (*c_cluster_ptr)(double*,int*,int), 
+        void (*c_cluster_ptr)(double*,int*,int,int), 
         Settings s);
 void run_polychord( 
         double (*c_loglikelihood_ptr)(double*,int,double*,int), 
@@ -75,7 +75,7 @@ void run_polychord(
         double (*loglikelihood)(double*,int,double*,int), 
         void (*prior)(double*,double*,int), 
         void (*dumper)(int,int,int,double*,double*,double*,double,double), 
-        void (*c_cluster_ptr)(double*,int*,int), 
+        void (*c_cluster_ptr)(double*,int*,int,int), 
         Settings, MPI_Comm &comm);
 void run_polychord( 
         double (*loglikelihood)(double*,int,double*,int), 
@@ -102,4 +102,4 @@ void run_polychord(
 double default_loglikelihood(double*,int,double*,int); 
 void default_prior(double*,double*,int); 
 void default_dumper(int,int,int,double*,double*,double*,double,double);
-void default_cluster(double*,int*,int);
+void default_cluster(double*,int*,int,int);
