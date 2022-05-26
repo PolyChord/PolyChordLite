@@ -6,13 +6,13 @@ module interfaces_module
     include 'mpif.h'
 #endif
     interface run_polychord
-        module procedure run_polychord_full, run_polychord_no_prior, run_polychord_no_dumper, run_polychord_no_prior_no_dumper, run_polychord_ini
+        module procedure run_polychord_full, run_polychord_no_cluster, run_polychord_no_prior, run_polychord_no_dumper, run_polychord_no_prior_no_dumper, run_polychord_ini
     end interface run_polychord
 
 contains
 
 
-    subroutine run_polychord_full(loglikelihood, prior_transform, dumper, settings_in, mpi_communicator)
+    subroutine run_polychord_full(loglikelihood, prior_transform, dumper, cluster, settings_in, mpi_communicator)
         use settings_module,          only: program_settings,initialise_settings
         use random_module,            only: initialise_random
         use nested_sampling_module,   only: NestedSampling
@@ -46,6 +46,13 @@ contains
                 real(dp), intent(in) :: logZ, logZerr
             end subroutine dumper
         end interface
+        interface
+            function cluster(points) result(cluster_list)
+                import :: dp
+                real(dp), intent(in), dimension(:,:) :: points
+                integer, dimension(size(points,1)) :: cluster_list
+            end function
+        end interface
 
         type(program_settings),intent(in)    :: settings_in
         type(program_settings)               :: settings 
@@ -74,16 +81,62 @@ contains
         settings = settings_in
         call initialise_settings(settings)   
 #ifdef MPI
-        output_info = NestedSampling(loglikelihood,prior_transform,dumper,settings,comm) 
+        output_info = NestedSampling(loglikelihood,prior_transform,dumper,cluster,settings,comm) 
         call finalise_mpi
 #else
-        output_info = NestedSampling(loglikelihood,prior_transform,dumper,settings,0) 
+        output_info = NestedSampling(loglikelihood,prior_transform,dumper,cluster,settings,0) 
 #endif
 
     end subroutine run_polychord_full
 
 
     !===================== INTERFACE ===============================================
+    subroutine run_polychord_no_cluster(loglikelihood,prior_transform,dumper,settings,mpi_communicator)
+        use settings_module,          only: program_settings
+        implicit none
+        interface
+            function loglikelihood(theta,phi)
+                import :: dp
+                real(dp), intent(in),  dimension(:) :: theta
+                real(dp), intent(out),  dimension(:) :: phi
+                real(dp) :: loglikelihood
+            end function loglikelihood
+        end interface
+        interface
+            function prior_transform(cube) result(theta)
+                import :: dp
+                real(dp), intent(in), dimension(:) :: cube
+                real(dp), dimension(size(cube))    :: theta
+            end function prior_transform
+        end interface
+        interface
+            subroutine dumper(live, dead, logweights, logZ, logZerr)
+                import :: dp
+                real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
+                real(dp), intent(in) :: logZ, logZerr
+            end subroutine dumper
+        end interface
+        type(program_settings),intent(in)    :: settings  ! The program settings 
+        integer, intent(in), optional :: mpi_communicator
+        integer :: comm
+#ifdef MPI
+        if (present(mpi_communicator)) then
+            comm = mpi_communicator
+        else 
+            comm = MPI_COMM_WORLD
+        end if
+#else
+            comm = 0
+#endif
+        call run_polychord(loglikelihood,prior_transform,dumper,cluster,settings,comm)
+    contains
+        function cluster(points) result(cluster_list)
+            real(dp), intent(in), dimension(:,:) :: points
+            integer, dimension(size(points,1)) :: cluster_list
+            cluster_list = 0
+        end function
+    end subroutine run_polychord_no_cluster
+
     subroutine run_polychord_no_prior(loglikelihood,dumper,settings,mpi_communicator)
         use settings_module,          only: program_settings
         implicit none
@@ -260,6 +313,7 @@ contains
             c_loglikelihood_ptr,&
             c_prior_ptr,&
             c_dumper_ptr,&
+            c_cluster_ptr,&
             nlive,&
             num_repeats,&
             nprior,&
@@ -335,10 +389,19 @@ contains
                 real(c_double), intent(in), value :: logZ, logZerr
             end subroutine c_dumper
         end interface
+        interface
+            subroutine c_cluster(points,cluster_list,nDims,nPoints) bind(c)
+                use iso_c_binding
+                integer(c_int), intent(in), value :: nDims, nPoints
+                real(c_double), intent(in),  dimension(nPoints,nDims) :: points
+                integer(c_int), intent(out), dimension(nPoints) :: cluster_list
+            end subroutine c_cluster
+        end interface
 
         type(c_funptr), intent(in), value   :: c_loglikelihood_ptr
         type(c_funptr), intent(in), value   :: c_prior_ptr
         type(c_funptr), intent(in), value   :: c_dumper_ptr
+        type(c_funptr), intent(in), value   :: c_cluster_ptr
         integer(c_int), intent(in), value   :: nlive
         integer(c_int), intent(in), value   :: num_repeats
         integer(c_int), intent(in), value   :: nprior
@@ -383,7 +446,8 @@ contains
 
         procedure(c_loglikelihood), pointer :: f_loglikelihood_ptr
         procedure(c_prior), pointer         :: f_prior_ptr
-        procedure(c_dumper), pointer         :: f_dumper_ptr
+        procedure(c_cluster), pointer       :: f_cluster_ptr
+        procedure(c_dumper), pointer        :: f_dumper_ptr
 
         integer, intent(in) :: comm
 
@@ -434,9 +498,10 @@ contains
 
         call c_f_procpointer(c_loglikelihood_ptr, f_loglikelihood_ptr)
         call c_f_procpointer(c_prior_ptr, f_prior_ptr)
+        call c_f_procpointer(c_cluster_ptr, f_cluster_ptr)
         call c_f_procpointer(c_dumper_ptr, f_dumper_ptr)
 
-        call run_polychord(loglikelihood,prior_transform,dumper,settings,comm)
+        call run_polychord(loglikelihood,prior_transform,dumper,cluster,settings,comm)
 
     contains
         function loglikelihood(theta,phi)
@@ -495,6 +560,22 @@ contains
             c_logZerr = logZerr
             call f_dumper_ptr(c_ndead, c_nlive, c_npars, c_live, c_dead, c_logweights, c_logZ, c_logZerr)
         end subroutine dumper
+
+        function cluster(points) result(cluster_list)
+            implicit none
+            real(dp), intent(in), dimension(:,:) :: points
+            integer, dimension(size(points,1)) :: cluster_list
+
+            integer(c_int) :: c_npoints, c_ndims
+            real(c_double),  dimension(size(points,1),size(points,2)) :: c_points
+            integer(c_int), dimension(size(points,1)) :: c_cluster_list
+            c_ndims = size(points,2)
+            c_npoints = size(c_cluster_list)
+            c_points = points
+            call f_cluster_ptr(c_points,c_cluster_list,c_ndims,c_npoints)
+            cluster_list = c_cluster_list
+
+        end function cluster
 
 
     end subroutine polychord_c_interface

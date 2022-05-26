@@ -79,34 +79,34 @@ module calculate_module
     end function calculate_posterior_point
 
 
-    !> This function computes the similarity matrix of an array of data.
+    !> This function computes the distance^2 matrix of an array of data.
     !!
-    !! Assume that the data_array can be considered an indexed array of vectors
+    !! Assume that the points can be considered an indexed array of vectors
     !! V = ( v_i : i=1,n )
     !!
-    !! The similarity matrix can be expressed very neatly as
+    !! The distance^2 matrix can be expressed very neatly as
     !! d_ij = (v_i-v_j) . (v_i-v_j)
     !!      = v_i.v_i + v_j.v_j - 2 v_i.v_j
     !!
-    !! The final term can be written as a data_array^T data_array, and the first
+    !! The final term can be written as a points^T points, and the first
     !! two are easy to write. We can therefore calculate this in two lines with
     !! instrisic functions
-    function calculate_similarity_matrix(data_array) result(similarity_matrix)
+    function calculate_distance2_matrix(points) result(distance2_matrix)
 
-        real(dp), intent(in), dimension(:,:) :: data_array
+        real(dp), intent(in), dimension(:,:) :: points
 
-        real(dp), dimension(size(data_array,2),size(data_array,2)) :: similarity_matrix
+        real(dp), dimension(size(points,1),size(points,1)) ::distance2_matrix 
 
         integer :: i
 
 
-        similarity_matrix = spread( &
-            [ ( dot_product(data_array(:,i),data_array(:,i)), i=1,size(data_array,2) ) ], &
-            dim=2,ncopies=size(data_array,2) )
+        distance2_matrix = spread( &
+            [ ( dot_product(points(i,:),points(i,:)), i=1,size(points,1) ) ], &
+            dim=2,ncopies=size(points,1) )
 
-        similarity_matrix = similarity_matrix + transpose(similarity_matrix) - 2d0 * matmul( transpose(data_array),data_array )
+        distance2_matrix = distance2_matrix + transpose(distance2_matrix) - 2d0 * matmul(points,transpose(points))
 
-    end function calculate_similarity_matrix
+    end function calculate_distance2_matrix
 
 
 

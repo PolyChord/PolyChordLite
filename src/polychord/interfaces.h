@@ -3,6 +3,7 @@ extern "C" void polychord_c_interface(
         double (*)(double*,int,double*,int), 
         void (*)(double*,double*,int), 
         void (*)(int,int,int,double*,double*,double*,double,double), 
+        void (*)(double*,int*,int,int), 
         int,
         int,
         int,

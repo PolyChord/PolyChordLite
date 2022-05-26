@@ -107,11 +107,34 @@ void dumper(int ndead, int nlive, int npars, double* live, double* dead, double*
     PyObject *py_logZerr = Py_BuildValue("d",logZerr);
     if (py_logZerr==NULL) {Py_DECREF(array_live); Py_DECREF(array_dead); Py_DECREF(array_logweights); Py_DECREF(py_logZ); throw PythonException();}
 
-    /* Compute theta from the prior */
+    /* Call dumper */
     PyObject_CallFunctionObjArgs(python_dumper,array_live,array_dead,array_logweights,py_logZ,py_logZerr,NULL);
 
     /* Garbage collect */
     Py_DECREF(array_live); Py_DECREF(array_dead); Py_DECREF(array_logweights); Py_DECREF(py_logZ); Py_DECREF(py_logZerr);
+}
+
+/* Callback to the cluster */
+static PyObject *python_cluster = NULL;
+
+void cluster(double* points, int* cluster_list, int nDims, int nPoints)
+{
+    /* create a python version of points */
+    npy_intp shape[] = {nPoints,nDims};            
+    PyObject *array_points = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, points);
+    if (array_points ==NULL) throw PythonException();
+    PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_points), NPY_ARRAY_WRITEABLE);
+
+    /* create a python version of cluster_list */
+    npy_intp shape1[] = {nPoints};            
+    PyObject *array_cluster_list = PyArray_SimpleNewFromData(1, shape1, NPY_INT, cluster_list);
+    if (array_cluster_list==NULL) {Py_DECREF(array_points); throw PythonException();}
+
+    /* Compute cluster_list from the cluster */
+    PyObject_CallFunctionObjArgs(python_cluster,array_points,array_cluster_list,NULL);
+
+    /* Garbage collect */
+    Py_DECREF(array_cluster_list); Py_DECREF(array_points);
 }
 
 
@@ -120,16 +143,17 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
 {
     Settings S;
 
-    PyObject *temp_logl, *temp_prior, *temp_dumper;
+    PyObject *temp_logl, *temp_prior, *temp_dumper, *temp_cluster;
     PyObject* py_grade_dims, *py_grade_frac, *py_nlives;
     char* base_dir, *file_root;
         
 
     if (!PyArg_ParseTuple(args,
-                "OOOiiiiiiiiddidiiiiiiiiiiidissO!O!O!i:run",
+                "OOOOiiiiiiiiddidiiiiiiiiiiidissO!O!O!i:run",
                 &temp_logl,
                 &temp_prior,
                 &temp_dumper,
+                &temp_cluster,
                 &S.nDims,
                 &S.nDerived,
                 &S.nlive,
@@ -215,11 +239,15 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
     Py_XDECREF(python_dumper);
     python_dumper = temp_dumper;
 
+    Py_XINCREF(temp_cluster);
+    Py_XDECREF(python_cluster);
+    python_cluster = temp_cluster;
+
     /* Run PolyChord */
-    try{ run_polychord(loglikelihood, prior, dumper, S); }
+    try{ run_polychord(loglikelihood, prior, dumper, cluster, S); }
     catch (PythonException& e)
     { 
-        Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);
+        Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);Py_DECREF(python_cluster); 
         return NULL; 
     }
 

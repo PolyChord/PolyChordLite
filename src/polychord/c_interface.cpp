@@ -46,12 +46,14 @@ void run_polychord(
         double (*c_loglikelihood_ptr)(double*,int,double*,int), 
         void (*c_prior_ptr)(double*,double*,int), 
         void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
+        void (*c_cluster_ptr)(double*,int*,int,int),
         Settings s, MPI_Comm& comm)
 #else
 void run_polychord( 
         double (*c_loglikelihood_ptr)(double*,int,double*,int), 
         void (*c_prior_ptr)(double*,double*,int), 
         void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
+        void (*c_cluster_ptr)(double*,int*,int,int),
         Settings s)
 #endif
 {
@@ -74,6 +76,7 @@ void run_polychord(
             c_loglikelihood_ptr, 
             c_prior_ptr, 
             c_dumper_ptr, 
+            c_cluster_ptr, 
             s.nlive, 
             s.num_repeats,
             s.nprior,
@@ -122,6 +125,7 @@ void run_polychord(
         double (*c_loglikelihood_ptr)(double*,int,double*,int), 
         void (*c_prior_ptr)(double*,double*,int), 
         void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
+        void (*c_cluster_ptr)(double*,int*,int,int), 
         Settings s)
 {
 	int flag;
@@ -129,39 +133,51 @@ void run_polychord(
 	if (flag==0) MPI_Init(NULL,NULL);
 	MPI_Comm world_comm;
 	MPI_Comm_dup(MPI_COMM_WORLD,&world_comm);
-	run_polychord(c_loglikelihood_ptr,c_prior_ptr,c_dumper_ptr,s,world_comm);
+	run_polychord(c_loglikelihood_ptr,c_prior_ptr,c_dumper_ptr,c_cluster_ptr,s,world_comm);
 	if (flag==0) MPI_Finalize();
 }
 void run_polychord( 
         double (*loglikelihood)(double*,int,double*,int),
+        void (*prior)(double*,double*,int), 
         void (*dumper)(int,int,int,double*,double*,double*,double,double), 
         Settings S, MPI_Comm &comm)
-{ run_polychord(loglikelihood,default_prior,dumper,S,comm); } 
+{ run_polychord(loglikelihood,prior,dumper,default_cluster,S,comm); } 
+void run_polychord( 
+        double (*loglikelihood)(double*,int,double*,int),
+        void (*dumper)(int,int,int,double*,double*,double*,double,double), 
+        Settings S, MPI_Comm &comm)
+{ run_polychord(loglikelihood,default_prior,dumper,default_cluster,S,comm); } 
 void run_polychord( 
         double (*loglikelihood)(double*,int,double*,int),
         void (*prior)(double*,double*,int),
         Settings S, MPI_Comm &comm)
-{ run_polychord(loglikelihood,prior,default_dumper,S,comm); } 
+{ run_polychord(loglikelihood,prior,default_dumper,default_cluster,S,comm); } 
 void run_polychord(
         double (*loglikelihood)(double*,int,double*,int),
         Settings S, MPI_Comm &comm)
-{ run_polychord(loglikelihood,default_prior,default_dumper,S,comm); } 
+{ run_polychord(loglikelihood,default_prior,default_dumper,default_cluster,S,comm); } 
 #endif
 
 void run_polychord( 
         double (*loglikelihood)(double*,int,double*,int),
+        void (*prior)(double*,double*,int), 
         void (*dumper)(int,int,int,double*,double*,double*,double,double), 
         Settings S)
-{ run_polychord(loglikelihood,default_prior,dumper,S); } 
+{ run_polychord(loglikelihood,prior,dumper,default_cluster,S); } 
+void run_polychord( 
+        double (*loglikelihood)(double*,int,double*,int),
+        void (*dumper)(int,int,int,double*,double*,double*,double,double), 
+        Settings S)
+{ run_polychord(loglikelihood,default_prior,dumper,default_cluster,S); } 
 void run_polychord( 
         double (*loglikelihood)(double*,int,double*,int),
         void (*prior)(double*,double*,int),
         Settings S)
-{ run_polychord(loglikelihood,prior,default_dumper,S); } 
+{ run_polychord(loglikelihood,prior,default_dumper,default_cluster,S); } 
 void run_polychord(
         double (*loglikelihood)(double*,int,double*,int),
         Settings S)
-{ run_polychord(loglikelihood,default_prior,default_dumper,S); } 
+{ run_polychord(loglikelihood,default_prior,default_dumper,default_cluster,S); } 
 
 
 #ifdef USE_MPI
@@ -211,3 +227,6 @@ void default_prior(double* cube, double* theta, int nDims)
 { for(int i=0;i<nDims;i++) theta[i] = cube[i]; }
 
 void default_dumper(int,int,int,double*,double*,double*,double,double) {}
+
+void default_cluster(double* points, int* cluster_list, int nDims, int nPoints)
+{ for(int i=0;i<nPoints;i++) cluster_list[i] = 0; }
