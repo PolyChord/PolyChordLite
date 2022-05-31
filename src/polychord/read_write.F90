@@ -1002,8 +1002,6 @@ module read_write_module
         
         type(program_settings),intent(in)                    :: settings       !> Program settings
 
-        integer :: i
-
         call check_directories(settings)
 
         open(unit=properties_unit,file=trim(properties_file(settings)))
