@@ -5,13 +5,13 @@ module abort_module
     subroutine halt_program(message)
         use utils_module, only: stderr_unit
         implicit none
-#ifdef MPI
+#ifdef USE_MPI
         include 'mpif.h'
 #endif
 
         character(LEN=*), intent(in), optional :: message
 
-#ifdef MPI
+#ifdef USE_MPI
         integer :: errorcode=1
         integer :: mpierror
 #endif
@@ -22,7 +22,7 @@ module abort_module
             write(stderr_unit,'( 20("=") )')
         end if 
 
-#ifdef MPI
+#ifdef USE_MPI
         call MPI_ABORT(MPI_COMM_WORLD,errorcode,mpierror)
 #else
         stop 1

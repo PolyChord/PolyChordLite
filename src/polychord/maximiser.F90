@@ -11,7 +11,7 @@ module maximise_module
         use run_time_module,   only: run_time_info
         use read_write_module,   only: write_max_file, mean
         use chordal_module, only: generate_nhats, slice_sample
-#ifdef MPI
+#ifdef USE_MPI
         use mpi_module, only: mpi_bundle,is_root, throw_point, catch_point, mpi_synchronise, throw_seed, catch_seed
 #else
         use mpi_module, only: mpi_bundle,is_root
@@ -70,7 +70,7 @@ module maximise_module
         use read_write_module,   only: write_max_file, mean
         use chordal_module, only: generate_nhats, slice_sample
         use nelder_mead_module, only: nelder_mead
-#ifdef MPI
+#ifdef USE_MPI
         use mpi_module, only: mpi_bundle,is_root, throw_point, catch_point, mpi_synchronise, throw_seed, catch_seed
 #else
         use mpi_module, only: mpi_bundle,is_root

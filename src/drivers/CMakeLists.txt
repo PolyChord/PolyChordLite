@@ -1,0 +1,1 @@
+project(polychord_examples)

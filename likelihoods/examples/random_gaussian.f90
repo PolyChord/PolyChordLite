@@ -32,7 +32,7 @@ module loglikelihood_module
 
 
     subroutine setup_loglikelihood(settings)
-#ifdef MPI
+#ifdef USE_MPI
         use mpi_module
 #endif
         use settings_module,   only: program_settings
@@ -54,7 +54,7 @@ module loglikelihood_module
         ! Generate a random covariance matrix, its inverse and logdet on the root node
         call random_inverse_covmat(invcovmat,logdetcovmat,sigma,nDims)
 
-#ifdef MPI
+#ifdef USE_MPI
         call initialise_mpi(settings%feedback)
         ! Broadcast the covariance matrix and normalisation data to the
         ! rest of the nodes

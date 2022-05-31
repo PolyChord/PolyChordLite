@@ -4,7 +4,7 @@
 module random_module
     use utils_module, only: dp
 
-#ifdef MPI
+#ifdef USE_MPI
     use mpi_module
 #endif
 
@@ -32,7 +32,7 @@ module random_module
         integer, optional, intent(in) :: seed_input
 
         integer,allocatable,dimension(:) :: seed ! vector to be passed to random_seed
-#ifdef MPI
+#ifdef USE_MPI
         integer :: mpierror
 #endif
 
@@ -46,7 +46,7 @@ module random_module
 
 
         ! Get the global ranking
-#ifdef MPI
+#ifdef USE_MPI
         call MPI_COMM_RANK(mpi_communicator, myrank, mpierror)
 #else
         myrank = 0
@@ -76,7 +76,7 @@ module random_module
 
         end if
 
-#ifdef MPI
+#ifdef USE_MPI
         ! Broadcast the system time to all nodes
         call MPI_BCAST(t,1,MPI_INTEGER,0,mpi_communicator,mpierror)      
 
