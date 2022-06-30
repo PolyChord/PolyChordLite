@@ -43,7 +43,7 @@ def dumper(live, dead, logweights, logZ, logZerr):
 
 def cluster(points):
     npoints = points.shape[0]
-    clusters = np.ones(npoints, dtype=int)
+    clusters = np.full(npoints, -1, dtype=int)
 
     # <do some clustering algorithm to assign clusters>
     # - clusters should be an array of cluster labels for each point
