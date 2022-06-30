@@ -4,13 +4,13 @@ module KNN_clustering
     implicit none
     contains
 
-    !> This function returns a clustering from a similarity matrix based on
+    !> This function returns a clustering from a distance^2 matrix based on
     !! 'nearest neighbour' clustering.
     !!
     !! Points belong to the same cluster if they are in either of each others k
     !! nearest neighbour sets. 
     !!
-    !! The algorithm computes the k nearest neighbor sets from the similarity
+    !! The algorithm computes the k nearest neighbor sets from the distance^2
     !! matrix, and then tests
     recursive function NN_clustering(distance2_matrix) result(cluster_list)
         use utils_module, only: relabel
@@ -83,7 +83,7 @@ module KNN_clustering
                 ! Get the indices of cluster i_cluster
                 call get_indices_of_cluster(cluster_list,points,i_cluster)
 
-                ! Call this function again on the similarity sub matrix, adding an offset
+                ! Call this function again on the distance^2 sub matrix, adding an offset
                 cluster_list(points) = num_clusters + NN_clustering(distance2_matrix(points,points))
                 num_clusters_new = maxval(cluster_list(points))-num_clusters
 
@@ -277,7 +277,7 @@ module cluster_module
         logical :: do_clustering
 
 
-        ! Similarity matrix
+        ! distance^2 matrix
         real(dp),dimension(settings%nDims,sum(RTI%nlive)) :: points
         integer,dimension(sum(RTI%nlive)) :: clusters
 
