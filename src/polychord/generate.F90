@@ -37,6 +37,7 @@ module generate_module
         integer :: seed_choice
 
         real(dp), dimension(RTI%ncluster) :: probs
+        real(dp), dimension(RTI%ncluster) :: equal_probs
 
         ! 0) Calculate an array proportional to the volumes
         probs = RTI%logXp                 ! prob_p = log( X_p )
@@ -44,7 +45,10 @@ module generate_module
         probs = exp(probs)                ! prob_p = X_p/(sum_q X_q)
 
         ! 1) Pick cluster in proportion to the set of volume estimates of the active clusters
-        seed_cluster = random_integer_P(probs)
+        ! Changed this to be equal probability of each cluster
+        equal_probs = 1.
+
+        seed_cluster = random_integer_P(equal_probs)
 
         ! 3) Pick a random integer in between 1 and the number of live points in the cluster 'p'
         seed_choice = random_integer(RTI%nlive(seed_cluster))
