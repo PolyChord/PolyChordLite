@@ -55,7 +55,7 @@ def run_polychord(loglikelihood, nDims, nDerived,
         -------
         logL: float
             log-likelihood
-        TODO: what about []?
+        TODO: what about []? I don't think it can be omitted from the return of loglikelihood.
 
     nDims: int
         Dimensionality of the model, i.e. the number of physical parameters.
@@ -267,6 +267,10 @@ def run_polychord(loglikelihood, nDims, nDerived,
 
     Will Handley: wh260@cam.ac.uk
 
+    OR if anesthetic is installed:
+    
+    anesthetic.NestedSamples object
+
     In general the contents of <base_dir> is a set of getdist compatible files.
 
     <root> = <base_dir>/<file_root>
@@ -299,7 +303,7 @@ def run_polychord(loglikelihood, nDims, nDerived,
         Final output evidence statistics
 
 
-
+    TODO: Check for kwargs that shouldn't be there.
 
     """
     kwargs = kwargs.copy()
