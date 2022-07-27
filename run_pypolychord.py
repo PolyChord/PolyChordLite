@@ -37,6 +37,10 @@ def prior(hypercube):
 def dumper(live, dead, logweights, logZ, logZerr):
     print("Last dead point:", dead[-1])
 
+#| Create a paramnames file
+paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
+paramnames += [('r*', 'r')]
+
 #| Initialise the settings
 
 kwargs = {
@@ -44,17 +48,13 @@ kwargs = {
     "nlive": 200,
     "do_clustering": True,
     "read_resume": False,
+    "paramnames": paramnames,
 }
 
 #| Run PolyChord
 
 output = pypolychord.run_polychord(likelihood, nDims, nDerived, prior, dumper, **kwargs)
 
-#| Create a paramnames file
-
-paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
-paramnames += [('r*', 'r')]
-output.make_paramnames_files(paramnames)
 
 #| Make an anesthetic plot (could also use getdist)
 try:
