@@ -340,9 +340,11 @@ def run_polychord(loglikelihood, nDims, nDerived,
     kwargs.setdefault('synchronous', True),
     kwargs.setdefault('base_dir', 'chains'),
     kwargs.setdefault('file_root', 'test'),
-    kwargs["grade_dims"] = list(kwargs.pop('grade_dims', [nDims]))
+    kwargs.setdefault("grade_dims", [nDims])
+    kwargs["grade_dims"] = [int(d) for d in list(kwargs["grade_dims"])]
     kwargs.setdefault("grade_frac", [1.0]*len(kwargs["grade_dims"]))
     kwargs.setdefault("nlives", {})
+    kwargs["nlives"] = {float(logL):int(nlive) for logL, nlive in kwargs["nlives"].items()}
     kwargs.setdefault("seed", -1),
 
     try:
@@ -369,8 +371,6 @@ def run_polychord(loglikelihood, nDims, nDerived,
     def wrap_prior(cube, theta):
         theta[:] = prior(cube)
 
-    kwargs["grade_dims"] = [int(d) for d in kwargs.pop("grade_dims", [nDims])]
-    kwargs["nlives"] = {float(logL):int(nlive) for logL, nlive in kwargs.pop("nlives", {}).items()}
 
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,
