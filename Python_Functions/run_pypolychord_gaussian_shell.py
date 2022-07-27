@@ -47,16 +47,16 @@ def prior(hypercube):
 def dumper(live, dead, logweights, logZ, logZerr):
     print("Last dead point:", dead[-1]) # prints last element of dead (wich is an array)
 
+paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
+paramnames += [('r*', 'r')]
 kwargs = {
     "file_root": functionName, #string
     "do_clustering": True,
     "read_resume": False,
+    "paramnames": paramnames,
 }
 
 output = pypolychord.run_polychord(likelihood, nDims, nDerived, prior, dumper, **kwargs)
-paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
-paramnames += [('r*', 'r')]
-output.make_paramnames_files(paramnames)
 
 try:
     import getdist.plots
