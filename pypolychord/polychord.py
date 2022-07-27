@@ -12,7 +12,7 @@ def default_dumper(live, dead, logweights, logZ, logZerr):
     pass
 
 
-def run_pypolychord(loglikelihood, nDims, nDerived,
+def run_polychord(loglikelihood, nDims, nDerived,
                   prior=default_prior, dumper=default_dumper, **kwargs):
     """
     Runs PolyChord.
