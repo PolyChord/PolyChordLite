@@ -219,8 +219,11 @@ def run_pypolychord(loglikelihood, nDims, nDerived,
 
     if "cube_samples" in kwargs:
         kwargs["read_resume"] = read_resume
-    
-    return PolyChordOutput(os.path.join(kwargs["base_dir"], kwargs["file_root"]))
+    try:
+        import anesthetic
+        return anesthetic.NestedSamples(os.path.join(kwargs["base_dir"], kwargs["file_root"]))
+    except ImportError:
+        return PolyChordOutput(os.path.join(kwargs["base_dir"], kwargs["file_root"]))
 
 
 
