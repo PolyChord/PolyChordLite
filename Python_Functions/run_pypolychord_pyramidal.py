@@ -1,7 +1,6 @@
 from numpy import log, exp, sqrt, pi
 from scipy.special import loggamma
 import pypolychord
-from pypolychord.settings import PolyChordSettings
 from pypolychord.priors import UniformPrior
 
 #EGGBOX 
@@ -43,12 +42,13 @@ def prior(hypercube):
 def dumper(live, dead, logweights, logZ, logZerr):
     print("Last dead point:", dead[-1]) # prints last element of dead (wich is an array)
 
-settings = PolyChordSettings(nDims, nDerived)
-settings.file_root = functionName
-settings.do_clustering = True
-settings.read_resume = False
+kwargs = {
+    "file_root": functionName,
+    "do_clustering": True,
+    "read_resume": False,
+}
 
-output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
+output = pypolychord.run_polychord(likelihood, nDims, nDerived, prior, dumper, **kwargs)
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 output.make_paramnames_files(paramnames)

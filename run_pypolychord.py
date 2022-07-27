@@ -1,6 +1,5 @@
 from numpy import pi, log, sqrt
 import pypolychord
-from pypolychord.settings import PolyChordSettings
 from pypolychord.priors import UniformPrior
 try:
     from mpi4py import MPI
@@ -40,15 +39,16 @@ def dumper(live, dead, logweights, logZ, logZerr):
 
 #| Initialise the settings
 
-settings = PolyChordSettings(nDims, nDerived)
-settings.file_root = 'gaussian'
-settings.nlive = 200
-settings.do_clustering = True
-settings.read_resume = False
+kwargs = {
+    "file_root": 'gaussian', 
+    "nlive": 200,
+    "do_clustering": True,
+    "read_resume": False,
+}
 
 #| Run PolyChord
 
-output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
+output = pypolychord.run_polychord(likelihood, nDims, nDerived, prior, dumper, **kwargs)
 
 #| Create a paramnames file
 
@@ -59,7 +59,7 @@ output.make_paramnames_files(paramnames)
 #| Make an anesthetic plot (could also use getdist)
 try:
     from anesthetic import NestedSamples
-    samples = NestedSamples(root= settings.base_dir + '/' + settings.file_root)
+    samples = NestedSamples(root= "chains/" + kwargs["file_root"])
     fig, axes = samples.plot_2d(['p0','p1','p2','p3','r'])
     fig.savefig('posterior.pdf')
 

@@ -1,6 +1,5 @@
 from numpy import pi, log, sqrt, logaddexp, exp
 import pypolychord
-from pypolychord.settings import PolyChordSettings
 from pypolychord.priors import UniformPrior
 
 nDims = 3
@@ -56,10 +55,11 @@ def prior(hypercube):
 def dumper(live, dead, logweights, logZ, logZerr):
     print("Last dead point:", dead[-1]) # prints last element of dead (wich is an array)
 
-settings = PolyChordSettings(nDims, nDerived) #settings is an object
-settings.file_root = functionName #string
-settings.do_clustering = True 
-settings.read_resume = False
+kwargs = {
+    "file_root": functionName, #string
+    "do_clustering": True,
+    "read_resume": False,
+}
 
 output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
