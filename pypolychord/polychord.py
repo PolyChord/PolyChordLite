@@ -302,6 +302,7 @@ def run_polychord(loglikelihood, nDims, nDerived,
 
 
     """
+    kwargs = kwargs.copy()
 
     try:
         from mpi4py import MPI
@@ -310,9 +311,36 @@ def run_polychord(loglikelihood, nDims, nDerived,
     except ImportError:
         rank = 0
 
-    kwargs.setdefault("base_dir", "chains")
-    kwargs.setdefault("cluster_dir", "test")
-    kwargs.setdefault("read_resume", True)
+    kwargs.setdefault('nlive', nDims*25),
+    kwargs.setdefault('num_repeats', nDims*5),
+    kwargs.setdefault('nprior', -1),
+    kwargs.setdefault('nfail', -1), 
+    kwargs.setdefault('do_clustering', True),
+    kwargs.setdefault('feedback', 1),
+    kwargs.setdefault('precision_criterion', 0.001),
+    kwargs.setdefault('logzero', -1e30),
+    kwargs.setdefault('max_ndead', -1),
+    kwargs.setdefault('boost_posterior', 0.0),
+    kwargs.setdefault('posteriors', True),
+    kwargs.setdefault('equals', True),
+    kwargs.setdefault('cluster_posteriors', True),
+    kwargs.setdefault('write_resume', True),
+    kwargs.setdefault('write_paramnames', False),
+    kwargs.setdefault('read_resume', True),
+    kwargs.setdefault('write_stats', True),
+    kwargs.setdefault('write_live', True),
+    kwargs.setdefault('write_dead', True),
+    kwargs.setdefault('write_prior', True),
+    kwargs.setdefault('maximise', False),
+    kwargs.setdefault('compression_factor', np.exp(-1)),
+    kwargs.setdefault('synchronous', True),
+    kwargs.setdefault('base_dir', 'chains'),
+    kwargs.setdefault('file_root', 'test'),
+    kwargs["grade_dims"] = list(kwargs.pop('grade_dims', [nDims]))
+    kwargs.setdefault("grade_frac", [1.0]*len(kwargs["grade_dims"]))
+    kwargs.setdefault("nlives", {})
+    kwargs.setdefault("seed", -1),
+
     try:
         if rank == 0:
             os.makedirs(kwargs["base_dir"])
@@ -321,7 +349,7 @@ def run_polychord(loglikelihood, nDims, nDerived,
         
     try:
         if rank == 0:
-            os.makedirs(os.path.join(kwargs["base_dir"], kwargs["cluster_dir"]))
+            os.makedirs(os.path.join(kwargs["base_dir"], "clusters"))
     except OSError:
         pass
 
@@ -346,45 +374,48 @@ def run_polychord(loglikelihood, nDims, nDerived,
         dumper,
         nDims,
         nDerived,
-        kwargs.pop('nlive', nDims*25),
-        kwargs.pop('num_repeats', nDims*5),
-        kwargs.pop('nprior', -1),
-        kwargs.pop('nfail', -1), 
-        kwargs.pop('do_clustering', True),
-        kwargs.pop('feedback', 1),
-        kwargs.pop('precision_criterion', 0.001),
-        kwargs.pop('logzero', -1e30),
-        kwargs.pop('max_ndead', -1),
-        kwargs.pop('boost_posterior', 0.0),
-        kwargs.pop('posteriors', True),
-        kwargs.pop('equals', True),
-        kwargs.pop('cluster_posteriors', True),
-        kwargs.pop('write_resume', True),
-        kwargs.pop('write_paramnames', False),
-        kwargs.pop('read_resume', True),
-        kwargs.pop('write_stats', True),
-        kwargs.pop('write_live', True),
-        kwargs.pop('write_dead', True),
-        kwargs.pop('write_prior', True),
-        kwargs.pop('maximise', False),
-        kwargs.pop('compression_factor', np.exp(-1)),
-        kwargs.pop('synchronous', True),
-        kwargs.pop('base_dir', 'chains'),
-        kwargs.pop('file_root', 'test'),
-        kwargs.pop('seed', -1),
-        kwargs.pop("grade_frac", [1.0]*len(kwargs["grade_dims"])),
+        kwargs['nlive'],
+        kwargs['num_repeats'],
+        kwargs['nprior'],
+        kwargs['nfail'], 
+        kwargs['do_clustering'],
+        kwargs['feedback'],
+        kwargs['precision_criterion'],
+        kwargs['logzero'],
+        kwargs['max_ndead'],
+        kwargs['boost_posterior'],
+        kwargs['posteriors'],
+        kwargs['equals'],
+        kwargs['cluster_posteriors'],
+        kwargs['write_resume'],
+        kwargs['write_paramnames'],
+        kwargs['read_resume'],
+        kwargs['write_stats'],
+        kwargs['write_live'],
+        kwargs['write_dead'],
+        kwargs['write_prior'],
+        kwargs['maximise'],
+        kwargs['compression_factor'],
+        kwargs['synchronous'],
+        kwargs['base_dir'],
+        kwargs['file_root'],
+        kwargs["grade_frac"],
         kwargs["grade_dims"],
         kwargs["nlives"], 
-        kwargs.pop("seed", -1),
+        kwargs["seed"],
     )
 
     if "cube_samples" in kwargs:
         kwargs["read_resume"] = read_resume
+
+    polychord_output = PolyChordOutput(kwargs["base_dir"], kwargs["file_root"])
+    if "paramnames" in kwargs:
+        polychord_output.make_paramnames_files(kwargs["paramnames"])
     try:
         import anesthetic
-        return anesthetic.NestedSamples(os.path.join(kwargs["base_dir"], kwargs["file_root"]))
+        return anesthetic.NestedSamples(root=os.path.join(kwargs["base_dir"], kwargs["file_root"]))
     except ImportError:
-        return PolyChordOutput(os.path.join(kwargs["base_dir"], kwargs["file_root"]))
+        return polychord_output
 
 
 
