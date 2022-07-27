@@ -65,7 +65,7 @@ kwargs = {
     "paramnames": paramnames,
 }
 
-output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
+output = pypolychord.run_polychord(likelihood, nDims, nDerived, prior, dumper, **kwargs)
 
 try:
     import getdist.plots
