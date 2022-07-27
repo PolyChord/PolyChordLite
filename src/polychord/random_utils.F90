@@ -537,7 +537,7 @@ module random_module
     !! The probability is defined by the input array, and need not be
     !! normalised.
     !!
-    !! E.g: If one reieves an array (/ 50.0, 120.0, 30.0 /), this function will
+    !! E.g: If one receives an array (/ 50.0, 120.0, 30.0 /), this function will
     !! return:
     !! |---|-----------------|
     !! | 1 | 25% of the time |
