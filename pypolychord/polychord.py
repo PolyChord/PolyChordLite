@@ -357,6 +357,9 @@ def make_resume_file(settings, loglikelihood, prior):
             write('=== global equally weighted posterior points ===')
 
 
+### new interface ###
+
+
 def run(loglikelihood, nDims, nDerived,
                   prior=default_prior, dumper=default_dumper, **kwargs):
     """
@@ -705,7 +708,7 @@ def run(loglikelihood, nDims, nDerived,
         pass
 
     if "cube_samples" in kwargs:
-        make_resume_file(loglikelihood, prior, **kwargs)
+        make_resume_file_kwargs_interface(loglikelihood, prior, **kwargs)
         read_resume = kwargs["read_resume"]
         kwargs["read_resume"] = True
 
