@@ -721,7 +721,7 @@ def run(loglikelihood, nDims, **kwargs):
     _pypolychord.run(wrap_loglikelihood,
         wrap_prior,
         kwargs["dumper"],
-        kwargs["nDims"],
+        nDims,
         kwargs["nDerived"],
         kwargs['nlive'],
         kwargs['num_repeats'],
