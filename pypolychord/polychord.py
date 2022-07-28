@@ -657,40 +657,50 @@ def run(loglikelihood, nDims, **kwargs):
     except ImportError:
         rank = 0
 
-    kwargs.setdefault("nDerived", 0)
-    kwargs.setdefault("prior", default_prior)
-    kwargs.setdefault("dumper", default_dumper)
-    kwargs.setdefault('nlive', nDims*25),
-    kwargs.setdefault('num_repeats', nDims*5),
-    kwargs.setdefault('nprior', -1),
-    kwargs.setdefault('nfail', -1), 
-    kwargs.setdefault('do_clustering', True),
-    kwargs.setdefault('feedback', 1),
-    kwargs.setdefault('precision_criterion', 0.001),
-    kwargs.setdefault('logzero', -1e30),
-    kwargs.setdefault('max_ndead', -1),
-    kwargs.setdefault('boost_posterior', 0.0),
-    kwargs.setdefault('posteriors', True),
-    kwargs.setdefault('equals', True),
-    kwargs.setdefault('cluster_posteriors', True),
-    kwargs.setdefault('write_resume', True),
-    kwargs.setdefault('write_paramnames', False),
-    kwargs.setdefault('read_resume', True),
-    kwargs.setdefault('write_stats', True),
-    kwargs.setdefault('write_live', True),
-    kwargs.setdefault('write_dead', True),
-    kwargs.setdefault('write_prior', True),
-    kwargs.setdefault('maximise', False),
-    kwargs.setdefault('compression_factor', np.exp(-1)),
-    kwargs.setdefault('synchronous', True),
-    kwargs.setdefault('base_dir', 'chains'),
-    kwargs.setdefault('file_root', 'test'),
-    kwargs.setdefault("grade_dims", [nDims])
+    default_kwargs = {
+        "nDerived": 0,
+        "prior": default_prior,
+        "dumper": default_dumper,
+        'nlive': nDims*25,
+        'num_repeats': nDims*5,
+        'nprior': -1,
+        'nfail': -1,
+        'do_clustering': True,
+        'feedback': 1,
+        'precision_criterion': 0.001,
+        'logzero': -1e30,
+        'max_ndead': -1,
+        'boost_posterior': 0.0,
+        'posteriors': True,
+        'equals': True,
+        'cluster_posteriors': True,
+        'write_resume': True,
+        'write_paramnames': False,
+        'read_resume': True,
+        'write_stats': True,
+        'write_live': True,
+        'write_dead': True,
+        'write_prior': True,
+        'maximise': False,
+        'compression_factor': np.exp(-1),
+        'synchronous': True,
+        'base_dir': 'chains',
+        'file_root': 'test',
+        "grade_dims": [nDims],
+        "grade_frac": [1.0]*len(default_kwargs["grade_dims"]),
+        "nlives": {},
+        "seed": -1,
+        "paramnames": [(f"p{i}", f"p_{{{i}}}") for i in range(nDims + default_kwargs("nDerived"))],
+    }
+
+
+    if not set(kwargs.keys()) <= set(default_kwargs.keys()):
+        raise TypeError(f"{__name__} got unknown keyword arguments {kwargs.keys() - default_kwargs.keys()}")
+    default_kwargs.update(kwargs)
+    kwargs = default_kwargs
+
     kwargs["grade_dims"] = [int(d) for d in list(kwargs["grade_dims"])]
-    kwargs.setdefault("grade_frac", [1.0]*len(kwargs["grade_dims"]))
-    kwargs.setdefault("nlives", {})
     kwargs["nlives"] = {float(logL):int(nlive) for logL, nlive in kwargs["nlives"].items()}
-    kwargs.setdefault("seed", -1),
 
     try:
         if rank == 0:
@@ -758,8 +768,7 @@ def run(loglikelihood, nDims, **kwargs):
         kwargs["read_resume"] = read_resume
 
     polychord_output = PolyChordOutput(kwargs["base_dir"], kwargs["file_root"])
-    if "paramnames" in kwargs:
-        polychord_output.make_paramnames_files(kwargs["paramnames"])
+    polychord_output.make_paramnames_files(kwargs["paramnames"])
     try:
         import anesthetic
         return anesthetic.NestedSamples(root=os.path.join(kwargs["base_dir"], kwargs["file_root"]))
