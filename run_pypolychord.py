@@ -53,7 +53,7 @@ kwargs = {
 
 #| Run PolyChord
 
-output = pypolychord.run_polychord(likelihood, nDims, nDerived, prior, dumper, **kwargs)
+output = pypolychord.run(likelihood, nDims, nDerived, prior, dumper, **kwargs)
 
 
 #| Make an anesthetic plot (could also use getdist)
