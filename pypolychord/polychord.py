@@ -691,7 +691,7 @@ def run(loglikelihood, nDims, **kwargs):
         "seed": -1,
     }
     default_kwargs["grade_frac"] = [1.0]*len(default_kwargs["grade_dims"]),
-    default_kwargs["paramnames"] = [(f"p{i}", f"p_{{{i}}}") for i in range(nDims + default_kwargs("nDerived"))],
+    default_kwargs["paramnames"] = [(f"p{i}", f"p_{{{i}}}") for i in range(nDims + default_kwargs["nDerived"])],
 
 
     if not set(kwargs.keys()) <= set(default_kwargs.keys()):
