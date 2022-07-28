@@ -360,8 +360,7 @@ def make_resume_file(settings, loglikelihood, prior):
 ### new interface ###
 
 
-def run(loglikelihood, nDims, nDerived,
-                  prior=default_prior, dumper=default_dumper, **kwargs):
+def run(loglikelihood, nDims, **kwargs):
     """
     Runs PolyChord.
 
@@ -408,14 +407,11 @@ def run(loglikelihood, nDims, nDerived,
     nDims: int
         Dimensionality of the model, i.e. the number of physical parameters.
 
+    Keyword arguments
+    -----------------
+
     nDerived: int
         The number of derived parameters (can be 0).
-
-    settings: settings.Settings
-        Object containing polychord settings
-
-    Optional Arguments
-    ------------------
 
     prior: function
         This function converts from the unit hypercube to the physical
@@ -451,8 +447,6 @@ def run(loglikelihood, nDims, nDerived,
         logZerr: float
             The current log-evidence error estimate
         
-    Keyword arguments
-    -----------------
     nlive: int
         (Default: nDims*25)
         The number of live points.
@@ -663,6 +657,9 @@ def run(loglikelihood, nDims, nDerived,
     except ImportError:
         rank = 0
 
+    kwargs.setdefault("nDerived", 0)
+    kwargs.setdefault("prior", default_prior)
+    kwargs.setdefault("dumper", default_dumper)
     kwargs.setdefault('nlive', nDims*25),
     kwargs.setdefault('num_repeats', nDims*5),
     kwargs.setdefault('nprior', -1),
@@ -708,7 +705,7 @@ def run(loglikelihood, nDims, nDerived,
         pass
 
     if "cube_samples" in kwargs:
-        make_resume_file_kwargs_interface(loglikelihood, prior, **kwargs)
+        make_resume_file_kwargs_interface(loglikelihood, kwargs["prior"], **kwargs)
         read_resume = kwargs["read_resume"]
         kwargs["read_resume"] = True
 
@@ -717,15 +714,15 @@ def run(loglikelihood, nDims, nDerived,
         return logL
 
     def wrap_prior(cube, theta):
-        theta[:] = prior(cube)
+        theta[:] = kwargs["prior"](cube)
 
 
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,
         wrap_prior,
-        dumper,
-        nDims,
-        nDerived,
+        kwargs["dumper"],
+        kwargs["nDims"],
+        kwargs["nDerived"],
         kwargs['nlive'],
         kwargs['num_repeats'],
         kwargs['nprior'],
@@ -771,7 +768,7 @@ def run(loglikelihood, nDims, nDerived,
 
 
 
-def make_resume_file_kwargs_interface(loglikelihood, prior, **kwargs):
+def make_resume_file_kwargs_interface(loglikelihood, **kwargs):
     import fortranformat as ff
     resume_filename = os.path.join(kwargs["base_dir"],
                                    kwargs["file_root"])+".resume"
@@ -789,7 +786,7 @@ def make_resume_file_kwargs_interface(loglikelihood, prior, **kwargs):
     logL_birth = kwargs["logzero"]
     for i in np.array_split(np.arange(len(kwargs["cube_samples"])), size)[rank]:
         cube = kwargs["cube_samples"][i]
-        theta = prior(cube)
+        theta = kwargs["prior"](cube)
         logL, derived = loglikelihood(theta)
         nDims = len(theta)
         nDerived = len(derived)
