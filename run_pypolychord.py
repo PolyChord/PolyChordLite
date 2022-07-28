@@ -44,7 +44,10 @@ paramnames += [('r*', 'r')]
 #| Initialise the settings
 
 kwargs = {
-    "file_root": 'gaussian', 
+    "nDerived": nDerived,
+    "prior": prior,
+    "dumper": dumper,
+    "file_root": 'gaussian',
     "nlive": 200,
     "do_clustering": True,
     "read_resume": False,
@@ -53,7 +56,7 @@ kwargs = {
 
 #| Run PolyChord
 
-output = pypolychord.run(likelihood, nDims, nDerived, prior, dumper, **kwargs)
+output = pypolychord.run(likelihood, nDims, **kwargs)
 
 
 #| Make an anesthetic plot (could also use getdist)
