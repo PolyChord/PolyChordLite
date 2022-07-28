@@ -687,11 +687,11 @@ def run(loglikelihood, nDims, **kwargs):
         'base_dir': 'chains',
         'file_root': 'test',
         "grade_dims": [nDims],
-        "grade_frac": [1.0]*len(default_kwargs["grade_dims"]),
         "nlives": {},
         "seed": -1,
-        "paramnames": [(f"p{i}", f"p_{{{i}}}") for i in range(nDims + default_kwargs("nDerived"))],
     }
+    default_kwargs["grade_frac"] = [1.0]*len(default_kwargs["grade_dims"]),
+    default_kwargs["paramnames"] = [(f"p{i}", f"p_{{{i}}}") for i in range(nDims + default_kwargs("nDerived"))],
 
 
     if not set(kwargs.keys()) <= set(default_kwargs.keys()):
