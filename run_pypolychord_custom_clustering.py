@@ -13,21 +13,20 @@ except ImportError:
 from sklearn.neighbors import NearestNeighbors
 
 
-#| Define a four-dimensional spherical gaussian likelihood,
-#| width sigma=0.1, centered on the 0 with one derived parameter.
-#| The derived parameter is the squared radius
+#| Define a four-dimensional twin-spherical gaussian likelihood,
+#| width sigma=0.1, centered on ±[0.5]^nDims with one derived parameter.
+#| The derived parameter is the squared radius from [0]^nDims
 
 nDims = 4
 nDerived = 1
 sigma = 0.1
 
 centres = np.array([[-0.5] * nDims, [0.5] * nDims])
-# weights = np.array([0.5, 0.5])
-weights = np.array([2/3, 1/3])
+weights = np.array([0.5, 0.5])
 
 
 def likelihood(theta):
-    """Double Gaussian likelihood."""
+    """Twin Gaussian likelihood."""
     nDims = len(theta)
     logL = -np.log(2 * np.pi * sigma * sigma) * nDims / 2 
     logL += logsumexp(-np.sum((theta - centres) ** 2, axis=-1) / 2 / sigma / sigma, b = weights)
