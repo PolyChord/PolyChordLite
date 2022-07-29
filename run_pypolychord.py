@@ -41,22 +41,21 @@ def dumper(live, dead, logweights, logZ, logZerr):
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 
-#| Initialise the settings
-
-kwargs = {
-    "nDerived": nDerived,
-    "prior": prior,
-    "dumper": dumper,
-    "file_root": 'gaussian',
-    "nlive": 200,
-    "do_clustering": True,
-    "read_resume": False,
-    "paramnames": paramnames,
-}
 
 #| Run PolyChord
 
-output = pypolychord.run(likelihood, nDims, **kwargs)
+output = pypolychord.run(
+    likelihood,
+    nDims,
+    nDerived=nDerived,
+    prior=prior,
+    dumper=dumper,
+    file_root='gaussian',
+    nlive=200,
+    do_clustering=True,
+    read_resume=False,
+    paramnames=paramnames,
+)
 
 
 #| Make an anesthetic plot (could also use getdist)
