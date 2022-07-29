@@ -43,10 +43,6 @@ def prior(hypercube):
 #| Optional cluster function allow user-defined clustering
 ## KNN clustering algorithm translated from clustering.F90
 
-def mutual_nearest_neighbors(knn_array, i, ii):
-    return (i in knn_array[ii]) or (ii in knn_array[i])
-
-
 def relabel(labels):
     k = max(labels)
     appearance_order = {}
@@ -68,7 +64,7 @@ def do_clustering(knn_array):
     for iii in range(num_points):
         for ii in range(iii + 1, num_points):
             if labels[ii] != labels[iii]:
-                if mutual_nearest_neighbors(knn_array, ii, iii):
+                if (ii in knn_array[iii]) or (iii in knn_array[ii]):
                     for i in range(num_points):
                         if labels[i] == labels[ii] or labels[i] == labels[iii]:
                             labels[i] = min([labels[ii], labels[iii]])
