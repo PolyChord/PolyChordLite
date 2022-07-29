@@ -58,21 +58,7 @@ output = pypolychord.run(
 )
 
 
-#| Make an anesthetic plot (could also use getdist)
-try:
-    from anesthetic import NestedSamples
-    samples = NestedSamples(root= "chains/" + kwargs["file_root"])
-    fig, axes = samples.plot_2d(['p0','p1','p2','p3','r'])
-    fig.savefig('posterior.pdf')
+#| Make an anesthetic plot 
 
-except ImportError:
-    try:
-        import getdist.plots
-        posterior = output.posterior
-        g = getdist.plots.getSubplotPlotter()
-        g.triangle_plot(posterior, filled=True)
-        g.export('posterior.pdf')
-    except ImportError:
-        print("Install matplotlib and getdist for plotting examples")
-
-    print("Install anesthetic or getdist  for for plotting examples")
+fig, axes = output.plot_2d(['p0','p1','p2','p3','r'])
+fig.savefig('posterior.pdf')
