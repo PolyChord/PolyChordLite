@@ -43,8 +43,8 @@ def prior(hypercube):
 #| Optional cluster function allow user-defined clustering
 ## KNN clustering algorithm translated from clustering.F90
 
-def compute_knn(position_matrix, k):
-    return np.argsort(distance_matrix(position_matrix, position_matrix))[:, :k]
+def compute_nn(position_matrix):
+    return np.argsort(distance_matrix(position_matrix, position_matrix))
 
 
 def relabel(labels):
@@ -79,15 +79,14 @@ def knn_cluster(position_matrix):
     """slight concern if two points are the same because sklearn"""
     npoints = position_matrix.shape[0]
     k = min(npoints, 10)
-    knn_array = compute_knn(position_matrix, k)
+    nn_array = compute_nn(position_matrix)
     labels = np.arange(npoints)
     num_clusters = npoints
 
     labels_old = labels
-    num_clusters_old = num_clusters
 
     for n in np.arange(2, k):
-        labels = do_clustering(knn_array[:, :n])
+        labels = do_clustering(nn_array[:, :n])
         num_clusters = max(labels) + 1
 
         if num_clusters <= 0:
@@ -98,10 +97,8 @@ def knn_cluster(position_matrix):
             break
         elif k == n - 1:
             k = min(k * 2, npoints)
-            knn_array = compute_knn(position_matrix, k)
 
         labels_old = labels
-        num_clusters_old = num_clusters
 
     if num_clusters > 1:
         i_cluster = 0
