@@ -465,17 +465,8 @@ def run(loglikelihood, nDims, **kwargs):
 
     Returns
     -------
-    None. (in Python)
-
-    All output is currently produced in the form of text files in <base_dir>
-    directory. If you would like to contribute to pypolychord and improve this,
-    please get in touch:
-
-    Will Handley: wh260@cam.ac.uk
-
-    OR if anesthetic is installed:
     
-    anesthetic.NestedSamples object
+    anesthetic.NestedSamples(root=<base_dir>/<file_root>)
 
     In general the contents of <base_dir> is a set of getdist compatible files.
 
@@ -507,9 +498,6 @@ def run(loglikelihood, nDims, **kwargs):
 
     <root>.stats
         Final output evidence statistics
-
-
-    TODO: Check for kwargs that shouldn't be there.
 
     """
     kwargs = kwargs.copy()
