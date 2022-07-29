@@ -2,6 +2,7 @@ from pypolychord.output import PolyChordOutput
 import os
 import _pypolychord
 import numpy as np
+import anesthetic
 
 
 def default_prior(cube):
@@ -769,11 +770,7 @@ def run(loglikelihood, nDims, **kwargs):
 
     polychord_output = PolyChordOutput(kwargs["base_dir"], kwargs["file_root"])
     polychord_output.make_paramnames_files(kwargs["paramnames"])
-    try:
-        import anesthetic
-        return anesthetic.NestedSamples(root=os.path.join(kwargs["base_dir"], kwargs["file_root"]))
-    except ImportError:
-        return polychord_output
+    return anesthetic.NestedSamples(root=os.path.join(kwargs["base_dir"], kwargs["file_root"]))
 
 
 
