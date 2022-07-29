@@ -4,13 +4,13 @@ import numpy as np
 import pypolychord
 from pypolychord.settings import PolyChordSettings
 from pypolychord.priors import UniformPrior
+from scipy.spatial import distance_matrix
 from scipy.special import logsumexp
 try:
     from mpi4py import MPI
 except ImportError:
     pass
 
-from sklearn.neighbors import NearestNeighbors
 
 
 #| Define a four-dimensional twin-spherical gaussian likelihood,
@@ -42,6 +42,10 @@ def prior(hypercube):
 
 #| Optional cluster function allow user-defined clustering
 ## KNN clustering algorithm translated from clustering.F90
+
+def compute_knn(position_matrix, k):
+    return np.argsort(distance_matrix(position_matrix, position_matrix))[:, :k]
+
 
 def relabel(labels):
     k = max(labels)
@@ -75,8 +79,7 @@ def knn_cluster(position_matrix):
     """slight concern if two points are the same because sklearn"""
     npoints = position_matrix.shape[0]
     k = min(npoints, 10)
-    nn = NearestNeighbors(n_neighbors=k).fit(position_matrix)
-    knn_array = nn.kneighbors(position_matrix, return_distance=False)
+    knn_array = compute_knn(position_matrix, k)
     labels = np.arange(npoints)
     num_clusters = npoints
 
@@ -95,8 +98,7 @@ def knn_cluster(position_matrix):
             break
         elif k == n - 1:
             k = min(k * 2, npoints)
-            nn = NearestNeighbors(n_neighbors=k).fit(position_matrix)
-            knn_array = nn.kneighbors(position_matrix, return_distance=False)
+            knn_array = compute_knn(position_matrix, k)
 
         labels_old = labels
         num_clusters_old = num_clusters
