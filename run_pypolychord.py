@@ -1,4 +1,4 @@
-from numpy import pi, log, sqrt
+from numpy import pi, log
 import pypolychord
 from pypolychord.priors import UniformPrior
 try:
