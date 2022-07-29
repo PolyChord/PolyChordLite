@@ -48,7 +48,6 @@ module KNN_clustering
 
         ! Set up the cluster list
         cluster_list_old = [( i_point,i_point=1,nlive )]
-        num_clusters_old = nlive
 
         do n=2,k
 
@@ -71,7 +70,6 @@ module KNN_clustering
 
             ! Save the old cluster list for later.
             cluster_list_old = cluster_list
-            num_clusters_old = num_clusters
 
         end do
 
