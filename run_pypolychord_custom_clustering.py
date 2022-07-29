@@ -85,7 +85,8 @@ def knn_cluster(position_matrix):
 
     labels_old = labels
 
-    for n in np.arange(2, k):
+    n = 2
+    while n <= k:
         labels = do_clustering(nn_array[:, :n])
         num_clusters = max(labels) + 1
 
@@ -95,10 +96,11 @@ def knn_cluster(position_matrix):
             return labels
         elif np.all(labels == labels_old):
             break
-        elif k == n - 1:
+        elif k == n:
             k = min(k * 2, npoints)
 
         labels_old = labels
+        n += 1
 
     if num_clusters > 1:
         i_cluster = 0
