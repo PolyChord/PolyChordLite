@@ -165,7 +165,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         pass
 
     if settings.cube_samples is not None:
-        make_resume_file(settings, loglikelihood, prior)
+        _legacy_make_resume_file(settings, loglikelihood, prior)
         read_resume = settings.read_resume
         settings.read_resume=True
 
@@ -219,143 +219,6 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         settings.read_resume = read_resume
 
     return PolyChordOutput(settings.base_dir, settings.file_root)
-
-
-def make_resume_file(settings, loglikelihood, prior):
-    import fortranformat as ff
-    resume_filename = os.path.join(settings.base_dir,
-                                   settings.file_root)+".resume"
-
-    try:
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
-        size = comm.Get_size()
-    except ImportError:
-        rank = 0
-        size = 1
-
-    lives = []
-    logL_birth = settings.logzero
-    for i in np.array_split(np.arange(len(settings.cube_samples)), size)[rank]:
-        cube = settings.cube_samples[i]
-        theta = prior(cube)
-        logL, derived = loglikelihood(theta)
-        nDims = len(theta)
-        nDerived = len(derived)
-        lives.append(np.concatenate([cube,theta,derived,[logL_birth, logL]]))
-
-    try:
-        sendbuf = np.array(lives).flatten()
-        sendcounts = np.array(comm.gather(len(sendbuf)))
-        if rank == 0:
-            recvbuf = np.empty(sum(sendcounts), dtype=int)
-        else:
-            recvbuf = None
-        comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=root)
-
-        lives = np.reshape(sendbuf, (len(settings.cube_samples), len(lives[0])))
-    except NameError:
-        lives = np.array(lives)
-
-    if rank == 0:
-        with open(resume_filename,"w") as f:
-            def write(var):
-                var = np.atleast_1d(var)
-                if isinstance(var[0], np.integer):
-                    fmt = '(%iI12)' % var.size
-                elif isinstance(var[0], np.double):
-                    fmt = '(%iE24.15E3)' % var.size
-                else:
-                    fmt = '(A)'
-                writer = ff.FortranRecordWriter(fmt)
-                f.write(writer.write(var) + '\n')
-
-            write('=== Number of dimensions ===')
-            write(nDims)
-            write('=== Number of derived parameters ===')
-            write(nDerived)
-            write('=== Number of dead points/iterations ===')
-            write(0)
-            write('=== Number of clusters ===')
-            write(1)
-            write('=== Number of dead clusters ===')
-            write(0)
-            write('=== Number of global weighted posterior points ===')
-            write(0)
-            write('=== Number of global equally weighted posterior points ===')
-            write(0)
-            write('=== Number of grades ===')
-            write(len(settings.grade_dims))
-            write('=== positions of grades ===')
-            write(settings.grade_dims)
-            write('=== Number of repeats ===')
-            write(settings.num_repeats)
-            write('=== Number of likelihood calls ===')
-            write(len(lives))
-            write('=== Number of live points in each cluster ===')
-            write(len(lives))
-            write('=== Number of phantom points in each cluster ===')
-            write(0)
-            write('=== Number of weighted posterior points in each cluster ===')
-            write(0)
-            write('=== Number of equally weighted posterior points in each cluster ===')
-            write(0)
-            write('=== Minimum loglikelihood positions ===')
-            write(np.argmin(lives[:,-1]))
-            write('=== Number of weighted posterior points in each dead cluster ===')
-            write('=== Number of equally weighted posterior points in each dead cluster ===')
-            write('=== global evidence -- log(<Z>) ===')
-            write(settings.logzero)
-            write('=== global evidence^2 -- log(<Z^2>) ===')
-            write(settings.logzero)
-            write('=== posterior thin factor ===')
-            write(settings.boost_posterior)
-            write('=== local loglikelihood bounds ===')
-            write(lives[:,-1].min())
-            write('=== local volume -- log(<X_p>) ===')
-            write(0.0)
-            write('=== last update volume ===')
-            write(0.0)
-            write('=== global evidence volume cross correlation -- log(<ZX_p>) ===')
-            write(settings.logzero)
-            write('=== local evidence -- log(<Z_p>) ===')
-            write(settings.logzero)
-            write('=== local evidence^2 -- log(<Z_p^2>) ===')
-            write(settings.logzero)
-            write('=== local evidence volume cross correlation -- log(<Z_pX_p>) ===')
-            write(settings.logzero)
-            write('=== local volume cross correlation -- log(<X_pX_q>) ===')
-            write(0.0)
-            write('=== maximum log weights -- log(w_p) ===')
-            write(settings.logzero)
-            write('=== local dead evidence -- log(<Z_p>) ===')
-            write('=== local dead evidence^2 -- log(<Z_p^2>) ===')
-            write('=== maximum dead log weights -- log(w_p) ===')
-            write('=== covariance matrices ===')
-            write('---------------------------------------')
-            for x in np.identity(nDims):
-                write(x)
-            write('=== cholesky decompositions ===')
-            write('---------------------------------------')
-            for x in np.identity(nDims):
-                write(x)
-            write('=== live points ===')
-            write('---------------------------------------')
-            for x in lives:
-                write(x)
-            write('=== dead points ===')
-            write('=== logweights of dead points ===')
-            write('=== phantom points ===')
-            write('---------------------------------------')
-            write('=== weighted posterior points ===')
-            write('---------------------------------------')
-            write('=== dead weighted posterior points ===')
-            write('=== global weighted posterior points ===')
-            write('=== equally weighted posterior points ===')
-            write('---------------------------------------')
-            write('=== dead equally weighted posterior points ===')
-            write('=== global equally weighted posterior points ===')
 
 
 ### new interface ###
@@ -716,7 +579,7 @@ def run(loglikelihood, nDims, **kwargs):
         pass
 
     if "cube_samples" in kwargs:
-        make_resume_file_kwargs_interface(loglikelihood, kwargs["prior"], **kwargs)
+        _make_resume_file(loglikelihood, kwargs["prior"], **kwargs)
         read_resume = kwargs["read_resume"]
         kwargs["read_resume"] = True
 
@@ -774,7 +637,7 @@ def run(loglikelihood, nDims, **kwargs):
 
 
 
-def make_resume_file_kwargs_interface(loglikelihood, **kwargs):
+def _make_resume_file(loglikelihood, **kwargs):
     import fortranformat as ff
     resume_filename = os.path.join(kwargs["base_dir"],
                                    kwargs["file_root"])+".resume"
@@ -909,3 +772,8 @@ def make_resume_file_kwargs_interface(loglikelihood, **kwargs):
             write('---------------------------------------')
             write('=== dead equally weighted posterior points ===')
             write('=== global equally weighted posterior points ===')
+
+def _legacy_make_resume_file(settings, loglikelihood, prior):
+    kwargs = settings.__dict__()
+    print(kwargs)
+    _make_resume_file(loglikelihood, prior = prior, **kwargs)
