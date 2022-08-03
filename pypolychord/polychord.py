@@ -546,7 +546,7 @@ def run(loglikelihood, nDims, **kwargs):
 
 
     if not set(kwargs.keys()) <= set(default_kwargs.keys()):
-        raise TypeError(f"run() got unknown keyword arguments {kwargs.keys() - default_kwargs.keys()}")
+        raise TypeError(f"{__name__} got unknown keyword arguments {kwargs.keys() - default_kwargs.keys()}")
     default_kwargs.update(kwargs)
     kwargs = default_kwargs
 
