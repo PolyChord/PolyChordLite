@@ -543,11 +543,10 @@ def run(loglikelihood, nDims, **kwargs):
         "seed": -1,
     }
     default_kwargs["grade_frac"] = [1.0]*len(default_kwargs["grade_dims"])
-    default_kwargs["paramnames"] = [(f"p{i}", f"p_{{{i}}}") for i in range(nDims + default_kwargs["nDerived"])]
 
 
     if not set(kwargs.keys()) <= set(default_kwargs.keys()):
-        raise TypeError(f"{__name__} got unknown keyword arguments {kwargs.keys() - default_kwargs.keys()}")
+        raise TypeError(f"run() got unknown keyword arguments {kwargs.keys() - default_kwargs.keys()}")
     default_kwargs.update(kwargs)
     kwargs = default_kwargs
 
@@ -619,8 +618,6 @@ def run(loglikelihood, nDims, **kwargs):
     if "cube_samples" in kwargs:
         kwargs["read_resume"] = read_resume
 
-    polychord_output = PolyChordOutput(kwargs["base_dir"], kwargs["file_root"])
-    polychord_output.make_paramnames_files(kwargs["paramnames"])
     return anesthetic.NestedSamples(root=os.path.join(kwargs["base_dir"], kwargs["file_root"]))
 
 

@@ -1,3 +1,4 @@
+import os
 from numpy import pi, log
 import pypolychord
 from pypolychord.priors import UniformPrior
@@ -38,8 +39,17 @@ def dumper(live, dead, logweights, logZ, logZerr):
     print("Last dead point:", dead[-1])
 
 #| Create a paramnames file
+
+def getdist_paramnames_file(path, paramnames):
+    lines = [f"{p}   {q}\n" for (p, q) in paramnames]
+    with open(f"{path}.paramnames", "w") as f:
+        f.writelines(lines)
+
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
+
+os.mkdir("chains")
+getdist_paramnames_file("chains/gaussian", paramnames)
 
 
 #| Run PolyChord
@@ -54,8 +64,9 @@ output = pypolychord.run(
     nlive=200,
     do_clustering=True,
     read_resume=False,
-    paramnames=paramnames,
+    # paramnames=paramnames,
 )
+
 
 
 #| Make an anesthetic plot 
