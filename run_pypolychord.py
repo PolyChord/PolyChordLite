@@ -48,7 +48,10 @@ def getdist_paramnames_file(path, paramnames):
 paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
 paramnames += [('r*', 'r')]
 
-os.mkdir("chains")
+try:
+    os.mkdir("chains")
+except FileExistsError:
+    pass
 getdist_paramnames_file("chains/gaussian", paramnames)
 
 
