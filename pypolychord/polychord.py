@@ -626,9 +626,14 @@ def run(loglikelihood, nDims, **kwargs):
         kwargs["read_resume"] = read_resume
 
     if paramnames is not None:
-        with open(os.path.join(kwargs["base_dir"], kwargs["file_root"]+".paramnames"), 'w') as f:
-            for name, latex in paramnames:
-                f.write('%s   %s\n' % (name, latex))
+        # with open(os.path.join(kwargs["base_dir"], kwargs["file_root"]+".paramnames"), 'w') as f:
+            # for paramname in paramnames:
+                # if 2 == len(paramname): 
+                    # f.write('%s   %s\n' % paramname))
+                # else:
+                    # f.write('%s\n' % paramname)
+        PolyChordOutput.make_paramnames_file(paramnames, os.path.join(kwargs["base_dir"], kwargs["file_root"]+".paramnames"))
+
 
 
     return anesthetic.read_chains(os.path.join(kwargs["base_dir"], kwargs["file_root"]))

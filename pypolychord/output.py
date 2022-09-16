@@ -170,7 +170,8 @@ class PolyChordOutput:
             self._create_pandas_table(paramnames = paramnames)
             
             
-    def make_paramnames_file(self, paramnames, filename):
+    @staticmethod
+    def make_paramnames_file(paramnames, filename):
         with open(filename, 'w') as f:
             for name, latex in paramnames:
                 f.write('%s   %s\n' % (name, latex))
