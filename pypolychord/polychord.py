@@ -462,6 +462,11 @@ def run(loglikelihood, nDims, **kwargs):
         x3 < 1, if one did not want to use SortedUniformPrior.
         Only available in Python interface.
         shape (:, nDims)
+    paramnames: List [(string,string)]
+        (Default: None)
+        Mapping of label:Tex for all parameters in order. E.g. for two physical
+        parameters and one derived:
+        paramnames = [("p0", "$p_0$"), ("p1", "$p_1$), ("d0", "$d_0$)]
 
     Returns
     -------
@@ -508,6 +513,8 @@ def run(loglikelihood, nDims, **kwargs):
         rank = comm.Get_rank()
     except ImportError:
         rank = 0
+
+    paramnames = kwargs.pop("paramnames", None)
 
     default_kwargs = {
         "nDerived": 0,
@@ -618,7 +625,13 @@ def run(loglikelihood, nDims, **kwargs):
     if "cube_samples" in kwargs:
         kwargs["read_resume"] = read_resume
 
-    return anesthetic.NestedSamples(root=os.path.join(kwargs["base_dir"], kwargs["file_root"]))
+    if paramnames is not None:
+        with open(os.path.join(kwargs["base_dir"], kwargs["file_root"]+".paramnames"), 'w') as f:
+            for name, latex in paramnames:
+                f.write('%s   %s\n' % (name, latex))
+
+
+    return anesthetic.read_chains(os.path.join(kwargs["base_dir"], kwargs["file_root"]))
 
 
 
