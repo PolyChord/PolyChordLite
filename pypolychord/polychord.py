@@ -557,8 +557,6 @@ def run(loglikelihood, nDims, **kwargs):
     default_kwargs.update(kwargs)
     kwargs = default_kwargs
 
-    kwargs["grade_dims"] = [int(d) for d in list(kwargs["grade_dims"])]
-    kwargs["nlives"] = {float(logL):int(nlive) for logL, nlive in kwargs["nlives"].items()}
 
     try:
         if rank == 0:
@@ -584,6 +582,8 @@ def run(loglikelihood, nDims, **kwargs):
     def wrap_prior(cube, theta):
         theta[:] = kwargs["prior"](cube)
 
+    kwargs["grade_dims"] = [int(d) for d in list(kwargs["grade_dims"])]
+    kwargs["nlives"] = {float(logL):int(nlive) for logL, nlive in kwargs["nlives"].items()}
 
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,
@@ -626,15 +626,7 @@ def run(loglikelihood, nDims, **kwargs):
         kwargs["read_resume"] = read_resume
 
     if paramnames is not None:
-        # with open(os.path.join(kwargs["base_dir"], kwargs["file_root"]+".paramnames"), 'w') as f:
-            # for paramname in paramnames:
-                # if 2 == len(paramname): 
-                    # f.write('%s   %s\n' % paramname))
-                # else:
-                    # f.write('%s\n' % paramname)
         PolyChordOutput.make_paramnames_file(paramnames, os.path.join(kwargs["base_dir"], kwargs["file_root"]+".paramnames"))
-
-
 
     return anesthetic.read_chains(os.path.join(kwargs["base_dir"], kwargs["file_root"]))
 
