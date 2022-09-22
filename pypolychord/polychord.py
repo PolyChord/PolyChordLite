@@ -232,6 +232,7 @@ def make_resume_file(settings, loglikelihood, prior):
         rank = comm.Get_rank()
         size = comm.Get_size()
     except ImportError:
+        MPI = False
         rank = 0
         size = 1
 
@@ -245,7 +246,7 @@ def make_resume_file(settings, loglikelihood, prior):
         nDerived = len(derived)
         lives.append(np.concatenate([cube,theta,derived,[logL_birth, logL]]))
 
-    try:
+    if MPI:
         sendbuf = np.array(lives).flatten()
         sendcounts = np.array(comm.gather(len(sendbuf)))
         if rank == 0:
@@ -255,7 +256,7 @@ def make_resume_file(settings, loglikelihood, prior):
         comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=root)
 
         lives = np.reshape(sendbuf, (len(settings.cube_samples), len(lives[0])))
-    except NameError:
+    else:
         lives = np.array(lives)
 
     if rank == 0:
