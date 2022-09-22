@@ -1,4 +1,4 @@
-from numpy import pi, log, sqrt
+from numpy import pi, log
 import numpy as np
 import pypolychord
 from pypolychord.settings import PolyChordSettings
