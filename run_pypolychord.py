@@ -1,4 +1,3 @@
-import os
 from numpy import pi, log
 import pypolychord
 from pypolychord.priors import UniformPrior
