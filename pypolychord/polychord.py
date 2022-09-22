@@ -119,7 +119,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         -------
         cluster_list: array-like
             cluster labels.  Must start from 0. All clusters must have at least
-            one point, so that max(cluster_list) gives the number of clusters
+            one point, so that max(cluster_list)-1 gives the number of clusters
             found.  Length nPoints.
 
 
