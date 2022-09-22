@@ -42,15 +42,16 @@ def dumper(live, dead, logweights, logZ, logZerr):
 #| Optional cluster function allow user-defined clustering
 
 def cluster(points):
+    """
+    <do some clustering algorithm to assign clusters>
+    - clusters should be an array of cluster labels for each point
+    - each cluster should have at least one point
+    - thus max(clusters)+1 should be the number of clusters
+    - i.e. clusters are 0-indexed
+    - work with the above numpy integer array
+    """
     npoints = points.shape[0]
     clusters = np.full(npoints, -1, dtype=int)
-
-    # <do some clustering algorithm to assign clusters>
-    # - clusters should be an array of cluster labels for each point
-    # - each cluster should have at least one point
-    # - thus max(clusters)+1 should be the number of clusters
-    # - i.e. clusters are 0-indexed
-    # - work with the above numpy integer array
 
     return clusters
 
