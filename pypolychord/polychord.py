@@ -253,7 +253,7 @@ def make_resume_file(settings, loglikelihood, prior):
             recvbuf = np.empty(sum(sendcounts), dtype=int)
         else:
             recvbuf = None
-        comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=root)
+        comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=0)
 
         lives = np.reshape(sendbuf, (len(settings.cube_samples), len(lives[0])))
     else:
