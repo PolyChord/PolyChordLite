@@ -3,12 +3,12 @@ Python interface to PolyChord
 
 Polychord is a tool to solve high dimensional problems.
 """
+import os, sys, subprocess, shutil
 
 from setuptools import setup, Extension, find_packages, Distribution
 from setuptools.command.build_py import build_py as _build_py
+from setuptools.command.develop import develop as _develop
 from distutils.command.clean import clean as _clean
-
-import os, sys, subprocess, shutil
 
 import numpy
 
@@ -17,7 +17,7 @@ def check_compiler(default_CC="gcc"):
 
     CC = default_CC if "CC" not in os.environ else os.environ["CC"]
     CC_version = subprocess.check_output([CC, "-v"], stderr=subprocess.STDOUT).decode("utf-8").lower()
-    
+
     if "clang" in CC_version:
         CC_family = "clang"
     elif "icc" in CC_version:
@@ -63,7 +63,8 @@ def get_version(short=False):
                 return line[44:50]
 
 
-class DistributionWithOption(Distribution, object):
+class DistributionWithOption(Distribution):
+
     def __init__(self, *args, **kwargs):
         self.global_options = self.global_options \
                                 + [("no-mpi", None, "Don't compile with MPI support."),
@@ -72,7 +73,9 @@ class DistributionWithOption(Distribution, object):
         self.debug_flags = None
         super(DistributionWithOption, self).__init__(*args, **kwargs)
 
-class CustomBuildPy(_build_py, object):
+
+class CustomBuildPy(_build_py):
+
     def run(self):
         env = {}
         env["PATH"] = os.environ["PATH"]
@@ -90,22 +93,32 @@ class CustomBuildPy(_build_py, object):
         if self.distribution.debug_flags is not None:
             self.distribution.ext_modules[0].extra_compile_args += ["-g", "-O0"]
             env["DEBUG"] = "1"
-        
+
         BASE_PATH = os.path.dirname(os.path.abspath(__file__))
         env["PWD"] = BASE_PATH
-        env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
+        env.update({k: os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
         subprocess.check_call(["make", "-e", "libchord.so"], env=env, cwd=BASE_PATH)
         if not os.path.isdir("pypolychord/lib/"):
             os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"))
-        shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"), 
+        shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"),
                     os.path.join(BASE_PATH, "pypolychord/lib/"))
         self.run_command("build_ext")
         return super(CustomBuildPy, self).run()
 
+
+class CustomDevelop(_develop):
+
+    def run(self):
+        self.run_command('build_py')
+        super(CustomDevelop, self).run()
+
+
 class CustomClean(_clean):
+
     def run(self):
         subprocess.run(["make", "veryclean"], check=True, env=os.environ)
         return super().run()
+
 
 if "--no-mpi" in sys.argv:
     NAME += '_nompi'
@@ -134,8 +147,9 @@ setup(name=NAME,
       extras_require={'plotting': 'getdist'},
       distclass=DistributionWithOption,
       ext_modules=[pypolychord_module],
-      cmdclass={'build_py' : CustomBuildPy,
-                'clean' : CustomClean},
-      package_data={"" : ["lib/libchord.so"]},
+      cmdclass={'build_py': CustomBuildPy,
+                'develop': CustomDevelop,
+                'clean': CustomClean},
+      package_data={"": ["lib/libchord.so"]},
       include_package_data=True,
       zip_safe=False)

@@ -73,4 +73,4 @@ except ImportError:
     except ImportError:
         print("Install matplotlib and getdist for plotting examples")
 
-    print("Install anesthetic or getdist  for for plotting examples")
+    print("Install anesthetic or getdist for plotting examples")

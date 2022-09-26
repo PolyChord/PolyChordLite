@@ -13,7 +13,7 @@ def default_dumper(live, dead, logweights, logZ, logZerr):
 
 
 def run_polychord(loglikelihood, nDims, nDerived, settings,
-                  prior=default_prior, dumper=default_dumper):
+                  prior=default_prior, dumper=default_dumper, comm=None):
     """
     Runs PolyChord.
 
@@ -144,20 +144,22 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         Final output evidence statistics
 
     """
-
-    try:
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
-    except ImportError:
-        rank = 0
+    rank = 0
+    if comm is None:
+        try:
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+        except ImportError:
+            pass
+    if comm is not None:
+        rank = comm.rank
 
     try:
         if rank == 0:
             os.makedirs(settings.base_dir)
     except OSError:
         pass
-        
+
     try:
         if rank == 0:
             os.makedirs(settings.cluster_dir)
@@ -213,7 +215,8 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
                      settings.grade_frac,
                      settings.grade_dims,
                      settings.nlives,
-                     settings.seed)
+                     settings.seed,
+                     comm)
 
     if settings.cube_samples is not None:
         settings.read_resume = read_resume
