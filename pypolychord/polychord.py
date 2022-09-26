@@ -505,7 +505,6 @@ def run(loglikelihood, nDims, **kwargs):
         Final output evidence statistics
 
     """
-    kwargs = kwargs.copy()
 
     try:
         from mpi4py import MPI
