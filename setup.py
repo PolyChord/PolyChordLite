@@ -12,6 +12,15 @@ from distutils.command.clean import clean as _clean
 
 import numpy
 
+
+try:
+    import mpi4py
+except ImportError:
+    mpi4py_get_include = None
+else:
+    mpi4py_get_include = mpi4py.get_include()
+
+
 def check_compiler(default_CC="gcc"):
     """Checks what compiler is being used (clang, intel, or gcc)."""
 
@@ -120,14 +129,21 @@ class CustomClean(_clean):
         return super().run()
 
 
+include_dirs = ['src/polychord', numpy.get_include()]
+
 if "--no-mpi" in sys.argv:
     NAME += '_nompi'
     DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
 
+elif mpi4py_get_include:
+    CPPRUNTIMELIB_FLAG += ["-DUSE_MPI"]
+    include_dirs += [mpi4py_get_include]
+
+
 pypolychord_module = Extension(
         name='_pypolychord',
         library_dirs=['lib'],
-        include_dirs=['src/polychord', numpy.get_include()],
+        include_dirs=include_dirs,
         libraries=['chord',],
         extra_link_args=RPATH_FLAG + CPPRUNTIMELIB_FLAG,
         extra_compile_args= ["-std=c++11"] + RPATH_FLAG + CPPRUNTIMELIB_FLAG,

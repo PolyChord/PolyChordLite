@@ -15,6 +15,9 @@
 PyMODINIT_FUNC PyInit__pypolychord(void)
 {
     import_array();
+#ifdef USE_MPI
+    import_mpi4py();
+#endif
     return PyModule_Create(&_pypolychordmodule);
 }
 #else
@@ -22,6 +25,9 @@ PyMODINIT_FUNC init_pypolychord(void)
 {
     Py_InitModule3("_pypolychord", module_methods, module_docstring);
     import_array();
+#ifdef USE_MPI
+    import_mpi4py();
+#endif
 }
 #endif
 
@@ -222,8 +228,8 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
     /* Run PolyChord */
     try{
 #ifdef USE_MPI
-        MPI_Comm comm = PyMPIComm_Get(py_comm);
-        run_polychord(loglikelihood, prior, dumper, S, comm);
+        MPI_Comm *comm = PyMPIComm_Get(py_comm);
+        run_polychord(loglikelihood, prior, dumper, S, *comm);
 #else
         run_polychord(loglikelihood, prior, dumper, S);
 #endif
