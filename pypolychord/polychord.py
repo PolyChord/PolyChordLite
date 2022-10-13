@@ -513,42 +513,42 @@ def run(loglikelihood, nDims, **kwargs):
     except ImportError:
         rank = 0
 
-    paramnames = kwargs.pop("paramnames", None)
+    paramnames = kwargs.pop('paramnames', None)
 
     default_kwargs = {
-        "nDerived": 0,
-        "prior": default_prior,
-        "dumper": default_dumper,
-        "nlive": nDims*25,
-        "num_repeats": nDims*5,
-        "nprior": -1,
-        "nfail": -1,
-        "do_clustering": True,
-        "feedback": 1,
-        "precision_criterion": 0.001,
-        "logzero": -1e30,
-        "max_ndead": -1,
-        "boost_posterior": 0.0,
-        "posteriors": True,
-        "equals": True,
-        "cluster_posteriors": True,
-        "write_resume": True,
-        "write_paramnames": False,
-        "read_resume": True,
-        "write_stats": True,
-        "write_live": True,
-        "write_dead": True,
-        "write_prior": True,
-        "maximise": False,
-        "compression_factor": np.exp(-1),
-        "synchronous": True,
-        "base_dir": "chains",
-        "file_root": "test",
-        "grade_dims": [nDims],
-        "nlives": {},
-        "seed": -1,
+        'nDerived': 0,
+        'prior': default_prior,
+        'dumper': default_dumper,
+        'nlive': nDims*25,
+        'num_repeats': nDims*5,
+        'nprior': -1,
+        'nfail': -1,
+        'do_clustering': True,
+        'feedback': 1,
+        'precision_criterion': 0.001,
+        'logzero': -1e30,
+        'max_ndead': -1,
+        'boost_posterior': 0.0,
+        'posteriors': True,
+        'equals': True,
+        'cluster_posteriors': True,
+        'write_resume': True,
+        'write_paramnames': False,
+        'read_resume': True,
+        'write_stats': True,
+        'write_live': True,
+        'write_dead': True,
+        'write_prior': True,
+        'maximise': False,
+        'compression_factor': np.exp(-1),
+        'synchronous': True,
+        'base_dir': 'chains',
+        'file_root': 'test',
+        'grade_dims': [nDims],
+        'nlives': {},
+        'seed': -1,
     }
-    default_kwargs["grade_frac"] = [1.0]*len(default_kwargs["grade_dims"])
+    default_kwargs['grade_frac'] = [1.0]*len(default_kwargs['grade_dims'])
 
 
     if not set(kwargs.keys()) <= set(default_kwargs.keys()):
@@ -559,82 +559,82 @@ def run(loglikelihood, nDims, **kwargs):
 
     try:
         if rank == 0:
-            os.makedirs(kwargs["base_dir"])
+            os.makedirs(kwargs['base_dir'])
     except OSError:
         pass
         
     try:
         if rank == 0:
-            os.makedirs(os.path.join(kwargs["base_dir"], "clusters"))
+            os.makedirs(os.path.join(kwargs['base_dir'], 'clusters'))
     except OSError:
         pass
 
-    if "cube_samples" in kwargs:
-        _make_resume_file(loglikelihood, kwargs["prior"], **kwargs)
-        read_resume = kwargs["read_resume"]
-        kwargs["read_resume"] = True
+    if 'cube_samples' in kwargs:
+        _make_resume_file(loglikelihood, kwargs['prior'], **kwargs)
+        read_resume = kwargs['read_resume']
+        kwargs['read_resume'] = True
 
     def wrap_loglikelihood(theta, phi):
         logL, phi[:] = loglikelihood(theta)
         return logL
 
     def wrap_prior(cube, theta):
-        theta[:] = kwargs["prior"](cube)
+        theta[:] = kwargs['prior'](cube)
 
-    kwargs["grade_dims"] = [int(d) for d in list(kwargs["grade_dims"])]
-    kwargs["nlives"] = {float(logL):int(nlive) for logL, nlive in kwargs["nlives"].items()}
+    kwargs['grade_dims'] = [int(d) for d in list(kwargs['grade_dims'])]
+    kwargs['nlives'] = {float(logL):int(nlive) for logL, nlive in kwargs['nlives'].items()}
 
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,
         wrap_prior,
-        kwargs["dumper"],
+        kwargs['dumper'],
         nDims,
-        kwargs["nDerived"],
-        kwargs["nlive"],
-        kwargs["num_repeats"],
-        kwargs["nprior"],
-        kwargs["nfail"], 
-        kwargs["do_clustering"],
-        kwargs["feedback"],
-        kwargs["precision_criterion"],
-        kwargs["logzero"],
-        kwargs["max_ndead"],
-        kwargs["boost_posterior"],
-        kwargs["posteriors"],
-        kwargs["equals"],
-        kwargs["cluster_posteriors"],
-        kwargs["write_resume"],
-        kwargs["write_paramnames"],
-        kwargs["read_resume"],
-        kwargs["write_stats"],
-        kwargs["write_live"],
-        kwargs["write_dead"],
-        kwargs["write_prior"],
-        kwargs["maximise"],
-        kwargs["compression_factor"],
-        kwargs["synchronous"],
-        kwargs["base_dir"],
-        kwargs["file_root"],
-        kwargs["grade_frac"],
-        kwargs["grade_dims"],
-        kwargs["nlives"], 
-        kwargs["seed"],
+        kwargs['nDerived'],
+        kwargs['nlive'],
+        kwargs['num_repeats'],
+        kwargs['nprior'],
+        kwargs['nfail'], 
+        kwargs['do_clustering'],
+        kwargs['feedback'],
+        kwargs['precision_criterion'],
+        kwargs['logzero'],
+        kwargs['max_ndead'],
+        kwargs['boost_posterior'],
+        kwargs['posteriors'],
+        kwargs['equals'],
+        kwargs['cluster_posteriors'],
+        kwargs['write_resume'],
+        kwargs['write_paramnames'],
+        kwargs['read_resume'],
+        kwargs['write_stats'],
+        kwargs['write_live'],
+        kwargs['write_dead'],
+        kwargs['write_prior'],
+        kwargs['maximise'],
+        kwargs['compression_factor'],
+        kwargs['synchronous'],
+        kwargs['base_dir'],
+        kwargs['file_root'],
+        kwargs['grade_frac'],
+        kwargs['grade_dims'],
+        kwargs['nlives'], 
+        kwargs['seed'],
     )
 
-    if "cube_samples" in kwargs:
-        kwargs["read_resume"] = read_resume
+    if 'cube_samples' in kwargs:
+        kwargs['read_resume'] = read_resume
 
     if paramnames is not None:
-        PolyChordOutput.make_paramnames_file(paramnames, os.path.join(kwargs["base_dir"], kwargs["file_root"]+".paramnames"))
+        PolyChordOutput.make_paramnames_file(paramnames, os.path.join(kwargs['base_dir'], kwargs['file_root']+".paramnames"))
 
-    return anesthetic.read_chains(os.path.join(kwargs["base_dir"], kwargs["file_root"]))
+    return anesthetic.read_chains(os.path.join(kwargs['base_dir'], kwargs['file_root']))
 
 
 
 def _make_resume_file(loglikelihood, **kwargs):
     import fortranformat as ff
-    resume_filename = os.path.join(kwargs["base_dir"],
-                                   kwargs["file_root"])+".resume"
+    resume_filename = os.path.join(kwargs['base_dir'],
+                                   kwargs['file_root'])+".resume"
 
     try:
         from mpi4py import MPI
@@ -646,10 +646,10 @@ def _make_resume_file(loglikelihood, **kwargs):
         size = 1
 
     lives = []
-    logL_birth = kwargs["logzero"]
-    for i in np.array_split(np.arange(len(kwargs["cube_samples"])), size)[rank]:
-        cube = kwargs["cube_samples"][i]
-        theta = kwargs["prior"](cube)
+    logL_birth = kwargs['logzero']
+    for i in np.array_split(np.arange(len(kwargs['cube_samples'])), size)[rank]:
+        cube = kwargs['cube_samples'][i]
+        theta = kwargs['prior'](cube)
         logL, derived = loglikelihood(theta)
         nDims = len(theta)
         nDerived = len(derived)
@@ -664,12 +664,12 @@ def _make_resume_file(loglikelihood, **kwargs):
             recvbuf = None
         comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=root)
 
-        lives = np.reshape(sendbuf, (len(kwargs["cube_samples"]), len(lives[0])))
+        lives = np.reshape(sendbuf, (len(kwargs['cube_samples']), len(lives[0])))
     except NameError:
         lives = np.array(lives)
 
     if rank == 0:
-        with open(resume_filename,"w") as f:
+        with open(resume_filename,'w') as f:
             def write(var):
                 var = np.atleast_1d(var)
                 if isinstance(var[0], np.integer):
@@ -696,11 +696,11 @@ def _make_resume_file(loglikelihood, **kwargs):
             write('=== Number of global equally weighted posterior points ===')
             write(0)
             write('=== Number of grades ===')
-            write(len(kwargs["grade_dims"]))
+            write(len(kwargs['grade_dims']))
             write('=== positions of grades ===')
-            write(kwargs["grade_dims"])
+            write(kwargs['grade_dims'])
             write('=== Number of repeats ===')
-            write(kwargs["num_repeats"])
+            write(kwargs['num_repeats'])
             write('=== Number of likelihood calls ===')
             write(len(lives))
             write('=== Number of live points in each cluster ===')
@@ -716,11 +716,11 @@ def _make_resume_file(loglikelihood, **kwargs):
             write('=== Number of weighted posterior points in each dead cluster ===')
             write('=== Number of equally weighted posterior points in each dead cluster ===')
             write('=== global evidence -- log(<Z>) ===')
-            write(kwargs["logzero"])
+            write(kwargs['logzero'])
             write('=== global evidence^2 -- log(<Z^2>) ===')
-            write(kwargs["logzero"])
+            write(kwargs['logzero'])
             write('=== posterior thin factor ===')
-            write(kwargs["boost_posterior"])
+            write(kwargs['boost_posterior'])
             write('=== local loglikelihood bounds ===')
             write(lives[:,-1].min())
             write('=== local volume -- log(<X_p>) ===')
@@ -728,17 +728,17 @@ def _make_resume_file(loglikelihood, **kwargs):
             write('=== last update volume ===')
             write(0.0)
             write('=== global evidence volume cross correlation -- log(<ZX_p>) ===')
-            write(kwargs["logzero"])
+            write(kwargs['logzero'])
             write('=== local evidence -- log(<Z_p>) ===')
-            write(kwargs["logzero"])
+            write(kwargs['logzero'])
             write('=== local evidence^2 -- log(<Z_p^2>) ===')
-            write(kwargs["logzero"])
+            write(kwargs['logzero'])
             write('=== local evidence volume cross correlation -- log(<Z_pX_p>) ===')
-            write(kwargs["logzero"])
+            write(kwargs['logzero'])
             write('=== local volume cross correlation -- log(<X_pX_q>) ===')
             write(0.0)
             write('=== maximum log weights -- log(w_p) ===')
-            write(kwargs["logzero"])
+            write(kwargs['logzero'])
             write('=== local dead evidence -- log(<Z_p>) ===')
             write('=== local dead evidence^2 -- log(<Z_p^2>) ===')
             write('=== maximum dead log weights -- log(w_p) ===')
