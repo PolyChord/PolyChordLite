@@ -32,7 +32,7 @@ endif
 ifneq (,$(findstring clang,$(shell '$(CXX)' -v 2>&1)))
 LDLIBS += -lc++
 else
-LDLIBS += -lstdc++
+LDLIBS += -lstdc++ -lmpi_cxx
 endif
 
 
