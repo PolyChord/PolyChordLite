@@ -86,27 +86,23 @@ class DistributionWithOption(Distribution):
 class CustomBuildPy(_build_py):
 
     def run(self):
-        env = {}
-        env["PATH"] = os.environ["PATH"]
         if self.distribution.no_mpi is None:
-            env["MPI"] = "1"
+            os.environ["MPI"] = "1"
             # These need to be set so that build_ext uses the right compilers
-            cc_compiler = subprocess.check_output(["make", "print_CC"]).decode('utf-8').strip()
-            os.environ["CC"] = cc_compiler
+            #cc_compiler = subprocess.check_output(["make", "print_CC"]).decode('utf-8').strip()
+            #os.environ"CC"] = cc_compiler
 
-            cxx_compiler = subprocess.check_output(["make", "print_CXX"]).decode('utf-8').strip()
-            os.environ["CXX"] = cxx_compiler
+            #cxx_compiler = subprocess.check_output(["make", "print_CXX"]).decode('utf-8').strip()
+            #os.environ["CXX"] = cxx_compiler
         else:
-            env["MPI"] = "0"
+            os.environ["MPI"] = "0"
 
         if self.distribution.debug_flags is not None:
             self.distribution.ext_modules[0].extra_compile_args += ["-g", "-O0"]
-            env["DEBUG"] = "1"
+            os.environ["DEBUG"] = "1"
 
         BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-        env["PWD"] = BASE_PATH
-        env.update({k: os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
-        subprocess.check_call(["make", "-e", "libchord.so"], env=env, cwd=BASE_PATH)
+        subprocess.check_call(["make", "-e", "libchord.so"], cwd=BASE_PATH)
         if not os.path.isdir("pypolychord/lib/"):
             os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"))
         shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"),
@@ -159,7 +155,7 @@ setup(name=NAME,
       author_email='wh260@cam.ac.uk',
       license='PolyChord',
       packages=find_packages(),
-      install_requires=['numpy','scipy'],
+      install_requires=['numpy', 'scipy'],
       extras_require={'plotting': 'getdist'},
       distclass=DistributionWithOption,
       ext_modules=[pypolychord_module],
