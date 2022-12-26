@@ -68,7 +68,7 @@ libchord.so: $(LIB_DIR)/libchord.so
 
 examples: $(EXAMPLES)
 $(EXAMPLES): % : $(BIN_DIR)/%
-$(PROGRAMS): % : $(BIN_DIR)/%
+$(PROGRAMS): % : $(BIN_DIR)/%  #!!
 
 # PolyChord
 # ---------
@@ -95,7 +95,7 @@ $(DRIVERS_DIR)/polychord_examples.o:
 $(patsubst %,$(BIN_DIR)/%,$(PROGRAMS)): $(BIN_DIR)/polychord_% : $(LIB_DIR)/libchord.a $(LIB_DIR)/lib%_likelihood.a $(DRIVERS_DIR)/polychord_%.o 
 	$(LD) $(DRIVERS_DIR)/polychord_$*.o $(LIB_DIR)/libchord.a -o $@ $(LDFLAGS) -l$*_likelihood $(LDLIBS) 
 
-$(patsubst polychord_%,$(LIB_DIR)/lib%_likelihood.a,$(PROGRAMS)): $(LIB_DIR)/lib%_likelihood.a: $(LIB_DIR)/libchord.a
+$(patsubst polychord_%,$(LIB_DIR)/lib%_likelihood.a,$(PROGRAMS)): $(LIB_DIR)/lib%_likelihood.a: $(LIB_DIR)/libchord.a $(LIKELIHOOD_DIR)/CC_ini/%_likelihood.o
 	$(MAKE) -C $(LIKELIHOOD_DIR)/$* $@
 
 $(patsubst %,$(DRIVERS_DIR)/%.o,$(PROGRAMS)):

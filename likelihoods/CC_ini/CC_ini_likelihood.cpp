@@ -44,7 +44,7 @@
 // 
 double loglikelihood (double theta[], int nDims, double phi[], int nDerived)
 {
-    double mu = 5e-1;
+    double mu = 3e-1;
     double sigma = 1e-1;
     double logL= -std::log(std::atan(1)*8*sigma*sigma)*nDims/2.;
 
