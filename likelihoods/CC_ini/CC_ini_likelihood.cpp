@@ -42,21 +42,76 @@
 // If you would like to adjust the signature of this call, then you should adjust it there,
 // as well as in likelihoods/my_cpp_likelihood.hpp
 // 
+double potential(double field) 
+{
+//    double mu = -2.0;
+    double lambda = 1.5;
+
+    double V = lambda * pow(field * field - 1, 2) + field * field;
+
+    return V;
+}
+
+
+double laplacian(double* theta, int n, int i, int j)
+{
+    double kinetic = 0.0;
+
+    int idx = i * n + j;
+
+    int idx_left = j + 1 == n   ? i * n         : i * n + (j+1);
+    int idx_right = j - 1 < 0   ? i * n + (n-1) : i * n + (j-1);
+    int idx_up = i - 1 < 0      ? (n-1) * n + j : (i-1) * n + j;
+    int idx_down = i + 1 == n   ? j             : (i+1) * n + j; // with torus b.c.
+
+    kinetic += 2 * pow(theta[idx], 2);
+    kinetic -= theta[idx] * theta[idx_left];
+    kinetic -= theta[idx] * theta[idx_right];
+    kinetic -= theta[idx] * theta[idx_up];
+    kinetic -= theta[idx] * theta[idx_down];
+
+    return kinetic;
+}
+
+
+double magnetisation(double* theta, int n) 
+{
+    double mag = 0.0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            mag += theta[i * n + j];
+        }
+    }
+
+    return mag;
+}
+
+
 double loglikelihood (double theta[], int nDims, double phi[], int nDerived)
 {
-    double mu = 3e-1;
-    double sigma = 1e-1;
-    double logL= -std::log(std::atan(1)*8*sigma*sigma)*nDims/2.;
+    // assume n x n = nDims grid for now.
+    double fieldAction = 0.0;
 
-    double rad2 = 0.;
-    for (int i=0;i<nDims;i++)
-        rad2 += (theta[i]-mu)*(theta[i]-mu);
+    double kappa = 0.2;
+    int n = sqrt(nDims);
 
-    phi[0] = std::sqrt(rad2);
-    logL -= rad2/(2.*sigma*sigma);
+    // kinetic term
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            fieldAction += kappa * laplacian(theta, n, i, j);
+        }
+    }
+
+    // potential term
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            fieldAction += potential(theta[i * n + j]);
+        }
+    }
     
-    return logL;
+    phi[0] = magnetisation(theta, n);
 
+    return -fieldAction;
 }
 
 // Prior function
