@@ -83,7 +83,7 @@ double magnetisation(double* theta, int n)
         }
     }
 
-    return mag;
+    return mag / (n*n);
 }
 
 
@@ -92,7 +92,7 @@ double loglikelihood (double theta[], int nDims, double phi[], int nDerived)
     // assume n x n = nDims grid for now.
     double fieldAction = 0.0;
 
-    double kappa = 0.2;
+    double kappa = 0.05;
     int n = sqrt(nDims);
 
     // kinetic term
@@ -108,7 +108,12 @@ double loglikelihood (double theta[], int nDims, double phi[], int nDerived)
             fieldAction += potential(theta[i * n + j]);
         }
     }
-    
+
+    //lagrangian becomes to T + V after wick rotation
+
+    //lambda=inf gives V(|1|)=0 else inf, so only phi=|1| has non infinite action (non-zero prob)
+    //therefore we recover ising model with kappa = 1/T 
+
     phi[0] = magnetisation(theta, n);
 
     return -fieldAction;
