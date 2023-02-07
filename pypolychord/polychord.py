@@ -642,6 +642,7 @@ def _make_resume_file(loglikelihood, **kwargs):
         rank = comm.Get_rank()
         size = comm.Get_size()
     except ImportError:
+        MPI = False
         rank = 0
         size = 1
 
@@ -655,17 +656,18 @@ def _make_resume_file(loglikelihood, **kwargs):
         nDerived = len(derived)
         lives.append(np.concatenate([cube,theta,derived,[logL_birth, logL]]))
 
-    try:
+    if MPI:
         sendbuf = np.array(lives).flatten()
         sendcounts = np.array(comm.gather(len(sendbuf)))
         if rank == 0:
             recvbuf = np.empty(sum(sendcounts), dtype=int)
         else:
             recvbuf = None
-        comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=root)
+        comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=0)
+
 
         lives = np.reshape(sendbuf, (len(kwargs['cube_samples']), len(lives[0])))
-    except NameError:
+    else:
         lives = np.array(lives)
 
     if rank == 0:
