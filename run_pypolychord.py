@@ -1,4 +1,4 @@
-from numpy import pi, log, sqrt
+from numpy import pi, log
 import numpy as np
 import pypolychord
 from pypolychord.settings import PolyChordSettings
@@ -41,15 +41,17 @@ def dumper(live, dead, logweights, logZ, logZerr):
 
 #| Optional cluster function allow user-defined clustering
 
-def cluster(distance2_matrix):
-    npoints = distance2_matrix.shape[0]
-    clusters = np.ones(npoints, dtype=int)
-
-    # <do some clustering algorithm to assign clusters>
-    # - clusters should be an array of cluster labels for each point
-    # - each cluster should have at least one point
-    # - thus max(clusters) should be the number of clusters
-    # - work with the above numpy integer array
+def cluster(points):
+    """
+    <do some clustering algorithm to assign clusters>
+    - clusters should be an array of cluster labels for each point
+    - each cluster should have at least one point
+    - thus max(clusters)+1 should be the number of clusters
+    - i.e. clusters are 0-indexed
+    - work with the above numpy integer array
+    """
+    npoints = points.shape[0]
+    clusters = np.full(npoints, -1, dtype=int)
 
     return clusters
 

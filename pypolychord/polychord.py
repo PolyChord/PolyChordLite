@@ -12,8 +12,8 @@ def default_dumper(live, dead, logweights, logZ, logZerr):
     pass
 
 
-def default_cluster(distance2_matrix):
-    return np.zeros(distance2_matrix.shape[0],dtype=int)
+def default_cluster(points):
+    return np.full(points.shape[0], -1,dtype=int)
 
 
 def run_polychord(loglikelihood, nDims, nDerived, settings,
@@ -112,14 +112,14 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
 
         Parameters
         ----------
-        distance2_matrix: numpy.array
-            squared distances between points. Shape (nPoints, nPoints)
+        points: numpy.array
+            positions of points. Shape (nDims, nPoints)
 
         Returns
         -------
         cluster_list: array-like
-            cluster labels.  Must start from 1. All clusters must have at least
-            one point, so that max(cluster_list) gives the number of clusters
+            cluster labels.  Must start from 0. All clusters must have at least
+            one point, so that max(cluster_list)-1 gives the number of clusters
             found.  Length nPoints.
 
 
@@ -197,8 +197,11 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     def wrap_prior(cube, theta):
         theta[:] = prior(cube)
 
-    def wrap_cluster(distance2_matrix, cluster_list):
-        cluster_list[:] = cluster(distance2_matrix)
+    def wrap_cluster(points, cluster_list):
+        cluster_list[:] = cluster(points) + 1
+
+    settings.grade_dims = [int(d) for d in settings.grade_dims]
+    settings.nlives = {float(logL):int(nlive) for logL, nlive in settings.nlives.items()}
 
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,
@@ -254,6 +257,7 @@ def make_resume_file(settings, loglikelihood, prior):
         rank = comm.Get_rank()
         size = comm.Get_size()
     except ImportError:
+        MPI = False
         rank = 0
         size = 1
 
@@ -267,17 +271,17 @@ def make_resume_file(settings, loglikelihood, prior):
         nDerived = len(derived)
         lives.append(np.concatenate([cube,theta,derived,[logL_birth, logL]]))
 
-    try:
+    if MPI:
         sendbuf = np.array(lives).flatten()
         sendcounts = np.array(comm.gather(len(sendbuf)))
         if rank == 0:
             recvbuf = np.empty(sum(sendcounts), dtype=int)
         else:
             recvbuf = None
-        comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=root)
+        comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=0)
 
         lives = np.reshape(sendbuf, (len(settings.cube_samples), len(lives[0])))
-    except NameError:
+    else:
         lives = np.array(lives)
 
     if rank == 0:

@@ -47,10 +47,10 @@ contains
             end subroutine dumper
         end interface
         interface
-            function cluster(distance2_matrix) result(cluster_list)
+            function cluster(points) result(cluster_list)
                 import :: dp
-                real(dp), intent(in), dimension(:,:) :: distance2_matrix
-                integer, dimension(size(distance2_matrix,1)) :: cluster_list
+                real(dp), intent(in), dimension(:,:) :: points
+                integer, dimension(size(points,2)) :: cluster_list
             end function
         end interface
 
@@ -130,9 +130,9 @@ contains
 #endif
         call run_polychord(loglikelihood,prior_transform,dumper,cluster,settings,comm)
     contains
-        function cluster(distance2_matrix) result(cluster_list)
-            real(dp), intent(in), dimension(:,:) :: distance2_matrix
-            integer, dimension(size(distance2_matrix,1)) :: cluster_list
+        function cluster(points) result(cluster_list)
+            real(dp), intent(in), dimension(:,:) :: points
+            integer, dimension(size(points,2)) :: cluster_list
             cluster_list = 0
         end function
     end subroutine run_polychord_no_cluster
@@ -390,11 +390,11 @@ contains
             end subroutine c_dumper
         end interface
         interface
-            subroutine c_cluster(distance2_matrix,cluster_list,n) bind(c)
+            subroutine c_cluster(points,cluster_list,nDims,nPoints) bind(c)
                 use iso_c_binding
-                integer(c_int), intent(in), value :: n
-                real(c_double), intent(in),  dimension(n,n) :: distance2_matrix
-                integer(c_int), intent(out), dimension(n) :: cluster_list
+                integer(c_int), intent(in), value :: nDims, nPoints
+                real(c_double), intent(in),  dimension(nDims,nPoints) :: points
+                integer(c_int), intent(out), dimension(nPoints) :: cluster_list
             end subroutine c_cluster
         end interface
 
@@ -561,17 +561,18 @@ contains
             call f_dumper_ptr(c_ndead, c_nlive, c_npars, c_live, c_dead, c_logweights, c_logZ, c_logZerr)
         end subroutine dumper
 
-        function cluster(distance2_matrix) result(cluster_list)
+        function cluster(points) result(cluster_list)
             implicit none
-            real(dp), intent(in), dimension(:,:) :: distance2_matrix
-            integer, dimension(size(distance2_matrix,1)) :: cluster_list
+            real(dp), intent(in), dimension(:,:) :: points
+            integer, dimension(size(points,2)) :: cluster_list
 
-            integer(c_int) :: c_n
-            real(c_double),  dimension(size(distance2_matrix,1),size(distance2_matrix,2)) :: c_distance2_matrix
-            integer(c_int), dimension(size(distance2_matrix,1)) :: c_cluster_list
-            c_n = size(c_cluster_list)
-            c_distance2_matrix = distance2_matrix
-            call f_cluster_ptr(c_distance2_matrix,c_cluster_list,c_n)
+            integer(c_int) :: c_npoints, c_ndims
+            real(c_double),  dimension(size(points,1),size(points,2)) :: c_points
+            integer(c_int), dimension(size(points,2)) :: c_cluster_list
+            c_ndims = size(points,1)
+            c_npoints = size(c_cluster_list)
+            c_points = points
+            call f_cluster_ptr(c_points,c_cluster_list,c_ndims,c_npoints)
             cluster_list = c_cluster_list
 
         end function cluster
