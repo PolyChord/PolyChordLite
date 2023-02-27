@@ -46,8 +46,7 @@ jobs:
       run: mpirun -np 2 python run_pypolychord.py
 
     - name: Test pypolychord (anesthetic)
-      exclude:
-        - python-version: ['3.6', '3.7']
+      if: ${{ matrix.python-version >= '3.7' }}
       run: |
         pip install -r requirements.txt
         python run_pypolychord.py
