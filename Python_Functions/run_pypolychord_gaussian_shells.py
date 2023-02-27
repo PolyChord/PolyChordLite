@@ -41,7 +41,7 @@ def likelihood(theta):
     r2 = 0
 
 
-    def logincexp(loga,logb,logx=None):
+    def logincexp(loga,logb,logc=None):
         if (loga>logb):
             loga = loga + log(exp(logb-loga) + 1)
         else:
