@@ -47,5 +47,5 @@ jobs:
 
     - name: Test pypolychord (anesthetic)
       run: |
-        pip install anesthetic
+        pip install -r requirements.txt
         python run_pypolychord.py
