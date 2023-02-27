@@ -44,3 +44,6 @@ jobs:
 
     - name: Test pypolychord (MPI)
       run: mpirun -np 2 python run_pypolychord.py
+
+    - name: Test pypolychord (anesthetic)
+      run: pip install anesthetic; python run_pypolychord.py
