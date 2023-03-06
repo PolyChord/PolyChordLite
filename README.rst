@@ -5,7 +5,7 @@
    :target: https://arxiv.org/abs/1506.00171
    :alt: Open-access paper
 
-PolyChord v 1.20.1
+PolyChord v 1.20.2
 
 Will Handley, Mike Hobson & Anthony Lasenby
 
@@ -319,8 +319,8 @@ simulate dynamic nested sampling.  The format & contents of these two files
 are as follows: They have has ndims+nderived+2 columns. The first
 ndims+nderived columns are the ndim parameter values along with the nderived
 additional parameters that are being passed by the likelihood routine for
-PolyChord to save along with the ndims parameters. The ndims+nderived+2 column
-is the log-likelihood value.  The ndims+nderived+1 column is the log-likelihood
+PolyChord to save along with the ndims parameters. The ndims+nderived+1 column
+is the log-likelihood value.  The ndims+nderived+2 column is the log-likelihood
 value that the point was born at. They are is identical to the
 [root]_phys_live.txt and [root]_dead.txt file, except for an additional column
 including the birth contours

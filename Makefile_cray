@@ -10,13 +10,13 @@ LDSHARED = $(LD) -shared
 # Archive tool
 AR = ar rv
 
-FFLAGS += -fpp -fpic -qopenmp -dynamic
-CXXFLAGS += -fpic -qopenmp -dynamic
+FFLAGS += -cpp -fpic -fopenmp -dynamic
+CXXFLAGS += -fpic -fopenmp -dynamic
 CFLAGS += -fpic
 #setting for Edison/Cori on NERSC
 ifneq ($(NERSC_HOST),)
-FFLAGS += -axMIC-AVX512,CORE-AVX2
-CXXFLAGS += -axMIC-AVX512,CORE-AVX2
+FFLAGS += -ffree-line-length-none -fallow-argument-mismatch 
+CXXFLAGS += -ffree-line-length-none -fallow-argument-mismatch 
 endif
 
 ifdef IPO

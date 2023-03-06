@@ -1,4 +1,4 @@
-from numpy import pi, log, sqrt
+from numpy import pi, log
 import pypolychord
 from pypolychord.settings import PolyChordSettings
 from pypolychord.priors import UniformPrior
@@ -58,10 +58,11 @@ output.make_paramnames_files(paramnames)
 
 #| Make an anesthetic plot (could also use getdist)
 try:
-    from anesthetic import NestedSamples
-    samples = NestedSamples(root= settings.base_dir + '/' + settings.file_root)
-    fig, axes = samples.plot_2d(['p0','p1','p2','p3','r'])
-    fig.savefig('posterior.pdf')
+    from matplotlib import pyplot as plt
+    from anesthetic import read_chains
+    samples = read_chains(settings.base_dir + '/' + settings.file_root)
+    samples.plot_2d(['p0','p1','p2','p3','r'])
+    plt.savefig('posterior.pdf')
 
 except ImportError:
     try:

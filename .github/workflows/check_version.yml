@@ -1,0 +1,30 @@
+name: check_version
+on: pull_request
+jobs:
+  check_version_numbers:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: set environment
+      run: |
+        echo "python_version=$(grep '__version__' pypolychord/__init__.py | grep -oe '[0-9]\+\.[0-9]\+\.[0-9]')" >> $GITHUB_ENV
+        echo "fortran_version=$(grep 'version' src/polychord/feedback.f90 | grep -oe '[0-9]\+\.[0-9]\+\.[0-9]')" >> $GITHUB_ENV
+        echo "readme_version=$(grep 'PolyChord v' README.rst | grep -oe '[0-9]\+\.[0-9]\+\.[0-9]')" >> $GITHUB_ENV
+    - name: Check python matches fortran version number
+      if:  env.python_version != env.fortran_version
+      run: |
+        echo "python version:  $python_version"
+        echo "fortran version: $fortran_version"
+        exit 1
+    - name: Check fortran matches readme version number
+      if:  env.fortran_version != env.readme_version
+      run: |
+        echo "fortran version: $fortran_version"
+        echo "readme version:  $readme_version"
+        exit 1
+    - name: Check readme matches python version number
+      if:  env.readme_version != env.python_version
+      run: |
+        echo "readme version:  $readme_version"
+        echo "python version:  $python_version"
+        exit 1
