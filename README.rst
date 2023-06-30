@@ -59,10 +59,14 @@ If you do not have sudo access/virtual environments/anaconda, then appending `--
 Post Processing
 ===============
 
-We recommend the tool `anesthetic <https://github.com/williamjameshandley/anesthetic>`_ for post-processing your nested sampling runs. A plot gallery can be found `here <http://htmlpreview.github.io/?https://github.com/williamjameshandley/cosmo_example/blob/master/demos/demo.html>`_
+We recommend the tool `anesthetic <https://github.com/handley-lab/anesthetic>`_ for post-processing your nested sampling runs. A plot gallery can be found `here <http://htmlpreview.github.io/?https://github.com/williamjameshandley/cosmo_example/blob/master/demos/demo.html>`_
 
 
-https://github.com/williamjameshandley/anesthetic
+https://github.com/handley-lab/anesthetic
+
+```
+pip install anesthetic
+```
 
 MPI Support
 ===========
