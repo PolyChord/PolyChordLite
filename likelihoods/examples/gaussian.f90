@@ -8,7 +8,7 @@ module loglikelihood_module
     !! It is normalised so that it should output an evidence of 1.0 for
     !! effectively infinite priors.
     !!
-    !! The mean is set at 0.5 by default, and all sigmas at 0.01
+    !! The mean is set at 0.5 by default, and all sigmas at 0.1
     function loglikelihood(theta,phi)
         use utils_module, only: logTwoPi,Vn
         implicit none

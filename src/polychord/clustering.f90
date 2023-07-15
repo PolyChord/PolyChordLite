@@ -5,12 +5,12 @@ module KNN_clustering
     contains
 
     !> This function returns a clustering from a similarity matrix based on
-    !! 'nearest neighbor' clustering.
+    !! 'nearest neighbour' clustering.
     !!
     !! Points belong to the same cluster if they are in either of each others k
     !! nearest neighbor sets. 
     !!
-    !! The algorithm computes the k nearest neihbor sets from the similarity
+    !! The algorithm computes the k nearest neighbour sets from the similarity
     !! matrix, and then tests
     recursive function NN_clustering(similarity_matrix,num_clusters) result(cluster_list)
         use utils_module, only: relabel
@@ -113,8 +113,8 @@ module KNN_clustering
 
                 ! If they're not in the same cluster already...
                 if(c(i)/=c(j)) then
-                    ! ... check to see if they are within each others k nearest neihbors...
-                    if( neighbors( knn(:,i),knn(:,j) ) ) then
+                    ! ... check to see if they are within each others k nearest neighbours...
+                    if( neighbours( knn(:,i),knn(:,j) ) ) then
 
                         ! If they are then relabel cluster_i and cluster_j to the smaller of the two
                         where(c==c(i).or.c==c(j)) 
@@ -137,10 +137,10 @@ module KNN_clustering
         !> The data to compute on
         real(dp), intent(in),dimension(:,:) :: similarity_matrix
 
-        !> The number of nearest neighbors to compute
+        !> The number of nearest neighbours to compute
         integer, intent(in) :: k
 
-        ! The indices of the k nearest neighbors to output
+        ! The indices of the k nearest neighbours to output
         integer, dimension(k,size(similarity_matrix,1)) :: knn
 
         integer :: nPoints,i,j
@@ -154,7 +154,7 @@ module KNN_clustering
         knn=0
 
         do i=1,nPoints
-            ! Find the k nearest neighbors for each point
+            ! Find the k nearest neighbours for each point
             distance2s = huge(1d0)
             do j=1,nPoints
                 ! If the distance between i and j is too large to be considered,
@@ -174,22 +174,22 @@ module KNN_clustering
     end function compute_knn
 
 
-    ! Return whether they're each others n nearest neighbor list
-    function neighbors(knn1,knn2) result(same_list)
+    ! Return whether they're each others n nearest neighbour list
+    function neighbours(knn1,knn2) result(same_list)
         implicit none
         integer,intent(in), dimension(:) :: knn1
         integer,intent(in), dimension(:) :: knn2 
 
         logical :: same_list
 
-        ! Check to see if they're in each others neighbors lists
+        ! Check to see if they're in each others neighbours lists
         same_list= any(knn1==knn2(1)) .or. any(knn2==knn1(1))
 
-    end function neighbors
+    end function neighbours
 
 
 
-    ! Return the number of matches in the n nearest neighbor list
+    ! Return the number of matches in the n nearest neighbour list
     function matches(knn1,knn2)
         implicit none
         integer,intent(in), dimension(:) :: knn1

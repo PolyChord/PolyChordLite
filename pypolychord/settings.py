@@ -120,6 +120,14 @@ class PolyChordSettings:
         (Default: exp(-1))
         How often to update the files and do clustering
 
+    synchronous : boolean
+        (Default: True)
+        Parallelise with synchronous workers, rather than asynchronous ones.
+        This can be set to False if the likelihood speed is known to be
+        approximately constant across the parameter space. Synchronous
+        parallelisation is less effective than asynchronous by a factor ~O(1)
+        for large parallelisation.
+
     base_dir : string
         (Default: 'chains')
         Where to store output files.
@@ -159,6 +167,17 @@ class PolyChordSettings:
         Note **Positive seeds only**
         a negative seed indicates that you should use the system time in
         milliseconds
+    cube_samples: array-like
+        (Default: None)
+        samples from the unit hypercube to start nested sampling from. This is
+        useful if the prior is hard to rejection sample directly from the unit
+        hypercube (e.g. if there is a large amount of excluded parameter
+        space), but can be done more efficiently manually. A concrete example
+        could be include sorted uniform parameters by requiring 0 < x1 < x2 <
+        x3 < 1, if one did not want to use SortedUniformPrior.
+        Only available in Python interface.
+        shape (:, nDims)
+
 
     """
     def __init__(self, nDims, nDerived, **kwargs):
@@ -186,6 +205,7 @@ class PolyChordSettings:
         self.maximise = kwargs.pop('maximise', False)
         self.compression_factor = kwargs.pop('compression_factor',
                                              numpy.exp(-1))
+        self.synchronous = kwargs.pop('synchronous', True)
         self.base_dir = kwargs.pop('base_dir', 'chains')
         self.file_root = kwargs.pop('file_root', 'test')
         self.seed = kwargs.pop('seed', -1)
@@ -194,6 +214,7 @@ class PolyChordSettings:
         self.grade_frac = list(kwargs.pop('grade_frac',
                                           [1.0]*len(self.grade_dims)))
         self.nlives = kwargs.pop('nlives', {})
+        self.cube_samples = kwargs.pop('cube_samples', None)
 
         self.wraparound = list(kwargs.pop('wraparound', [False]*nDims))
 

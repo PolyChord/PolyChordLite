@@ -28,8 +28,8 @@ module feedback_module
             write(stdout_unit,'("")')
             write(stdout_unit,'("PolyChord: Next Generation Nested Sampling")')
             write(stdout_unit,'("copyright: Will Handley, Mike Hobson & Anthony Lasenby")')
-            write(stdout_unit,'("  version: 1.18.2")')
-            write(stdout_unit,'("  release: 7th April 2020")')
+            write(stdout_unit,'("  version: 1.20.2")')
+            write(stdout_unit,'("  release: 1st June 2021")')
             write(stdout_unit,'("    email: wh260@mrao.cam.ac.uk")')
             write(stdout_unit,'("")')
         end if
@@ -40,10 +40,11 @@ module feedback_module
             write(stdout_unit,'("nDims    :",I8)')   settings%nDims
             write(stdout_unit,'("nDerived :",I8)')   settings%nDerived
             if(settings%do_clustering) write(stdout_unit,'("Doing Clustering")')
+            if(settings%synchronous) write(stdout_unit,'("Synchronous parallelisation")')
             if(settings%equals) write(stdout_unit,'("Generating equally weighted posteriors")')
             if(settings%posteriors) write(stdout_unit,'("Generating weighted posteriors")')
             if((settings%equals.or.settings%posteriors).and.settings%cluster_posteriors.and.settings%do_clustering) write(stdout_unit,'("Clustering on posteriors")')
-            if(settings%write_resume) write(stdout_unit,'("Writing a resume file to",A)') trim(resume_file(settings,.false.))
+            if(settings%write_resume) write(stdout_unit,'("Writing a resume file to ",A)') trim(resume_file(settings,.false.))
             if(allocated(settings%sub_clustering_dimensions)) then
                 if(size(settings%sub_clustering_dimensions)==1) then
                     write(stdout_unit,'("Sub clustering on ",I4," dimension")') size(settings%sub_clustering_dimensions)
@@ -239,9 +240,9 @@ module feedback_module
 
         integer, dimension(RTI%ncluster+RTI%ncluster_dead) :: ordering
 
-        character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_equals,fmt_tail,fmt_nlike
+        character(len=fmt_len) fmt_head,fmt_live,fmt_phantom,fmt_posterior,fmt_equals,fmt_tail,fmt_nlike,fmt_Z
 
-        integer :: int_width
+        integer :: int_width, i_char
 
         int_width = ceiling(log10(dble(maxval([RTI%nlive(:RTI%ncluster),RTI%nphantom(:RTI%ncluster),RTI%nposterior(:RTI%ncluster),RTI%nequals(:RTI%ncluster)]))))
 
@@ -278,26 +279,31 @@ module feedback_module
             if(abs(logZ) < 1e9) then
                 write(stdout_unit,'("log(Z)     = ", F15.2, " +/- ", F5.2)') logZ,sqrt(abs(varlogZ))
             else
-                write(stdout_unit,'("log(Z_)    = ?")')
+                write(stdout_unit,'("log(Z)     = ?")')
             end if
 
             ordering = sort_doubles([-RTI%logZp,-RTI%logZp_dead])
 
             do p=1,RTI%ncluster+RTI%ncluster_dead
 
+                i_char = ceiling(log10(float(p+1)))
                 if(ordering(p)<=RTI%ncluster) then
 
                     if(abs(logZp(ordering(p)))<1e9) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F15.2, " +/- ", F5.2, " (still evaluating)")') p, logZp(ordering(p)),sqrt(abs(varlogZp(ordering(p))))
+                        write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= "",F15.2,"" +/- "",F5.2"" (still evaluating)"")")') i_char,4-i_char
+                        write(stdout_unit,fmt_Z) p, '', logZp(ordering(p)),sqrt(abs(varlogZp(ordering(p))))
                     else
-                        write(stdout_unit,'("log(Z_",I2,")  = ? (still evaluating)")') p
+                        write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= ? (still evaluating)"")")') i_char,4-i_char
+                        write(stdout_unit,fmt_Z) p, ''
                     end if
 
                 else
                     if(abs(logZp_dead(ordering(p)-RTI%ncluster))<1e9) then
-                        write(stdout_unit,'("log(Z_",I2,")  = ", F15.2, " +/- ", F5.2)') p, logZp_dead(ordering(p)-RTI%ncluster),sqrt(abs(varlogZp_dead(ordering(p)-RTI%ncluster)))
+                        write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= "",F15.2,"" +/- "",F5.2)")') i_char,4-i_char
+                        write(stdout_unit,fmt_Z) p, '', logZp_dead(ordering(p)-RTI%ncluster),sqrt(abs(varlogZp_dead(ordering(p)-RTI%ncluster)))
                     else
-                        write(stdout_unit,'("log(Z_",I2,")  = ?")') p
+                        write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= ?"")")') i_char,4-i_char
+                        write(stdout_unit,fmt_Z) p, ''
                     end if
                 end if
 

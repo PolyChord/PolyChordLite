@@ -75,6 +75,7 @@ contains
         settings%write_prior        = get_logical(file_name,'write_prior',.false.)
         settings%maximise           = get_logical(file_name,'maximise',.false.)
         settings%compression_factor = get_double(file_name,'compression_factor',exp(-1d0))
+        settings%synchronous        = get_logical(file_name,'synchronous',.true.)
         settings%base_dir           = get_string(file_name,'base_dir','chains')
         settings%file_root          = get_string(file_name,'file_root','test')
         settings%seed               = get_integer(file_name,'seed', -1)
@@ -225,7 +226,6 @@ contains
     end function get_string
 
     function get_double(file_name,key_word,dflt)
-        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -246,7 +246,6 @@ contains
     end function get_double
 
     subroutine get_doubles(file_name,key_word,doubles)
-        use utils_module,  only: STR_LENGTH
         use array_module,  only: reallocate
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -273,7 +272,6 @@ contains
     end subroutine get_doubles
 
     subroutine get_integers(file_name,key_word,integers)
-        use utils_module,  only: STR_LENGTH
         use array_module,  only: reallocate
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -300,7 +298,6 @@ contains
     end subroutine get_integers
 
     function get_integer(file_name,key_word,dflt)
-        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -323,7 +320,6 @@ contains
     end function get_integer
 
     function get_logical(file_name,key_word,dflt)
-        use utils_module,  only: STR_LENGTH
         use abort_module,  only: halt_program
         character(len=*),intent(in)  :: file_name !> The name of the file to search in
         character(len=*),intent(in)  :: key_word  !> keyword to search for
@@ -471,7 +467,6 @@ contains
 
 
     subroutine next_element(line_buffer,delimiter) 
-        use utils_module,  only: STR_LENGTH
         implicit none
         character(len=:), allocatable, intent(inout)  :: line_buffer ! Line buffer
         character :: delimiter
@@ -479,7 +474,6 @@ contains
     end subroutine next_element
 
     subroutine get_prior_params(prior_params,line_buffer)
-        use utils_module,  only: STR_LENGTH
         implicit none
         character(len=:), allocatable,intent(inout)               :: line_buffer ! Line buffer
         real(dp),allocatable,dimension(:),intent(out) :: prior_params      ! prior parameters
