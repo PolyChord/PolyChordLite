@@ -3,7 +3,10 @@ Python interface to PolyChord
 
 Polychord is a tool to solve high dimensional problems.
 """
-import os, sys, subprocess, shutil
+import os
+import sys
+import subprocess
+import shutil
 
 from setuptools import setup, Extension, find_packages, Distribution
 from setuptools.command.build_py import build_py as _build_py
@@ -21,10 +24,14 @@ else:
     mpi4py_get_include = mpi4py.get_include()
 
 
-def check_compiler(default_CC="gcc"):
+def check_compiler(default_CC=None):
     """Checks what compiler is being used (clang, intel, or gcc)."""
 
-    CC = default_CC if "CC" not in os.environ else os.environ["CC"]
+    default_CC = 'gcc'
+    if mpi4py_get_include:
+        default_CC = 'mpicc'
+    CC = os.getenv('CC', default_CC)
+    os.environ['CC'] = CC
     CC_version = subprocess.check_output([CC, "-v"], stderr=subprocess.STDOUT).decode("utf-8").lower()
 
     if "clang" in CC_version:
@@ -75,9 +82,7 @@ def get_version(short=False):
 class DistributionWithOption(Distribution):
 
     def __init__(self, *args, **kwargs):
-        self.global_options = self.global_options \
-                                + [("no-mpi", None, "Don't compile with MPI support."),
-                                   ("debug-flags", None, "Compile in debug mode.")]
+        self.global_options = self.global_options + [("no-mpi", None, "Compile without MPI support."), ("debug-flags", None, "Compile in debug mode.")]
         self.no_mpi = None
         self.debug_flags = None
         super(DistributionWithOption, self).__init__(*args, **kwargs)
@@ -134,19 +139,19 @@ if "--no-mpi" in sys.argv:
 
 elif mpi4py_get_include:
     CPPRUNTIMELIB_FLAG += ["-DUSE_MPI"]
+    print(mpi4py_get_include)
     include_dirs += [mpi4py_get_include]
 
 
-pypolychord_module = Extension(
-        name='_pypolychord',
-        library_dirs=['lib'],
-        include_dirs=include_dirs,
-        libraries=['chord',],
-        extra_link_args=RPATH_FLAG + CPPRUNTIMELIB_FLAG,
-        extra_compile_args= ["-std=c++11"] + RPATH_FLAG + CPPRUNTIMELIB_FLAG,
-        runtime_library_dirs=['lib'],
-        sources=['pypolychord/_pypolychord.cpp']
-        )
+pypolychord_module = Extension(name='_pypolychord',
+                               library_dirs=['lib'],
+                               include_dirs=include_dirs,
+                               libraries=['chord'],
+                               extra_link_args=RPATH_FLAG + CPPRUNTIMELIB_FLAG,
+                               extra_compile_args=["-std=c++11"] + RPATH_FLAG + CPPRUNTIMELIB_FLAG,
+                               runtime_library_dirs=['lib'],
+                               sources=['pypolychord/_pypolychord.cpp'])
+
 
 setup(name=NAME,
       version=get_version(),
@@ -163,6 +168,6 @@ setup(name=NAME,
       cmdclass={'build_py': CustomBuildPy,
                 'develop': CustomDevelop,
                 'clean': CustomClean},
-      package_data={"": ["lib/libchord.so"]},
+      package_data={NAME: ["lib/libchord.so"]},
       include_package_data=True,
       zip_safe=False)
