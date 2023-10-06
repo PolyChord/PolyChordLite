@@ -2,5 +2,12 @@
 requires = ["setuptools", "wheel", "numpy"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "pypolychord"
+dynamic = ["version"]
+
 [project.optional-dependencies]
 test = ["pytest", "pytest-mpi"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pypolychord.__version__"}
