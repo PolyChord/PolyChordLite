@@ -215,7 +215,7 @@ class PolyChordOutput:
         for paramname in self._samples_table.columns[2:]:
             mean = np.mean(np.array( self._samples_table[paramname]) )
             std = np.std(np.array( self._samples_table[paramname]) )
-            stats_dict[paramname] = '%.3E +\- %.3E' % (mean, std)
+            stats_dict[paramname] = '%.3E +/- %.3E' % (mean, std)
 
         lst.append(pd.Series(stats_dict))
         return lst
