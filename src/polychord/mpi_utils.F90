@@ -368,11 +368,16 @@ module mpi_module
 
 
 
-    !============= Generating live points =================
-    !> 
-    !!
-    !! This a process by which the administrator 'scatters' live points
-    !! to all workers.
+    !============== Scattering/gathering live points ====================
+    ! This a process by which the administrator 'scatters' live points
+    ! to all workers, and gathers them back again.
+    !
+    ! This is used in the initial generation of live points.
+    ! scatter_points:
+    !    root     ---->   all workers
+    !
+    ! gather_points:
+    ! all workers ---->   root
 
     !> Administrator scatters live points to all workers.
     !!
