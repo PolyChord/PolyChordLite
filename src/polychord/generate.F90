@@ -69,7 +69,7 @@ module generate_module
         use array_module,     only: add_point
         use abort_module
 #ifdef MPI
-        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points
+        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points,scatter_points,gather_points
 #else
         use mpi_module, only: mpi_bundle,is_root,linear_mode
 #endif
@@ -106,6 +106,7 @@ module generate_module
 #endif
 
         real(dp), dimension(settings%nTotal) :: live_point ! Temporary live point array
+        real(dp), dimension(settings%nTotal*mpi_information%nprocs) :: live_points ! Temporary live point array for generation
 
 
         character(len=fmt_len) :: fmt_dbl ! writing format variable
@@ -116,6 +117,7 @@ module generate_module
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
 
+        integer :: i
 
         ! Initialise number of likelihood calls to zero here
         nlike = 0
@@ -185,64 +187,61 @@ module generate_module
         else 
             !===================== PARALLEL MODE =======================
 
-            if(is_root(mpi_information)) then
-                ! The root node just recieves data from all other processors
-
-
-                active_workers=mpi_information%nprocs-1 ! Set the number of active processors to the number of workers
-
-                do while(active_workers>0) 
-
-                    ! Recieve a point from any worker
-                    worker_id = catch_point(live_point,mpi_information)
-
-                    ! If its valid, add it to the array
-                    if(live_point(settings%l0)>settings%logzero) then
-
-                        call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
-
-                        !-------------------------------------------------------------------------------!
-                        call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
-                        !-------------------------------------------------------------------------------!
-
-                        if(settings%write_live) then
-                            ! Write the live points to the live_points file
-                            write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                            flush(write_phys_unit) ! flush the unit to force write
-                        end if
-
-                    end if
-
-
-                    if(RTI%nlive(1)<nprior) then
-                        call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
+            do while(.true.)
+                if(is_root(mpi_information)) then
+                    ! root generates random numbers and scatters them to the workers
+                    if (RTI%nlive(1)<nprior)then
+                        live_points = random_reals(size(live_points)) ! Generate random coordinates
                     else
-                        call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
-                        active_workers=active_workers-1                ! decrease the active worker counter
+                        ! set live points to -1 to indicate that no more points are needed
+                        live_points = -1d0
                     end if
-
-                end do
-
+                end if
 
 
+                call scatter_points(live_points,live_point,mpi_information,settings%nTotal)
 
-            else
+                ! if live points have been set to -1 then exit loop
+                if (any(live_point<0)) exit
 
-                ! The workers simply generate and send points until they're told to stop by the administrator
-                do while(.true.)
-        
-                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
-                    time0 = time()
-                    call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
-                    ndiscarded=ndiscarded+1
-                    time1 = time()
-                    live_point(settings%b0) = settings%logzero
-                    if(live_point(settings%l0)>settings%logzero) total_time = total_time + time1-time0
-                    call throw_point(live_point,mpi_information)                                    ! Send it to the root node
-                    if(.not. more_points_needed(mpi_information)) exit                              ! If we've recieved a kill signal, then exit this loop
+                time0 = time()
+                call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
+                ndiscarded=ndiscarded+1
+                time1 = time()
+                live_point(settings%b0) = settings%logzero
+                if(live_point(settings%l0)>settings%logzero) total_time = total_time + time1-time0
 
-                end do
-            end if
+
+                call gather_points(live_points,live_point,mpi_information,settings%nTotal)
+                    ! Recieve a point from any worker
+
+                if (is_root(mpi_information)) then
+                    do i=1, mpi_information%nprocs * settings%nTotal, settings%nTotal
+                        if (RTI%nlive(1)>=nprior) exit ! exit loop if enough points have been generated
+
+                        live_point=live_points(i:i+settings%nTotal-1)
+
+                        ! If its valid, add it to the array
+                        if(live_point(settings%l0)>settings%logzero) then
+
+                            call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
+
+                            !-------------------------------------------------------------------------------!
+                            call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
+                            !-------------------------------------------------------------------------------!
+
+                            if(settings%write_live) then
+                                ! Write the live points to the live_points file
+                                write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
+                                flush(write_phys_unit) ! flush the unit to force write
+                            end if
+                        end if
+                    end do
+
+                end if
+
+
+            end do
 #endif
         end if !(nprocs case)
 
@@ -607,6 +606,7 @@ module generate_module
 
                 ! The workers simply generate and send points until they're told to stop by the administrator
                 live_point = settings%seed_point
+                live_point = 0
                 do while(.true.)
                     do i_repeat = 1,settings%nprior_repeat
                         do i_dim=1,settings%nDims

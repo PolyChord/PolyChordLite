@@ -368,6 +368,61 @@ module mpi_module
 
 
 
+    !============= Generating live points =================
+    !> 
+    !!
+    !! This a process by which the worker node 'catches' thrown points
+    !! from the administrator
+
+    !> Administrator throws points to all workers
+    !!
+    !! This a process by which a worker node 'throws' a point to the root
+
+    subroutine scatter_points(live_points,live_point,mpi_information,nTotal)
+        implicit none
+
+        real(dp),intent(in),dimension(:) :: live_points !> live point to throw
+        real(dp),intent(out),dimension(:) :: live_point !> live point to catch
+        type(mpi_bundle), intent(in) :: mpi_information
+        integer, intent(in) :: nTotal
+
+        call MPI_SCATTER(                &!
+            live_points,                 &!
+            nTotal,                      &!
+            MPI_DOUBLE_PRECISION,        &!
+            live_point,                  &!
+            nTotal,                      &!
+            MPI_DOUBLE_PRECISION,        &!
+            mpi_information%root,        &!
+            mpi_information%communicator,&!
+            mpierror                     &!
+            )
+
+    end subroutine scatter_points
+
+
+
+    subroutine gather_points(live_points,live_point,mpi_information,nTotal)
+        implicit none
+
+        real(dp),intent(in),dimension(:) :: live_point !> live point to throw
+        real(dp),intent(out),dimension(:) :: live_points !> live points to catch
+        type(mpi_bundle), intent(in) :: mpi_information
+        integer, intent(in) :: nTotal
+
+        call MPI_GATHER(                 &!
+            live_point,                  &!
+            nTotal,                      &!
+            MPI_DOUBLE_PRECISION,        &!
+            live_points,                 &!
+            nTotal,                      &!
+            MPI_DOUBLE_PRECISION,        &!
+            mpi_information%root,        &!
+            mpi_information%communicator,&!
+            mpierror                     &!
+            )
+
+    end subroutine gather_points
 
 
 
