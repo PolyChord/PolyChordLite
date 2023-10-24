@@ -117,7 +117,7 @@ module generate_module
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
 
-        integer :: i
+        integer :: live_point_index ! Start index of the live point in the live_points array.
 
         ! Initialise number of likelihood calls to zero here
         nlike = 0
@@ -216,10 +216,10 @@ module generate_module
                     ! Recieve a point from any worker
 
                 if (is_root(mpi_information)) then
-                    do i=1, mpi_information%nprocs * settings%nTotal, settings%nTotal
+                    do live_point_index=1, mpi_information%nprocs * settings%nTotal, settings%nTotal
                         if (RTI%nlive(1)>=nprior) exit ! exit loop if enough points have been generated
 
-                        live_point=live_points(i:i+settings%nTotal-1)
+                        live_point=live_points(live_point_index:live_point_index+settings%nTotal-1)
 
                         ! If its valid, add it to the array
                         if(live_point(settings%l0)>settings%logzero) then
