@@ -371,17 +371,17 @@ module mpi_module
     !============= Generating live points =================
     !> 
     !!
-    !! This a process by which the worker node 'catches' thrown points
-    !! from the administrator
+    !! This a process by which the administrator 'scatters' live points
+    !! to all workers.
 
-    !> Administrator throws points to all workers
+    !> Administrator scatters live points to all workers.
     !!
     !! This a process by which a worker node 'throws' a point to the root
 
     subroutine scatter_points(live_points,live_point,mpi_information,nTotal)
         implicit none
 
-        real(dp),intent(in),dimension(:) :: live_points !> live point to throw
+        real(dp),intent(in),dimension(:) :: live_points !> live points to throw
         real(dp),intent(out),dimension(:) :: live_point !> live point to catch
         type(mpi_bundle), intent(in) :: mpi_information
         integer, intent(in) :: nTotal
@@ -401,11 +401,16 @@ module mpi_module
     end subroutine scatter_points
 
 
+    !> Administrator gathers live points from all workers.
+    !!
+    !! This a process by which the administrator node 'gathers'
+    !! all points to the root.
+
 
     subroutine gather_points(live_points,live_point,mpi_information,nTotal)
         implicit none
 
-        real(dp),intent(in),dimension(:) :: live_point !> live point to throw
+        real(dp),intent(in),dimension(:) :: live_point   !> live point to throw
         real(dp),intent(out),dimension(:) :: live_points !> live points to catch
         type(mpi_bundle), intent(in) :: mpi_information
         integer, intent(in) :: nTotal
