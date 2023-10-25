@@ -199,7 +199,7 @@ module generate_module
                 end if
 
 
-                call scatter_points(live_points,live_point,mpi_information,settings%nTotal)
+                call scatter_points(live_points,live_point,mpi_information)
 
                 ! if live points have been set to -1 then exit loop
                 if (any(live_point<0)) exit
@@ -212,7 +212,7 @@ module generate_module
                 if(live_point(settings%l0)>settings%logzero) total_time = total_time + time1-time0
 
 
-                call gather_points(live_points,live_point,mpi_information,settings%nTotal)
+                call gather_points(live_points,live_point,mpi_information)
                     ! Recieve a point from any worker
 
                 if (is_root(mpi_information)) then
