@@ -693,20 +693,15 @@ module mpi_module
 
     end function more_points_needed
 
-
-    !============== New messaging routines ===========================
-    ! Fix this later!
-    ! During initial live point generation, the administrator needs to signal to the workers
-    ! whether or not to keep generating live points, or whether to stop
-    !
-    ! administrator         ----> worker
-    ! request_point        more_points_needed -> true
-    ! no_more_points       more_points_needed -> false
+    !> Request specific live points
+    ! administrator                     ----> worker
+    ! request_this_point(live_point)   point_needed -> true
+    ! no_more_points (defined above)   point_needed -> false
     ! 
 
-    !> Request point
+    !> Request this point
     !!
-    !! This subroutine is used by the root node to request a new live point
+    !! This subroutine is used by the root node to request a specific live point
     subroutine request_this_point(live_point,mpi_information,worker_id)
         implicit none
         type(mpi_bundle), intent(in) :: mpi_information
@@ -726,9 +721,9 @@ module mpi_module
 
     end subroutine request_this_point
 
-    !> See if more points are needed
+    !> See if another point is needed
     !!
-    !! This subroutine is used by the root node to request a new live point
+    !! This subroutine is used by the root node to request a specific live point
     function point_needed(live_point,mpi_information)
         use abort_module
         implicit none
