@@ -69,7 +69,7 @@ module generate_module
         use array_module,     only: add_point
         use abort_module
 #ifdef MPI
-        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points
+        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points,request_this_point,point_needed
 #else
         use mpi_module, only: mpi_bundle,is_root,linear_mode
 #endif
@@ -190,6 +190,11 @@ module generate_module
 
 
                 active_workers=mpi_information%nprocs-1 ! Set the number of active processors to the number of workers
+                do worker_id=1,active_workers
+                    ! Request a point from any worker
+                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                    call request_this_point(live_point,mpi_information,worker_id)
+                end do
 
                 do while(active_workers>0) 
 
@@ -215,7 +220,8 @@ module generate_module
 
 
                     if(RTI%nlive(1)<nprior) then
-                        call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
+                        live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                        call request_this_point(live_point,mpi_information,worker_id)
                     else
                         call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
                         active_workers=active_workers-1                ! decrease the active worker counter
@@ -229,9 +235,8 @@ module generate_module
             else
 
                 ! The workers simply generate and send points until they're told to stop by the administrator
-                do while(.true.)
-        
-                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                
+                do while(point_needed(live_point,mpi_information))
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     ndiscarded=ndiscarded+1
@@ -239,7 +244,6 @@ module generate_module
                     live_point(settings%b0) = settings%logzero
                     if(live_point(settings%l0)>settings%logzero) total_time = total_time + time1-time0
                     call throw_point(live_point,mpi_information)                                    ! Send it to the root node
-                    if(.not. more_points_needed(mpi_information)) exit                              ! If we've recieved a kill signal, then exit this loop
 
                 end do
             end if

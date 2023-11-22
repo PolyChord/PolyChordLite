@@ -693,6 +693,75 @@ module mpi_module
 
     end function more_points_needed
 
+
+    !============== New messaging routines ===========================
+    ! Fix this later!
+    ! During initial live point generation, the administrator needs to signal to the workers
+    ! whether or not to keep generating live points, or whether to stop
+    !
+    ! administrator         ----> worker
+    ! request_point        more_points_needed -> true
+    ! no_more_points       more_points_needed -> false
+    ! 
+
+    !> Request point
+    !!
+    !! This subroutine is used by the root node to request a new live point
+    subroutine request_this_point(live_point,mpi_information,worker_id)
+        implicit none
+        type(mpi_bundle), intent(in) :: mpi_information
+        integer, intent(in) :: worker_id         !> Worker to request a new point from
+        real(dp), intent(in), dimension(:) :: live_point !> The live point to be sent
+
+
+        call MPI_SEND(                   &
+            live_point,                  &! not sending anything
+            size(live_point),            &!
+            MPI_DOUBLE_PRECISION,        &! sending doubles
+            worker_id,                   &! process id to send to
+            tag_gen_request,             &! continuation tag
+            mpi_information%communicator,&! mpi handle
+            mpierror                     &! error flag
+            )
+
+    end subroutine request_this_point
+
+    !> See if more points are needed
+    !!
+    !! This subroutine is used by the root node to request a new live point
+    function point_needed(live_point,mpi_information)
+        use abort_module
+        implicit none
+        type(mpi_bundle), intent(in) :: mpi_information
+        real(dp),intent(out),dimension(:) :: live_point !> live point to throw
+
+        integer, dimension(MPI_STATUS_SIZE) :: mpistatus  ! status identifier
+
+        logical :: point_needed !> Whether we need more points or not
+
+        call MPI_RECV(                   &!
+            live_point,                  &!
+            size(live_point),            &!
+            MPI_DOUBLE_PRECISION,        &!
+            mpi_information%root,        &!
+            MPI_ANY_TAG,                 &!
+            mpi_information%communicator,&!
+            mpistatus,                   &!
+            mpierror                     &!
+            )
+
+        ! If we've recieved a kill signal, then exit this loop
+        if(mpistatus(MPI_TAG) == tag_gen_stop ) then
+            point_needed = .false.
+        else if(mpistatus(MPI_TAG) == tag_gen_request) then
+            point_needed = .true.
+        else
+            call halt_program('generate error: unrecognised tag')
+        end if
+
+    end function point_needed
+
+
 #endif
 
 
