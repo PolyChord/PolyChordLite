@@ -368,69 +368,6 @@ module mpi_module
 
 
 
-    !============== Scattering/gathering live points ====================
-    ! This a process by which the administrator 'scatters' live points
-    ! to all workers, and gathers them back again.
-    !
-    ! This is used in the initial generation of live points.
-    ! scatter_points:
-    !    root     ---->   all workers
-    !
-    ! gather_points:
-    ! all workers ---->   root
-
-    !> Administrator scatters live points to all workers.
-    !!
-    !! This a process by which a worker node 'throws' a point to the root
-
-    subroutine scatter_points(live_points,live_point,mpi_information)
-        implicit none
-
-        real(dp),intent(in),dimension(:) :: live_points !> live points to throw
-        real(dp),intent(out),dimension(:) :: live_point !> live point to catch
-        type(mpi_bundle), intent(in) :: mpi_information
-
-        call MPI_SCATTER(                &!
-            live_points,                 &!
-            size(live_point),            &!
-            MPI_DOUBLE_PRECISION,        &!
-            live_point,                  &!
-            size(live_point),            &!
-            MPI_DOUBLE_PRECISION,        &!
-            mpi_information%root,        &!
-            mpi_information%communicator,&!
-            mpierror                     &!
-            )
-
-    end subroutine scatter_points
-
-
-    !> Administrator gathers live points from all workers.
-    !!
-    !! This a process by which the administrator node 'gathers'
-    !! all points to the root.
-
-
-    subroutine gather_points(live_points,live_point,mpi_information)
-        implicit none
-
-        real(dp),intent(in),dimension(:) :: live_point   !> live point to throw
-        real(dp),intent(out),dimension(:) :: live_points !> live points to catch
-        type(mpi_bundle), intent(in) :: mpi_information
-
-        call MPI_GATHER(                 &!
-            live_point,                  &!
-            size(live_point),            &!
-            MPI_DOUBLE_PRECISION,        &!
-            live_points,                 &!
-            size(live_point),            &!
-            MPI_DOUBLE_PRECISION,        &!
-            mpi_information%root,        &!
-            mpi_information%communicator,&!
-            mpierror                     &!
-            )
-
-    end subroutine gather_points
 
 
 
