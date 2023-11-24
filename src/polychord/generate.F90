@@ -61,7 +61,7 @@ module generate_module
     subroutine GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
-        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time
+        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time,sort_doubles
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file, prior_info_file
         use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
@@ -111,7 +111,8 @@ module generate_module
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
         integer :: nlike ! number of likelihood calls
-        integer :: nprior, ndiscarded
+        integer :: nprior, ndiscarded,
+        integer :: ngenerated ! use to track order points are generated in
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -119,6 +120,7 @@ module generate_module
 
         ! Initialise number of likelihood calls to zero here
         nlike = 0
+        ngenerated = 1
 
 
         if(is_root(mpi_information)) then
@@ -193,6 +195,9 @@ module generate_module
                 do worker_id=1,active_workers
                     ! Request a point from any worker
                     live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                    ! use the time as an ordering identifier, cheat by using the birth contour
+                    live_point(settings%b0) = ngenerated
+                    ngenerated = ngenerated+1
                     call request_this_point(live_point,mpi_information,worker_id)
                 end do
 
@@ -221,6 +226,9 @@ module generate_module
 
                     if(RTI%nlive(1)<nprior) then
                         live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                        ! use the time as a unique identifier, cheat by using the birth contour
+                        live_point(settings%b0) = ngenerated
+                        ngenerated = ngenerated+1
                         call request_this_point(live_point,mpi_information,worker_id)
                     else
                         call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
@@ -229,6 +237,10 @@ module generate_module
 
                 end do
 
+                ! sort live points by order the prior samples were generated in
+                RTI%live(:,:RTI%nlive(1),:) = RTI%live(:,sort_doubles(RTI%live(settings%b0,:RTI%nlive(1),1)),:)
+                ! restore birth contour to logzero
+                RTI%live(settings%b0,:RTI%nlive(1),:) = settings%logzero
 
 
 
@@ -241,7 +253,6 @@ module generate_module
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     ndiscarded=ndiscarded+1
                     time1 = time()
-                    live_point(settings%b0) = settings%logzero
                     if(live_point(settings%l0)>settings%logzero) total_time = total_time + time1-time0
                     call throw_point(live_point,mpi_information)                                    ! Send it to the root node
 
