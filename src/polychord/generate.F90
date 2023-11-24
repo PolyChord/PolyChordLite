@@ -111,7 +111,7 @@ module generate_module
         character(len=fmt_len) :: fmt_dbl ! writing format variable
 
         integer :: nlike ! number of likelihood calls
-        integer :: nprior, ndiscarded,
+        integer :: nprior, ndiscarded
         integer :: ngenerated ! use to track order points are generated in
 
         real(dp) :: time0,time1,total_time
