@@ -621,6 +621,8 @@ module run_time_module
                 / (RTI%nlive(i_cluster) + RTI%nphantom(i_cluster) )
 
 
+            RTI%covmat(:,:,i_cluster) = 0d0
+            RTI%cholesky(:,:,i_cluster) = 0d0
             do i=1,settings%nDims
                 RTI%covmat(i,i,i_cluster) = var(i)
                 RTI%cholesky(i,i,i_cluster) = var(i)**0.5
