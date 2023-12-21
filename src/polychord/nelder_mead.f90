@@ -24,7 +24,6 @@ module nelder_mead_module
             integer :: n, j
             integer, dimension(size(f)) :: i
             double precision, dimension(size(f)-1) :: xo, xr, xe, xc, xmax
-            double precision, dimension(size(f)-1,size(f)-1) :: V
             double precision :: fr, fe, fc
             double precision :: det0, det1
 

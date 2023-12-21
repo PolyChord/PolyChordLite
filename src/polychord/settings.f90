@@ -144,6 +144,8 @@ module settings_module
         
         real(dp) :: compression_factor = exp(-1d0)
 
+        logical :: synchronous = .true.
+
     end type program_settings
 
     contains
