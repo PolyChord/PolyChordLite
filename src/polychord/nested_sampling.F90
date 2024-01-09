@@ -21,7 +21,7 @@ module nested_sampling_module
         use chordal_module,    only: SliceSampling
         use random_module,     only: random_integer,random_direction
         use cluster_module,    only: do_clustering
-        use generate_module,   only: GenerateSeed,GenerateLivePoints,GenerateLivePointsFromSeed
+        use generate_module,   only: GenerateSeed,GenerateLivePoints
         use maximise_module,   only: maximise
 #ifdef MPI
         use utils_module, only: normal_fb,stdout_unit
@@ -191,11 +191,7 @@ module nested_sampling_module
             end if
 
             ! Intialise the run by setting all of the relevant run time info, and generating live points
-            if (settings%generate_from_seed) then
-                call GenerateLivePointsFromSeed(loglikelihood,prior,settings,RTI,mpi_information)
-            else
-                call GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
-            end if
+            call GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
 
             if(is_root(mpi_information)) then
                 if(settings%write_prior) call write_prior_file(settings,RTI) 
