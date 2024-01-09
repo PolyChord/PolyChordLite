@@ -43,7 +43,7 @@ jobs:
       run: python run_pypolychord.py
 
     - name: Test pypolychord (MPI)
-      run: mpirun -np 3 python run_pypolychord.py
+      run: mpirun --oversubscribe -np 3 python run_pypolychord.py
 
     - name: Test pypolychord (anesthetic)
       if: ${{ ! contains( '3.6, 3.7', matrix.python-version ) }}
@@ -84,4 +84,4 @@ jobs:
       run: python -m pytest tests
 
     - name: Test pypolychord (MPI)
-      run: mpirun -np 3 python -m pytest tests --only-mpi 
+      run: mpirun --oversubscribe -np 3 python -m pytest tests --only-mpi 
