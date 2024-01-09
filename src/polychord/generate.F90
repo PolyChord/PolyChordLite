@@ -61,7 +61,7 @@ module generate_module
     subroutine GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
-        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time
+        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time,sort_doubles
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file, prior_info_file
         use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
@@ -69,7 +69,7 @@ module generate_module
         use array_module,     only: add_point
         use abort_module
 #ifdef MPI
-        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points
+        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points,request_live_point,live_point_needed
 #else
         use mpi_module, only: mpi_bundle,is_root,linear_mode
 #endif
@@ -112,6 +112,7 @@ module generate_module
 
         integer :: nlike ! number of likelihood calls
         integer :: nprior, ndiscarded
+        integer :: ngenerated ! use to track order points are generated in
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -119,6 +120,7 @@ module generate_module
 
         ! Initialise number of likelihood calls to zero here
         nlike = 0
+        ngenerated = 1
 
 
         if(is_root(mpi_information)) then
@@ -190,6 +192,14 @@ module generate_module
 
 
                 active_workers=mpi_information%nprocs-1 ! Set the number of active processors to the number of workers
+                do worker_id=1,active_workers
+                    ! Request a point from any worker
+                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                    ! use the time as an ordering identifier, cheat by using the birth contour
+                    live_point(settings%b0) = ngenerated
+                    ngenerated = ngenerated+1
+                    call request_live_point(live_point,mpi_information,worker_id)
+                end do
 
                 do while(active_workers>0) 
 
@@ -215,7 +225,11 @@ module generate_module
 
 
                     if(RTI%nlive(1)<nprior) then
-                        call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
+                        live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                        ! use the time as a unique identifier, cheat by using the birth contour
+                        live_point(settings%b0) = ngenerated
+                        ngenerated = ngenerated+1
+                        call request_live_point(live_point,mpi_information,worker_id)
                     else
                         call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
                         active_workers=active_workers-1                ! decrease the active worker counter
@@ -223,23 +237,24 @@ module generate_module
 
                 end do
 
+                ! sort live points by order the prior samples were generated in
+                RTI%live(:,:RTI%nlive(1),:) = RTI%live(:,sort_doubles(RTI%live(settings%b0,:RTI%nlive(1),1)),:)
+                ! restore birth contour to logzero
+                RTI%live(settings%b0,:RTI%nlive(1),:) = settings%logzero
 
 
 
             else
 
                 ! The workers simply generate and send points until they're told to stop by the administrator
-                do while(.true.)
-        
-                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                
+                do while(live_point_needed(live_point,mpi_information))
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     ndiscarded=ndiscarded+1
                     time1 = time()
-                    live_point(settings%b0) = settings%logzero
                     if(live_point(settings%l0)>settings%logzero) total_time = total_time + time1-time0
                     call throw_point(live_point,mpi_information)                                    ! Send it to the root node
-                    if(.not. more_points_needed(mpi_information)) exit                              ! If we've recieved a kill signal, then exit this loop
 
                 end do
             end if
