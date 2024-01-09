@@ -12,6 +12,7 @@ def default_prior(cube):
 def default_dumper(live, dead, logweights, logZ, logZerr):
     pass
 
+
 def run_polychord(loglikelihood, nDims, nDerived, settings,
                   prior=default_prior, dumper=default_dumper):
     """
@@ -266,7 +267,6 @@ def run(loglikelihood, nDims, **kwargs):
         -------
         logL: float
             log-likelihood
-        TODO: what about []? I don't think it can be omitted from the return of loglikelihood.
 
     nDims: int
         Dimensionality of the model, i.e. the number of physical parameters.
