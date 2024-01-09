@@ -37,8 +37,6 @@ cube_samples_settings.feedback = 0
                          [(default_settings, gaussian_likelihood, 4, 1),
                           (cube_samples_settings, gaussian_likelihood, 4, 1)])
 def test_run(settings, likelihood, nDims, nDerived):
-    settings.file_root += '_mpi'
-
     # Define a box uniform prior from -1 to 1
     def prior(hypercube):
         """ Uniform prior from [-1,1]^D. """
