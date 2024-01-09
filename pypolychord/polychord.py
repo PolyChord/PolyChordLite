@@ -170,7 +170,11 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         settings.read_resume=True
 
     def wrap_loglikelihood(theta, phi):
-        logL, phi[:] = loglikelihood(theta)
+        logL = loglikelihood(theta)
+        try:
+            logL, phi[:] = logL
+        except TypeError:
+            pass
         return logL
 
     def wrap_prior(cube, theta):
@@ -241,7 +245,11 @@ def make_resume_file(settings, loglikelihood, prior):
     for i in np.array_split(np.arange(len(settings.cube_samples)), size)[rank]:
         cube = settings.cube_samples[i]
         theta = prior(cube)
-        logL, derived = loglikelihood(theta)
+        logL = loglikelihood(theta)
+        try:
+            logL, derived = logL
+        except TypeError:
+            derived = []
         nDims = len(theta)
         nDerived = len(derived)
         lives.append(np.concatenate([cube,theta,derived,[logL_birth, logL]]))
