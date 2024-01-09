@@ -714,7 +714,7 @@ def _make_resume_file(loglikelihood, **kwargs):
             write('=== Number of equally weighted posterior points in each cluster ===')
             write(0)
             write('=== Minimum loglikelihood positions ===')
-            write(np.argmin(lives[:,-1]))
+            write(np.argmin(lives[:,-1])+1)
             write('=== Number of weighted posterior points in each dead cluster ===')
             write('=== Number of equally weighted posterior points in each dead cluster ===')
             write('=== global evidence -- log(<Z>) ===')

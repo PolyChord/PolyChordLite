@@ -1,3 +1,3 @@
 numpy
 scipy
-anesthetic>=2.0.0b12
+anesthetic>=2.0.0
