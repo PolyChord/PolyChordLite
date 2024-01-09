@@ -1,13 +1,3 @@
 [build-system]
 requires = ["setuptools", "wheel", "numpy"]
 build-backend = "setuptools.build_meta"
-
-[project]
-name = "pypolychord"
-dynamic = ["version"]
-
-[project.optional-dependencies]
-cube_samples = ["fortranformat"]
-
-[tool.setuptools.dynamic]
-version = {attr = "pypolychord.__version__"}
