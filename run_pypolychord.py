@@ -60,7 +60,8 @@ output.make_paramnames_files(paramnames)
 try:
     import anesthetic as ac
     samples = ac.read_chains(settings.base_dir + '/' + settings.file_root)
-    fig, axes = samples.plot_2d(['p0','p1','p2','p3','r'])
+    fig, axes = ac.make_2d_axes(['p0', 'p1', 'p2', 'p3', 'r'])
+    samples.plot_2d(axes)
     fig.savefig('posterior.pdf')
 
 except ImportError:
