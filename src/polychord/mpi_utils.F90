@@ -607,32 +607,9 @@ module mpi_module
     ! whether or not to keep generating live points, or whether to stop
     !
     ! administrator         ----> worker
-    ! request_point        more_points_needed -> true
-    ! no_more_points       more_points_needed -> false
-    ! 
-
-    !> Request point
-    !!
-    !! This subroutine is used by the root node to request a new live point
-    subroutine request_point(mpi_information,worker_id)
-        implicit none
-        type(mpi_bundle), intent(in) :: mpi_information
-        integer, intent(in) :: worker_id         !> Worker to request a new point from
-
-
-        integer :: empty_buffer(0) ! empty buffer to send
-
-        call MPI_SEND(                   &
-            empty_buffer,                &! not sending anything
-            0,                           &! size of nothing
-            MPI_INTEGER,                 &! sending no integers
-            worker_id,                   &! process id to send to
-            tag_gen_request,             &! continuation tag
-            mpi_information%communicator,&! mpi handle
-            mpierror                     &! error flag
-            )
-
-    end subroutine request_point
+    ! no_more_points        keep_going -> false
+    ! request_live_point    keep_going -> true
+    ! live_point_needed     keep_going -> true
 
 
     !> No more points please
@@ -657,41 +634,6 @@ module mpi_module
             )
 
     end subroutine no_more_points
-
-    !> See if more points are needed
-    !!
-    !! This subroutine is used by the root node to request a new live point
-    function more_points_needed(mpi_information)
-        use abort_module
-        implicit none
-        type(mpi_bundle), intent(in) :: mpi_information
-
-        integer :: empty_buffer(0) ! empty buffer to send
-        integer, dimension(MPI_STATUS_SIZE) :: mpistatus  ! status identifier
-
-        logical :: more_points_needed !> Whether we need more points or not
-
-        call MPI_RECV(                   &!
-            empty_buffer,                &!
-            0,                           &!
-            MPI_INTEGER,                 &!
-            mpi_information%root,        &!
-            MPI_ANY_TAG,                 &!
-            mpi_information%communicator,&!
-            mpistatus,                   &!
-            mpierror                     &!
-            )
-
-        ! If we've recieved a kill signal, then exit this loop
-        if(mpistatus(MPI_TAG) == tag_gen_stop ) then
-            more_points_needed = .false.
-        else if(mpistatus(MPI_TAG) == tag_gen_request) then
-            more_points_needed = .true.
-        else
-            call halt_program('generate error: unrecognised tag')
-        end if
-
-    end function more_points_needed
 
     !> Request specific live points
     ! administrator                     ----> worker
