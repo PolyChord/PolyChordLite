@@ -314,7 +314,7 @@ def run(loglikelihood, nDims, **kwargs):
             The current log-evidence estimate
         logZerr: float
             The current log-evidence error estimate
-        
+
     nlive: int
         (Default: nDims*25)
         The number of live points.
@@ -434,7 +434,7 @@ def run(loglikelihood, nDims, **kwargs):
 
     grade_frac : List[float]
         (Default: [1])
-        The amount of time to spend in each speed. 
+        The amount of time to spend in each speed.
         If any of grade_frac are <= 1, then polychord will time each sub-speed,
         and then choose num_repeats for the number of slowest repeats, and
         spend the proportion of time indicated by grade_frac. Otherwise this
@@ -474,7 +474,7 @@ def run(loglikelihood, nDims, **kwargs):
 
     Returns
     -------
-    
+
     anesthetic.NestedSamples(root=<base_dir>/<file_root>)
 
     In general the contents of <base_dir> is a set of getdist compatible files.
@@ -554,19 +554,17 @@ def run(loglikelihood, nDims, **kwargs):
     }
     default_kwargs['grade_frac'] = [1.0]*len(default_kwargs['grade_dims'])
 
-
     if not set(kwargs.keys()) <= set(default_kwargs.keys()):
         raise TypeError(f"{__name__} got unknown keyword arguments {kwargs.keys() - default_kwargs.keys()}")
     default_kwargs.update(kwargs)
     kwargs = default_kwargs
-
 
     try:
         if rank == 0:
             os.makedirs(kwargs['base_dir'])
     except OSError:
         pass
-        
+
     try:
         if rank == 0:
             os.makedirs(os.path.join(kwargs['base_dir'], 'clusters'))
@@ -586,52 +584,56 @@ def run(loglikelihood, nDims, **kwargs):
         theta[:] = kwargs['prior'](cube)
 
     kwargs['grade_dims'] = [int(d) for d in list(kwargs['grade_dims'])]
-    kwargs['nlives'] = {float(logL):int(nlive) for logL, nlive in kwargs['nlives'].items()}
+    kwargs['nlives'] = {float(logL): int(nlive)
+                        for logL, nlive in kwargs['nlives'].items()}
 
     # Run polychord from module library
     _pypolychord.run(wrap_loglikelihood,
-        wrap_prior,
-        kwargs['dumper'],
-        nDims,
-        kwargs['nDerived'],
-        kwargs['nlive'],
-        kwargs['num_repeats'],
-        kwargs['nprior'],
-        kwargs['nfail'], 
-        kwargs['do_clustering'],
-        kwargs['feedback'],
-        kwargs['precision_criterion'],
-        kwargs['logzero'],
-        kwargs['max_ndead'],
-        kwargs['boost_posterior'],
-        kwargs['posteriors'],
-        kwargs['equals'],
-        kwargs['cluster_posteriors'],
-        kwargs['write_resume'],
-        kwargs['write_paramnames'],
-        kwargs['read_resume'],
-        kwargs['write_stats'],
-        kwargs['write_live'],
-        kwargs['write_dead'],
-        kwargs['write_prior'],
-        kwargs['maximise'],
-        kwargs['compression_factor'],
-        kwargs['synchronous'],
-        kwargs['base_dir'],
-        kwargs['file_root'],
-        kwargs['grade_frac'],
-        kwargs['grade_dims'],
-        kwargs['nlives'], 
-        kwargs['seed'],
-    )
+                     wrap_prior,
+                     kwargs['dumper'],
+                     nDims,
+                     kwargs['nDerived'],
+                     kwargs['nlive'],
+                     kwargs['num_repeats'],
+                     kwargs['nprior'],
+                     kwargs['nfail'],
+                     kwargs['do_clustering'],
+                     kwargs['feedback'],
+                     kwargs['precision_criterion'],
+                     kwargs['logzero'],
+                     kwargs['max_ndead'],
+                     kwargs['boost_posterior'],
+                     kwargs['posteriors'],
+                     kwargs['equals'],
+                     kwargs['cluster_posteriors'],
+                     kwargs['write_resume'],
+                     kwargs['write_paramnames'],
+                     kwargs['read_resume'],
+                     kwargs['write_stats'],
+                     kwargs['write_live'],
+                     kwargs['write_dead'],
+                     kwargs['write_prior'],
+                     kwargs['maximise'],
+                     kwargs['compression_factor'],
+                     kwargs['synchronous'],
+                     kwargs['base_dir'],
+                     kwargs['file_root'],
+                     kwargs['grade_frac'],
+                     kwargs['grade_dims'],
+                     kwargs['nlives'],
+                     kwargs['seed'],
+                     )
 
     if 'cube_samples' in kwargs:
         kwargs['read_resume'] = read_resume
 
     if paramnames is not None:
-        PolyChordOutput.make_paramnames_file(paramnames, os.path.join(kwargs['base_dir'], kwargs['file_root']+".paramnames"))
+        PolyChordOutput.make_paramnames_file(
+            paramnames, os.path.join(kwargs['base_dir'],
+                                     kwargs['file_root']+".paramnames"))
 
-    return anesthetic.read_chains(os.path.join(kwargs['base_dir'], kwargs['file_root']))
+    return anesthetic.read_chains(
+        os.path.join(kwargs['base_dir'], kwargs['file_root']))
 
 
 
