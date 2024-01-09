@@ -20,18 +20,7 @@ def gaussian_likelihood(theta):
     return logL, [r2]
 
 
-def no_derived_gaussian_likelihood(theta):
-    """ Simple Gaussian Likelihood without derived parameters"""
-
-    sigma = 0.1
-
-    nDims = len(theta)
-    r2 = sum(theta**2)
-    logL = -np.log(2*np.pi*sigma*sigma)*nDims/2.0
-    logL += -r2/2/sigma/sigma
-
-    return logL
-
+uniform_prior = UniformPrior(-1, 1)
 
 default_settings = PolyChordSettings(4, 1)
 default_settings.file_root = 'settings'
@@ -52,11 +41,6 @@ cube_samples_settings.feedback = 0
                          [(default_settings, gaussian_likelihood, 4, 1),
                           (cube_samples_settings, gaussian_likelihood, 4, 1)])
 def test_run_polychord(settings, likelihood, nDims, nDerived):
-    # Define a box uniform prior from -1 to 1
-    def prior(hypercube):
-        """ Uniform prior from [-1,1]^D. """
-        return UniformPrior(-1, 1)(hypercube)
-
     # Optional dumper function giving run-time read access to
     # the live points, dead points, weights and evidences
 
@@ -66,7 +50,7 @@ def test_run_polychord(settings, likelihood, nDims, nDerived):
     # Run PolyChord
 
     output = pypolychord.run_polychord(likelihood, nDims, nDerived,
-                                       settings, prior, dumper)
+                                       settings, uniform_prior, dumper)
 
     # Create a paramnames file
 
@@ -78,12 +62,6 @@ def test_run_polychord(settings, likelihood, nDims, nDerived):
 @pytest.mark.parametrize("likelihood, nDims, nDerived",
                          [(gaussian_likelihood, 4, 1),])
 def test_run(likelihood, nDims, nDerived):
-
-    # Define a box uniform prior from -1 to 1
-    def prior(hypercube):
-        """ Uniform prior from [-1,1]^D. """
-        return UniformPrior(-1, 1)(hypercube)
-
     # Create paramnames
     paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
     paramnames += [('r*', 'r')]
@@ -91,48 +69,51 @@ def test_run(likelihood, nDims, nDerived):
     # Run PolyChord
 
     ns = pypolychord.run(likelihood, nDims, nDerived=nDerived,
-                         prior=prior, paramnames=paramnames, read_resume=False)
+                         prior=uniform_prior, paramnames=paramnames,
+                         read_resume=False)
     assert isinstance(ns, ac.NestedSamples)
 
 
 @pytest.mark.parametrize("seed", [-1, 0, 1, 2])
 def test_seed(seed):
-    # Define a box uniform prior from -1 to 1
-    def prior(hypercube):
-        """ Uniform prior from [-1,1]^D. """
-        return UniformPrior(-1, 1)(hypercube)
-
     # Create paramnames
     paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(4)]
     paramnames += [('r*', 'r')]
 
     # Run PolyChord twice
     ns0 = pypolychord.run(gaussian_likelihood, 4, nDerived=1,
-                          prior=prior, paramnames=paramnames, read_resume=False,
-                          seed=seed)
+                          prior=uniform_prior, paramnames=paramnames,
+                          read_resume=False, seed=seed)
     ns1 = pypolychord.run(gaussian_likelihood, 4, nDerived=1,
-                          prior=prior, paramnames=paramnames, read_resume=False,
-                          seed=seed)
+                          prior=uniform_prior, paramnames=paramnames,
+                          read_resume=False, seed=seed)
     assert ns0.equals(ns1) != (seed < 0)
 
 
+@pytest.mark.filterwarnings("ignore::pandas.errors.PerformanceWarning")
 def test_no_derived():
-    # Define a box uniform prior from -1 to 1
+    def no_derived_gaussian_likelihood(theta):
+        """ Simple Gaussian Likelihood without derived parameters"""
+
+        sigma = 0.1
+
+        nDims = len(theta)
+        r2 = sum(theta**2)
+        logL = -np.log(2*np.pi*sigma*sigma)*nDims/2.0
+        logL += -r2/2/sigma/sigma
+
+        return logL
+
     seed = 1
-
-    def prior(hypercube):
-        """ Uniform prior from [-1,1]^D. """
-        return UniformPrior(-1, 1)(hypercube)
-
     paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(4)]
 
     # Run without derived parameters
     ns0 = pypolychord.run(no_derived_gaussian_likelihood, 4,
-                          prior=prior, paramnames=paramnames, read_resume=False,
-                          seed=seed)
+                          prior=uniform_prior, paramnames=paramnames,
+                          read_resume=False, seed=seed)
     # Run with derived parameters
     paramnames += [('r*', 'r')]
     ns1 = pypolychord.run(gaussian_likelihood, 4, nDerived=1,
-                          prior=prior, paramnames=paramnames, read_resume=False,
-                          seed=seed)
+                          prior=uniform_prior, paramnames=paramnames,
+                          read_resume=False, seed=seed)
     assert ns0.equals(ns1.drop(columns='r'))
