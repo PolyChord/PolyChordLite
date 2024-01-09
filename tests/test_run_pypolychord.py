@@ -1,5 +1,7 @@
 import pytest
 import numpy as np
+from mpi4py import MPI
+import anesthetic as ac
 import pypolychord
 from pypolychord.settings import PolyChordSettings
 from pypolychord.priors import UniformPrior
@@ -36,7 +38,7 @@ cube_samples_settings.feedback = 0
 @pytest.mark.parametrize("settings, likelihood, nDims, nDerived",
                          [(default_settings, gaussian_likelihood, 4, 1),
                           (cube_samples_settings, gaussian_likelihood, 4, 1)])
-def test_run(settings, likelihood, nDims, nDerived):
+def test_run_polychord(settings, likelihood, nDims, nDerived):
     # Define a box uniform prior from -1 to 1
     def prior(hypercube):
         """ Uniform prior from [-1,1]^D. """
@@ -50,8 +52,8 @@ def test_run(settings, likelihood, nDims, nDerived):
 
     # Run PolyChord
 
-    print("Running PolyChord")
-    output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
+    output = pypolychord.run_polychord(likelihood, nDims, nDerived,
+                                       settings, prior, dumper)
 
     # Create a paramnames file
 
@@ -60,33 +62,43 @@ def test_run(settings, likelihood, nDims, nDerived):
     output.make_paramnames_files(paramnames)
 
 
-@pytest.mark.parametrize("settings, likelihood, nDims, nDerived",
-                         [(default_settings, gaussian_likelihood, 4, 1),
-                          (cube_samples_settings, gaussian_likelihood, 4, 1)])
-@pytest.mark.mpi
-def test_run_mpi(settings, likelihood, nDims, nDerived):
-    from mpi4py import MPI
-
-    settings.file_root += '_mpi'
+@pytest.mark.parametrize("likelihood, nDims, nDerived",
+                         [(gaussian_likelihood, 4, 1),])
+def test_run(likelihood, nDims, nDerived):
 
     # Define a box uniform prior from -1 to 1
     def prior(hypercube):
         """ Uniform prior from [-1,1]^D. """
         return UniformPrior(-1, 1)(hypercube)
 
-    # Optional dumper function giving run-time read access to
-    # the live points, dead points, weights and evidences
-
-    def dumper(live, dead, logweights, logZ, logZerr):
-        print("Last dead point:", dead[-1])
+    # Create paramnames
+    paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
+    paramnames += [('r*', 'r')]
 
     # Run PolyChord
 
-    print("Running PolyChord")
-    output = pypolychord.run_polychord(likelihood, nDims, nDerived, settings, prior, dumper)
+    ns = pypolychord.run(likelihood, nDims, nDerived=nDerived,
+                         prior=prior, paramnames=paramnames, read_resume=False)
+    assert isinstance(ns, ac.NestedSamples)
 
-    # Create a paramnames file
 
-    paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
+@pytest.mark.parametrize("seed", [-1, 0, 1, 2])
+def test_seed(seed):
+    # Define a box uniform prior from -1 to 1
+    def prior(hypercube):
+        """ Uniform prior from [-1,1]^D. """
+        return UniformPrior(-1, 1)(hypercube)
+
+
+    # Create paramnames
+    paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(4)]
     paramnames += [('r*', 'r')]
-    output.make_paramnames_files(paramnames)
+
+    # Run PolyChord twice
+    ns0 = pypolychord.run(gaussian_likelihood, 4, nDerived=1,
+                          prior=prior, paramnames=paramnames, read_resume=False,
+                          seed=seed)
+    ns1 = pypolychord.run(gaussian_likelihood, 4, nDerived=1,
+                          prior=prior, paramnames=paramnames, read_resume=False,
+                          seed=seed)
+    assert ns0.equals(ns1) != (seed < 0)
