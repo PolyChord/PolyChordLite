@@ -245,7 +245,7 @@ def make_resume_file(settings, loglikelihood, prior):
     for i in np.array_split(np.arange(len(settings.cube_samples)), size)[rank]:
         cube = settings.cube_samples[i]
         theta = prior(cube)
-        logL= loglikelihood(theta)
+        logL = loglikelihood(theta)
         try:
             logL, derived = logL
         except TypeError:
