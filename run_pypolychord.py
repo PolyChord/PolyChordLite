@@ -1,4 +1,5 @@
 from numpy import pi, log
+import anesthetic as ac
 import pypolychord
 from pypolychord.priors import UniformPrior
 try:
@@ -59,5 +60,6 @@ output = pypolychord.run(
 
 #| Make an anesthetic plot 
 
-fig, axes = output.plot_2d(['p0','p1','p2','p3','r'])
+fig, ax = ac.make_2d_axes(['p0','p1','p2','p3','r'])
+output.plot_2d(ax)
 fig.savefig('posterior.pdf')
