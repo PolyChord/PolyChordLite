@@ -577,7 +577,11 @@ def run(loglikelihood, nDims, **kwargs):
         kwargs['read_resume'] = True
 
     def wrap_loglikelihood(theta, phi):
-        logL, phi[:] = loglikelihood(theta)
+        logL = loglikelihood(theta)
+        try:
+            logL, phi[:] = logL
+        except TypeError:
+            pass
         return logL
 
     def wrap_prior(cube, theta):
