@@ -58,8 +58,8 @@ output.make_paramnames_files(paramnames)
 
 #| Make an anesthetic plot (could also use getdist)
 try:
-    from anesthetic import NestedSamples
-    samples = NestedSamples(root= settings.base_dir + '/' + settings.file_root)
+    import anesthetic as ac
+    samples = ac.read_chains(settings.base_dir + '/' + settings.file_root)
     fig, axes = samples.plot_2d(['p0','p1','p2','p3','r'])
     fig.savefig('posterior.pdf')
 
