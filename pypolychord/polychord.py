@@ -788,5 +788,5 @@ def _make_resume_file(loglikelihood, **kwargs):
             write('=== global equally weighted posterior points ===')
 
 def _legacy_make_resume_file(settings, loglikelihood, prior):
-    kwargs = settings.__dict__()
+    kwargs = settings.__dict__
     _make_resume_file(loglikelihood, prior = prior, **kwargs)
