@@ -69,7 +69,7 @@ module generate_module
         use array_module,     only: add_point
         use abort_module
 #ifdef MPI
-        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points,request_live_point,live_point_needed
+        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,sum_integers,sum_doubles,no_more_points,request_live_point,live_point_needed
 #else
         use mpi_module, only: mpi_bundle,is_root,linear_mode
 #endif
