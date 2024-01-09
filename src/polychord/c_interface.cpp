@@ -3,10 +3,10 @@
 #include <iostream>
 
 // Constructor for settings struct
-Settings::Settings(int _nDims,int _nDerived):
+Settings::Settings(int _nDims,int _nDerived): 
     nDims               {_nDims},
     nDerived            {_nDerived},
-    nlive               {500},
+    nlive               {500}, 
     num_repeats         {nDims*5},
     nprior              {-1},
     nfail               {-1},
@@ -42,16 +42,16 @@ Settings::Settings(int _nDims,int _nDerived):
 
 
 #ifdef USE_MPI
-void run_polychord(
-        double (*c_loglikelihood_ptr)(double*,int,double*,int),
-        void (*c_prior_ptr)(double*,double*,int),
-        void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double),
+void run_polychord( 
+        double (*c_loglikelihood_ptr)(double*,int,double*,int), 
+        void (*c_prior_ptr)(double*,double*,int), 
+        void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
         Settings s, MPI_Comm& comm)
 #else
-void run_polychord(
-        double (*c_loglikelihood_ptr)(double*,int,double*,int),
-        void (*c_prior_ptr)(double*,double*,int),
-        void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double),
+void run_polychord( 
+        double (*c_loglikelihood_ptr)(double*,int,double*,int), 
+        void (*c_prior_ptr)(double*,double*,int), 
+        void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
         Settings s)
 #endif
 {
@@ -70,11 +70,11 @@ void run_polychord(
 	 int fortran_comm = 0;
 #endif
 
-    polychord_c_interface(
-            c_loglikelihood_ptr,
-            c_prior_ptr,
-            c_dumper_ptr,
-            s.nlive,
+    polychord_c_interface( 
+            c_loglikelihood_ptr, 
+            c_prior_ptr, 
+            c_dumper_ptr, 
+            s.nlive, 
             s.num_repeats,
             s.nprior,
             s.nfail,
@@ -118,10 +118,10 @@ void run_polychord(
 #ifdef USE_MPI
 // In this function no MPI communicator is given, so a communicator is automatically
 // made from MPI_COMM_WORLD
-void run_polychord(
-        double (*c_loglikelihood_ptr)(double*,int,double*,int),
-        void (*c_prior_ptr)(double*,double*,int),
-        void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double),
+void run_polychord( 
+        double (*c_loglikelihood_ptr)(double*,int,double*,int), 
+        void (*c_prior_ptr)(double*,double*,int), 
+        void (*c_dumper_ptr)(int,int,int,double*,double*,double*,double,double), 
         Settings s)
 {
 	int flag;
@@ -132,47 +132,47 @@ void run_polychord(
 	run_polychord(c_loglikelihood_ptr,c_prior_ptr,c_dumper_ptr,s,world_comm);
 	if (flag==0) MPI_Finalize();
 }
-void run_polychord(
+void run_polychord( 
         double (*loglikelihood)(double*,int,double*,int),
-        void (*dumper)(int,int,int,double*,double*,double*,double,double),
+        void (*dumper)(int,int,int,double*,double*,double*,double,double), 
         Settings S, MPI_Comm &comm)
-{ run_polychord(loglikelihood,default_prior,dumper,S,comm); }
-void run_polychord(
+{ run_polychord(loglikelihood,default_prior,dumper,S,comm); } 
+void run_polychord( 
         double (*loglikelihood)(double*,int,double*,int),
         void (*prior)(double*,double*,int),
         Settings S, MPI_Comm &comm)
-{ run_polychord(loglikelihood,prior,default_dumper,S,comm); }
+{ run_polychord(loglikelihood,prior,default_dumper,S,comm); } 
 void run_polychord(
         double (*loglikelihood)(double*,int,double*,int),
         Settings S, MPI_Comm &comm)
-{ run_polychord(loglikelihood,default_prior,default_dumper,S,comm); }
+{ run_polychord(loglikelihood,default_prior,default_dumper,S,comm); } 
 #endif
 
-void run_polychord(
+void run_polychord( 
         double (*loglikelihood)(double*,int,double*,int),
-        void (*dumper)(int,int,int,double*,double*,double*,double,double),
+        void (*dumper)(int,int,int,double*,double*,double*,double,double), 
         Settings S)
-{ run_polychord(loglikelihood,default_prior,dumper,S); }
-void run_polychord(
+{ run_polychord(loglikelihood,default_prior,dumper,S); } 
+void run_polychord( 
         double (*loglikelihood)(double*,int,double*,int),
         void (*prior)(double*,double*,int),
         Settings S)
-{ run_polychord(loglikelihood,prior,default_dumper,S); }
+{ run_polychord(loglikelihood,prior,default_dumper,S); } 
 void run_polychord(
         double (*loglikelihood)(double*,int,double*,int),
         Settings S)
-{ run_polychord(loglikelihood,default_prior,default_dumper,S); }
+{ run_polychord(loglikelihood,default_prior,default_dumper,S); } 
 
 
 #ifdef USE_MPI
-void run_polychord(
-        double (*c_loglikelihood_ptr)(double*,int,double*,int),
-        void (*c_setup_loglikelihood_ptr)(),
+void run_polychord( 
+        double (*c_loglikelihood_ptr)(double*,int,double*,int), 
+        void (*c_setup_loglikelihood_ptr)(), 
         std::string inifile, MPI_Comm &comm)
 #else
-void run_polychord(
-        double (*c_loglikelihood_ptr)(double*,int,double*,int),
-        void (*c_setup_loglikelihood_ptr)(),
+void run_polychord( 
+        double (*c_loglikelihood_ptr)(double*,int,double*,int), 
+        void (*c_setup_loglikelihood_ptr)(), 
         std::string inifile)
 #endif
 {
@@ -192,9 +192,9 @@ void run_polychord(
 #ifdef USE_MPI
 // In this function no MPI communicator is given, so a communicator is automatically
 // made from MPI_COMM_WORLD
-void run_polychord(
-        double (*c_loglikelihood_ptr)(double*,int,double*,int),
-        void (*c_setup_loglikelihood_ptr)(),
+void run_polychord( 
+        double (*c_loglikelihood_ptr)(double*,int,double*,int), 
+        void (*c_setup_loglikelihood_ptr)(), 
         std::string inifile)
 {
 	int flag;

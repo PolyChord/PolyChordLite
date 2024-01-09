@@ -3,18 +3,15 @@ Python interface to PolyChord
 
 Polychord is a tool to solve high dimensional problems.
 """
-import os
-import sys
-import subprocess
-import shutil
 
 from setuptools import setup, Extension, find_packages, Distribution
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.develop import develop as _develop
 from distutils.command.clean import clean as _clean
 
-import numpy
+import os, sys, subprocess, shutil
 
+import numpy
 
 try:
     import mpi4py
@@ -33,7 +30,7 @@ def check_compiler(default_CC=None):
     CC = os.getenv('CC', default_CC)
     os.environ['CC'] = CC
     CC_version = subprocess.check_output([CC, "-v"], stderr=subprocess.STDOUT).decode("utf-8").lower()
-
+    
     if "clang" in CC_version:
         CC_family = "clang"
     elif "icc" in CC_version:
@@ -80,16 +77,15 @@ def get_version(short=False):
 
 
 class DistributionWithOption(Distribution):
-
     def __init__(self, *args, **kwargs):
-        self.global_options = self.global_options + [("no-mpi", None, "Compile without MPI support."), ("debug-flags", None, "Compile in debug mode.")]
+        self.global_options = self.global_options \
+                                + [("no-mpi", None, "Don't compile with MPI support."),
+                                   ("debug-flags", None, "Compile in debug mode.")]
         self.no_mpi = None
         self.debug_flags = None
         super(DistributionWithOption, self).__init__(*args, **kwargs)
 
-
 class CustomBuildPy(_build_py):
-
     def run(self):
         if self.distribution.no_mpi is None:
             os.environ["MPI"] = "1"
@@ -104,10 +100,11 @@ class CustomBuildPy(_build_py):
 
         if self.distribution.debug_flags is not None:
             self.distribution.ext_modules[0].extra_compile_args += ["-g", "-O0"]
-            os.environ["DEBUG"] = "1"
-
+            env["DEBUG"] = "1"
+        
         BASE_PATH = os.path.dirname(os.path.abspath(__file__))
         os.environ["PWD"] = BASE_PATH
+        os.environ.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
         subprocess.check_call(["make", "-e", "libchord.so"], cwd=BASE_PATH)
         if not os.path.isdir("pypolychord/lib/"):
             os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"))
@@ -125,7 +122,6 @@ class CustomDevelop(_develop):
 
 
 class CustomClean(_clean):
-
     def run(self):
         subprocess.run(["make", "veryclean"], check=True, env=os.environ)
         return super().run()
@@ -143,15 +139,16 @@ elif mpi4py_get_include:
     include_dirs += [mpi4py_get_include]
 
 
-pypolychord_module = Extension(name='_pypolychord',
-                               library_dirs=['lib'],
-                               include_dirs=include_dirs,
-                               libraries=['chord'],
-                               extra_link_args=RPATH_FLAG + CPPRUNTIMELIB_FLAG,
-                               extra_compile_args=["-std=c++11"] + RPATH_FLAG + CPPRUNTIMELIB_FLAG,
-                               runtime_library_dirs=['lib'],
-                               sources=['pypolychord/_pypolychord.cpp'])
-
+pypolychord_module = Extension(
+        name='_pypolychord',
+        library_dirs=['lib'],
+        include_dirs=include_dirs,
+        libraries=['chord',],
+        extra_link_args=RPATH_FLAG + CPPRUNTIMELIB_FLAG,
+        extra_compile_args= ["-std=c++11"] + RPATH_FLAG + CPPRUNTIMELIB_FLAG,
+        runtime_library_dirs=['lib'],
+        sources=['pypolychord/_pypolychord.cpp']
+        )
 
 setup(name=NAME,
       version=get_version(),
@@ -161,13 +158,13 @@ setup(name=NAME,
       author_email='wh260@cam.ac.uk',
       license='PolyChord',
       packages=find_packages(),
-      install_requires=['numpy', 'scipy'],
+      install_requires=['numpy','scipy'],
       extras_require={'plotting': 'getdist'},
       distclass=DistributionWithOption,
       ext_modules=[pypolychord_module],
-      cmdclass={'build_py': CustomBuildPy,
+      cmdclass={'build_py' : CustomBuildPy,
                 'develop': CustomDevelop,
-                'clean': CustomClean},
+                'clean' : CustomClean},
       package_data={NAME: ["lib/libchord.so"]},
       include_package_data=True,
       zip_safe=False)

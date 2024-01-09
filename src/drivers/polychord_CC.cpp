@@ -36,7 +36,7 @@ int main()
     settings.boost_posterior= 5.0;
 
     setup_loglikelihood();
-    run_polychord(loglikelihood,prior,dumper,settings);
+    run_polychord(loglikelihood,prior,dumper,settings) ;
 
 
 }

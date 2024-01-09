@@ -39,13 +39,13 @@ static PyObject *python_loglikelihood = NULL;
 double loglikelihood(double* theta, int nDims, double* phi, int nDerived)
 {
     /* Create a python version of theta */
-    npy_intp theta_shape[] = {nDims};
+    npy_intp theta_shape[] = {nDims};            
     PyObject *array_theta = PyArray_SimpleNewFromData(1, theta_shape, NPY_DOUBLE, theta);
     if (array_theta==NULL) throw PythonException();
     PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_theta), NPY_ARRAY_WRITEABLE);
 
     /* Create a python version of phi */
-    npy_intp phi_shape[] = {nDerived};
+    npy_intp phi_shape[] = {nDerived};            
     PyObject *array_phi = PyArray_SimpleNewFromData(1, phi_shape, NPY_DOUBLE, phi);
     if (array_phi==NULL) {Py_DECREF(array_theta); throw PythonException();}
 
@@ -73,7 +73,7 @@ static PyObject *python_prior = NULL;
 void prior(double* cube, double* theta, int nDims)
 {
     /* create a python version of cube */
-    npy_intp shape[] = {nDims};
+    npy_intp shape[] = {nDims};            
     PyObject *array_cube = PyArray_SimpleNewFromData(1, shape, NPY_DOUBLE, cube);
     if (array_cube==NULL) throw PythonException();
     PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_cube), NPY_ARRAY_WRITEABLE);
@@ -95,19 +95,19 @@ static PyObject *python_dumper = NULL;
 void dumper(int ndead, int nlive, int npars, double* live, double* dead, double* logweights, double logZ, double logZerr)
 {
     /* create a python version of live points */
-    npy_intp live_shape[] = {nlive, npars};
+    npy_intp live_shape[] = {nlive, npars};            
     PyObject *array_live = PyArray_SimpleNewFromData(2, live_shape, NPY_DOUBLE, live);
     if (array_live==NULL) throw PythonException();
     PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_live), NPY_ARRAY_WRITEABLE);
 
     /* create a python version of dead points */
-    npy_intp dead_shape[] = {ndead, npars};
+    npy_intp dead_shape[] = {ndead, npars};            
     PyObject *array_dead = PyArray_SimpleNewFromData(2, dead_shape, NPY_DOUBLE, dead);
     if (array_dead==NULL) {Py_DECREF(array_live); throw PythonException();}
     PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_dead), NPY_ARRAY_WRITEABLE);
 
     /* create a python version of posterior weights */
-    npy_intp logweights_shape[] = {ndead};
+    npy_intp logweights_shape[] = {ndead};            
     PyObject *array_logweights = PyArray_SimpleNewFromData(1, logweights_shape, NPY_DOUBLE, logweights);
     if (array_logweights==NULL) {Py_DECREF(array_live); Py_DECREF(array_dead); throw PythonException();}
     PyArray_CLEARFLAGS(reinterpret_cast<PyArrayObject*>(array_logweights), NPY_ARRAY_WRITEABLE);
@@ -133,6 +133,7 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
     PyObject *temp_logl, *temp_prior, *temp_dumper;
     PyObject* py_grade_dims, *py_grade_frac, *py_nlives, *py_comm;
     char* base_dir, *file_root;
+        
 
     if (!PyArg_ParseTuple(args,
                 "OOOiiiiiiiiddidiiiiiiiiiiidissO!O!O!iO:run",
@@ -179,7 +180,7 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
         return NULL;
     S.base_dir = base_dir;
     S.file_root = file_root;
-
+    
     int nGrade = PyList_Size(py_grade_frac);
     S.grade_frac.resize(nGrade);
     S.grade_dims.resize(nGrade);
@@ -235,11 +236,12 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
 #endif
     }
     catch (PythonException& e)
-    {
+    { 
         Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);
-        return NULL;
+        return NULL; 
     }
 
     /* Return None */
     Py_RETURN_NONE;
 }
+
