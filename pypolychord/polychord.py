@@ -1,8 +1,8 @@
 from pypolychord.output import PolyChordOutput
 import os
+import warnings
 import _pypolychord
 import numpy as np
-import anesthetic
 
 
 def default_prior(cube):
@@ -636,6 +636,11 @@ def run(loglikelihood, nDims, **kwargs):
             paramnames, os.path.join(kwargs['base_dir'],
                                      kwargs['file_root']+".paramnames"))
 
+    try:
+        import anesthetic
+    except ImportError:
+        warnings.warn("anesthetic not installed. Cannot return NestedSamples object.")
+        return
     return anesthetic.read_chains(
         os.path.join(kwargs['base_dir'], kwargs['file_root']))
 

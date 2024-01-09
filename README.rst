@@ -68,6 +68,8 @@ https://github.com/handley-lab/anesthetic
 pip install anesthetic
 ```
 
+If `anesthetic` is already installed, then `pypolychord.run()` will return an `anesthetic.NestedSamples` object, which can be used directly for post-processing.
+
 MPI Support
 ===========
 
