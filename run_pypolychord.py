@@ -45,7 +45,6 @@ settings.file_root = 'gaussian'
 settings.nlive = 200
 settings.do_clustering = True
 settings.read_resume = False
-settings.seed = 0 
 
 #| Run PolyChord
 
