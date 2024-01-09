@@ -20,6 +20,19 @@ def gaussian_likelihood(theta):
     return logL, [r2]
 
 
+def no_derived_gaussian_likelihood(theta):
+    """ Simple Gaussian Likelihood without derived parameters"""
+
+    sigma = 0.1
+
+    nDims = len(theta)
+    r2 = sum(theta**2)
+    logL = -np.log(2*np.pi*sigma*sigma)*nDims/2.0
+    logL += -r2/2/sigma/sigma
+
+    return logL
+
+
 default_settings = PolyChordSettings(4, 1)
 default_settings.file_root = 'settings'
 default_settings.nlive = 200
@@ -89,7 +102,6 @@ def test_seed(seed):
         """ Uniform prior from [-1,1]^D. """
         return UniformPrior(-1, 1)(hypercube)
 
-
     # Create paramnames
     paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(4)]
     paramnames += [('r*', 'r')]
@@ -102,3 +114,25 @@ def test_seed(seed):
                           prior=prior, paramnames=paramnames, read_resume=False,
                           seed=seed)
     assert ns0.equals(ns1) != (seed < 0)
+
+
+def test_no_derived():
+    # Define a box uniform prior from -1 to 1
+    seed = 1
+
+    def prior(hypercube):
+        """ Uniform prior from [-1,1]^D. """
+        return UniformPrior(-1, 1)(hypercube)
+
+    paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(4)]
+
+    # Run without derived parameters
+    ns0 = pypolychord.run(no_derived_gaussian_likelihood, 4,
+                          prior=prior, paramnames=paramnames, read_resume=False,
+                          seed=seed)
+    # Run with derived parameters
+    paramnames += [('r*', 'r')]
+    ns1 = pypolychord.run(gaussian_likelihood, 4, nDerived=1,
+                          prior=prior, paramnames=paramnames, read_resume=False,
+                          seed=seed)
+    assert ns0.equals(ns1.drop(columns='r'))
