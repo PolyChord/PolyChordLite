@@ -61,8 +61,8 @@ or perhaps:
 
     git clone https://github.com/PolyChord/PolyChordLite.git
     cd PolyChordLite
-	make
-	pip install .
+    make
+    pip install .
 
 our apologies -- the shifting sands that are macOS do not play well with the delicate dance of fortran, C and Python that is (py)PolyChordLite.
 
@@ -73,12 +73,9 @@ Post Processing
 
 We recommend the pip-installable tool `anesthetic <https://github.com/handley-lab/anesthetic>`_ for post-processing your nested sampling runs. A plot gallery can be found `here <https://anesthetic.readthedocs.io/en/latest/plotting.html>`_
 
+.. code:: bash
 
-https://github.com/handley-lab/anesthetic
-
-```
-pip install anesthetic
-```
+    pip install anesthetic
 
 If `anesthetic` is already installed, then `pypolychord.run()` will return an `anesthetic.NestedSamples` object, which can be used directly for post-processing.
 
