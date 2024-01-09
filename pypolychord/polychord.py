@@ -789,5 +789,4 @@ def _make_resume_file(loglikelihood, **kwargs):
 
 def _legacy_make_resume_file(settings, loglikelihood, prior):
     kwargs = settings.__dict__()
-    print(kwargs)
     _make_resume_file(loglikelihood, prior = prior, **kwargs)
