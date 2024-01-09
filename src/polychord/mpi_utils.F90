@@ -695,22 +695,22 @@ module mpi_module
 
     !> Request specific live points
     ! administrator                     ----> worker
-    ! request_this_point(live_point)   point_needed -> true
+    ! request_live_point(live_point)   point_needed -> true
     ! no_more_points (defined above)   point_needed -> false
     ! 
 
-    !> Request this point
+    !> Request live point
     !!
     !! This subroutine is used by the root node to request a specific live point
-    subroutine request_this_point(live_point,mpi_information,worker_id)
+    subroutine request_live_point(live_point,mpi_information,worker_id)
         implicit none
         type(mpi_bundle), intent(in) :: mpi_information
         integer, intent(in) :: worker_id         !> Worker to request a new point from
         real(dp), intent(in), dimension(:) :: live_point !> The live point to be sent
 
 
-        call MPI_SEND(                   &
-            live_point,                  &! not sending anything
+        call MPI_SEND(                   &!
+            live_point,                  &! live point being sent
             size(live_point),            &!
             MPI_DOUBLE_PRECISION,        &! sending doubles
             worker_id,                   &! process id to send to
@@ -719,12 +719,12 @@ module mpi_module
             mpierror                     &! error flag
             )
 
-    end subroutine request_this_point
+    end subroutine request_live_point
 
     !> See if another point is needed
     !!
     !! This subroutine is used by the root node to request a specific live point
-    function point_needed(live_point,mpi_information)
+    function live_point_needed(live_point,mpi_information)
         use abort_module
         implicit none
         type(mpi_bundle), intent(in) :: mpi_information
@@ -732,29 +732,29 @@ module mpi_module
 
         integer, dimension(MPI_STATUS_SIZE) :: mpistatus  ! status identifier
 
-        logical :: point_needed !> Whether we need more points or not
+        logical :: live_point_needed !> Whether we need more points or not
 
         call MPI_RECV(                   &!
-            live_point,                  &!
+            live_point,                  &! live point recieved
             size(live_point),            &!
-            MPI_DOUBLE_PRECISION,        &!
-            mpi_information%root,        &!
-            MPI_ANY_TAG,                 &!
-            mpi_information%communicator,&!
-            mpistatus,                   &!
-            mpierror                     &!
+            MPI_DOUBLE_PRECISION,        &! receiving doubles
+            mpi_information%root,        &! root node
+            MPI_ANY_TAG,                 &! mpi tag
+            mpi_information%communicator,&! mpi handle
+            mpistatus,                   &! status identifier
+            mpierror                     &! error flag
             )
 
         ! If we've recieved a kill signal, then exit this loop
         if(mpistatus(MPI_TAG) == tag_gen_stop ) then
-            point_needed = .false.
+            live_point_needed = .false.
         else if(mpistatus(MPI_TAG) == tag_gen_request) then
-            point_needed = .true.
+            live_point_needed = .true.
         else
             call halt_program('generate error: unrecognised tag')
         end if
 
-    end function point_needed
+    end function live_point_needed
 
 
 #endif

@@ -69,7 +69,7 @@ module generate_module
         use array_module,     only: add_point
         use abort_module
 #ifdef MPI
-        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points,request_this_point,point_needed
+        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points,request_live_point,live_point_needed
 #else
         use mpi_module, only: mpi_bundle,is_root,linear_mode
 #endif
@@ -198,7 +198,7 @@ module generate_module
                     ! use the time as an ordering identifier, cheat by using the birth contour
                     live_point(settings%b0) = ngenerated
                     ngenerated = ngenerated+1
-                    call request_this_point(live_point,mpi_information,worker_id)
+                    call request_live_point(live_point,mpi_information,worker_id)
                 end do
 
                 do while(active_workers>0) 
@@ -229,7 +229,7 @@ module generate_module
                         ! use the time as a unique identifier, cheat by using the birth contour
                         live_point(settings%b0) = ngenerated
                         ngenerated = ngenerated+1
-                        call request_this_point(live_point,mpi_information,worker_id)
+                        call request_live_point(live_point,mpi_information,worker_id)
                     else
                         call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
                         active_workers=active_workers-1                ! decrease the active worker counter
@@ -248,7 +248,7 @@ module generate_module
 
                 ! The workers simply generate and send points until they're told to stop by the administrator
                 
-                do while(point_needed(live_point,mpi_information))
+                do while(live_point_needed(live_point,mpi_information))
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     ndiscarded=ndiscarded+1
