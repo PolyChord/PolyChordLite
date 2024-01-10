@@ -472,7 +472,13 @@ def run(loglikelihood, nDims, **kwargs):
     Returns
     -------
 
-    anesthetic.NestedSamples(root=<base_dir>/<file_root>)
+    anesthetic.NestedSamples
+
+    All output is currently produced in the form of text files in <base_dir>,
+    anesthetic can read these in directly:
+
+    >>> import anesthetic
+    >>> anesthetic.read_chains("base_dir/file_root")
 
     In general the contents of <base_dir> is a set of getdist compatible files.
 
