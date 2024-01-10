@@ -121,11 +121,10 @@ def test_no_derived():
 
 def test_grade_dims():
     grade_dims = [1, 3]
-    grade_frac = [0.5, 0.5]
     pypolychord.run(gaussian_likelihood, 4, nDerived=1,
                     prior=uniform_prior, read_resume=False,
-                    grade_dims=grade_dims, grade_frac=grade_frac)
+                    grade_dims=grade_dims)
     with pytest.raises(ValueError):
         pypolychord.run(gaussian_likelihood, 5, nDerived=1,
                         prior=uniform_prior, read_resume=False,
-                        grade_dims=grade_dims, grade_frac=grade_frac)
+                        grade_dims=grade_dims)
