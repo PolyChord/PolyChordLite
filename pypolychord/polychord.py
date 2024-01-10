@@ -577,6 +577,9 @@ def run(loglikelihood, nDims, **kwargs):
         theta[:] = kwargs['prior'](cube)
 
     kwargs['grade_dims'] = [int(d) for d in list(kwargs['grade_dims'])]
+    if sum(kwargs['grade_dims']) != nDims:
+        raise ValueError(f"grade_dims ({sum(kwargs['grade_dims'])}) "
+                         f"must sum to nDims ({nDims})")
     kwargs['nlives'] = {float(logL): int(nlive)
                         for logL, nlive in kwargs['nlives'].items()}
 
