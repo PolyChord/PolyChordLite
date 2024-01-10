@@ -1,5 +1,4 @@
 from pypolychord.output import PolyChordOutput
-import os
 from pathlib import Path
 import warnings
 import _pypolychord
@@ -152,17 +151,8 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
     except ImportError:
         rank = 0
 
-    try:
-        if rank == 0:
-            os.makedirs(settings.base_dir)
-    except OSError:
-        pass
-        
-    try:
-        if rank == 0:
-            os.makedirs(settings.cluster_dir)
-    except OSError:
-        pass
+    if rank == 0:
+        Path(settings.cluster_dir).mkdir(parents=True, exist_ok=True)
 
     if settings.cube_samples is not None:
         _legacy_make_resume_file(settings, loglikelihood, prior)
@@ -639,23 +629,25 @@ def run(loglikelihood, nDims, **kwargs):
 
     if paramnames is not None:
         PolyChordOutput.make_paramnames_file(
-            paramnames, os.path.join(kwargs['base_dir'],
-                                     kwargs['file_root']+".paramnames"))
+            paramnames,
+            Path(kwargs['base_dir']) /
+                (kwargs['file_root'] + ".paramnames"))
 
     try:
         import anesthetic
     except ImportError:
-        warnings.warn("anesthetic not installed. Cannot return NestedSamples object.")
+        warnings.warn("anesthetic not installed. "
+                      "Cannot return NestedSamples object.")
         return
     return anesthetic.read_chains(
-        os.path.join(kwargs['base_dir'], kwargs['file_root']))
+        str(Path(kwargs['base_dir']) / kwargs['file_root']))
 
 
 
 def _make_resume_file(loglikelihood, **kwargs):
     import fortranformat as ff
-    resume_filename = os.path.join(kwargs['base_dir'],
-                                   kwargs['file_root'])+".resume"
+    resume_filename = Path(kwargs['base_dir']) / (kwargs['file_root']
+                                                  + ".resume")
 
     try:
         from mpi4py import MPI
