@@ -37,9 +37,11 @@ def prior(hypercube):
 def dumper(live, dead, logweights, logZ, logZerr):
     print("Last dead point:", dead[-1])
 
-#| Create a paramnames file
+#| Parameter names
+#! This is a list of tuples (label, latex)
+#! Derived parameters should be followed by a *
 
-paramnames = [('p%i' % i, r'\theta_%i' % i) for i in range(nDims)]
+paramnames = [(f'p{i}', f'\\theta_{i}') for i in range(nDims)]
 paramnames += [('r*', 'r')]
 
 #| Run PolyChord
