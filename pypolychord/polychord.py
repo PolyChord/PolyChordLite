@@ -51,9 +51,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         (logL, phi): (float, array-like)
             return is a 2-tuple of the log-likelihood (logL) and the derived
             parameters (phi). phi length nDerived.
-
-        Returns
-        -------
+        OR
         logL: float
             log-likelihood
 
@@ -266,9 +264,7 @@ def run(loglikelihood, nDims, **kwargs):
         (logL, phi): (float, array-like)
             return is a 2-tuple of the log-likelihood (logL) and the derived
             parameters (phi). phi length nDerived.
-
-        Returns
-        -------
+        OR
         logL: float
             log-likelihood
 
