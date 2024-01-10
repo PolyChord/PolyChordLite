@@ -104,7 +104,7 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
 
     Returns
     -------
-    None. (in Python)
+    pypolychord.output.PolyChordOutput
 
     All output is currently produced in the form of text files in <base_dir>
     directory. If you would like to contribute to pypolychord and improve this,
