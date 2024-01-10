@@ -1,5 +1,6 @@
 from pypolychord.output import PolyChordOutput
 import os
+from pathlib import Path
 import warnings
 import _pypolychord
 import numpy as np
@@ -555,17 +556,9 @@ def run(loglikelihood, nDims, **kwargs):
     default_kwargs.update(kwargs)
     kwargs = default_kwargs
 
-    try:
-        if rank == 0:
-            os.makedirs(kwargs['base_dir'])
-    except OSError:
-        pass
-
-    try:
-        if rank == 0:
-            os.makedirs(os.path.join(kwargs['base_dir'], 'clusters'))
-    except OSError:
-        pass
+    if rank == 0:
+        (Path(kwargs['base_dir']) / "clusters").mkdir(
+            parents=True, exist_ok=True)
 
     if 'cube_samples' in kwargs:
         _make_resume_file(loglikelihood, kwargs['prior'], **kwargs)
