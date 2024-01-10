@@ -447,12 +447,14 @@ def run(loglikelihood, nDims, **kwargs):
         between loglike contours and nlive.
         You should still set nlive to be a sensible number, as this indicates
         how often to update the clustering, and to define the default value.
+
     seed : positive int
         (Default: system time in milliseconds)
         Choose the seed to seed the random number generator.
         Note **Positive seeds only**
         a negative seed indicates that you should use the system time in
         milliseconds
+
     cube_samples: array-like
         (Default: None)
         samples from the unit hypercube to start nested sampling from. This is
@@ -463,6 +465,7 @@ def run(loglikelihood, nDims, **kwargs):
         x3 < 1, if one did not want to use SortedUniformPrior.
         Only available in Python interface.
         shape (:, nDims)
+
     paramnames: List [(string,string)]
         (Default: None)
         Mapping of label:Tex for all parameters in order. E.g. for two physical
