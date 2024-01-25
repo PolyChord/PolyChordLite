@@ -557,7 +557,7 @@ def run(loglikelihood, nDims, **kwargs):
                                     if 'grade_dims' not in kwargs else
                                     [1.0]*len(kwargs['grade_dims']))
 
-    if not set(kwargs.keys()) <= set(default_kwargs.keys()):
+    if not kwargs.keys() <= default_kwargs.keys():
         raise TypeError(f"{__name__} got unknown keyword arguments: "
                         f"{kwargs.keys() - default_kwargs.keys()}")
     default_kwargs.update(kwargs)
