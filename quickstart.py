@@ -1,4 +1,4 @@
-import numpy as np
+from numpy import pi, log
 import pypolychord
 from pypolychord.priors import UniformPrior
 try:
@@ -20,7 +20,7 @@ def likelihood(theta):
 
     nDims = len(theta)
     r2 = sum(theta**2)
-    logL = -np.log(2*np.pi*sigma*sigma)*nDims/2.0
+    logL = -log(2*pi*sigma*sigma)*nDims/2.0
     logL += -r2/2/sigma/sigma
 
     return logL, [r2]
@@ -62,8 +62,8 @@ output = pypolychord.run(
 #| Make an anesthetic plot 
 
 try:
-    import anesthetic
-    fig, ax = anesthetic.make_2d_axes(['p0', 'p1', 'p2', 'p3', 'r'])
+    import anesthetic as ac
+    fig, ax = ac.make_2d_axes(['p0', 'p1', 'p2', 'p3', 'r'])
     output.plot_2d(ax)
     fig.savefig('posterior.pdf')
 except ImportError:
