@@ -62,8 +62,8 @@ output = pypolychord.run(
 #| Make an anesthetic plot 
 
 try:
-    import anesthetic as ac
-    fig, ax = ac.make_2d_axes(['p0', 'p1', 'p2', 'p3', 'r'])
+    from anesthetic import make_2d_axes
+    fig, ax = make_2d_axes(['p0', 'p1', 'p2', 'p3', 'r'])
     output.plot_2d(ax)
     fig.savefig('posterior.pdf')
 except ImportError:
