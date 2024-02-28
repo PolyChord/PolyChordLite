@@ -6,7 +6,6 @@ Polychord is a tool to solve high dimensional problems.
 
 from setuptools import setup, Extension, find_packages, Distribution
 from setuptools.command.build_py import build_py as _build_py
-from setuptools.command.develop import develop as _develop
 from distutils.command.clean import clean as _clean
 
 import os, sys, subprocess, shutil
@@ -73,7 +72,7 @@ def get_version(short=False):
                 return line[44:50]
 
 
-class DistributionWithOption(Distribution):
+class DistributionWithOption(Distribution, object):
     def __init__(self, *args, **kwargs):
         self.global_options = self.global_options \
                                 + [("no-mpi", None, "Don't compile with MPI support."),
@@ -84,7 +83,8 @@ class DistributionWithOption(Distribution):
 
 class CustomBuildPy(_build_py):
     def run(self):
-        env = os.environ.copy()
+        env = {}
+        env["PATH"] = os.environ["PATH"]
         if self.distribution.no_mpi is None:
             env["MPI"] = "1"
             # These need to be set so that build_ext uses the right compilers
@@ -92,7 +92,7 @@ class CustomBuildPy(_build_py):
             os.environ["CC"] = cc_compiler
 
             cxx_compiler = subprocess.check_output(["make", "print_CXX"]).decode('utf-8').strip()
-            env["CXX"] = cxx_compiler
+            os.environ["CXX"] = cxx_compiler
         else:
             env["MPI"] = "0"
 
@@ -101,13 +101,9 @@ class CustomBuildPy(_build_py):
             env["DEBUG"] = "1"
         
         BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-        env["PWD"] = BASE_PATH
+        env["CURDIR"] = BASE_PATH
         env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
-
-        def compile():
-            subprocess.call(["make", "-e", "libchord.so"], env=env, cwd=BASE_PATH)
-
-        self.execute(compile, [], 'Compiling')
+        subprocess.check_call(["make", "-e", "libchord.so"], env=env, cwd=BASE_PATH)
         if not os.path.isdir("pypolychord/lib/"):
             os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"))
         shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"),
@@ -115,17 +111,9 @@ class CustomBuildPy(_build_py):
         self.run_command("build_ext")
         return super(CustomBuildPy, self).run()
 
-
-class CustomDevelop(_develop):
-
-    def run(self):
-        self.run_command('build_py')
-        super(CustomDevelop, self).run()
-
-
 class CustomClean(_clean):
     def run(self):
-        subprocess.run(["make", "veryclean"], check=True)
+        subprocess.run(["make", "veryclean"], check=True, env=os.environ)
         return super().run()
 
 
@@ -165,7 +153,6 @@ setup(name=NAME,
       distclass=DistributionWithOption,
       ext_modules=[pypolychord_module],
       cmdclass={'build_py' : CustomBuildPy,
-                'develop': CustomDevelop,
                 'clean' : CustomClean},
       package_data={NAME: ["lib/libchord.so"]},
       include_package_data=True,
