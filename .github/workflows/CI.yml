@@ -43,10 +43,42 @@ jobs:
       run: python run_pypolychord.py
 
     - name: Test pypolychord (MPI)
-      run: mpirun -np 2 python run_pypolychord.py
+      run: mpirun --oversubscribe -np 3 python run_pypolychord.py
 
     - name: Test pypolychord (anesthetic)
       if: ${{ ! contains( '3.6, 3.7', matrix.python-version ) }}
       run: |
         pip install -r requirements.txt
         python run_pypolychord.py
+
+
+  tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies (Linux)
+      run: sudo apt-get install gfortran libopenmpi-dev
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install mpi4py pytest fortranformat anesthetic
+
+    - name: Install pypolychord
+      run: pip install -v '.[test]'
+
+    - name: Test pypolychord (no MPI)
+      run: python -m pytest tests
+
+    - name: Test pypolychord (MPI)
+      run: mpirun --oversubscribe -np 3 python -m pytest tests

@@ -5,17 +5,17 @@
    :target: https://arxiv.org/abs/1506.00171
    :alt: Open-access paper
 
-PolyChord v 1.21.0
+PolyChord v 1.22.1
 
 Will Handley, Mike Hobson & Anthony Lasenby
 
 wh260@mrao.cam.ac.uk
 
-arXiv:1502.01856
+`arXiv:1502.01856 <https://arxiv.org/abs/1502.01856>`_
 
-arXiv:1506.00171
+`arXiv:1506.00171 <https://arxiv.org/abs/1506.00171>`_
 
-Latest version Released Apr 2020
+Latest version Released Jan 2024
 
 
 PolyChord Licence
@@ -26,10 +26,11 @@ file. PolyChord is free for academic usage
 
 Users are also required to cite the PolyChord papers: 
 
-- arXiv:1502.01856
-- arXiv:1506.00171
+- `arXiv:1502.01856 <https://arxiv.org/abs/1502.01856>`_
+- `arXiv:1506.00171 <https://arxiv.org/abs/1506.00171>`_
 
 in their publications.
+
 
 Python quickstart
 =================
@@ -39,14 +40,14 @@ For Python users in a hurry:
 .. code:: bash
 
     pip install git+https://github.com/PolyChord/PolyChordLite@master
-    wget https://raw.githubusercontent.com/PolyChord/PolyChordLite/master/run_pypolychord.py
-    python run_pypolychord.py
+    wget https://raw.githubusercontent.com/PolyChord/PolyChordLite/master/quickstart.py
+    python quickstart.py
 
-You can then modify the file run_pypolychord.py to your needs. If you have mpi compilers available, this version can be run in parallel with mpi.
+You should make sure that you have gfortran/gcc (or equivalent) fortran compilers installed. 
 
-You should make sure that you have gfortran (or equivalent) fortran compilers installed. 
+You can then modify the file quickstart.py to your needs. If you have mpi compilers available, this version can be run in parallel with mpi.
 
-If any of the above steps fail (this can in general happen for certain Mac OSX versions), then try installing without pip:
+If any of the above steps fail (this can in general happen for certain macOS versions), then try installing without pip:
 
 .. code:: bash
 
@@ -54,15 +55,29 @@ If any of the above steps fail (this can in general happen for certain Mac OSX v
     cd PolyChordLite
     python setup.py install
 
+or perhaps:
+
+.. code:: bash
+
+    git clone https://github.com/PolyChord/PolyChordLite.git
+    cd PolyChordLite
+    make
+    pip install .
+
+our apologies -- the shifting sands that are macOS do not play well with the delicate dance of fortran, C and Python that is (py)PolyChordLite.
+
 If you do not have sudo access/virtual environments/anaconda, then appending `--user` to the install command may be necessary.
 
 Post Processing
 ===============
 
-We recommend the tool `anesthetic <https://github.com/williamjameshandley/anesthetic>`_ for post-processing your nested sampling runs. A plot gallery can be found `here <http://htmlpreview.github.io/?https://github.com/williamjameshandley/cosmo_example/blob/master/demos/demo.html>`_
+We recommend the pip-installable tool `anesthetic <https://github.com/handley-lab/anesthetic>`_ for post-processing your nested sampling runs. A plot gallery can be found `here <https://anesthetic.readthedocs.io/en/latest/plotting.html>`_
 
+.. code:: bash
 
-https://github.com/williamjameshandley/anesthetic
+    pip install anesthetic
+
+If `anesthetic` is already installed, then `pypolychord.run()` will return an `anesthetic.NestedSamples` object, which can be used directly for post-processing.
 
 MPI Support
 ===========
@@ -207,7 +222,6 @@ You can install direct from the git repository using:
 
     pip install https://github.com/PolyChord/PolyChordLite/archive/master.zip
 
-(N.B. PyPi coming soon)
 or you can install locally with the command:
 
 .. code:: bash
@@ -228,26 +242,27 @@ and check that it's working by running:
 
 .. code:: bash
 
-    $  python run_pypolychord.py
+    $  python quickstart.py
 
 or in MPI:
 
 .. code:: bash
 
-    $  mpirun -np 4 python run_pypolychord.py
+    $  mpirun -np 4 python quickstart.py
 
 If so, the rest of the interface is relatively painless. Follow the example in
-run_pypolychord.py, and consult the docstring if you need help:
+quickstart.py, and consult the docstring if you need help:
 
 .. code:: python
 
-    import pypolychord
-    from pypolychord.settings import PolyChordSettings
+    >>> import pypolychord
+    >>> help(pypolychord.run)
 
-    help(pypolychord.run_polychord)
-    help(PolyChordSettings)
+There is also a demo `python notebook <https://github.com/PolyChord/PolyChordLite/blob/master/quickstart.ipynb>`_.
 
-There is also a demo `python notebook <https://github.com/PolyChord/PolyChordLite/blob/master/run_pypolychord.ipynb>`_.
+To post-process nested sampling runs we recommend the pip-installable tool `anesthetic <https://github.com/handley-lab/anesthetic>`_. A plot gallery can be found `here <https://anesthetic.readthedocs.io/en/latest/plotting.html>`_ 
+
+
 
 Output files 
 =============
