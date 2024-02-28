@@ -61,7 +61,7 @@ module generate_module
     subroutine GenerateLivePoints(loglikelihood,prior,settings,RTI,mpi_information)
         use settings_module,  only: program_settings
         use random_module,   only: random_reals
-        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time
+        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time,sort_doubles
         use calculate_module, only: calculate_point
         use read_write_module, only: phys_live_file, prior_info_file
         use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
@@ -69,7 +69,7 @@ module generate_module
         use array_module,     only: add_point
         use abort_module
 #ifdef MPI
-        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points
+        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,sum_integers,sum_doubles,no_more_points,request_live_point,live_point_needed
 #else
         use mpi_module, only: mpi_bundle,is_root,linear_mode
 #endif
@@ -112,6 +112,7 @@ module generate_module
 
         integer :: nlike ! number of likelihood calls
         integer :: nprior, ndiscarded
+        integer :: ngenerated ! use to track order points are generated in
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -119,6 +120,7 @@ module generate_module
 
         ! Initialise number of likelihood calls to zero here
         nlike = 0
+        ngenerated = 1
 
 
         if(is_root(mpi_information)) then
@@ -190,6 +192,14 @@ module generate_module
 
 
                 active_workers=mpi_information%nprocs-1 ! Set the number of active processors to the number of workers
+                do worker_id=1,active_workers
+                    ! Request a point from any worker
+                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                    ! use the time as an ordering identifier, cheat by using the birth contour
+                    live_point(settings%b0) = ngenerated
+                    ngenerated = ngenerated+1
+                    call request_live_point(live_point,mpi_information,worker_id)
+                end do
 
                 do while(active_workers>0) 
 
@@ -215,7 +225,11 @@ module generate_module
 
 
                     if(RTI%nlive(1)<nprior) then
-                        call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
+                        live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                        ! use the time as a unique identifier, cheat by using the birth contour
+                        live_point(settings%b0) = ngenerated
+                        ngenerated = ngenerated+1
+                        call request_live_point(live_point,mpi_information,worker_id)
                     else
                         call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
                         active_workers=active_workers-1                ! decrease the active worker counter
@@ -223,23 +237,24 @@ module generate_module
 
                 end do
 
+                ! sort live points by order the prior samples were generated in
+                RTI%live(:,:RTI%nlive(1),:) = RTI%live(:,sort_doubles(RTI%live(settings%b0,:RTI%nlive(1),1)),:)
+                ! restore birth contour to logzero
+                RTI%live(settings%b0,:RTI%nlive(1),:) = settings%logzero
 
 
 
             else
 
                 ! The workers simply generate and send points until they're told to stop by the administrator
-                do while(.true.)
-        
-                    live_point(settings%h0:settings%h1) = random_reals(settings%nDims)       ! Generate a random hypercube coordinate
+                
+                do while(live_point_needed(live_point,mpi_information))
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     ndiscarded=ndiscarded+1
                     time1 = time()
-                    live_point(settings%b0) = settings%logzero
                     if(live_point(settings%l0)>settings%logzero) total_time = total_time + time1-time0
                     call throw_point(live_point,mpi_information)                                    ! Send it to the root node
-                    if(.not. more_points_needed(mpi_information)) exit                              ! If we've recieved a kill signal, then exit this loop
 
                 end do
             end if
@@ -438,258 +453,5 @@ module generate_module
         end do
 
     end subroutine time_speeds
-
-
-    subroutine GenerateLivePointsFromSeed(loglikelihood,prior,settings,RTI,mpi_information)
-        use settings_module,  only: program_settings
-        use utils_module,    only: write_phys_unit,DB_FMT,fmt_len,minpos,time,stdout_unit
-        use calculate_module, only: calculate_point
-        use read_write_module, only: phys_live_file
-        use feedback_module,  only: write_started_generating,write_finished_generating,write_generating_live_points
-        use run_time_module,   only: run_time_info,initialise_run_time_info, find_min_loglikelihoods
-        use array_module,     only: add_point
-        use abort_module
-        use chordal_module, only: slice_sample
-#ifdef MPI
-        use mpi_module, only: mpi_bundle,is_root,linear_mode,throw_point,catch_point,more_points_needed,sum_integers,sum_doubles,request_point,no_more_points
-#else
-        use mpi_module, only: mpi_bundle,is_root,linear_mode
-#endif
-
-        implicit none
-
-        interface
-            function loglikelihood(theta,phi)
-                import :: dp
-                real(dp), intent(in), dimension(:)  :: theta
-                real(dp), intent(out), dimension(:) :: phi
-                real(dp) :: loglikelihood
-            end function
-        end interface
-        interface
-            function prior(cube) result(theta)
-                import :: dp
-                real(dp), intent(in), dimension(:) :: cube
-                real(dp), dimension(size(cube))    :: theta
-            end function
-        end interface
-
-
-        !> Program settings
-        type(program_settings), intent(in) :: settings
-
-        ! The run time info (very important, see src/run_time_info.f90)
-        type(run_time_info) :: RTI
-
-        type(mpi_bundle),intent(in) :: mpi_information
-#ifdef MPI
-        integer             :: active_workers    !  Number of currently working workers
-        integer             :: worker_id         !  Worker identifier to signal who to throw back to
-#endif
-
-        real(dp), dimension(settings%nTotal) :: live_point ! Temporary live point array
-
-
-        character(len=fmt_len) :: fmt_dbl ! writing format variable
-
-        integer :: nprior
-
-        real(dp) :: time0,time1
-        real(dp),dimension(size(settings%grade_dims)) :: speed
-        real(dp),dimension(size(settings%grade_dims)) :: times
-        integer, dimension(size(settings%grade_dims)) :: nlikes
-
-        integer :: i_dim,i_repeat,i_grade
-        integer, dimension(settings%nDims) :: grade
-        real(dp), dimension(settings%nDims) :: nhat
-
-        do i_grade = size(settings%grade_dims),1,-1
-            grade(:sum(settings%grade_dims(:i_grade))) = i_grade
-        end do
-        nlikes = 0
-        times = 0d0
-
-        if(is_root(mpi_information)) then
-            ! ---------------------------------------------- !
-            call write_started_generating(settings%feedback)
-            ! ---------------------------------------------- !
-
-            ! Initialise the format
-            write(fmt_dbl,'("(",I0,A,")")') settings%nDims+settings%nDerived+1, DB_FMT
-
-            ! Open the live points file to sequentially add live points
-            if(settings%write_live) open(write_phys_unit,file=trim(phys_live_file(settings)), action='write')
-
-            ! Allocate the run time arrays, and set the default values for the variables
-            call initialise_run_time_info(settings,RTI)
-
-        end if
-
-        if (settings%nprior <= 0) then
-            nprior = settings%nlive
-        else
-            nprior = settings%nprior
-        end if
-
-        if(linear_mode(mpi_information)) then
-            !===================== LINEAR MODE =========================
-
-            live_point = settings%seed_point
-            do while(RTI%nlive(1)<nprior)
-                do i_repeat = 1,settings%nprior_repeat
-                    do i_dim=1,settings%nDims
-                        i_grade = grade(i_dim)
-                        nhat = 0d0
-                        nhat(i_dim) = 1d0
-
-                        time0 = time()
-                        live_point = slice_sample(loglikelihood,prior,settings%logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
-                        time1 = time()
-                        times(i_grade) = times(i_grade) + time1 - time0
-                    end do
-                end do
-
-                call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
-                call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
-                if(settings%write_live) then
-                    ! Write the live points to the live_points file
-                    write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                    flush(write_phys_unit) ! flush the unit to force write
-                end if
-
-            end do
-
-#ifdef MPI
-        else 
-            !===================== PARALLEL MODE =======================
-
-            if(is_root(mpi_information)) then
-                ! The root node just recieves data from all other processors
-
-                active_workers=mpi_information%nprocs-1 ! Set the number of active processors to the number of workers
-
-                do while(active_workers>0) 
-
-                    ! Recieve a point from any worker
-                    worker_id = catch_point(live_point,mpi_information)
-
-                    ! If its valid, and we need more points, add it to the array
-                    if(RTI%nlive(1)<nprior) then
-
-                        call add_point(live_point,RTI%live,RTI%nlive,1) ! Add this point to the array
-
-                        !-------------------------------------------------------------------------------!
-                        call write_generating_live_points(settings%feedback,RTI%nlive(1),nprior)
-                        !-------------------------------------------------------------------------------!
-
-                        if(settings%write_live) then
-                            ! Write the live points to the live_points file
-                            write(write_phys_unit,fmt_dbl) live_point(settings%p0:settings%d1), live_point(settings%l0)
-                            flush(write_phys_unit) ! flush the unit to force write
-                        end if
-
-                    end if
-
-
-                    if(RTI%nlive(1)<nprior) then
-                        call request_point(mpi_information,worker_id)  ! If we still need more points, send a signal to have another go
-                    else
-                        call no_more_points(mpi_information,worker_id) ! Otherwise, send a signal to stop
-                        active_workers=active_workers-1                ! decrease the active worker counter
-                    end if
-
-                end do
-
-
-
-
-            else
-
-                ! The workers simply generate and send points until they're told to stop by the administrator
-                live_point = settings%seed_point
-                do while(.true.)
-                    do i_repeat = 1,settings%nprior_repeat
-                        do i_dim=1,settings%nDims
-                            i_grade = grade(i_dim)
-                            nhat = 0d0
-                            nhat(i_dim) = 1d0
-
-                            time0 = time()
-                            live_point = slice_sample(loglikelihood,prior,settings%logzero,nhat,live_point,1d0,settings,nlikes(i_grade))
-                            time1 = time()
-                            times(i_grade) = times(i_grade) + time1 - time0
-                        end do
-                    end do
-        
-                    call throw_point(live_point,mpi_information)                                    ! Send it to the root node
-                    if(.not. more_points_needed(mpi_information)) exit                              ! If we've recieved a kill signal, then exit this loop
-
-                end do
-            end if
-#endif
-        end if !(nprocs case)
-
-#ifdef MPI
-        do i_grade=1,size(settings%grade_dims)
-            nlikes(i_grade) = sum_integers(nlikes(i_grade),mpi_information) ! Gather the likelihood calls onto one node
-            times(i_grade) = sum_doubles(times(i_grade),mpi_information) ! Sum up the total time taken
-        end do
-#endif
-
-
-        ! ----------------------------------------------- !
-        if(is_root(mpi_information)) call write_finished_generating(settings%feedback)  
-        ! ----------------------------------------------- !
-
-        if(is_root(mpi_information)) then
-            ! Find the average time taken
-            speed = times/nlikes
-
-            do i_grade = 1,size(settings%grade_dims)
-                write(stdout_unit,'("Speed ",I2," = ",E10.3, " seconds     ")') i_grade, speed(i_grade)
-            end do
-
-
-            ! Pass over the number of likelihood calls
-            RTI%nlike = nlikes
-
-            ! Set the local and global loglikelihood bounds
-            RTI%i(1)  = minpos(RTI%live(settings%l0,:,1)) ! Find the position of the minimum loglikelihood
-            RTI%logLp = RTI%live(settings%l0,RTI%i(1),1)  ! Store the value of the minimum loglikelihood 
-
-            ! Close the file
-            if(settings%write_live) close(write_phys_unit)
-
-            if(.not. allocated(RTI%num_repeats) ) allocate(RTI%num_repeats(size(settings%grade_dims)))
-            if (any(settings%grade_frac<=1)) then
-                RTI%num_repeats(1) = settings%num_repeats
-                RTI%num_repeats(2:) = nint(settings%grade_frac(2:)/(settings%grade_frac(1)+0d0)*RTI%num_repeats(1)*speed(1)/speed(2:))
-            else
-                RTI%num_repeats = int(settings%grade_frac)
-            end if
-
-            ! Set the posterior thinning factor
-            if(settings%boost_posterior<0d0) then
-                RTI%thin_posterior = 1d0
-            else
-                RTI%thin_posterior = (settings%boost_posterior+0d0)/(sum(RTI%num_repeats)+0d0)
-            end if
-
-            ! Calculate the minimum loglikelihood for future use
-            call find_min_loglikelihoods(settings,RTI)
-
-        end if
-
-
-
-
-
-    end subroutine GenerateLivePointsFromSeed
-
-
-
-
-
-
 
 end module generate_module
