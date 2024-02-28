@@ -519,6 +519,12 @@ def run(loglikelihood, nDims, **kwargs):
 
     paramnames = kwargs.pop('paramnames', None)
 
+    if paramnames is not None:
+        PolyChordOutput.make_paramnames_file(
+            paramnames,
+            Path(kwargs['base_dir']) /
+                (kwargs['file_root'] + ".paramnames"))
+
     default_kwargs = {
         'nDerived': 0,
         'prior': default_prior,
@@ -629,12 +635,6 @@ def run(loglikelihood, nDims, **kwargs):
 
     if 'cube_samples' in kwargs:
         kwargs['read_resume'] = read_resume
-
-    if paramnames is not None:
-        PolyChordOutput.make_paramnames_file(
-            paramnames,
-            Path(kwargs['base_dir']) /
-                (kwargs['file_root'] + ".paramnames"))
 
     try:
         import anesthetic
