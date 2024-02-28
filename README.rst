@@ -111,6 +111,14 @@ set
 COMPILER_TYPE = intel
 for intel compilers (proprietary, much faster)
 
+Mac OS troubleshooting guide
+============================
+
+Users of the ``brew`` package manager should reinstall ``gcc`` (which should pull in ``gfortran``) and ``open-mpi``. If you do not reinstall ``gcc`` (or the equivalent intel compiler), your installation may fail to build with
+
+	ld: unknown options: -commons
+
+If this error message persists after re-installation, please consider downgrading the XCode command line tools to an earlier version.
 
 Running PolyChord
 =================
