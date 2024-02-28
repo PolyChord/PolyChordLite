@@ -81,7 +81,7 @@ class DistributionWithOption(Distribution, object):
         self.debug_flags = None
         super(DistributionWithOption, self).__init__(*args, **kwargs)
 
-class CustomBuildPy(_build_py):
+class CustomBuildPy(_build_py, object):
     def run(self):
         env = {}
         env["PATH"] = os.environ["PATH"]
@@ -128,7 +128,6 @@ elif mpi4py_get_include:
     print(mpi4py_get_include)
     include_dirs += [mpi4py_get_include]
 
-
 pypolychord_module = Extension(
         name='_pypolychord',
         library_dirs=['lib'],
@@ -154,6 +153,6 @@ setup(name=NAME,
       ext_modules=[pypolychord_module],
       cmdclass={'build_py' : CustomBuildPy,
                 'clean' : CustomClean},
-      package_data={NAME: ["lib/libchord.so"]},
+      package_data={"" : ["lib/libchord.so"]},
       include_package_data=True,
       zip_safe=False)
