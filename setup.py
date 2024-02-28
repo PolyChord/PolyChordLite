@@ -21,13 +21,10 @@ else:
     mpi4py_get_include = mpi4py.get_include()
 
 
-def check_compiler(default_CC=None):
+def check_compiler():
     """Checks what compiler is being used (clang, intel, or gcc)."""
 
-    default_CC = 'gcc'
-    if mpi4py_get_include:
-        default_CC = 'mpicc'
-    CC = os.getenv('CC', default_CC)
+    CC = os.getenv('CC', 'mpicc' if mpi4py_get_include else 'gcc')
     os.environ['CC'] = CC
     CC_version = subprocess.check_output([CC, "-v"], stderr=subprocess.STDOUT).decode("utf-8").lower()
     
@@ -91,11 +88,11 @@ class CustomBuildPy(_build_py):
         if self.distribution.no_mpi is None:
             env["MPI"] = "1"
             # These need to be set so that build_ext uses the right compilers
-            #cc_compiler = subprocess.check_output(["make", "print_CC"]).decode('utf-8').strip()
-            #os.environ["CC"] = cc_compiler
+            cc_compiler = subprocess.check_output(["make", "print_CC"]).decode('utf-8').strip()
+            os.environ["CC"] = cc_compiler
 
-            #cxx_compiler = subprocess.check_output(["make", "print_CXX"]).decode('utf-8').strip()
-            #env["CXX"] = cxx_compiler
+            cxx_compiler = subprocess.check_output(["make", "print_CXX"]).decode('utf-8').strip()
+            env["CXX"] = cxx_compiler
         else:
             env["MPI"] = "0"
 
@@ -105,7 +102,7 @@ class CustomBuildPy(_build_py):
         
         BASE_PATH = os.path.dirname(os.path.abspath(__file__))
         env["PWD"] = BASE_PATH
-        #env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
+        env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
 
         def compile():
             subprocess.call(["make", "-e", "libchord.so"], env=env, cwd=BASE_PATH)
