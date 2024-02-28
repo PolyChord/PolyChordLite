@@ -519,12 +519,6 @@ def run(loglikelihood, nDims, **kwargs):
 
     paramnames = kwargs.pop('paramnames', None)
 
-    if paramnames is not None:
-        PolyChordOutput.make_paramnames_file(
-            paramnames,
-            Path(kwargs['base_dir']) /
-                (kwargs['file_root'] + ".paramnames"))
-
     default_kwargs = {
         'nDerived': 0,
         'prior': default_prior,
@@ -572,6 +566,12 @@ def run(loglikelihood, nDims, **kwargs):
     if rank == 0:
         (Path(kwargs['base_dir']) / kwargs['cluster_dir']).mkdir(
             parents=True, exist_ok=True)
+        if paramnames is not None:
+            PolyChordOutput.make_paramnames_file(
+                paramnames,
+                Path(kwargs['base_dir']) /
+                    (kwargs['file_root'] + ".paramnames"))
+
 
     if 'cube_samples' in kwargs:
         _make_resume_file(loglikelihood, kwargs['prior'], **kwargs)
