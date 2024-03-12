@@ -170,7 +170,11 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         settings.read_resume=True
 
     def wrap_loglikelihood(theta, phi):
-        logL, phi[:] = loglikelihood(theta)
+        logL = loglikelihood(theta)
+        try:
+            logL, phi[:] = logL
+        except TypeError:
+            pass
         return logL
 
     def wrap_prior(cube, theta):
@@ -242,7 +246,11 @@ def make_resume_file(settings, loglikelihood, prior):
     for i in np.array_split(np.arange(len(settings.cube_samples)), size)[rank]:
         cube = settings.cube_samples[i]
         theta = prior(cube)
-        logL, derived = loglikelihood(theta)
+        logL = loglikelihood(theta)
+        try:
+            logL, derived = logL
+        except TypeError:
+            derived = []
         nDims = len(theta)
         nDerived = len(derived)
         lives.append(np.concatenate([cube,theta,derived,[logL_birth, logL]]))
@@ -251,16 +259,16 @@ def make_resume_file(settings, loglikelihood, prior):
         sendbuf = np.array(lives).flatten()
         sendcounts = np.array(comm.gather(len(sendbuf)))
         if rank == 0:
-            recvbuf = np.empty(sum(sendcounts), dtype=int)
+            recvbuf = np.empty(sum(sendcounts))
         else:
             recvbuf = None
         comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=0)
 
-        lives = np.reshape(sendbuf, (len(settings.cube_samples), len(lives[0])))
-    else:
-        lives = np.array(lives)
-
     if rank == 0:
+        if MPI:
+            lives = np.reshape(recvbuf, (len(settings.cube_samples), len(lives[0])))
+        else:
+            lives = np.array(lives)
         with open(resume_filename,"w") as f:
             def write(var):
                 var = np.atleast_1d(var)
