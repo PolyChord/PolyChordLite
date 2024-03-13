@@ -106,7 +106,7 @@ class CustomBuildPy(_build_py, object):
         subprocess.check_call(["make", "-e", "libchord.so"], env=env, cwd=BASE_PATH)
         if not os.path.isdir("pypolychord/lib/"):
             os.makedirs(os.path.join(BASE_PATH, "pypolychord/lib/"))
-        shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"),
+        shutil.copy(os.path.join(BASE_PATH, "lib/libchord.so"), 
                     os.path.join(BASE_PATH, "pypolychord/lib/"))
         self.run_command("build_ext")
         return super(CustomBuildPy, self).run()
