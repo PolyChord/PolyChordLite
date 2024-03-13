@@ -644,13 +644,13 @@ module mpi_module
         integer, intent(in) :: worker_id         !> Worker to request a new point from
 
         call MPI_SEND(                   &
-            tag_gen_stop,                &! not sending anything
-            1,                           &! size of nothing
-            MPI_INTEGER,                 &! sending no integers
-            worker_id,                   &! process id to send to
-            tag_tag_gen,                 &! continuation tag
-            mpi_information%communicator,&! mpi handle
-            mpierror                     &! error flag
+            tag_gen_stop,                &!
+            1,                           &!
+            MPI_INTEGER,                 &!
+            worker_id,                   &!
+            tag_tag_gen,                 &!
+            mpi_information%communicator,&!
+            mpierror                     &!
             )
 
     end subroutine no_more_points
@@ -671,13 +671,13 @@ module mpi_module
         real(dp), intent(in), dimension(:) :: live_point !> The live point to be sent
 
         call MPI_SEND(                   &
-            tag_gen_request,             &! not sending anything
-            1,                           &! size of nothing
-            MPI_INTEGER,                 &! sending no integers
-            worker_id,                   &! process id to send to
-            tag_tag_gen,                 &! continuation tag
-            mpi_information%communicator,&! mpi handle
-            mpierror                     &! error flag
+            tag_gen_request,             &!
+            1,                           &!
+            MPI_INTEGER,                 &!
+            worker_id,                   &!
+            tag_tag_gen,                 &!
+            mpi_information%communicator,&!
+            mpierror                     &!
             )
 
 
