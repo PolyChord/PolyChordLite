@@ -14,7 +14,7 @@ def default_dumper(live, dead, logweights, logZ, logZerr):
 
 
 def run_polychord(loglikelihood, nDims, nDerived, settings,
-                  prior=default_prior, dumper=default_dumper):
+                  prior=default_prior, dumper=default_dumper, comm=None):
     """
     Runs PolyChord.
 
@@ -143,13 +143,15 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
         Final output evidence statistics
 
     """
-
-    try:
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
-    except ImportError:
-        rank = 0
+    rank = 0
+    if comm is None:
+        try:
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+        except ImportError:
+            pass
+    if comm is not None:
+        rank = comm.rank
 
     if rank == 0:
         Path(settings.cluster_dir).mkdir(parents=True, exist_ok=True)
@@ -207,7 +209,8 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
                      settings.grade_frac,
                      settings.grade_dims,
                      settings.nlives,
-                     settings.seed)
+                     settings.seed,
+                     comm)
 
     if settings.cube_samples is not None:
         settings.read_resume = read_resume
@@ -512,10 +515,9 @@ def run(loglikelihood, nDims, **kwargs):
 
     try:
         from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
+        default_comm = MPI.COMM_WORLD
     except ImportError:
-        rank = 0
+        default_comm = None
 
     paramnames = kwargs.pop('paramnames', None)
 
@@ -552,6 +554,7 @@ def run(loglikelihood, nDims, **kwargs):
         'grade_dims': [nDims],
         'nlives': {},
         'seed': -1,
+        'comm': default_comm,
     }
     default_kwargs['grade_frac'] = ([1.0]*len(default_kwargs['grade_dims'])
                                     if 'grade_dims' not in kwargs else
@@ -562,6 +565,11 @@ def run(loglikelihood, nDims, **kwargs):
                         f"{kwargs.keys() - default_kwargs.keys()}")
     default_kwargs.update(kwargs)
     kwargs = default_kwargs
+
+    if kwargs['comm'] is not None:
+        rank = kwargs['comm'].rank
+    else:
+        rank = 0
 
     if rank == 0:
         (Path(kwargs['base_dir']) / kwargs['cluster_dir']).mkdir(
@@ -631,7 +639,7 @@ def run(loglikelihood, nDims, **kwargs):
                      kwargs['grade_dims'],
                      kwargs['nlives'],
                      kwargs['seed'],
-                     )
+                     kwargs['comm'])
 
     if 'cube_samples' in kwargs:
         kwargs['read_resume'] = read_resume

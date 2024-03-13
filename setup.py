@@ -12,10 +12,19 @@ import os, sys, subprocess, shutil
 
 import numpy
 
-def check_compiler(default_CC="gcc"):
+try:
+    import mpi4py
+except ImportError:
+    mpi4py_get_include = None
+else:
+    mpi4py_get_include = mpi4py.get_include()
+
+
+def check_compiler():
     """Checks what compiler is being used (clang, intel, or gcc)."""
 
-    CC = default_CC if "CC" not in os.environ else os.environ["CC"]
+    CC = os.getenv('CC', 'mpicc' if mpi4py_get_include else 'gcc')
+    os.environ['CC'] = CC
     CC_version = subprocess.check_output([CC, "-v"], stderr=subprocess.STDOUT).decode("utf-8").lower()
     
     if "clang" in CC_version:
@@ -107,14 +116,22 @@ class CustomClean(_clean):
         subprocess.run(["make", "veryclean"], check=True, env=os.environ)
         return super().run()
 
+
+include_dirs = ['src/polychord', numpy.get_include()]
+
 if "--no-mpi" in sys.argv:
     NAME += '_nompi'
     DOCLINES[1] = DOCLINES[1] + ' (cannot be used with MPI)'
 
+elif mpi4py_get_include:
+    CPPRUNTIMELIB_FLAG += ["-DUSE_MPI"]
+    print(mpi4py_get_include)
+    include_dirs += [mpi4py_get_include]
+
 pypolychord_module = Extension(
         name='_pypolychord',
         library_dirs=['lib'],
-        include_dirs=['src/polychord', numpy.get_include()],
+        include_dirs=include_dirs,
         libraries=['chord',],
         extra_link_args=RPATH_FLAG + CPPRUNTIMELIB_FLAG,
         extra_compile_args= ["-std=c++11"] + RPATH_FLAG + CPPRUNTIMELIB_FLAG,
