@@ -5,12 +5,19 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 
+#ifdef USE_MPI
+#include <mpi.h>
+#include <mpi4py/mpi4py.h>
+#endif
 
 /* Initialize the module */
 #ifdef PYTHON3
 PyMODINIT_FUNC PyInit__pypolychord(void)
 {
     import_array();
+#ifdef USE_MPI
+    import_mpi4py();
+#endif
     return PyModule_Create(&_pypolychordmodule);
 }
 #else
@@ -18,6 +25,9 @@ PyMODINIT_FUNC init_pypolychord(void)
 {
     Py_InitModule3("_pypolychord", module_methods, module_docstring);
     import_array();
+#ifdef USE_MPI
+    import_mpi4py();
+#endif
 }
 #endif
 
@@ -121,12 +131,12 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
     Settings S;
 
     PyObject *temp_logl, *temp_prior, *temp_dumper;
-    PyObject* py_grade_dims, *py_grade_frac, *py_nlives, *py_wraparound;
+    PyObject* py_grade_dims, *py_grade_frac, *py_nlives, *py_wraparound, *py_comm;
     char* base_dir, *file_root;
         
 
     if (!PyArg_ParseTuple(args,
-                "OOOiiiiiiiiddidiiiiiiiiiiidissO!O!O!O!i:run",
+                "OOOiiiiiiiiddidiiiiiiiiiiidissO!O!O!O!iO:run",
                 &temp_logl,
                 &temp_prior,
                 &temp_dumper,
@@ -165,7 +175,8 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
                 &py_nlives,
                 &PyList_Type,
                 &py_wraparound,
-                &S.seed
+                &S.seed,
+                &py_comm
                 )
             )
         return NULL;
@@ -232,7 +243,14 @@ static PyObject *run_pypolychord(PyObject *, PyObject *args)
     python_dumper = temp_dumper;
 
     /* Run PolyChord */
-    try{ run_polychord(loglikelihood, prior, dumper, S); }
+    try{
+#ifdef USE_MPI
+        MPI_Comm *comm = PyMPIComm_Get(py_comm);
+        run_polychord(loglikelihood, prior, dumper, S, *comm);
+#else
+        run_polychord(loglikelihood, prior, dumper, S);
+#endif
+    }
     catch (PythonException& e)
     { 
         Py_DECREF(py_grade_frac);Py_DECREF(py_grade_dims);Py_DECREF(py_wraparound);Py_DECREF(python_loglikelihood);Py_DECREF(python_prior);
