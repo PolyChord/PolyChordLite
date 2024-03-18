@@ -552,6 +552,7 @@ def run(loglikelihood, nDims, **kwargs):
         'cluster_dir': 'clusters',
         'grade_dims': [nDims],
         'nlives': {},
+        'wraparound': [False]*nDims,
         'seed': -1,
     }
     default_kwargs['grade_frac'] = ([1.0]*len(default_kwargs['grade_dims'])
