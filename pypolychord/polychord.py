@@ -577,8 +577,7 @@ def run(loglikelihood, nDims, **kwargs):
     read_resume = kwargs['read_resume']
     if kwargs['cube_samples'] is not None:
         _make_resume_file(loglikelihood, **kwargs)
-        read_resume = kwargs['read_resume']
-        kwargs['read_resume'] = True
+        read_resume = True
 
     def wrap_loglikelihood(theta, phi):
         logL = loglikelihood(theta)
@@ -619,7 +618,7 @@ def run(loglikelihood, nDims, **kwargs):
                      kwargs['cluster_posteriors'],
                      kwargs['write_resume'],
                      kwargs['write_paramnames'],
-                     kwargs['read_resume'],
+                     read_resume,
                      kwargs['write_stats'],
                      kwargs['write_live'],
                      kwargs['write_dead'],
@@ -634,9 +633,6 @@ def run(loglikelihood, nDims, **kwargs):
                      kwargs['nlives'],
                      kwargs['seed'],
                      )
-
-    if 'cube_samples' in kwargs:
-        kwargs['read_resume'] = read_resume
 
     try:
         import anesthetic
