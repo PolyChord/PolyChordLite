@@ -552,6 +552,7 @@ def run(loglikelihood, nDims, **kwargs):
         'grade_dims': [nDims],
         'nlives': {},
         'seed': -1,
+        'cube_samples': None,
     }
     default_kwargs['grade_frac'] = ([1.0]*len(default_kwargs['grade_dims'])
                                     if 'grade_dims' not in kwargs else
@@ -573,8 +574,9 @@ def run(loglikelihood, nDims, **kwargs):
                     (kwargs['file_root'] + ".paramnames"))
 
 
-    if 'cube_samples' in kwargs:
-        _make_resume_file(loglikelihood, kwargs['prior'], **kwargs)
+    read_resume = kwargs['read_resume']
+    if kwargs['cube_samples'] is not None:
+        _make_resume_file(loglikelihood, **kwargs)
         read_resume = kwargs['read_resume']
         kwargs['read_resume'] = True
 
