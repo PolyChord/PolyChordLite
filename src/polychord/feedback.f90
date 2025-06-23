@@ -268,7 +268,7 @@ module feedback_module
             write(fmt_nlike,'("(""nlike      ="",",I0,"I20)")') size(nlikesum)
             write(stdout_unit,fmt_nlike) RTI%nlike
 
-            write(fmt_nlike,'(  "(""<nlike>    ="","  ,I0,   "F15.2,""   (""",I0,"F15.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
+            write(fmt_nlike,'(  "(""<nlike>    ="","  ,I0,   "F15.2,""   (""",I0,"F15.2, "" per slice )"")")') size(nlikesum), size(nlikesum)
             write(stdout_unit,fmt_nlike) dble(nlikesum)/dble(settings%nlive),dble(nlikesum)/dble(RTI%num_repeats*settings%nlive)
 
 
@@ -288,7 +288,7 @@ module feedback_module
                 if(ordering(p)<=RTI%ncluster) then
 
                     if(abs(logZp(ordering(p)))<1e9) then
-                        write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= "",F15.2,"" +/- "",F5.2"" (still evaluating)"")")') i_char,4-i_char
+                        write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= "",F15.2,"" +/- "",F5.2,"" (still evaluating)"")")') i_char,4-i_char
                         write(stdout_unit,fmt_Z) p, '', logZp(ordering(p)),sqrt(abs(varlogZp(ordering(p))))
                     else
                         write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= ? (still evaluating)"")")') i_char,4-i_char
