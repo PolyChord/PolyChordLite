@@ -4,6 +4,7 @@
 #include "interfaces.hpp"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
+#include <cmath>
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -38,6 +39,16 @@ static PyObject *python_loglikelihood = NULL;
 
 double loglikelihood(double* theta, int nDims, double* phi, int nDerived)
 {
+    // --- START OF ADDED WARNING ---
+    for (int i = 0; i < nDims; ++i) {
+        if (std::isnan(theta[i])) {
+            PySys_WriteStderr("PolyChord TRACE (C++ loglikelihood): NaN detected in parameter vector received from Fortran.\n");
+            // We can break after the first one is found.
+            break;
+        }
+    }
+    // --- END OF ADDED WARNING ---
+    
     /* Create a python version of theta */
     npy_intp theta_shape[] = {nDims};            
     PyObject *array_theta = PyArray_SimpleNewFromData(1, theta_shape, NPY_DOUBLE, theta);

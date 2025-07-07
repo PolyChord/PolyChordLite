@@ -37,6 +37,13 @@ module calculate_module
 
         cube = point(settings%h0:settings%h1)
 
+        ! --- START OF ADDED WARNING ---
+        if (any(isnan(cube))) then
+            write(stdout_unit,'(A)') 'PolyChord TRACE (calculate_point): NaN detected in hypercube vector before prior transformation.'
+            flush(stdout_unit)
+        end if
+        ! --- END OF ADDED WARNING ---
+
         if ( any(cube<mn) .or. any(cube>mx) )  then
             theta = 0
             logL  = settings%logzero

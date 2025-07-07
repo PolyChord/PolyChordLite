@@ -645,6 +645,18 @@ module utils_module
             if (L(i,i).le.0d0) then
                 ! If the cholesky decomposition does not exist, then set it to
                 ! be a re-scaled identity matrix
+
+                ! --- START OF ADDED WARNING ---
+                real(dp) :: trace_val
+                trace_val = trace(a)
+                if (trace_val <= 1.d-20) then
+                    write(stdout_unit,'(A)') 'PolyChord WARNING: Cholesky decomposition failed.'
+                    write(stdout_unit,'(A, E12.5)') '                   Matrix trace is near-zero: ', trace_val
+                    write(stdout_unit,'(A)') '                   This will likely lead to a NaN direction vector.'
+                    flush(stdout_unit)
+                end if
+                ! --- END OF ADDED WARNING ---
+
                 L = identity_matrix(size(a,1)) * sqrt(trace(a))
                 return
             else

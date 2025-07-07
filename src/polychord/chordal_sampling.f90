@@ -78,6 +78,15 @@ module chordal_module
 
             ! Normalise it
             w = sqrt(dot_product(nhat,nhat))
+
+            ! --- START OF ADDED WARNING ---
+            if (w < 1.d-20) then
+                write(stdout_unit,'(A)') 'PolyChord WARNING: Slice sampling direction vector has zero magnitude (w=0).'
+                write(stdout_unit,'(A)') '                   Division by zero is imminent, resulting in NaN parameters.'
+                flush(stdout_unit)
+            end if
+            ! --- END OF ADDED WARNING ---
+
             nhat = nhat/w
             w = w * 3d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
 
@@ -245,6 +254,13 @@ module chordal_module
 
             ! Draw a random point within L and R
             baby_point(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 
+
+            ! --- START OF ADDED WARNING ---
+            if (any(isnan(baby_point(S%h0:S%h1)))) then
+                write(stdout_unit,'(A)') 'PolyChord TRACE (slice_sample): NaN detected in new parameter vector immediately after creation.'
+                flush(stdout_unit)
+            end if
+            ! --- END OF ADDED WARNING ---
 
             ! calculate the likelihood 
             call calculate_point(loglikelihood,prior,baby_point,S,n)
