@@ -7,6 +7,8 @@ module chordal_module
     function SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)  result(baby_points)
         use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,random_real
+        ! added to check for NaN in hypercube vector, to support stdout
+        use utils_module, only: stdout_unit
 
         implicit none
         interface
@@ -171,7 +173,8 @@ module chordal_module
     !!
     function slice_sample(loglikelihood,prior,logL,nhat,x0,w,S,n) result(baby_point)
         use settings_module, only: program_settings
-        use utils_module,  only: distance
+        ! added stdout_unit to support printing warnings about NaN
+        use utils_module,  only: distance, stdout_unit
         use random_module, only: random_real
         use calculate_module, only: calculate_point
         implicit none
