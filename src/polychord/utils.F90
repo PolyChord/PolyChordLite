@@ -634,6 +634,8 @@ module utils_module
         real(dp), intent(in),dimension(:,:) :: a
         real(dp), dimension(size(a,1),size(a,2)) :: L
         integer :: i,j
+        ! added trace_val to check for NaN
+        real(dp) :: trace_val
 
         ! Set it all to zero to begin with
         L = 0
@@ -647,7 +649,6 @@ module utils_module
                 ! be a re-scaled identity matrix
 
                 ! --- START OF ADDED WARNING ---
-                real(dp) :: trace_val
                 trace_val = trace(a)
                 if (trace_val <= 1.d-20) then
                     write(stdout_unit,'(A)') 'PolyChord WARNING: Cholesky decomposition failed.'
