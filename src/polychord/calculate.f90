@@ -5,6 +5,9 @@ module calculate_module
 
     subroutine calculate_point(loglikelihood,prior,point,settings,nlike)
         use settings_module, only: program_settings
+        ! added to check for NaN in hypercube vector
+        use utils_module, only: stdout_unit
+
         implicit none
         interface
             function loglikelihood(theta,phi)
