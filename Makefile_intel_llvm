@@ -1,0 +1,75 @@
+# Makefile_intel_llvm (for Intel LLVM-based compilers: ifx, icx, icpx)
+
+ifeq ($(MPI),1)
+# Using specific MPI-enabled Intel LLVM compilers
+FC = mpiifx
+CC = mpiicx
+CXX = mpiicpx
+# For shared libraries, include the -v (verbose) flag as per your command
+LDSHARED = $(LD) -shared -v
+else
+# Using standard Intel LLVM compilers
+FC = ifx
+CXX = icpx
+CC = icx
+LDSHARED = $(LD) -shared
+endif
+
+# CPP uses the C compiler
+CPP = $(CC)
+# LD uses the C/C++ compiler as the primary linker driver for mixed-language projects
+# This aligns with your `LD=mpiicx` override
+LD = $(CC)
+
+# Archive tool: Always 'ar rv' now that IPO-specific xiar is not used
+AR = ar rv
+
+
+# default flags
+# --------------
+# fpp                    : perform preprocessing
+# fpic                   : shared object libraries
+# assume noold_maxminloc : Removed, as it might not be relevant or cause issues with ifx/icx
+# heap-arrays            : allocate local arrays on heap
+FFLAGS += -fpp -fpic -heap-arrays
+CXXFLAGS += -std=c++11 -fpic
+# nofor_main 	         : Removed, as per previous command and often not needed with modern compilers
+LDFLAGS += # This line is effectively empty now that -nofor-main is removed
+
+# Link specific Intel runtime libraries, replacing generic -cxxlib
+LDLIBS += -lifcore -lifport -limf -lsvml -liomp5
+
+ifeq ($(DEBUG),1)
+# Debugging mode
+# --------------
+# g              : enable gnu debugger compatibility
+# O0             : no optimisation
+# traceback      : create a backtrace on system failure
+# check all      : all checks (whilst compiling)
+# warn all       : all warnings (whilst running)
+# ftrapuv        : Traps uninitialized variables by setting them to very large values
+# debug all      : additional debugging information
+# gen-interfaces : generate an interface block for each routine
+# warn-interfaces: warn on these interface blocks
+# fpe0           : halts program if dividing by zero, etc
+FFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces
+CXXFLAGS += -g -O0 -traceback -Wcheck -Wremarks -Wall -Weffc++ -ftrapuv -debug all
+LDFLAGS += -g
+else
+# Optimised mode
+# --------------
+#   ipo          : (Removed -ipo and related code, as per your modifications for ifx/icx)
+#   O3           : maximum optimisation
+#   no-prec-div  : (Removed, as per your modifications)
+#   static       : link intel libraries statically (covered by specific LDLIBS)
+#   xHost        : maximise architecture usage (from $(HOST) variable)
+#   w            : turn off all warnings
+#   vec-report0  : (Removed, as per your modifications)
+#   opt-report0  : (Removed, as per your modifications)
+FFLAGS += -O3 $(HOST) -w
+CXXFLAGS += -O3 $(HOST) -w
+
+# The ifdef IPO block for AR is removed as IPO itself is removed for this config.
+# AR remains the default 'ar rv'.
+
+endif

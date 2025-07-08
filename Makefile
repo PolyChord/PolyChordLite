@@ -25,18 +25,24 @@ export MPI DEBUG
 # We can autodetect the compiler type on unix systems via the shell.
 # if you want to override this then just run make with
 # make COMPILER_TYPE=<your type>
-# where <your type> is gnu or intel
+# where <your type> is gnu, intel, intel_llvm, or cray
 ifeq "$(shell which ftn >/dev/null 2>&1; echo $$?)" "0"
 COMPILER_TYPE=cray
-else ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
+else ifeq "$(shell which ifx >/dev/null 2>&1; echo $$?)" "0"
+# Detected Intel LLVM-based compilers (ifx, icx, icpx)
+COMPILER_TYPE=intel_llvm
+else ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0"
+# Detected Intel classic compilers (ifort, icc, icpc)
 COMPILER_TYPE=intel
 else ifeq "$(shell which gfortran >/dev/null 2>&1; echo $$?)" "0"
 COMPILER_TYPE=gnu
 endif
 
-ifeq ($(COMPILER_TYPE),intel)
+ifeq ($(COMPILER_TYPE),intel_llvm)
+include Makefile_intel_llvm
+else ifeq ($(COMPILER_TYPE),intel)
 include Makefile_intel
-else ifeq ($(COMPILER_TYPE),gnu) 
+else ifeq ($(COMPILER_TYPE),gnu)
 include Makefile_gnu
 else ifeq ($(COMPILER_TYPE),cray)
 include Makefile_cray
@@ -118,4 +124,3 @@ veryclean: clean $(addsuffix veryclean,$(CLEANDIRS))
 	$(RM) *~ build dist pypolychord.egg-info pypolychord/*.pyc pypolychord/__pycache__ __pycache__ pypolychord/lib/*.so
 $(addsuffix veryclean,$(CLEANDIRS))  : %veryclean: 
 	$(MAKE) -C $* veryclean
-	
