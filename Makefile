@@ -111,6 +111,8 @@ print_CC:
 	@echo $(CC)
 print_CXX:
 	@echo $(CXX)
+print_FC:
+	@echo $(FC)
 
 CLEANDIRS = $(POLYCHORD_DIR) $(PYPOLYCHORD_DIR) $(LIKELIHOOD_DIR) $(BIN_DIR) $(LIB_DIR) $(DRIVERS_DIR) 
 .PHONY: clean veryclean print_CC print_CXX $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS)) 
