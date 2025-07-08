@@ -5,23 +5,20 @@ ifeq ($(MPI),1)
 FC = mpiifx
 CC = mpiicx
 CXX = mpiicpx
-# For shared libraries, include the -v (verbose) flag as per your command
-LDSHARED = $(LD) -shared -v
 else
 # Using standard Intel LLVM compilers
 FC = ifx
 CXX = icpx
 CC = icx
-LDSHARED = $(LD) -shared
 endif
+LDSHARED = $(LD) -shared
 
 # CPP uses the C compiler
 CPP = $(CC)
 # LD uses the C/C++ compiler as the primary linker driver for mixed-language projects
-# This aligns with your `LD=mpiicx` override
 LD = $(CC)
 
-# Archive tool: Always 'ar rv' now that IPO-specific xiar is not used
+# Archive tool
 AR = ar rv
 
 
@@ -29,14 +26,12 @@ AR = ar rv
 # --------------
 # fpp                    : perform preprocessing
 # fpic                   : shared object libraries
-# assume noold_maxminloc : Removed, as it might not be relevant or cause issues with ifx/icx
 # heap-arrays            : allocate local arrays on heap
 FFLAGS += -fpp -fpic -heap-arrays
 CXXFLAGS += -std=c++11 -fpic
-# nofor_main 	         : Removed, as per previous command and often not needed with modern compilers
-LDFLAGS += # This line is effectively empty now that -nofor-main is removed
+LDFLAGS +=
 
-# Link specific Intel runtime libraries, replacing generic -cxxlib
+# Link specific Intel runtime libraries
 LDLIBS += -lifcore -lifport -limf -lsvml -liomp5
 
 ifeq ($(DEBUG),1)
@@ -58,18 +53,11 @@ LDFLAGS += -g
 else
 # Optimised mode
 # --------------
-#   ipo          : (Removed -ipo and related code, as per your modifications for ifx/icx)
-#   O3           : maximum optimisation
-#   no-prec-div  : (Removed, as per your modifications)
-#   static       : link intel libraries statically (covered by specific LDLIBS)
-#   xHost        : maximise architecture usage (from $(HOST) variable)
-#   w            : turn off all warnings
-#   vec-report0  : (Removed, as per your modifications)
-#   opt-report0  : (Removed, as per your modifications)
-FFLAGS += -O3 $(HOST) -w
-CXXFLAGS += -O3 $(HOST) -w
-
-# The ifdef IPO block for AR is removed as IPO itself is removed for this config.
-# AR remains the default 'ar rv'.
+# O2             : A high but safe level of optimisation.
+# fp-model precise: Disables value-unsafe floating-point optimisations. This is crucial for numerical stability and cross-compiler consistency.
+# xHost          : maximise architecture usage (from $(HOST) variable)
+# warn all       : Enable all warnings instead of suppressing them with -w.
+FFLAGS += -O2 -fp-model precise $(HOST) -warn all
+CXXFLAGS += -O2 -fp-model precise $(HOST) -Wall
 
 endif
