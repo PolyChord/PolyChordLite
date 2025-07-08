@@ -42,8 +42,8 @@ module calculate_module
 
         ! --- START OF ADDED WARNING ---
         if (any(isnan(cube))) then
-            write(stdout_unit,'(A)') 'PolyChord TRACE (calculate_point): NaN detected in hypercube vector before prior transformation.'
-            flush(stdout_unit)
+            write(*,'(A)') 'PolyChord TRACE (calculate_point): NaN detected in hypercube vector before prior transformation.'
+            flush(6)
         end if
         ! --- END OF ADDED WARNING ---
 

@@ -650,15 +650,29 @@ module utils_module
 
                 ! --- START OF ADDED WARNING ---
                 trace_val = trace(a)
-                if (trace_val <= 1.d-20) then
-                    write(stdout_unit,'(A)') 'PolyChord WARNING: Cholesky decomposition failed.'
-                    write(stdout_unit,'(A, E12.5)') '                   Matrix trace is near-zero: ', trace_val
-                    write(stdout_unit,'(A)') '                   This will likely lead to a NaN direction vector.'
-                    flush(stdout_unit)
+                if (trace_val < 1.d-20) then
+                    write(*,'(A)') 'PolyChord WARNING: Cholesky decomposition failed.'
+                    if (trace_val < 0.d0) then
+                        write(*,'(A, E12.5)') '                   Matrix trace is NEGATIVE: ', trace_val
+                    else
+                        write(*,'(A, E12.5)') '                   Matrix trace is near-zero: ', trace_val
+                    end if
+                    write(*,'(A)') '                   This will likely lead to a NaN direction vector.'
+                    flush(6)
                 end if
                 ! --- END OF ADDED WARNING ---
 
-                L = identity_matrix(size(a,1)) * sqrt(trace(a))
+                ! L = identity_matrix(size(a,1)) * sqrt(trace(a))
+
+                ! Make this sqrt safe for negative inputs
+                L = identity_matrix(size(a,1)) * sqrt(max(trace_val, 0.d0))
+                
+                ! --- NEW, CRITICAL TRACE ---
+                if (any(isnan(L))) then
+                    write(*,'(A)') 'PolyChord TRACE (calc_cholesky): NaN detected in Cholesky matrix L immediately after creation from a failed decomposition.'
+                    flush(6)
+                end if
+
                 return
             else
                 L(i,i)=sqrt(L(i,i))
@@ -669,6 +683,12 @@ module utils_module
             end do
 
         end do
+
+        ! --- NEW, FINAL SANITY CHECK ---
+        if (any(isnan(L))) then
+            write(*,'(A)') 'PolyChord TRACE (calc_cholesky): NaN detected in Cholesky matrix L at function exit.'
+            flush(6)
+        endif
 
     end function calc_cholesky
 

@@ -74,6 +74,18 @@ module chordal_module
         ! Transform to the unit hypercube
         nhats = matmul(cholesky,nhats)
 
+        ! --- NEW, CRITICAL TRACE ---
+        if (any(isnan(nhats))) then
+            write(*,'(A)') 'PolyChord TRACE (SliceSampling): NaN detected in nhats vector immediately after matmul(cholesky,nhats).'
+            if (any(isnan(cholesky))) then
+                write(*,'(A)') '                           The source is a NaN cholesky matrix.'
+            else
+                write(*,'(A)') '                           The source is NOT the cholesky matrix. Problem is in generate_nhats or matmul.'
+            end if
+            flush(6)
+        end if
+        ! --- END OF TRACE ---
+
         do i_babies=1,size(nhats,2)
             ! Get a new random direction
             nhat = nhats(:,i_babies)
@@ -83,9 +95,9 @@ module chordal_module
 
             ! --- START OF ADDED WARNING ---
             if (w < 1.d-20) then
-                write(stdout_unit,'(A)') 'PolyChord WARNING: Slice sampling direction vector has zero magnitude (w=0).'
-                write(stdout_unit,'(A)') '                   Division by zero is imminent, resulting in NaN parameters.'
-                flush(stdout_unit)
+                write(*,'(A)') 'PolyChord WARNING: Slice sampling direction vector has zero magnitude (w=0).'
+                write(*,'(A)') '                   Division by zero is imminent, resulting in NaN parameters.'
+                flush(6)
             end if
             ! --- END OF ADDED WARNING ---
 
@@ -260,8 +272,8 @@ module chordal_module
 
             ! --- START OF ADDED WARNING ---
             if (any(isnan(baby_point(S%h0:S%h1)))) then
-                write(stdout_unit,'(A)') 'PolyChord TRACE (slice_sample): NaN detected in new parameter vector immediately after creation.'
-                flush(stdout_unit)
+                write(*,'(A)') 'PolyChord TRACE (slice_sample): NaN detected in new parameter vector immediately after creation.'
+                flush(6)
             end if
             ! --- END OF ADDED WARNING ---
 
