@@ -444,6 +444,10 @@ module nested_sampling_module
 
         else !(myrank/=root)
 
+            ! --- START OF HELLO WORLD TEST ---
+            write(*, '(A, I0, A)') 'Worker rank ', mpi_information%rank, ' reporting for duty.'
+            ! --- END OF HELLO WORLD TEST ---
+
             ! These are the worker tasks
             ! --------------------------
             !

@@ -435,6 +435,12 @@ module mpi_module
         integer,               intent(in) :: epoch                !> The epoch the babies were generated in
         type(mpi_bundle), intent(in) :: mpi_information
 
+        ! --- START OF ADDED TRACE ---
+        if (any(isnan(baby_points))) then
+            write(*,'(A, I0, A)') 'PolyChord TRACE (throw_babies): Worker rank ', mpi_information%rank, ' is about to send a NaN baby_points array to the root.'
+        endif
+        ! --- END OF ADDED TRACE ---
+
         call MPI_SEND(                              &! 
             baby_points,                            &! 
             size(baby_points,1)*size(baby_points,2),&! 
