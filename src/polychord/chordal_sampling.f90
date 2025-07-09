@@ -82,7 +82,6 @@ module chordal_module
             else
                 write(*,'(A)') '                           The source is NOT the cholesky matrix. Problem is in generate_nhats or matmul.'
             end if
-            flush(6)
         end if
         ! --- END OF TRACE ---
 
@@ -97,7 +96,6 @@ module chordal_module
             if (w < 1.d-20) then
                 write(*,'(A)') 'PolyChord WARNING: Slice sampling direction vector has zero magnitude (w=0).'
                 write(*,'(A)') '                   Division by zero is imminent, resulting in NaN parameters.'
-                flush(6)
             end if
             ! --- END OF ADDED WARNING ---
 
@@ -273,7 +271,6 @@ module chordal_module
             ! --- START OF ADDED WARNING ---
             if (any(isnan(baby_point(S%h0:S%h1)))) then
                 write(*,'(A)') 'PolyChord TRACE (slice_sample): NaN detected in new parameter vector immediately after creation.'
-                flush(6)
             end if
             ! --- END OF ADDED WARNING ---
 

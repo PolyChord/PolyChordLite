@@ -658,7 +658,6 @@ module utils_module
                         write(*,'(A, E12.5)') '                   Matrix trace is near-zero: ', trace_val
                     end if
                     write(*,'(A)') '                   This will likely lead to a NaN direction vector.'
-                    flush(6)
                 end if
                 ! --- END OF ADDED WARNING ---
 
@@ -670,7 +669,6 @@ module utils_module
                 ! --- NEW, CRITICAL TRACE ---
                 if (any(isnan(L))) then
                     write(*,'(A)') 'PolyChord TRACE (calc_cholesky): NaN detected in Cholesky matrix L immediately after creation from a failed decomposition.'
-                    flush(6)
                 end if
 
                 return
@@ -687,7 +685,6 @@ module utils_module
         ! --- NEW, FINAL SANITY CHECK ---
         if (any(isnan(L))) then
             write(*,'(A)') 'PolyChord TRACE (calc_cholesky): NaN detected in Cholesky matrix L at function exit.'
-            flush(6)
         endif
 
     end function calc_cholesky
