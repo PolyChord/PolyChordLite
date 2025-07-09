@@ -489,6 +489,12 @@ module nested_sampling_module
                 time1 = time()
                 slice_time = slice_time + time1-time0
 
+                ! --- NEW TRACE ---
+                if (any(isnan(baby_points))) then
+                    write(*,'(A, I0, A)') 'PolyChord TRACE (NestedSampling): Worker rank ', mpi_information%rank, ' received NaN array from SliceSampling.'
+                endif
+                ! --- END TRACE ---
+
 
                 ! 3) Send the baby points back
                 call throw_babies(baby_points,nlike,worker_epoch,mpi_information)

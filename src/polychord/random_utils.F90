@@ -290,6 +290,13 @@ module random_module
             random_direction = random_gaussian(nDims)
             ! Calculate the modulus squared
             random_direction2 = dot_product(random_direction,random_direction)
+
+            ! --- START OF ADDED TRACE (Non-invasive) ---
+            if (random_direction2 <= 1.d-30) then
+                write(*, '(A)') 'PolyChord TRACE (random_direction): Generated a near-zero-length random vector. This could cause issues if not handled.'
+                flush(6)
+            endif
+            ! --- END OF ADDED TRACE ---
         end do
 
         ! normalise the vector
