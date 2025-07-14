@@ -115,6 +115,8 @@ module generate_module
         integer :: ngenerated ! use to track order points are generated in
         ! --- NEW COUNTER FOR NaN INJECTION TEST ---
         integer :: calculation_counter
+        ! --- NEW VARIABLE FOR NaN INJECTION TEST ---
+        real(dp) :: nan_generator
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -162,7 +164,8 @@ module generate_module
                 calculation_counter = calculation_counter + 1
                 if (calculation_counter == 5) then
                     write(*,*) 'TEST (Linear Mode): Intentionally injecting a NaN via sqrt(-1.0).'
-                    live_point(settings%h0) = sqrt(-1.0_dp)
+                    nan_generator = -1.0_dp
+                    live_point(settings%h0) = sqrt(nan_generator)
                 end if
                 ! --- END OF INTENTIONAL NaN INJECTION ---
 
@@ -264,7 +267,8 @@ module generate_module
                     calculation_counter = calculation_counter + 1
                     if (mpi_information%rank == 1 .and. calculation_counter == 5) then
                         write(*,*) 'TEST (Parallel Mode, Rank 1): Intentionally injecting a NaN via sqrt(-1.0).'
-                        live_point(settings%h0) = sqrt(-1.0_dp)
+                        nan_generator = -1.0_dp
+                        live_point(settings%h0) = sqrt(nan_generator)
                     end if
                     ! --- END OF INTENTIONAL NaN INJECTION ---
 
