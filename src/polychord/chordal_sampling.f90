@@ -65,6 +65,15 @@ module chordal_module
         ! Start the baby point at the seed point
         previous_point = seed_point
 
+        ! --- NEW AGGRESSIVE CHECK 5 ---
+        if (any(isnan(seed_point))) then
+            write(*, '(A)') 'TRACE 5 (SliceSampling): NaN detected in the input seed_point.'
+            write(*, '(A, *(F24.15))') '                       seed_point = ', seed_point
+        end if
+        if (any(isnan(cholesky))) then
+            write(*, '(A)') 'TRACE 5 (SliceSampling): NaN detected in the input cholesky matrix.'
+        end if
+
         ! Initialise the likelihood counter at 0
         nlike = 0
 
@@ -225,6 +234,15 @@ module chordal_module
         ! The lower bound
         real(dp),    dimension(S%nTotal)   :: L
 
+        ! --- NEW AGGRESSIVE CHECK 3 ---
+        if (any(isnan(x0))) then
+            write(*, '(A)') 'TRACE 3 (slice_sample): NaN detected in the input seed point x0.'
+            write(*, '(A, *(F24.15))') '                       x0 = ', x0
+        end if
+        if (any(isnan(nhat))) then
+            write(*, '(A)') 'TRACE 3 (slice_sample): NaN detected in the input direction vector nhat.'
+            write(*, '(A, *(F24.15))') '                       nhat = ', nhat
+        end if
 
         real(dp) :: temp_random
 
@@ -264,6 +282,13 @@ module chordal_module
             x0Ld= distance(x0(S%h0:S%h1),L(S%h0:S%h1), [(.false., i=1,S%nDims)])
             ! Find the distance between x0 and R 
             x0Rd= distance(x0(S%h0:S%h1),R(S%h0:S%h1), [(.false., i=1,S%nDims)])
+
+            ! --- NEW AGGRESSIVE CHECK 4 ---
+            if (isnan(x0Ld) .or. isnan(x0Rd)) then
+                write(*, '(A)') 'TRACE 4 (slice_sample): NaN detected in boundary distances.'
+                write(*, '(A, F24.15)') '                       x0Ld = ', x0Ld
+                write(*, '(A, F24.15)') '                       x0Rd = ', x0Rd
+            end if
 
             ! Draw a random point within L and R
             baby_point(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 

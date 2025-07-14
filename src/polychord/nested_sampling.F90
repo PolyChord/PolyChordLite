@@ -247,6 +247,16 @@ module nested_sampling_module
                 ! Choose the cholesky decomposition for the cluster
                 cholesky = RTI%cholesky(:,:,cluster_id)
 
+                ! --- NEW AGGRESSIVE CHECK 6 ---
+                if (any(isnan(seed_point))) then
+                    write(*, '(A, I0)') 'TRACE 6 (NestedSampling): NaN seed_point chosen from cluster ', cluster_id
+                    write(*, '(A, *(F24.15))') '                       seed_point = ', seed_point
+                end if
+                if (any(isnan(cholesky))) then
+                    write(*, '(A, I0)') 'TRACE 6 (NestedSampling): NaN cholesky matrix chosen from cluster ', cluster_id
+                    ! Not printing the matrix as it's large, its presence is enough.
+                end if
+
                 ! Get the loglikelihood contour we're generating from
                 logL = RTI%logLp(cluster_id)
 

@@ -40,6 +40,12 @@ module calculate_module
 
         cube = point(settings%h0:settings%h1)
 
+        ! --- NEW AGGRESSIVE CHECK 0 ---
+        if (any(isnan(point))) then
+            write(*, '(A)') 'TRACE 0 (calculate_point): NaN detected in the full input POINT vector.'
+            write(*, '(A, *(F24.15))') '                       point = ', point
+        end if
+
         ! --- START OF ADDED WARNING ---
         if (any(isnan(cube))) then
             write(*,'(A)') 'PolyChord TRACE (calculate_point): NaN detected in hypercube vector before prior transformation.'
@@ -51,7 +57,21 @@ module calculate_module
             logL  = settings%logzero
         else
             where(settings%wraparound) cube = modulo(cube,1d0)
+
+            if (any(isnan(cube))) then
+            ! --- NEW AGGRESSIVE CHECK 1 ---
+                write(*,'(A)') 'TRACE 1 (calculate_point): NaN detected in hypercube vector AFTER MODULO.'
+                write(*, '(A, *(F24.15))') '                       cube = ', cube
+            end if
+
             theta = prior(cube)
+
+            ! --- NEW AGGRESSIVE CHECK 2 (MOST IMPORTANT) ---
+            if (any(isnan(theta))) then
+                write(*,'(A)') 'TRACE 2 (calculate_point): NaN detected in physical vector THETA before likelihood call.'
+                write(*, '(A, *(F24.15))') '                       theta = ', theta
+            end if
+
             logL  = loglikelihood(theta,phi)
         end if
 
