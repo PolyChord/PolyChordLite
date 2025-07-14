@@ -155,6 +155,13 @@ module generate_module
                 ! Generate a random coordinate
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
 
+                ! --- START OF INTENTIONAL NaN INJECTION (FOR TESTING) ---
+                if (RTI%nlive(1) == 10) then
+                    write(*,*) 'TEST: Intentionally injecting a NaN into the hypercube vector.'
+                    live_point(settings%h0) = 0.0_dp / 0.0_dp
+                end if
+                ! --- END OF INTENTIONAL NaN INJECTION ---
+
                 ! Compute physical coordinates, likelihoods and derived parameters
                 time0 = time()
                 call calculate_point( loglikelihood, prior, live_point, settings, nlike)
