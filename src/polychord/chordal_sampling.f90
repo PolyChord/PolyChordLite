@@ -234,6 +234,11 @@ module chordal_module
         ! The lower bound
         real(dp),    dimension(S%nTotal)   :: L
 
+        real(dp) :: temp_random
+
+        integer :: i_step, i
+        real(dp) :: x0Rd, x0Ld
+
         ! --- NEW AGGRESSIVE CHECK 3 ---
         if (any(isnan(x0))) then
             write(*, '(A)') 'TRACE 3 (slice_sample): NaN detected in the input seed point x0.'
@@ -244,11 +249,7 @@ module chordal_module
             write(*, '(A, *(F24.15))') '                       nhat = ', nhat
         end if
 
-        real(dp) :: temp_random
-
-        integer :: i_step, i
-        real(dp) :: x0Rd, x0Ld
-
+        
         ! Select initial start and end points
         temp_random = random_real()
         L(S%h0:S%h1) = x0(S%h0:S%h1) -   temp_random   * w * nhat 
