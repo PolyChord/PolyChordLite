@@ -113,6 +113,8 @@ module generate_module
         integer :: nlike ! number of likelihood calls
         integer :: nprior, ndiscarded
         integer :: ngenerated ! use to track order points are generated in
+        ! --- NEW COUNTER FOR NaN INJECTION TEST ---
+        integer :: calculation_counter
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -121,6 +123,7 @@ module generate_module
         ! Initialise number of likelihood calls to zero here
         nlike = 0
         ngenerated = 1
+        calculation_counter = 0 ! Initialize the new counter
 
 
         if(is_root(mpi_information)) then
@@ -156,9 +159,10 @@ module generate_module
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
 
                 ! --- START OF INTENTIONAL NaN INJECTION (FOR TESTING) ---
-                if (RTI%nlive(1) == 10) then
-                    write(*,*) 'TEST: Intentionally injecting a NaN into the hypercube vector.'
-                    live_point(settings%h0) = 0.0_dp / 0.0_dp
+                calculation_counter = calculation_counter + 1
+                if (calculation_counter == 5) then
+                    write(*,*) 'TEST (Linear Mode): Intentionally injecting a NaN via sqrt(-1.0).'
+                    live_point(settings%h0) = sqrt(-1.0_dp)
                 end if
                 ! --- END OF INTENTIONAL NaN INJECTION ---
 
@@ -256,6 +260,14 @@ module generate_module
                 ! The workers simply generate and send points until they're told to stop by the administrator
                 
                 do while(live_point_needed(live_point,mpi_information))
+                    ! --- START OF INTENTIONAL NaN INJECTION (FOR TESTING) ---
+                    calculation_counter = calculation_counter + 1
+                    if (mpi_information%rank == 1 .and. calculation_counter == 5) then
+                        write(*,*) 'TEST (Parallel Mode, Rank 1): Intentionally injecting a NaN via sqrt(-1.0).'
+                        live_point(settings%h0) = sqrt(-1.0_dp)
+                    end if
+                    ! --- END OF INTENTIONAL NaN INJECTION ---
+
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     ndiscarded=ndiscarded+1
