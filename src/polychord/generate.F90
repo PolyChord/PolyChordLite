@@ -166,6 +166,9 @@ module generate_module
                     write(*,*) 'TEST (Linear Mode): Intentionally injecting a NaN via sqrt(-1.0).'
                     nan_generator = -1.0_dp
                     live_point(settings%h0) = sqrt(nan_generator)
+                    if (any(isnan(live_point))) then
+                        write(*,*) 'TEST (Linear Mode): NaN detected in live_point, isnan works.'
+                    end if
                 end if
                 ! --- END OF INTENTIONAL NaN INJECTION ---
 
@@ -269,6 +272,9 @@ module generate_module
                         write(*,*) 'TEST (Parallel Mode, Rank 1): Intentionally injecting a NaN via sqrt(-1.0).'
                         nan_generator = -1.0_dp
                         live_point(settings%h0) = sqrt(nan_generator)
+                        if (any(isnan(live_point))) then
+                            write(*,*) 'TEST (Parallel Mode, Rank 1): NaN detected in live_point, isnan works.'
+                        end if
                     end if
                     ! --- END OF INTENTIONAL NaN INJECTION ---
 
