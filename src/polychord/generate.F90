@@ -4,6 +4,7 @@
 !! * GenerateLivePoints
 module generate_module
     use utils_module, only: dp
+    use, intrinsic :: ieee_arithmetic
 
 
     implicit none
@@ -166,8 +167,10 @@ module generate_module
                     write(*,*) 'TEST (Linear Mode): Intentionally injecting a NaN via sqrt(-1.0).'
                     nan_generator = -1.0_dp
                     live_point(settings%h0) = sqrt(nan_generator)
-                    if (any(live_point /= live_point)) then
-                        write(*,*) 'TEST (Linear Mode): NaN detected in live_point, /= works.'
+                    if (any(iee_is_nan(live_point))) then
+                        write(*,*) 'TEST (Linear Mode): NaN detected in live_point, iee_is_nan works.'
+                    else
+                        write(*,*) 'TEST (Linear Mode): NaN not detected in live_point, iee_is_nan failed.'
                     end if
                 end if
                 ! --- END OF INTENTIONAL NaN INJECTION ---
@@ -272,8 +275,10 @@ module generate_module
                         write(*,*) 'TEST (Parallel Mode, Rank 1): Intentionally injecting a NaN via sqrt(-1.0).'
                         nan_generator = -1.0_dp
                         live_point(settings%h0) = sqrt(nan_generator)
-                        if (any(live_point /= live_point)) then
-                            write(*,*) 'TEST (Parallel Mode, Rank 1): NaN detected in live_point, /= works.'
+                        if (any(iee_is_nan(live_point))) then
+                            write(*,*) 'TEST (Parallel Mode, Rank 1): NaN detected in live_point, iee_is_nan works.'
+                        else
+                            write(*,*) 'TEST (Parallel Mode, Rank 1): NaN not detected in live_point, iee_is_nan failed.'
                         end if
                     end if
                     ! --- END OF INTENTIONAL NaN INJECTION ---
