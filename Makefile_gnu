@@ -63,7 +63,7 @@ else
 # Optimised mode
 # --------------
 # Ofast : maximum optimisation
-FFLAGS += -Ofast
+FFLAGS += -Ofast -fno-finite-math-only # no-finit-math-only is needed for detectinng NaNs
 CXXFLAGS += -Ofast
 CXFLAGS += -Ofast
 endif
