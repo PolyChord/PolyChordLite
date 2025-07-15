@@ -275,6 +275,15 @@ module generate_module
                         write(*,*) 'TEST (Parallel Mode, Rank 1): Intentionally injecting a NaN via sqrt(-1.0).'
                         nan_generator = -1.0_dp
                         live_point(settings%h0) = sqrt(nan_generator)
+                        
+                        write(*,*) 'DEBUG: The injected value is: ', live_point(settings%h0)
+
+                        if (ieee_is_nan(live_point(settings%h0))) then
+                           write(*,*) 'DEBUG: Scalar check PASSED. The value is a NaN.'
+                        else
+                           write(*,*) 'DEBUG: Scalar check FAILED. The value is NOT a NaN.'
+                        end if
+
                         if (any(ieee_is_nan(live_point))) then
                             write(*,*) 'TEST (Parallel Mode, Rank 1): NaN detected in live_point, ieee_is_nan works.'
                         else
