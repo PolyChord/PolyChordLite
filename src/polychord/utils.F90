@@ -1,5 +1,6 @@
 
 module utils_module
+    use, intrinsic :: ieee_arithmetic
     implicit none
 #ifdef MPI
     include 'mpif.h'
@@ -667,7 +668,7 @@ module utils_module
                 L = identity_matrix(size(a,1)) * sqrt(max(trace_val, 0.d0))
                 
                 ! --- NEW, CRITICAL TRACE ---
-                if (any(isnan(L))) then
+                if (any(ieee_is_nan(L))) then
                     write(*,'(A)') 'PolyChord TRACE (calc_cholesky): NaN detected in Cholesky matrix L immediately after creation from a failed decomposition.'
                 end if
 
@@ -683,7 +684,7 @@ module utils_module
         end do
 
         ! --- NEW, FINAL SANITY CHECK ---
-        if (any(isnan(L))) then
+        if (any(ieee_is_nan(L))) then
             write(*,'(A)') 'PolyChord TRACE (calc_cholesky): NaN detected in Cholesky matrix L at function exit.'
         endif
 

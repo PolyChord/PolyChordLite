@@ -1,5 +1,6 @@
 module calculate_module
     use utils_module, only: dp
+    use, intrinsic :: ieee_arithmetic
     implicit none
     contains
 
@@ -41,13 +42,13 @@ module calculate_module
         cube = point(settings%h0:settings%h1)
 
         ! --- NEW AGGRESSIVE CHECK 0 ---
-        if (any(isnan(point))) then
+        if (any(ieee_is_nan(point))) then
             write(*, '(A)') 'TRACE 0 (calculate_point): NaN detected in the full input POINT vector.'
             write(*, '(A, *(F24.15))') '                       point = ', point
         end if
 
         ! --- START OF ADDED WARNING ---
-        if (any(isnan(cube))) then
+        if (any(ieee_is_nan(cube))) then
             write(*,'(A)') 'PolyChord TRACE (calculate_point): NaN detected in hypercube vector before prior transformation.'
         end if
         ! --- END OF ADDED WARNING ---
@@ -58,7 +59,7 @@ module calculate_module
         else
             where(settings%wraparound) cube = modulo(cube,1d0)
 
-            if (any(isnan(cube))) then
+            if (any(ieee_is_nan(cube))) then
             ! --- NEW AGGRESSIVE CHECK 1 ---
                 write(*,'(A)') 'TRACE 1 (calculate_point): NaN detected in hypercube vector AFTER MODULO.'
                 write(*, '(A, *(F24.15))') '                       cube = ', cube
@@ -67,7 +68,7 @@ module calculate_module
             theta = prior(cube)
 
             ! --- NEW AGGRESSIVE CHECK 2 (MOST IMPORTANT) ---
-            if (any(isnan(theta))) then
+            if (any(ieee_is_nan(theta))) then
                 write(*,'(A)') 'TRACE 2 (calculate_point): NaN detected in physical vector THETA before likelihood call.'
                 write(*, '(A, *(F24.15))') '                       theta = ', theta
             end if

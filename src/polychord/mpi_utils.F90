@@ -1,5 +1,6 @@
 module mpi_module
     use utils_module, only: dp, normal_fb
+    use, intrinsic :: ieee_arithmetic
 
     implicit none
 #ifdef MPI
@@ -436,7 +437,7 @@ module mpi_module
         type(mpi_bundle), intent(in) :: mpi_information
 
         ! --- START OF ADDED TRACE ---
-        if (any(isnan(baby_points))) then
+        if (any(ieee_is_nan(baby_points))) then
             write(*,'(A, I0, A)') 'PolyChord TRACE (throw_babies): Worker rank ', mpi_information%rank, ' is about to send a NaN baby_points array to the root.'
         endif
         ! --- END OF ADDED TRACE ---

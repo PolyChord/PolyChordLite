@@ -1,5 +1,6 @@
 module nested_sampling_module
     use utils_module, only: dp
+    use, intrinsic :: ieee_arithmetic
 
 #ifdef MPI
     use mpi_module, only: get_mpi_information,mpi_bundle,is_root,linear_mode,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers,mpi_synchronise
@@ -248,11 +249,11 @@ module nested_sampling_module
                 cholesky = RTI%cholesky(:,:,cluster_id)
 
                 ! --- NEW AGGRESSIVE CHECK 6 ---
-                if (any(isnan(seed_point))) then
+                if (any(ieee_is_nan(seed_point))) then
                     write(*, '(A, I0)') 'TRACE 6 (NestedSampling): NaN seed_point chosen from cluster ', cluster_id
                     write(*, '(A, *(F24.15))') '                       seed_point = ', seed_point
                 end if
-                if (any(isnan(cholesky))) then
+                if (any(ieee_is_nan(cholesky))) then
                     write(*, '(A, I0)') 'TRACE 6 (NestedSampling): NaN cholesky matrix chosen from cluster ', cluster_id
                     ! Not printing the matrix as it's large, its presence is enough.
                 end if
@@ -500,7 +501,7 @@ module nested_sampling_module
                 slice_time = slice_time + time1-time0
 
                 ! --- NEW TRACE ---
-                if (any(isnan(baby_points))) then
+                if (any(ieee_is_nan(baby_points))) then
                     write(*,'(A, I0, A)') 'PolyChord TRACE (NestedSampling): Worker rank ', mpi_information%rank, ' received NaN array from SliceSampling.'
                 endif
                 ! --- END TRACE ---

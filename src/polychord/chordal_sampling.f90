@@ -1,5 +1,6 @@
 module chordal_module
     use utils_module, only: dp
+    use, intrinsic :: ieee_arithmetic
     implicit none
 
     contains
@@ -66,11 +67,11 @@ module chordal_module
         previous_point = seed_point
 
         ! --- NEW AGGRESSIVE CHECK 5 ---
-        if (any(isnan(seed_point))) then
+        if (any(ieee_is_nan(seed_point))) then
             write(*, '(A)') 'TRACE 5 (SliceSampling): NaN detected in the input seed_point.'
             write(*, '(A, *(F24.15))') '                       seed_point = ', seed_point
         end if
-        if (any(isnan(cholesky))) then
+        if (any(ieee_is_nan(cholesky))) then
             write(*, '(A)') 'TRACE 5 (SliceSampling): NaN detected in the input cholesky matrix.'
         end if
 
@@ -84,9 +85,9 @@ module chordal_module
         nhats = matmul(cholesky,nhats)
 
         ! --- NEW, CRITICAL TRACE ---
-        if (any(isnan(nhats))) then
+        if (any(ieee_is_nan(nhats))) then
             write(*,'(A)') 'PolyChord TRACE (SliceSampling): NaN detected in nhats vector immediately after matmul(cholesky,nhats).'
-            if (any(isnan(cholesky))) then
+            if (any(ieee_is_nan(cholesky))) then
                 write(*,'(A)') '                           The source is a NaN cholesky matrix.'
             else
                 write(*,'(A)') '                           The source is NOT the cholesky matrix. Problem is in generate_nhats or matmul.'
@@ -240,11 +241,11 @@ module chordal_module
         real(dp) :: x0Rd, x0Ld
 
         ! --- NEW AGGRESSIVE CHECK 3 ---
-        if (any(isnan(x0))) then
+        if (any(ieee_is_nan(x0))) then
             write(*, '(A)') 'TRACE 3 (slice_sample): NaN detected in the input seed point x0.'
             write(*, '(A, *(F24.15))') '                       x0 = ', x0
         end if
-        if (any(isnan(nhat))) then
+        if (any(ieee_is_nan(nhat))) then
             write(*, '(A)') 'TRACE 3 (slice_sample): NaN detected in the input direction vector nhat.'
             write(*, '(A, *(F24.15))') '                       nhat = ', nhat
         end if
@@ -285,7 +286,7 @@ module chordal_module
             x0Rd= distance(x0(S%h0:S%h1),R(S%h0:S%h1), [(.false., i=1,S%nDims)])
 
             ! --- NEW AGGRESSIVE CHECK 4 ---
-            if (isnan(x0Ld) .or. isnan(x0Rd)) then
+            if (ieee_is_nan(x0Ld) .or. ieee_is_nan(x0Rd)) then
                 write(*, '(A)') 'TRACE 4 (slice_sample): NaN detected in boundary distances.'
                 write(*, '(A, F24.15)') '                       x0Ld = ', x0Ld
                 write(*, '(A, F24.15)') '                       x0Rd = ', x0Rd
@@ -295,7 +296,7 @@ module chordal_module
             baby_point(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 
 
             ! --- START OF ADDED WARNING ---
-            if (any(isnan(baby_point(S%h0:S%h1)))) then
+            if (any(ieee_is_nan(baby_point(S%h0:S%h1)))) then
                 write(*,'(A)') 'PolyChord TRACE (slice_sample): NaN detected in new parameter vector immediately after creation.'
             end if
             ! --- END OF ADDED WARNING ---
