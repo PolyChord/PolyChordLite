@@ -126,7 +126,7 @@ module generate_module
         ! Initialise number of likelihood calls to zero here
         nlike = 0
         ngenerated = 1
-        calculation_counter = 0 ! Initialize the new counter
+        ! calculation_counter = 0 ! Initialize the new counter
 
 
         if(is_root(mpi_information)) then
@@ -268,7 +268,7 @@ module generate_module
 
                 ! The workers simply generate and send points until they're told to stop by the administrator
                 
-                ! do while(live_point_needed(live_point,mpi_information))
+                do while(live_point_needed(live_point,mpi_information))
                 !     ! --- START OF INTENTIONAL NaN INJECTION (FOR TESTING) ---
                 !     calculation_counter = calculation_counter + 1
                 !     if (mpi_information%rank == 1 .and. calculation_counter == 5) then
