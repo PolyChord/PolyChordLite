@@ -657,7 +657,7 @@ module utils_module
             end if
 
             do j=i+1,size(a,1)
-                L(j,i) = (a(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)
+                L(j,i) = (a_reg(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)
             end do
 
         end do
