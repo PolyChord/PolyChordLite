@@ -633,48 +633,27 @@ module utils_module
     function calc_cholesky(a) result(L)
         implicit none
         real(dp), intent(in),dimension(:,:) :: a
+        real(dp), dimension(size(a,1),size(a,2)) :: a_reg
         real(dp), dimension(size(a,1),size(a,2)) :: L
         integer :: i,j
-        ! added trace_val to check for NaN
-        real(dp) :: trace_val
+        real(dp), parameter :: min_variance = 1.d-20
 
         ! Set it all to zero to begin with
         L = 0
 
+        ! Regularise the matrix to avoid numerical issues
+        a_reg = a + identity_matrix(size(a,1)) * min_variance
+
         ! Zero out the upper half
         do i=1,size(a,1)
-
-            L(i,i)= a(i,i) - sum(L(i,:i-1)**2) 
+            L(i,i)= a_reg(i,i) - sum(L(i,:i-1)**2) 
             if (L(i,i).le.0d0) then
-                ! If the cholesky decomposition does not exist, then set it to
+                ! If the cholesky decomposition still does not exist, then set it to
                 ! be a re-scaled identity matrix
-
-                ! --- START OF ADDED WARNING ---
-                trace_val = trace(a)
-                if (trace_val < 1.d-20) then
-                    write(*,'(A)') 'PolyChord WARNING: Cholesky decomposition failed.'
-                    if (trace_val < 0.d0) then
-                        write(*,'(A, E12.5)') '                   Matrix trace is NEGATIVE: ', trace_val
-                    else
-                        write(*,'(A, E12.5)') '                   Matrix trace is near-zero: ', trace_val
-                    end if
-                    write(*,'(A)') '                   This will likely lead to a NaN direction vector.'
-                end if
-                ! --- END OF ADDED WARNING ---
-
-                ! L = identity_matrix(size(a,1)) * sqrt(trace(a))
-
-                ! Make this sqrt safe for negative inputs
-                L = identity_matrix(size(a,1)) * sqrt(max(trace_val, 0.d0))
-                
-                ! --- NEW, CRITICAL TRACE ---
-                if (any(ieee_is_nan(L))) then
-                    write(*,'(A)') 'PolyChord TRACE (calc_cholesky): NaN detected in Cholesky matrix L immediately after creation from a failed decomposition.'
-                end if
-
+                L = identity_matrix(size(a,1)) * sqrt(min_variance)
                 return
             else
-                L(i,i)=sqrt(L(i,i))
+                L(i,i) = sqrt(L(i,i))
             end if
 
             do j=i+1,size(a,1)
