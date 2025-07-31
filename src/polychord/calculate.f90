@@ -41,11 +41,11 @@ module calculate_module
 
         cube = point(settings%h0:settings%h1)
 
-        ! --- NEW AGGRESSIVE CHECK 0 ---
-        if (any(ieee_is_nan(point))) then
-            write(*, '(A)') 'TRACE 0 (calculate_point): NaN detected in the full input POINT vector.'
-            write(*, '(A, *(F24.15))') '                       point = ', point
-        end if
+        ! ! --- NEW AGGRESSIVE CHECK 0 ---
+        ! if (any(ieee_is_nan(point))) then
+        !     write(*, '(A)') 'TRACE 0 (calculate_point): NaN detected in the full input POINT vector.'
+        !     write(*, '(A, *(F24.15))') '                       point = ', point
+        ! end if
 
         ! --- START OF ADDED WARNING ---
         if (any(ieee_is_nan(cube))) then
