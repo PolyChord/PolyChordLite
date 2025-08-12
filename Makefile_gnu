@@ -35,6 +35,7 @@ else
 LDLIBS += -lstdc++
 endif
 
+LDLIBS += -Wl,-z,noexecstack
 
 detected_OS := $(shell uname -s)
 ifeq ($(detected_OS),Darwin)
