@@ -1,7 +1,32 @@
 module maximise_module
     use utils_module, only: dp
+    use settings_module,  only: program_settings
 
     implicit none
+
+    ! Module-level variables for the maximisation function
+    type(program_settings), save :: func_settings
+    logical, save :: func_posterior
+    
+    abstract interface
+        function loglike_func(theta,phi)
+            import :: dp
+            real(dp), intent(in), dimension(:)  :: theta
+            real(dp), intent(out), dimension(:) :: phi
+            real(dp) :: loglike_func
+        end function
+    end interface
+    
+    abstract interface
+        function prior_func(cube) result(theta)
+            import :: dp
+            real(dp), intent(in), dimension(:) :: cube
+            real(dp), dimension(size(cube))    :: theta
+        end function
+    end interface
+    
+    procedure(loglike_func), save, pointer :: stored_loglikelihood => null()
+    procedure(prior_func), save, pointer :: stored_prior => null()
 
     contains
 
@@ -130,34 +155,37 @@ module maximise_module
             end if
         end do
         if (max_loglike > settings%logzero) then
-            x = nelder_mead(func, simplex, f, 1d-5)
+            ! Set up module variables for func
+            func_settings = settings
+            func_posterior = posterior
+            stored_loglikelihood => loglikelihood
+            stored_prior => prior
+            
+            x = nelder_mead(maximisation_func, simplex, f, 1d-5)
             max_point(settings%h0:settings%h1) = x
             call calculate_point(loglikelihood,prior,max_point,settings,nlike) 
         else
             write(*,*) "Could not construct simplex"
         end if
 
-
-        contains
-         function func(x)
-            use calculate_module, only: calculate_point
-            implicit none
-            double precision, intent(in), dimension(:) :: x
-            double precision :: func
-            real(dp), dimension(settings%nTotal) :: point
-            integer nlike
-
-            point(settings%h0:settings%h1) = x
-            call calculate_point(loglikelihood,prior,point,settings,nlike) 
-            func  = point(settings%l0)
-            if (posterior .and. func>settings%logzero) then
-                func = func + dXdtheta(prior, point(settings%h0:settings%h1))
-            end if
-
-         end function
-
-
     end function do_maximisation
+
+    function maximisation_func(x)
+        use calculate_module, only: calculate_point
+        implicit none
+        double precision, intent(in), dimension(:) :: x
+        double precision :: maximisation_func
+        real(dp), dimension(func_settings%nTotal) :: point
+        integer :: nlike
+
+        point(func_settings%h0:func_settings%h1) = x
+        call calculate_point(stored_loglikelihood, stored_prior, point, func_settings, nlike) 
+        maximisation_func = point(func_settings%l0)
+        if (func_posterior .and. maximisation_func > func_settings%logzero) then
+            maximisation_func = maximisation_func + dXdtheta(stored_prior, point(func_settings%h0:func_settings%h1))
+        end if
+
+    end function maximisation_func
 
     function dXdtheta(prior, cube, dx_)
         implicit none
