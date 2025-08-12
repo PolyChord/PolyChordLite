@@ -16,10 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
-        include:
-          - os: ubuntu-20.04
-            python-version: '3.6'
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
 
     steps:
     - uses: actions/checkout@v3
@@ -46,7 +43,6 @@ jobs:
       run: mpirun --oversubscribe -np 3 python run_pypolychord.py
 
     - name: Test pypolychord (anesthetic)
-      if: ${{ ! contains( '3.6, 3.7', matrix.python-version ) }}
       run: |
         pip install -r requirements.txt
         python run_pypolychord.py
@@ -57,7 +53,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
 
     steps:
     - uses: actions/checkout@v3
