@@ -76,8 +76,16 @@ class CustomBuildPy(_build_py, object):
     def run(self):
         env = {}
         env["PATH"] = os.environ["PATH"]
+        # Ensure that the library paths are set correctly in build environment
+        for var in ("LD_LIBRARY_PATH", "LIBRARY_PATH"):
+            if var in os.environ:
+                env[var] = os.environ[var]
+        # Check if we are building with MPI support
         if self.distribution.no_mpi is None:
             env["MPI"] = "1"
+            # Copy over I_MPI_ROOT for intel MPI builds if it exists
+            if "I_MPI_ROOT" in os.environ:
+                env["I_MPI_ROOT"] = os.environ["I_MPI_ROOT"]
             # These need to be set so that build_ext uses the right compilers
             cc_compiler = subprocess.check_output(["make", "print_CC"]).decode('utf-8').strip()
             os.environ["CC"] = cc_compiler
