@@ -22,6 +22,9 @@ module mpi_module
     integer, parameter :: tag_run_epoch_babies=10
     integer, parameter :: tag_run_stop=11
 
+    integer, parameter :: tag_tag_gen=12
+    integer, parameter :: tag_tag_run=13
+
     type mpi_bundle
         integer :: rank
         integer :: nprocs
@@ -476,6 +479,7 @@ module mpi_module
         real(dp),intent(out),dimension(:) :: seed_point  !> The seed point to be caught
         real(dp),intent(out),dimension(:,:) :: cholesky  !> Cholesky matrix to be caught
         real(dp),intent(out)               :: logL       !> loglikelihood contour to be caught
+        integer                            :: tag_run
         integer,         intent(out)               :: epoch
         type(mpi_bundle), intent(in)               :: mpi_information
 
@@ -483,25 +487,36 @@ module mpi_module
 
         integer, dimension(MPI_STATUS_SIZE) :: mpistatus ! status identifier
 
+        call MPI_RECV(                   &!
+            tag_run,                     &!
+            1,                           &!
+            MPI_INTEGER,                 &!
+            mpi_information%root,        &!
+            tag_tag_run,                 &!
+            mpi_information%communicator,&!
+            mpistatus,                   &!
+            mpierror                     &!
+            )
+
+        if(tag_run == tag_run_stop) then
+            more_points_needed = .false.
+            return
+        else if(tag_run == tag_run_seed) then
+            more_points_needed = .true.
+        else
+            call halt_program('worker error: unrecognised tag')
+        end if
 
         call MPI_RECV(                   &!
             seed_point,                  &!
             size(seed_point),            &!
             MPI_DOUBLE_PRECISION,        &!
             mpi_information%root,        &!
-            MPI_ANY_TAG,                 &!
+            tag_run,                     &!
             mpi_information%communicator,&!
             mpistatus,                   &!
             mpierror                     &!
             )
-        if(mpistatus(MPI_TAG) == tag_run_stop ) then
-            more_points_needed = .false.
-            return
-        else if(mpistatus(MPI_TAG) == tag_run_seed) then
-            more_points_needed = .true.
-        else
-            call halt_program('worker error: unrecognised tag')
-        end if
 
         call MPI_RECV(                        &!
             cholesky,                         &!
@@ -548,26 +563,34 @@ module mpi_module
         type(mpi_bundle),intent(in) :: mpi_information           !> mpi handle
         integer, intent(in) :: worker_id                          !> identity of target worker
         integer, intent(in) :: epoch                             !> epoch of seed
-        logical, intent(in) :: keep_going                        !> Further signal whether to keep going 
+        logical, intent(in) :: keep_going                        !> Further signal whether to keep going
 
-        integer :: tag ! tag variable to
+        integer :: tag_run ! tag variable to
 
-        tag = tag_run_stop                 ! Default tag is stop tag
-        if(keep_going) tag = tag_run_seed  ! If we want to keep going then change this to the seed tag
-
+        tag_run = tag_run_stop                 ! Default tag is stop tag
+        if(keep_going) tag_run = tag_run_seed  ! If we want to keep going then change this to the seed tag
 
         call MPI_SEND(                   &!  
-            seed_point,                  &!  
-            size(seed_point),            &!  
-            MPI_DOUBLE_PRECISION,        &!  
+            tag_run,                     &!  
+            1,                           &!  
+            MPI_INTEGER,                 &!  
             worker_id,                   &!  
-            tag,                         &!  
+            tag_tag_run,                 &!  
             mpi_information%communicator,&!  
             mpierror                     &!  
             )
 
         if(.not. keep_going) return ! Stop here if we're wrapping up
 
+        call MPI_SEND(                        &!  
+            seed_point,                       &!  
+            size(seed_point),                 &!  
+            MPI_DOUBLE_PRECISION,             &!  
+            worker_id,                        &!  
+            tag_run,                          &!  
+            mpi_information%communicator,     &!  
+            mpierror                          &!  
+            )
         call MPI_SEND(                        &!  
             cholesky,                         &!  
             size(cholesky,1)*size(cholesky,2),&!  
@@ -620,17 +643,14 @@ module mpi_module
         type(mpi_bundle), intent(in) :: mpi_information
         integer, intent(in) :: worker_id         !> Worker to request a new point from
 
-
-        integer :: empty_buffer(0) ! empty buffer to send
-
         call MPI_SEND(                   &
-            empty_buffer,                &! not sending anything
-            0,                           &! size of nothing
-            MPI_INTEGER,                 &! sending no integers
-            worker_id,                   &! process id to send to
-            tag_gen_stop,                &! continuation tag
-            mpi_information%communicator,&! mpi handle
-            mpierror                     &! error flag
+            tag_gen_stop,                &!
+            1,                           &!
+            MPI_INTEGER,                 &!
+            worker_id,                   &!
+            tag_tag_gen,                 &!
+            mpi_information%communicator,&!
+            mpierror                     &!
             )
 
     end subroutine no_more_points
@@ -649,6 +669,16 @@ module mpi_module
         type(mpi_bundle), intent(in) :: mpi_information
         integer, intent(in) :: worker_id         !> Worker to request a new point from
         real(dp), intent(in), dimension(:) :: live_point !> The live point to be sent
+
+        call MPI_SEND(                   &
+            tag_gen_request,             &!
+            1,                           &!
+            MPI_INTEGER,                 &!
+            worker_id,                   &!
+            tag_tag_gen,                 &!
+            mpi_information%communicator,&!
+            mpierror                     &!
+            )
 
 
         call MPI_SEND(                   &!
@@ -675,6 +705,29 @@ module mpi_module
         integer, dimension(MPI_STATUS_SIZE) :: mpistatus  ! status identifier
 
         logical :: live_point_needed !> Whether we need more points or not
+        integer :: tag_gen
+
+        call MPI_RECV(                   &!
+            tag_gen,                     &!
+            1,                           &!
+            MPI_INTEGER,                 &!
+            mpi_information%root,        &!
+            tag_tag_gen,                 &!
+            mpi_information%communicator,&!
+            mpistatus,                   &!
+            mpierror                     &!
+            )
+
+        ! If we've recieved a kill signal, then exit this loop
+        if(tag_gen == tag_gen_stop) then
+            live_point_needed = .false.
+            return
+        else if(tag_gen == tag_gen_request) then
+            live_point_needed = .true.
+        else
+            call halt_program('generate error: unrecognised tag')
+        end if
+
 
         call MPI_RECV(                   &!
             live_point,                  &! live point recieved
@@ -686,15 +739,6 @@ module mpi_module
             mpistatus,                   &! status identifier
             mpierror                     &! error flag
             )
-
-        ! If we've recieved a kill signal, then exit this loop
-        if(mpistatus(MPI_TAG) == tag_gen_stop ) then
-            live_point_needed = .false.
-        else if(mpistatus(MPI_TAG) == tag_gen_request) then
-            live_point_needed = .true.
-        else
-            call halt_program('generate error: unrecognised tag')
-        end if
 
     end function live_point_needed
 
