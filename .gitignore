@@ -33,3 +33,4 @@ pypolychord/.ld_preload.sh
 # Chains folder (test results only)
 chains/*
 .ipynb_checkpoints/
+CLAUDE.md
