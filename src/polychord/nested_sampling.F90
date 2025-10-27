@@ -268,6 +268,12 @@ module nested_sampling_module
 
                     ! Generate a new set of points within the likelihood bound of the late point
                     baby_points = SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)
+
+                    ! === DEBUG PRIORITY 3: Check for NaN from SliceSampling ===
+                    if (any(ieee_is_nan(baby_points))) then
+                        write(*,'(A)') 'DEBUG (NestedSampling): ERROR! NaN in baby_points from SliceSampling (linear mode) (Failure Point 4 upstream)'
+                    endif
+
                     baby_points(settings%b0,:) = logL ! Note the moment it is born at
 #ifdef MPI
                 else if(settings%synchronous) then
@@ -302,6 +308,12 @@ module nested_sampling_module
 
                     ! Recieve any new baby points from any worker currently sending
                     worker_id = catch_babies(baby_points,nlike,worker_epoch,mpi_information)
+
+                    ! === DEBUG PRIORITY 3: Check for NaN from worker ===
+                    if (any(ieee_is_nan(baby_points))) then
+                        write(*,'(A,I3,A)') 'DEBUG (NestedSampling): ERROR! NaN in baby_points from worker ', worker_id, &
+                            ' (Failure Point 4 upstream)'
+                    endif
 
                     ! and throw seeding information back to worker (true => keep going)
                     call throw_seed(seed_point,cholesky,logL,mpi_information,worker_id,administrator_epoch,.true.)

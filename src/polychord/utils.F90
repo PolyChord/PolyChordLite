@@ -763,24 +763,71 @@ module utils_module
         real(dp), dimension(size(x,1),size(x,2)) :: dx
         real(dp), dimension(size(x,1)) :: mu, circle_mu
 
-        integer :: nDims,n
+        integer :: nDims,n,i
+        real(dp) :: sum_s, sum_c  ! For wraparound checks
 
         nDims = size(x,1)
         n = size(x,2)
 
+        ! === DEBUG PRIORITY 2 CHECK 1: Insufficient points ===
+        write(*,'(A,I5)') 'DEBUG (calc_covmat): ENTER with n=', n
+        if (n < 2) then
+            write(*,'(A)') 'DEBUG (calc_covmat): ERROR! n < 2, covariance undefined (Failure Point 1)'
+            ! For now, just report; in Phase 2 we'll add fallback
+            covmat = 0.0_dp
+            return
+        endif
+
+        ! === DEBUG PRIORITY 2 CHECK 2: Wraparound atan2(0,0) ===
         ! Compute the circle mean
         circle_mu = 0d0
+        if (any(wraparound)) then
+            do i = 1, nDims
+                if (wraparound(i)) then
+                    sum_s = sum(sin(x(i,:)*TwoPi))
+                    sum_c = sum(cos(x(i,:)*TwoPi))
+                    if (abs(sum_s) < 1.d-15 .and. abs(sum_c) < 1.d-15) then
+                        write(*,'(A,I3,A)') 'DEBUG (calc_covmat): WARNING! atan2(0,0) condition for dim ', i, ' (Failure Point 2)'
+                    endif
+                endif
+            end do
+        endif
         where(wraparound) circle_mu = atan2(sum(sin(x*TwoPi),dim=2),sum(cos(x*TwoPi),dim=2))/TwoPi
 
-        ! Compute the mean 
-        dx = x - spread(circle_mu,dim=2,ncopies=n)  
+        if (any(ieee_is_nan(circle_mu))) then
+            write(*,'(A)') 'DEBUG (calc_covmat): ERROR! NaN in circle_mu after atan2 (Failure Point 2)'
+        endif
+
+        ! Compute the mean
+        dx = x - spread(circle_mu,dim=2,ncopies=n)
         where(spread(wraparound,dim=2,ncopies=n)) dx = dx - nint(dx)
         mu = modulo(sum(dx,dim=2)/n + circle_mu, 1d0)
 
+        if (any(ieee_is_nan(mu))) then
+            write(*,'(A)') 'DEBUG (calc_covmat): ERROR! NaN in mu after mean calculation'
+        endif
+
+        ! === DEBUG PRIORITY 2 CHECK 3: Catastrophic cancellation ===
         ! Compute the covariance matrix
-        dx = x - spread(mu,dim=2,ncopies=n) 
+        dx = x - spread(mu,dim=2,ncopies=n)
         where(spread(wraparound,dim=2,ncopies=n)) dx = dx - nint(dx)
+
+        ! Check if dx is effectively zero (tight cluster)
+        if (maxval(abs(dx)) < 1.d-25) then
+            write(*,'(A,E12.3)') 'DEBUG (calc_covmat): WARNING! Cluster extremely tight, max|dx|=', maxval(abs(dx)), &
+                ' (Failure Point 3)'
+        endif
+
         covmat = matmul(dx,transpose(dx))/(n-1)
+
+        if (any(ieee_is_nan(covmat))) then
+            write(*,'(A)') 'DEBUG (calc_covmat): ERROR! NaN in final covmat (likely Failure Point 3)'
+        endif
+
+        ! Check trace for near-zero variance
+        if (trace(covmat) < 1.d-30) then
+            write(*,'(A,E12.3)') 'DEBUG (calc_covmat): WARNING! Trace near-zero: ', trace(covmat), ' (Failure Point 3)'
+        endif
 
     end function calc_covmat
 
