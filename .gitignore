@@ -34,3 +34,4 @@ pypolychord/.ld_preload.sh
 chains/*
 .ipynb_checkpoints/
 CLAUDE.md
+.mcp*
