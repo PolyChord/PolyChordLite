@@ -87,6 +87,9 @@ module utils_module
     ! which means that we neglect all terms smaller than eps times the
     ! current sum
 
+    !> Minimum variance for regularization of covariance matrices
+    !! Used when clusters have insufficient points or near-zero variance
+    real(dp), parameter :: min_variance = 1.d-20
 
     integer,parameter :: flag_blank     = -2
     integer,parameter :: flag_gestating = -1
@@ -630,89 +633,31 @@ module utils_module
 
     end function abovetol
 
-    function calc_cholesky_regularised(a) result(L)
+    function calc_cholesky(a) result(L)
         implicit none
         real(dp), intent(in),dimension(:,:) :: a
         real(dp), dimension(size(a,1),size(a,2)) :: a_reg
         real(dp), dimension(size(a,1),size(a,2)) :: L
         integer :: i,j
-        real(dp), parameter :: min_variance = 1.d-20
 
-        ! Set it all to zero to begin with
-        L = 0
-
-        ! Regularise the matrix to avoid numerical issues
+        ! === FIX 3: Pre-regularize the matrix to avoid numerical issues ===
+        ! Add min_variance to diagonal before attempting decomposition
+        ! This prevents failure for near-singular matrices from tight clusters
         a_reg = a + identity_matrix(size(a,1)) * min_variance
 
-        ! Zero out the upper half
-        do i=1,size(a,1)
-            L(i,i)= a_reg(i,i) - sum(L(i,:i-1)**2) 
-            if (L(i,i).le.0d0) then
-                ! If the cholesky decomposition still does not exist, then set it to
-                ! be a re-scaled identity matrix
-                L = identity_matrix(size(a,1)) * sqrt(min_variance)
-                return
-            else
-                L(i,i) = sqrt(L(i,i))
-            end if
-
-            do j=i+1,size(a,1)
-                L(j,i) = (a_reg(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)
-            end do
-
-        end do
-
-        ! --- NEW, FINAL SANITY CHECK ---
-        if (any(ieee_is_nan(L))) then
-            write(*,'(A)') 'PolyChord TRACE (calc_cholesky): NaN detected in Cholesky matrix L at function exit.'
-            write(*,'(A)') 'Input matrix a:'
-            do i = 1, size(a,1)
-                write(*,'(*(E15.8,1X))') a(i,:)
-            end do
-            write(*,'(A)') 'Output matrix L:'
-            do i = 1, size(L,1)
-                write(*,'(*(E15.8,1X))') L(i,:)
-            end do
-        endif
-
-    end function calc_cholesky_regularised
-
-    function calc_cholesky(a) result(L)
-        implicit none
-        real(dp), intent(in),dimension(:,:) :: a
-        real(dp), dimension(size(a,1),size(a,2)) :: L
-        integer :: i,j
-        ! added trace_val to check for NaN
-        real(dp) :: trace_val
-
         ! Set it all to zero to begin with
         L = 0
 
         ! Zero out the upper half
         do i=1,size(a,1)
 
-            L(i,i)= a(i,i) - sum(L(i,:i-1)**2) 
+            L(i,i)= a_reg(i,i) - sum(L(i,:i-1)**2)
             if (L(i,i).le.0d0) then
-                ! If the cholesky decomposition does not exist, then set it to
-                ! be a re-scaled identity matrix
-
-                ! --- START OF ADDED WARNING ---
-                trace_val = trace(a)
-                if (trace_val < 1.d-20) then
-                    write(*,'(A)') 'PolyChord WARNING: Cholesky decomposition failed.'
-                    if (trace_val < 0.d0) then
-                        write(*,'(A, E12.5)') '                   Matrix trace is NEGATIVE: ', trace_val
-                    else
-                        write(*,'(A, E12.5)') '                   Matrix trace is near-zero: ', trace_val
-                    end if
-                    write(*,'(A)') '                   This will likely lead to a NaN direction vector.'
-                end if
-                ! --- END OF ADDED WARNING ---
-
-                ! L = identity_matrix(size(a,1)) * sqrt(trace(a))
-
-                ! Make this sqrt safe for negative inputs
-                L = identity_matrix(size(a,1)) * sqrt(max(trace_val, 0.d0))
+                ! If the cholesky decomposition still does not exist after regularization,
+                ! use a stronger fallback with guaranteed non-zero value
+                write(*,'(A)') 'PolyChord WARNING: Cholesky decomposition failed even after regularization.'
+                write(*,'(A)') '                   Using minimal-variance identity matrix fallback.'
+                L = identity_matrix(size(a,1)) * sqrt(min_variance)
                 
                 ! --- NEW, CRITICAL TRACE ---
                 if (any(ieee_is_nan(L))) then
@@ -732,8 +677,8 @@ module utils_module
                 L(i,i)=sqrt(L(i,i))
             end if
 
-            do j=i+1,size(a,1)
-                L(j,i) = (a(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)
+            do j=i+1,size(a_reg,1)
+                L(j,i) = (a_reg(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)
             end do
 
         end do
@@ -769,30 +714,37 @@ module utils_module
         nDims = size(x,1)
         n = size(x,2)
 
-        ! === DEBUG PRIORITY 2 CHECK 1: Insufficient points ===
+        ! === FIX 1: Handle insufficient points (n < 2) ===
         write(*,'(A,I5)') 'DEBUG (calc_covmat): ENTER with n=', n
         if (n < 2) then
-            write(*,'(A)') 'DEBUG (calc_covmat): ERROR! n < 2, covariance undefined (Failure Point 1)'
-            ! For now, just report; in Phase 2 we'll add fallback
-            covmat = 0.0_dp
+            write(*,'(A)') 'PolyChord WARNING (calc_covmat): n < 2, returning minimal-variance identity matrix (Fix 1)'
+            ! Return minimal-variance identity matrix to allow local exploration
+            ! This is mathematically sound: represents zero correlation and minimal variance
+            covmat = identity_matrix(nDims) * min_variance
             return
         endif
 
-        ! === DEBUG PRIORITY 2 CHECK 2: Wraparound atan2(0,0) ===
-        ! Compute the circle mean
+        ! === FIX 2: Wraparound atan2(0,0) protection ===
+        ! Compute the circle mean with protection against atan2(0,0)
         circle_mu = 0d0
         if (any(wraparound)) then
             do i = 1, nDims
                 if (wraparound(i)) then
                     sum_s = sum(sin(x(i,:)*TwoPi))
                     sum_c = sum(cos(x(i,:)*TwoPi))
-                    if (abs(sum_s) < 1.d-15 .and. abs(sum_c) < 1.d-15) then
-                        write(*,'(A,I3,A)') 'DEBUG (calc_covmat): WARNING! atan2(0,0) condition for dim ', i, ' (Failure Point 2)'
+                    ! Check if magnitude is effectively zero (all points identical or antipodal)
+                    if (sqrt(sum_s**2 + sum_c**2) < 1.d-15) then
+                        ! Mean is undefined, use first point's value
+                        circle_mu(i) = x(i,1)
+                        write(*,'(A,I3,A)') 'PolyChord WARNING (calc_covmat): atan2(0,0) avoided for dim ', i, &
+                            ' - using first point value (Fix 2)'
+                    else
+                        ! Normal case: compute angle
+                        circle_mu(i) = atan2(sum_s, sum_c) / TwoPi
                     endif
                 endif
             end do
         endif
-        where(wraparound) circle_mu = atan2(sum(sin(x*TwoPi),dim=2),sum(cos(x*TwoPi),dim=2))/TwoPi
 
         if (any(ieee_is_nan(circle_mu))) then
             write(*,'(A)') 'DEBUG (calc_covmat): ERROR! NaN in circle_mu after atan2 (Failure Point 2)'
