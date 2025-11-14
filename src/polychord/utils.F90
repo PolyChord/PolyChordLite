@@ -717,10 +717,10 @@ module utils_module
         ! === FIX 1: Handle insufficient points (n < 2) ===
         write(*,'(A,I5)') 'DEBUG (calc_covmat): ENTER with n=', n
         if (n < 2) then
-            write(*,'(A)') 'PolyChord WARNING (calc_covmat): n < 2, returning minimal-variance identity matrix (Fix 1)'
-            ! Return minimal-variance identity matrix to allow local exploration
-            ! This is mathematically sound: represents zero correlation and minimal variance
-            covmat = identity_matrix(nDims) * min_variance
+            write(*,'(A)') 'PolyChord WARNING (calc_covmat): n < 2, returning unit covariance identity matrix (Fix 1)'
+            ! Return unit identity matrix to allow local exploration
+            ! This is mathematically sound: represents zero correlation and unit variance
+            covmat = identity_matrix(nDims)
             return
         endif
 
