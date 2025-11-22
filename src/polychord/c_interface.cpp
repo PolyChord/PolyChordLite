@@ -102,11 +102,11 @@ void run_polychord(
             base_dir,
             file_root,
             s.grade_frac.size(),
-            &s.grade_frac[0],
-            &s.grade_dims[0],
+            s.grade_frac.data(),
+            s.grade_dims.data(),
             s.loglikes.size(),
-            &s.loglikes[0],
-            &s.nlives[0],
+            s.loglikes.data(),
+            s.nlives.data(),
             s.seed,
 				fortran_comm
                 );

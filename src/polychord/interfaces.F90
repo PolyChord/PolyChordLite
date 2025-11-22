@@ -1,6 +1,8 @@
 !> This allows for a simple C interface... 
 module interfaces_module
     use utils_module, only: dp
+    use priors_module, only: prior, hypercube_to_physical
+    use iso_c_binding
     implicit none
 #ifdef MPI
     include 'mpif.h'
@@ -9,8 +11,58 @@ module interfaces_module
         module procedure run_polychord_full, run_polychord_no_prior, run_polychord_no_dumper, run_polychord_no_prior_no_dumper, run_polychord_ini
     end interface run_polychord
 
+    interface
+        function c_loglikelihood(theta,nDims,phi,nDerived) bind(c)
+            use iso_c_binding
+            integer(c_int), intent(in), value :: nDims
+            integer(c_int), intent(in), value :: nDerived
+            real(c_double), intent(in),  dimension(nDims) :: theta
+            real(c_double), intent(out),  dimension(nDerived) :: phi
+            real(c_double) :: c_loglikelihood
+        end function c_loglikelihood
+    end interface
+    interface
+        subroutine c_prior(cube,theta,nDims) bind(c)
+            use iso_c_binding
+            integer(c_int), intent(in), value :: nDims
+            real(c_double), intent(in),  dimension(nDims) :: cube
+            real(c_double), intent(out), dimension(nDims) :: theta
+        end subroutine c_prior
+    end interface
+    interface
+        subroutine c_dumper(ndead, nlive, npars, live, dead, logweights, logZ, logZerr) bind(c)
+            use iso_c_binding
+            integer(c_int), intent(in), value :: ndead, nlive, npars
+            real(c_double), intent(in), dimension(npars,nlive) :: live, dead(npars,ndead), logweights(ndead)
+            real(c_double), intent(in), value :: logZ, logZerr
+        end subroutine c_dumper
+    end interface
+    interface
+        subroutine c_setup_loglikelihood() bind(c)
+        end subroutine c_setup_loglikelihood
+    end interface
+
+    procedure(c_loglikelihood), pointer :: f_loglikelihood_ptr
+    procedure(c_prior), pointer         :: f_prior_ptr
+    procedure(c_dumper), pointer         :: f_dumper_ptr
+    procedure(c_setup_loglikelihood), pointer :: f_setup_loglikelihood_ptr
+
+
+
+    type(prior), dimension(:),allocatable     :: priors    ! The details of the priors
 contains
 
+    function default_prior_transform(cube) result(theta)
+        implicit none
+        real(dp), intent(in), dimension(:) :: cube
+        real(dp), dimension(size(cube))    :: theta
+        theta = cube
+    end function default_prior_transform
+
+    subroutine default_dumper(live, dead, logweights, logZ, logZerr)
+        real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
+        real(dp), intent(in) :: logZ, logZerr
+    end subroutine default_dumper
 
     subroutine run_polychord_full(loglikelihood, prior_transform, dumper, settings_in, mpi_communicator)
         use settings_module,          only: program_settings,initialise_settings
@@ -114,14 +166,7 @@ contains
 #else
             comm = 0
 #endif
-        call run_polychord(loglikelihood,prior_transform,dumper,settings,comm)
-    contains
-        function prior_transform(cube) result(theta)
-            implicit none
-            real(dp), intent(in), dimension(:) :: cube
-            real(dp), dimension(size(cube))    :: theta
-            theta = cube
-        end function prior_transform
+        call run_polychord(loglikelihood,default_prior_transform,dumper,settings,comm)
     end subroutine run_polychord_no_prior
 
     subroutine run_polychord_no_dumper(loglikelihood,prior_transform,settings,mpi_communicator)
@@ -154,12 +199,7 @@ contains
 #else
             comm = 0
 #endif
-        call run_polychord(loglikelihood,prior_transform,dumper,settings,comm)
-    contains
-        subroutine dumper(live, dead, logweights, logZ, logZerr)
-            real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
-            real(dp), intent(in) :: logZ, logZerr
-        end subroutine dumper
+        call run_polychord(loglikelihood,prior_transform,default_dumper,settings,comm)
     end subroutine run_polychord_no_dumper
 
     subroutine run_polychord_no_prior_no_dumper(loglikelihood, settings,mpi_communicator)
@@ -186,31 +226,18 @@ contains
 #else
             comm = 0
 #endif
-        call run_polychord(loglikelihood,prior_transform,settings, comm)
-    contains
-        function prior_transform(cube) result(theta)
-            implicit none
-            real(dp), intent(in), dimension(:) :: cube
-            real(dp), dimension(size(cube))    :: theta
-            theta = cube
-        end function prior_transform
-        subroutine dumper(live, dead, logweights, logZ, logZerr)
-            real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
-            real(dp), intent(in) :: logZ, logZerr
-        end subroutine dumper
+        call run_polychord(loglikelihood,default_prior_transform,settings, comm)
     end subroutine run_polychord_no_prior_no_dumper
-
 
     subroutine run_polychord_ini(loglikelihood, setup_loglikelihood, input_file,mpi_communicator)
         use ini_module,               only: read_params
         use read_write_module,        only: write_paramnames_file
+        use priors_module,            only: create_priors
         use params_module,            only: add_parameter,param_type
-        use priors_module
         use settings_module,          only: program_settings
         use utils_module,             only: STR_LENGTH
         implicit none
         type(program_settings)                    :: settings  ! The program settings 
-        type(prior), dimension(:),allocatable     :: priors    ! The details of the priors
 
         character(len=STR_LENGTH), intent(in)     :: input_file     ! input file
         type(param_type),dimension(:),allocatable :: params         ! Parameter array
@@ -244,17 +271,16 @@ contains
         if(settings%write_paramnames) call write_paramnames_file(settings,params,derived_params)
         call create_priors(priors,params,settings)
         call setup_loglikelihood(settings)
-        call run_polychord(loglikelihood,prior_wrapper,settings,comm) 
+        call run_polychord(loglikelihood,ini_prior,settings,comm) 
 
-        contains
-            function prior_wrapper(cube) result(theta)
-                implicit none
-                real(dp), intent(in), dimension(:) :: cube
-                real(dp), dimension(size(cube))    :: theta
-                theta = hypercube_to_physical(cube,priors)
-            end function prior_wrapper
     end subroutine run_polychord_ini
 
+    function ini_prior(cube) result(theta)
+        implicit none
+        real(dp), intent(in), dimension(:) :: cube
+        real(dp), dimension(size(cube))    :: theta
+        theta = hypercube_to_physical(cube,priors)
+    end function ini_prior
 
     subroutine polychord_c_interface(&
             c_loglikelihood_ptr,&
@@ -297,7 +323,6 @@ contains
             comm) &
             bind(c,name='polychord_c_interface')
 
-        use iso_c_binding
         use utils_module,             only: STR_LENGTH, convert_c_string
         use ini_module,               only: default_params
         use params_module,            only: param_type
@@ -309,32 +334,6 @@ contains
         ! ~~~~~~~ Local Variable Declaration ~~~~~~~
         implicit none
 
-        interface
-            function c_loglikelihood(theta,nDims,phi,nDerived) bind(c)
-                use iso_c_binding
-                integer(c_int), intent(in), value :: nDims
-                integer(c_int), intent(in), value :: nDerived
-                real(c_double), intent(in),  dimension(nDims) :: theta
-                real(c_double), intent(out),  dimension(nDerived) :: phi
-                real(c_double) :: c_loglikelihood
-            end function c_loglikelihood
-        end interface
-        interface
-            subroutine c_prior(cube,theta,nDims) bind(c)
-                use iso_c_binding
-                integer(c_int), intent(in), value :: nDims
-                real(c_double), intent(in),  dimension(nDims) :: cube
-                real(c_double), intent(out), dimension(nDims) :: theta
-            end subroutine c_prior
-        end interface
-        interface
-            subroutine c_dumper(ndead, nlive, npars, live, dead, logweights, logZ, logZerr) bind(c)
-                use iso_c_binding
-                integer(c_int), intent(in), value :: ndead, nlive, npars
-                real(c_double), intent(in), dimension(npars,nlive) :: live, dead(npars,ndead), logweights(ndead)
-                real(c_double), intent(in), value :: logZ, logZerr
-            end subroutine c_dumper
-        end interface
 
         type(c_funptr), intent(in), value   :: c_loglikelihood_ptr
         type(c_funptr), intent(in), value   :: c_prior_ptr
@@ -380,10 +379,6 @@ contains
 
         type(param_type),dimension(:),allocatable :: params         ! Parameter array
         type(param_type),dimension(:),allocatable :: derived_params ! Derived parameter array
-
-        procedure(c_loglikelihood), pointer :: f_loglikelihood_ptr
-        procedure(c_prior), pointer         :: f_prior_ptr
-        procedure(c_dumper), pointer         :: f_dumper_ptr
 
         integer, intent(in) :: comm
 
@@ -436,68 +431,66 @@ contains
         call c_f_procpointer(c_prior_ptr, f_prior_ptr)
         call c_f_procpointer(c_dumper_ptr, f_dumper_ptr)
 
-        call run_polychord(loglikelihood,prior_transform,dumper,settings,comm)
-
-    contains
-        function loglikelihood(theta,phi)
-            implicit none
-            real(dp), intent(in),  dimension(:) :: theta
-            real(dp), intent(out),  dimension(:) :: phi
-            real(dp) :: loglikelihood
-
-            real (c_double),dimension(size(theta)) :: c_theta
-            integer (c_int)                        :: c_nDims
-            real (c_double),dimension(size(phi))   :: c_phi
-            integer (c_int)                        :: c_nDerived
-            real (c_double)                        :: c_loglike
-
-            c_nDims = size(theta)
-            c_nDerived = size(phi)
-            c_theta = theta
-            c_loglike = f_loglikelihood_ptr(c_theta,c_nDims,c_phi,c_nDerived)
-            phi = c_phi
-            loglikelihood = c_loglike
-
-        end function loglikelihood
-
-        function prior_transform(cube) result(theta)
-            implicit none
-            real(dp), intent(in), dimension(:) :: cube
-            real(dp), dimension(size(cube))    :: theta
-
-            integer (c_int)                       :: c_nDims
-            real (c_double),dimension(size(cube)) :: c_cube
-            real (c_double),dimension(size(cube)) :: c_theta
-
-            c_nDims = size(cube)
-            c_cube = cube
-            call f_prior_ptr(c_cube,c_theta,c_nDims)
-            theta = c_theta
-
-        end function prior_transform
-
-        subroutine dumper(live, dead, logweights, logZ, logZerr)
-            implicit none
-            real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
-            real(dp), intent(in) :: logZ, logZerr
-
-            integer(c_int) :: c_ndead, c_nlive, c_npars
-            real(c_double) :: c_live(size(live,1),size(live,2)), c_dead(size(dead,1),size(dead,2)), c_logweights(size(logweights))
-            real(c_double) :: c_logZ, c_logZerr
-
-            c_npars = size(live,1)
-            c_nlive = size(live,2)
-            c_ndead = size(dead,2)
-            c_live = live
-            c_dead = dead
-            c_logweights = logweights
-            c_logZ = logZ
-            c_logZerr = logZerr
-            call f_dumper_ptr(c_ndead, c_nlive, c_npars, c_live, c_dead, c_logweights, c_logZ, c_logZerr)
-        end subroutine dumper
-
+        call run_polychord(f_loglikelihood,f_prior,f_dumper,settings,comm)
 
     end subroutine polychord_c_interface
+
+    function f_loglikelihood(theta,phi)
+        implicit none
+        real(dp), intent(in),  dimension(:) :: theta
+        real(dp), intent(out),  dimension(:) :: phi
+        real(dp) :: f_loglikelihood
+
+        real (c_double),dimension(size(theta)) :: c_theta
+        integer (c_int)                        :: c_nDims
+        real (c_double),dimension(size(phi))   :: c_phi
+        integer (c_int)                        :: c_nDerived
+        real (c_double)                        :: c_loglike
+
+        c_nDims = size(theta)
+        c_nDerived = size(phi)
+        c_theta = theta
+        c_loglike = f_loglikelihood_ptr(c_theta,c_nDims,c_phi,c_nDerived)
+        phi = c_phi
+        f_loglikelihood = c_loglike
+
+    end function f_loglikelihood
+
+    function f_prior(cube) result(theta)
+        implicit none
+        real(dp), intent(in), dimension(:) :: cube
+        real(dp), dimension(size(cube))    :: theta
+
+        integer (c_int)                       :: c_nDims
+        real (c_double),dimension(size(cube)) :: c_cube
+        real (c_double),dimension(size(cube)) :: c_theta
+
+        c_nDims = size(cube)
+        c_cube = cube
+        call f_prior_ptr(c_cube,c_theta,c_nDims)
+        theta = c_theta
+
+    end function f_prior
+
+    subroutine f_dumper(live, dead, logweights, logZ, logZerr)
+        implicit none
+        real(dp), intent(in) :: live(:,:), dead(:,:), logweights(:)
+        real(dp), intent(in) :: logZ, logZerr
+
+        integer(c_int) :: c_ndead, c_nlive, c_npars
+        real(c_double) :: c_live(size(live,1),size(live,2)), c_dead(size(dead,1),size(dead,2)), c_logweights(size(logweights))
+        real(c_double) :: c_logZ, c_logZerr
+
+        c_npars = size(live,1)
+        c_nlive = size(live,2)
+        c_ndead = size(dead,2)
+        c_live = live
+        c_dead = dead
+        c_logweights = logweights
+        c_logZ = logZ
+        c_logZerr = logZerr
+        call f_dumper_ptr(c_ndead, c_nlive, c_npars, c_live, c_dead, c_logweights, c_logZ, c_logZerr)
+    end subroutine f_dumper
 
 
     subroutine polychord_c_interface_ini(c_loglikelihood_ptr, c_setup_loglikelihood_ptr, input_file_c, comm)&
@@ -510,66 +503,48 @@ contains
         implicit none
         integer, intent(in) :: comm
 
-        interface
-            function c_loglikelihood(theta,nDims,phi,nDerived) bind(c)
-                use iso_c_binding
-                integer(c_int), intent(in), value :: nDims
-                integer(c_int), intent(in), value :: nDerived
-                real(c_double), intent(in),  dimension(nDims) :: theta
-                real(c_double), intent(out),  dimension(nDerived) :: phi
-                real(c_double) :: c_loglikelihood
-            end function c_loglikelihood
-        end interface
-        interface
-            subroutine c_setup_loglikelihood() bind(c)
-            end subroutine c_setup_loglikelihood
-        end interface
         character(len=STR_LENGTH)     :: input_file     ! input file
 
         type(c_funptr), intent(in), value   :: c_loglikelihood_ptr
         type(c_funptr), intent(in), value   :: c_setup_loglikelihood_ptr
         character(len=1,kind=c_char), intent(in), dimension(STR_LENGTH) :: input_file_c
 
-        procedure(c_loglikelihood), pointer :: f_loglikelihood_ptr
-        procedure(c_setup_loglikelihood), pointer :: f_setup_loglikelihood_ptr
-
         input_file = convert_c_string(input_file_c)
 
         call c_f_procpointer(c_loglikelihood_ptr, f_loglikelihood_ptr)
         call c_f_procpointer(c_setup_loglikelihood_ptr, f_setup_loglikelihood_ptr)
 
-        call run_polychord(loglikelihood, setup_loglikelihood, input_file, comm) 
-
-    contains
-        function loglikelihood(theta,phi)
-            implicit none
-            real(dp), intent(in),  dimension(:) :: theta
-            real(dp), intent(out),  dimension(:) :: phi
-            real(dp) :: loglikelihood
-
-            real (c_double),dimension(size(theta)) :: c_theta
-            integer (c_int)                        :: c_nDims
-            real (c_double),dimension(size(phi))   :: c_phi
-            integer (c_int)                        :: c_nDerived
-            real (c_double)                        :: c_loglike
-
-            c_nDims = size(theta)
-            c_nDerived = size(phi)
-            c_theta = theta
-            c_loglike = f_loglikelihood_ptr(c_theta,c_nDims,c_phi,c_nDerived)
-            phi = c_phi
-            loglikelihood = c_loglike
-
-        end function loglikelihood
-
-        subroutine setup_loglikelihood(settings)
-            use settings_module,          only: program_settings
-            implicit none
-            type(program_settings), intent(in)    :: settings
-            call f_setup_loglikelihood_ptr()
-        end subroutine setup_loglikelihood
+        call run_polychord(c_ini_loglikelihood, c_ini_setup_loglikelihood, input_file, comm) 
 
     end subroutine polychord_c_interface_ini
+
+    subroutine c_ini_setup_loglikelihood(settings)
+        use settings_module,          only: program_settings
+        implicit none
+        type(program_settings), intent(in)    :: settings
+        call f_setup_loglikelihood_ptr()
+    end subroutine c_ini_setup_loglikelihood
+
+    function c_ini_loglikelihood(theta,phi)
+        implicit none
+        real(dp), intent(in),  dimension(:) :: theta
+        real(dp), intent(out),  dimension(:) :: phi
+        real(dp) :: c_ini_loglikelihood
+
+        real (c_double),dimension(size(theta)) :: c_theta
+        integer (c_int)                        :: c_nDims
+        real (c_double),dimension(size(phi))   :: c_phi
+        integer (c_int)                        :: c_nDerived
+        real (c_double)                        :: c_loglike
+
+        c_nDims = size(theta)
+        c_nDerived = size(phi)
+        c_theta = theta
+        c_loglike = f_loglikelihood_ptr(c_theta,c_nDims,c_phi,c_nDerived)
+        phi = c_phi
+        c_ini_loglikelihood = c_loglike
+
+    end function c_ini_loglikelihood
 
 
 end module interfaces_module
