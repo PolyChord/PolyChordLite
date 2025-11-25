@@ -35,13 +35,13 @@ else
 LDLIBS += -lstdc++
 endif
 
-LDLIBS += -Wl,-z,noexecstack
 
 detected_OS := $(shell uname -s)
 ifeq ($(detected_OS),Darwin)
 RPATH=-install_name @loader_path/pypolychord/lib/libchord.so
 else
 RPATH= 
+LDLIBS += -Wl,-z,noexecstack
 endif
 
 ifeq ($(DEBUG),1)
