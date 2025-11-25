@@ -70,7 +70,7 @@ def test_run(likelihood, nDims, nDerived):
 
     ns = pypolychord.run(likelihood, nDims, nDerived=nDerived,
                          prior=uniform_prior, paramnames=paramnames,
-                         read_resume=False)
+                         read_resume=False, feedback=0)
     assert isinstance(ns, ac.NestedSamples)
 
 
@@ -128,3 +128,12 @@ def test_grade_dims():
         pypolychord.run(gaussian_likelihood, 5, nDerived=1,
                         prior=uniform_prior, read_resume=False,
                         grade_dims=grade_dims)
+
+
+def test_cube_samples():
+    cube_samples = np.array([[0.1, 0.2, 0.3, 0.4],
+                             [0.5, 0.6, 0.7, 0.8]])
+    pypolychord.run(gaussian_likelihood, 4, nDerived=1,
+                    prior=uniform_prior,
+                    read_resume=False,
+                    cube_samples=cube_samples)
