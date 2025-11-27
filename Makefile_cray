@@ -19,6 +19,14 @@ FFLAGS += -ffree-line-length-none -fallow-argument-mismatch
 CXXFLAGS += -ffree-line-length-none -fallow-argument-mismatch 
 endif
 
+# LAPACK support for eigendecomposition-based covariance regularization
+# Set LAPACK=0 to disable (will use pure-Fortran Jacobi fallback)
+# Cray systems typically have LAPACK via LibSci
+ifeq ($(LAPACK),1)
+FFLAGS += -DHAVE_LAPACK
+# LibSci is usually linked automatically on Cray systems
+endif
+
 ifdef IPO
 # Archive tool for compiling with ipo.
 AR = xiar rv

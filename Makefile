@@ -20,7 +20,11 @@ MPI=1
 # Whether to compile in debugging mode (default: false)
 DEBUG=0
 
-export MPI DEBUG
+# Whether to use LAPACK for eigendecomposition (default: true)
+# Set LAPACK=0 to use pure-Fortran Jacobi fallback
+LAPACK=1
+
+export MPI DEBUG LAPACK
 
 # We can autodetect the compiler type on unix systems via the shell.
 # if you want to override this then just run make with

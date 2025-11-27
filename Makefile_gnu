@@ -43,6 +43,13 @@ else
 RPATH= 
 endif
 
+# LAPACK support for eigendecomposition-based covariance regularization
+# Set LAPACK=0 to disable (will use pure-Fortran Jacobi fallback)
+ifeq ($(LAPACK),1)
+FFLAGS += -DHAVE_LAPACK
+LDLIBS += -llapack -lblas
+endif
+
 ifeq ($(DEBUG),1)
 # Debugging mode
 # --------------

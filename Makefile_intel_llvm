@@ -34,6 +34,14 @@ LDFLAGS +=
 # Link specific Intel runtime libraries
 LDLIBS += -lifcore -lifport -limf -lsvml -liomp5
 
+# LAPACK support for eigendecomposition-based covariance regularization
+# Set LAPACK=0 to disable (will use pure-Fortran Jacobi fallback)
+# Intel MKL provides LAPACK (use -qmkl for LLVM-based compilers)
+ifeq ($(LAPACK),1)
+FFLAGS += -DHAVE_LAPACK -qmkl
+LDLIBS += -qmkl
+endif
+
 ifeq ($(DEBUG),1)
 # Debugging mode
 # --------------

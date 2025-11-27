@@ -28,6 +28,14 @@ CXXFLAGS += -std=c++11 -fpic
 LDFLAGS += -nofor-main
 LDLIBS += -cxxlib
 
+# LAPACK support for eigendecomposition-based covariance regularization
+# Set LAPACK=0 to disable (will use pure-Fortran Jacobi fallback)
+# Intel MKL provides LAPACK
+ifeq ($(LAPACK),1)
+FFLAGS += -DHAVE_LAPACK
+LDLIBS += -mkl
+endif
+
 ifeq ($(DEBUG),1)
 # Debugging mode
 # --------------
