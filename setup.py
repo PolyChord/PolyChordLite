@@ -99,7 +99,10 @@ class CustomBuildPy(_build_py, object):
         if self.distribution.debug_flags is not None:
             self.distribution.ext_modules[0].extra_compile_args += ["-g", "-O0"]
             env["DEBUG"] = "1"
-        
+
+        # Enable LAPACK by default for eigendecomposition-based covariance regularization
+        env["LAPACK"] = os.environ.get("LAPACK", "1")
+
         BASE_PATH = os.path.dirname(os.path.abspath(__file__))
         env["CURDIR"] = BASE_PATH
         env.update({k : os.environ[k] for k in ["CC", "CXX", "FC"] if k in os.environ})
