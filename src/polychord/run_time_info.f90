@@ -609,13 +609,12 @@ module run_time_module
         type(run_time_info),intent(inout) :: RTI        !> Run time information
 
         integer :: i_cluster ! cluster iterator
-        ! === DEBUG PRIORITY 1: Variables for debugging ===
         integer :: num_points
         real(dp), allocatable, dimension(:,:) :: points_to_check
 
         ! For each cluster:
         do i_cluster = 1,RTI%ncluster
-            ! === DEBUG PRIORITY 1: Check inputs to calc_covmat ===
+            ! Concatenate live and phantom points for this cluster
             if (RTI%nlive(i_cluster) + RTI%nphantom(i_cluster) > 0) then
                 points_to_check = concat(RTI%live(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster),&
                                          RTI%phantom(settings%h0:settings%h1,:RTI%nphantom(i_cluster),i_cluster))
@@ -624,31 +623,15 @@ module run_time_module
             end if
             num_points = size(points_to_check,2)
 
-            write(*,'(A,I3,A,I5,A,I5,A,I5)') 'DEBUG (calculate_covmats): ENTER for cluster ', i_cluster, &
-                ', nlive=', RTI%nlive(i_cluster), ', nphantom=', RTI%nphantom(i_cluster), ', total_points=', num_points
-
-            if (any(ieee_is_nan(points_to_check))) then
-                write(*,'(A,I3,A)') 'DEBUG (calculate_covmats): ERROR! NaN detected in input points for cluster ', &
-                    i_cluster, ' (Failure Point 4)'
-            endif
-
-            if (num_points < 2) then
-                write(*,'(A,I3,A)') 'DEBUG (calculate_covmats): WARNING! Insufficient points (n < 2) for cluster ', &
-                    i_cluster, ' (Failure Point 1)'
-            endif
-
-            ! Original line - now using points_to_check
+            ! Calculate the covariance matrix
             RTI%covmat(:,:,i_cluster) = calc_covmat(points_to_check, settings%wraparound)
-
-            ! Add after
-            if (any(ieee_is_nan(RTI%covmat(:,:,i_cluster)))) then
-                write(*,'(A,I3,A)') 'DEBUG (calculate_covmats): ERROR! NaN in covmat AFTER calc_covmat for cluster ', i_cluster
-            endif
 
             if (allocated(points_to_check)) deallocate(points_to_check)
 
             ! Calculate the cholesky decomposition
-            RTI%cholesky(:,:,i_cluster) = calc_cholesky(RTI%covmat(:,:,i_cluster))
+            ! Pass num_points to enable eigendecomposition-based regularization
+            ! for rank-deficient covariance matrices (when n < D+1)
+            RTI%cholesky(:,:,i_cluster) = calc_cholesky(RTI%covmat(:,:,i_cluster), num_points)
         end do
 
 
