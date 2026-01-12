@@ -153,6 +153,8 @@ def run_polychord(loglikelihood, nDims, nDerived, settings,
 
     if rank == 0:
         Path(settings.cluster_dir).mkdir(parents=True, exist_ok=True)
+        if settings.write_phantom:
+            Path(settings.phantom_dir).mkdir(parents=True, exist_ok=True)
 
     if settings.cube_samples is not None:
         _legacy_make_resume_file(settings, loglikelihood, prior)
