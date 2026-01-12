@@ -419,10 +419,6 @@ def run(loglikelihood, nDims, **kwargs):
         (Default: 'test')
         Root name of the files produced.
 
-    cluster_dir : string
-        (Default: 'clusters')
-        Where to store clustering files. (base_dir/cluster_dir)
-
     grade_frac : List[float]
         (Default: [1])
         The amount of time to spend in each speed.
@@ -548,7 +544,6 @@ def run(loglikelihood, nDims, **kwargs):
         'synchronous': True,
         'base_dir': 'chains',
         'file_root': 'test',
-        'cluster_dir': 'clusters',
         'grade_dims': [nDims],
         'nlives': {},
         'seed': -1,
@@ -565,7 +560,7 @@ def run(loglikelihood, nDims, **kwargs):
     kwargs = default_kwargs
 
     if rank == 0:
-        (Path(kwargs['base_dir']) / kwargs['cluster_dir']).mkdir(
+        (Path(kwargs['base_dir']) / 'clusters').mkdir(
             parents=True, exist_ok=True)
         if paramnames is not None:
             PolyChordOutput.make_paramnames_file(
