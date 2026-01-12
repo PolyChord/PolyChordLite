@@ -857,7 +857,7 @@ module read_write_module
 
         do p=1,RTI%ncluster
             i_char = ceiling(log10(float(p+1)))
-            write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= "",", A, ","" +/- "",", A, """ (Still Active)"")")') i_char,6-i_char,DB_FMT,DB_FMT
+            write(fmt_Z,'("(""log(Z_"",I",I1,","")"",A",I1,",""= "",", A, ","" +/- "",", A, ","" (Still Active)"")")') i_char,6-i_char,DB_FMT,DB_FMT
             write(write_stats_unit,fmt_Z) p, '', logZp(p), sqrt(abs(varlogZp(p)))
         end do
         do p=1,RTI%ncluster_dead
@@ -880,7 +880,7 @@ module read_write_module
         write(fmt_nlike,'("("" nlike:      "",",I0,"I8)")') size(nlikesum)
         write(write_stats_unit,fmt_nlike) RTI%nlike
 
-        write(fmt_nlike,'(  "("" <nlike>:    "","  ,I0,   "F8.2,""   (""",I0,"F8.2 "" per slice )"")")') size(nlikesum), size(nlikesum)
+        write(fmt_nlike,'(  "("" <nlike>:    "","  ,I0,   "F8.2,""   (""",I0,"F8.2, "" per slice )"")")') size(nlikesum), size(nlikesum)
         if (sum(RTI%nlive)>0) then
             update_files = -sum(RTI%nlive)*log(settings%compression_factor)
             write(write_stats_unit,fmt_nlike) dble(nlikesum)/update_files,dble(nlikesum)/dble(RTI%num_repeats*update_files)

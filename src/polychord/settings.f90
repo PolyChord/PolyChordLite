@@ -51,7 +51,6 @@ module settings_module
 
 
         real(dp), allocatable,dimension(:) :: seed_point
-        logical :: generate_from_seed = .false.
         integer :: nprior = -1
         integer :: nfail = -1
         integer :: nprior_repeat = -1

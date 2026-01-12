@@ -170,7 +170,8 @@ class PolyChordOutput:
             self._create_pandas_table(paramnames = paramnames)
             
             
-    def make_paramnames_file(self, paramnames, filename):
+    @staticmethod
+    def make_paramnames_file(paramnames, filename):
         with open(filename, 'w') as f:
             for name, latex in paramnames:
                 f.write('%s   %s\n' % (name, latex))
@@ -215,7 +216,7 @@ class PolyChordOutput:
         for paramname in self._samples_table.columns[2:]:
             mean = np.mean(np.array( self._samples_table[paramname]) )
             std = np.std(np.array( self._samples_table[paramname]) )
-            stats_dict[paramname] = '%.3E +\- %.3E' % (mean, std)
+            stats_dict[paramname] = '%.3E +/- %.3E' % (mean, std)
 
         lst.append(pd.Series(stats_dict))
         return lst
