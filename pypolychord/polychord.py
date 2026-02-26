@@ -521,6 +521,7 @@ def run(loglikelihood, nDims, **kwargs):
         default_comm = None
 
     paramnames = kwargs.pop('paramnames', None)
+    cube_samples = kwargs.pop('cube_samples', None)
 
     default_kwargs = {
         'nDerived': 0,
@@ -583,8 +584,8 @@ def run(loglikelihood, nDims, **kwargs):
                     (kwargs['file_root'] + ".paramnames"))
 
 
-    if 'cube_samples' in kwargs:
-        _make_resume_file(loglikelihood, kwargs['prior'], **kwargs)
+    if cube_samples is not None:
+        _make_resume_file(loglikelihood, cube_samples=cube_samples, **kwargs)
         read_resume = kwargs['read_resume']
         kwargs['read_resume'] = True
 
@@ -644,7 +645,7 @@ def run(loglikelihood, nDims, **kwargs):
                      kwargs['seed'],
                      kwargs['comm'])
 
-    if 'cube_samples' in kwargs:
+    if cube_samples is not None:
         kwargs['read_resume'] = read_resume
 
     try:
