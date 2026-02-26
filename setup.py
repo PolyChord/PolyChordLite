@@ -83,8 +83,9 @@ class DistributionWithOption(Distribution, object):
 
 class CustomBuildPy(_build_py, object):
     def run(self):
-        env = {}
-        env["PATH"] = os.environ["PATH"]
+        env = {k: v for k, v in os.environ.items()
+               if k in ("PATH", "HOME", "USER", "TMPDIR", "LANG",
+                         "TERM", "SHELL", "LOGNAME")}
         if self.distribution.no_mpi is None:
             env["MPI"] = "1"
             # These need to be set so that build_ext uses the right compilers

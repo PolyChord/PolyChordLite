@@ -1,3 +1,38 @@
 [build-system]
 requires = ["setuptools", "wheel", "numpy"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pypolychord"
+version = "1.22.1"
+description = "Python interface to PolyChord"
+readme = "README.rst"
+license = "LicenseRef-PolyChord"
+license-files = ["LICENCE"]
+authors = [
+    { name = "Will Handley", email = "wh260@cam.ac.uk" },
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "scipy",
+]
+
+[project.optional-dependencies]
+plotting = ["getdist"]
+mpi = ["mpi4py"]
+
+[dependency-groups]
+dev = ["setuptools", "wheel", "mpi4py"]
+
+[project.urls]
+Homepage = "https://github.com/PolyChord/PolyChordLite"
+
+[tool.uv]
+no-build-isolation-package = ["pypolychord"]
+
+[tool.setuptools.packages.find]
+include = ["pypolychord*"]
+
+[tool.setuptools.package-data]
+pypolychord = ["lib/libchord.so"]
