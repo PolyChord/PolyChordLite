@@ -4,8 +4,6 @@
 !! * GenerateLivePoints
 module generate_module
     use utils_module, only: dp
-    use, intrinsic :: ieee_arithmetic
-
 
     implicit none
 
@@ -114,10 +112,6 @@ module generate_module
         integer :: nlike ! number of likelihood calls
         integer :: nprior, ndiscarded
         integer :: ngenerated ! use to track order points are generated in
-        ! ! --- NEW COUNTER FOR NaN INJECTION TEST ---
-        ! integer :: calculation_counter
-        ! ! --- NEW VARIABLE FOR NaN INJECTION TEST ---
-        ! real(dp) :: nan_generator
 
         real(dp) :: time0,time1,total_time
         real(dp),dimension(size(settings%grade_dims)) :: speed
@@ -126,7 +120,6 @@ module generate_module
         ! Initialise number of likelihood calls to zero here
         nlike = 0
         ngenerated = 1
-        ! calculation_counter = 0 ! Initialize the new counter
 
 
         if(is_root(mpi_information)) then
@@ -160,20 +153,6 @@ module generate_module
 
                 ! Generate a random coordinate
                 live_point(settings%h0:settings%h1) = random_reals(settings%nDims)
-
-                ! ! --- START OF INTENTIONAL NaN INJECTION (FOR TESTING) ---
-                ! calculation_counter = calculation_counter + 1
-                ! if (calculation_counter == 5) then
-                !     write(*,*) 'TEST (Linear Mode): Intentionally injecting a NaN via sqrt(-1.0).'
-                !     nan_generator = -1.0_dp
-                !     live_point(settings%h0) = sqrt(nan_generator)
-                !     if (any(ieee_is_nan(live_point))) then
-                !         write(*,*) 'TEST (Linear Mode): NaN detected in live_point, ieee_is_nan works.'
-                !     else
-                !         write(*,*) 'TEST (Linear Mode): NaN not detected in live_point, ieee_is_nan failed.'
-                !     end if
-                ! end if
-                ! ! --- END OF INTENTIONAL NaN INJECTION ---
 
                 ! Compute physical coordinates, likelihoods and derived parameters
                 time0 = time()
@@ -269,28 +248,6 @@ module generate_module
                 ! The workers simply generate and send points until they're told to stop by the administrator
                 
                 do while(live_point_needed(live_point,mpi_information))
-                !     ! --- START OF INTENTIONAL NaN INJECTION (FOR TESTING) ---
-                !     calculation_counter = calculation_counter + 1
-                !     if (mpi_information%rank == 1 .and. calculation_counter == 5) then
-                !         write(*,*) 'TEST (Parallel Mode, Rank 1): Intentionally injecting a NaN via sqrt(-1.0).'
-                !         nan_generator = -1.0_dp
-                !         live_point(settings%h0) = sqrt(nan_generator)
-
-                !         write(*,*) 'DEBUG: The injected value is: ', live_point(settings%h0)
-
-                !         if (ieee_is_nan(live_point(settings%h0))) then
-                !            write(*,*) 'DEBUG: Scalar check PASSED. The value is a NaN.'
-                !         else
-                !            write(*,*) 'DEBUG: Scalar check FAILED. The value is NOT a NaN.'
-                !         end if
-
-                !         if (any(ieee_is_nan(live_point))) then
-                !             write(*,*) 'TEST (Parallel Mode, Rank 1): NaN detected in live_point, ieee_is_nan works.'
-                !         else
-                !             write(*,*) 'TEST (Parallel Mode, Rank 1): NaN not detected in live_point, ieee_is_nan failed.'
-                !         end if
-                !     end if
-                !     ! --- END OF INTENTIONAL NaN INJECTION ---
 
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters

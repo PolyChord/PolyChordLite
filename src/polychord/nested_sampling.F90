@@ -1,6 +1,5 @@
 module nested_sampling_module
     use utils_module, only: dp
-    use, intrinsic :: ieee_arithmetic
 
 #ifdef MPI
     use mpi_module, only: get_mpi_information,mpi_bundle,is_root,linear_mode,catch_babies,throw_babies,throw_seed,catch_seed,broadcast_integers,mpi_synchronise
@@ -248,16 +247,6 @@ module nested_sampling_module
                 ! Choose the cholesky decomposition for the cluster
                 cholesky = RTI%cholesky(:,:,cluster_id)
 
-                ! --- NEW AGGRESSIVE CHECK 6 ---
-                if (any(ieee_is_nan(seed_point))) then
-                    write(*, '(A, I0)') 'TRACE 6 (NestedSampling): NaN seed_point chosen from cluster ', cluster_id
-                    write(*, '(A, *(F24.15))') '                       seed_point = ', seed_point
-                end if
-                if (any(ieee_is_nan(cholesky))) then
-                    write(*, '(A, I0)') 'TRACE 6 (NestedSampling): NaN cholesky matrix chosen from cluster ', cluster_id
-                    ! Not printing the matrix as it's large, its presence is enough.
-                end if
-
                 ! Get the loglikelihood contour we're generating from
                 logL = RTI%logLp(cluster_id)
 
@@ -268,11 +257,6 @@ module nested_sampling_module
 
                     ! Generate a new set of points within the likelihood bound of the late point
                     baby_points = SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)
-
-                    ! === DEBUG PRIORITY 3: Check for NaN from SliceSampling ===
-                    if (any(ieee_is_nan(baby_points))) then
-                        write(*,'(A)') 'DEBUG (NestedSampling): ERROR! NaN in baby_points from SliceSampling (linear mode) (Failure Point 4 upstream)'
-                    endif
 
                     baby_points(settings%b0,:) = logL ! Note the moment it is born at
 #ifdef MPI
@@ -308,12 +292,6 @@ module nested_sampling_module
 
                     ! Recieve any new baby points from any worker currently sending
                     worker_id = catch_babies(baby_points,nlike,worker_epoch,mpi_information)
-
-                    ! === DEBUG PRIORITY 3: Check for NaN from worker ===
-                    if (any(ieee_is_nan(baby_points))) then
-                        write(*,'(A,I3,A)') 'DEBUG (NestedSampling): ERROR! NaN in baby_points from worker ', worker_id, &
-                            ' (Failure Point 4 upstream)'
-                    endif
 
                     ! and throw seeding information back to worker (true => keep going)
                     call throw_seed(seed_point,cholesky,logL,mpi_information,worker_id,administrator_epoch,.true.)
@@ -467,10 +445,6 @@ module nested_sampling_module
 
         else !(myrank/=root)
 
-            ! --- START OF HELLO WORLD TEST ---
-            write(*, '(A, I0, A)') 'Worker rank ', mpi_information%rank, ' reporting for duty.'
-            ! --- END OF HELLO WORLD TEST ---
-
             ! These are the worker tasks
             ! --------------------------
             !
@@ -511,13 +485,6 @@ module nested_sampling_module
                 wait_time = wait_time + time0-time1
                 time1 = time()
                 slice_time = slice_time + time1-time0
-
-                ! --- NEW TRACE ---
-                if (any(ieee_is_nan(baby_points))) then
-                    write(*,'(A, I0, A)') 'PolyChord TRACE (NestedSampling): Worker rank ', mpi_information%rank, ' received NaN array from SliceSampling.'
-                endif
-                ! --- END TRACE ---
-
 
                 ! 3) Send the baby points back
                 call throw_babies(baby_points,nlike,worker_epoch,mpi_information)

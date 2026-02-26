@@ -1,6 +1,5 @@
 module chordal_module
     use utils_module, only: dp
-    use, intrinsic :: ieee_arithmetic
     implicit none
 
     contains
@@ -8,8 +7,9 @@ module chordal_module
     function SliceSampling(loglikelihood,prior,settings,logL,seed_point,cholesky,nlike,num_repeats)  result(baby_points)
         use settings_module, only: program_settings
         use random_module, only: random_orthonormal_basis,random_real
-        ! added to check for NaN in hypercube vector, to support stdout
-        use utils_module, only: stdout_unit
+#ifdef DEBUG
+        use, intrinsic :: ieee_arithmetic
+#endif
 
         implicit none
         interface
@@ -66,14 +66,14 @@ module chordal_module
         ! Start the baby point at the seed point
         previous_point = seed_point
 
-        ! --- NEW AGGRESSIVE CHECK 5 ---
+#ifdef DEBUG
         if (any(ieee_is_nan(seed_point))) then
-            write(*, '(A)') 'TRACE 5 (SliceSampling): NaN detected in the input seed_point.'
-            write(*, '(A, *(F24.15))') '                       seed_point = ', seed_point
+            write(*, '(A)') 'PolyChord DEBUG (SliceSampling): NaN detected in the input seed_point.'
         end if
         if (any(ieee_is_nan(cholesky))) then
-            write(*, '(A)') 'TRACE 5 (SliceSampling): NaN detected in the input cholesky matrix.'
+            write(*, '(A)') 'PolyChord DEBUG (SliceSampling): NaN detected in the input cholesky matrix.'
         end if
+#endif
 
         ! Initialise the likelihood counter at 0
         nlike = 0
@@ -84,16 +84,16 @@ module chordal_module
         ! Transform to the unit hypercube
         nhats = matmul(cholesky,nhats)
 
-        ! --- NEW, CRITICAL TRACE ---
+#ifdef DEBUG
         if (any(ieee_is_nan(nhats))) then
-            write(*,'(A)') 'PolyChord TRACE (SliceSampling): NaN detected in nhats vector immediately after matmul(cholesky,nhats).'
+            write(*,'(A)') 'PolyChord DEBUG (SliceSampling): NaN detected in nhats vector immediately after matmul(cholesky,nhats).'
             if (any(ieee_is_nan(cholesky))) then
                 write(*,'(A)') '                           The source is a NaN cholesky matrix.'
             else
                 write(*,'(A)') '                           The source is NOT the cholesky matrix. Problem is in generate_nhats or matmul.'
             end if
         end if
-        ! --- END OF TRACE ---
+#endif
 
         do i_babies=1,size(nhats,2)
             ! Get a new random direction
@@ -102,12 +102,11 @@ module chordal_module
             ! Normalise it
             w = sqrt(dot_product(nhat,nhat))
 
-            ! --- START OF ADDED WARNING ---
+            ! Warn if direction vector has zero magnitude (root cause of NaN propagation)
             if (w < 1.d-20) then
                 write(*,'(A)') 'PolyChord WARNING: Slice sampling direction vector has zero magnitude (w=0).'
                 write(*,'(A)') '                   Division by zero is imminent, resulting in NaN parameters.'
             end if
-            ! --- END OF ADDED WARNING ---
 
             nhat = nhat/w
             w = w * 3d0 !* exp( lgamma(0.5d0 * settings%nDims) - lgamma(1.5d0 + 0.5d0 * settings%nDims) ) * settings%nDims
@@ -193,10 +192,12 @@ module chordal_module
     !!
     function slice_sample(loglikelihood,prior,logL,nhat,x0,w,S,n) result(baby_point)
         use settings_module, only: program_settings
-        ! added stdout_unit to support printing warnings about NaN
-        use utils_module,  only: distance, stdout_unit
+        use utils_module,  only: distance
         use random_module, only: random_real
         use calculate_module, only: calculate_point
+#ifdef DEBUG
+        use, intrinsic :: ieee_arithmetic
+#endif
         implicit none
         interface
             function loglikelihood(theta,phi)
@@ -240,21 +241,19 @@ module chordal_module
         integer :: i_step, i
         real(dp) :: x0Rd, x0Ld
 
-        ! --- NEW AGGRESSIVE CHECK 3 ---
+#ifdef DEBUG
         if (any(ieee_is_nan(x0))) then
-            write(*, '(A)') 'TRACE 3 (slice_sample): NaN detected in the input seed point x0.'
-            write(*, '(A, *(F24.15))') '                       x0 = ', x0
+            write(*, '(A)') 'PolyChord DEBUG (slice_sample): NaN detected in the input seed point x0.'
         end if
         if (any(ieee_is_nan(nhat))) then
-            write(*, '(A)') 'TRACE 3 (slice_sample): NaN detected in the input direction vector nhat.'
-            write(*, '(A, *(F24.15))') '                       nhat = ', nhat
+            write(*, '(A)') 'PolyChord DEBUG (slice_sample): NaN detected in the input direction vector nhat.'
         end if
+#endif
 
-        
         ! Select initial start and end points
         temp_random = random_real()
-        L(S%h0:S%h1) = x0(S%h0:S%h1) -   temp_random   * w * nhat 
-        R(S%h0:S%h1) = x0(S%h0:S%h1) + (1-temp_random) * w * nhat 
+        L(S%h0:S%h1) = x0(S%h0:S%h1) -   temp_random   * w * nhat
+        R(S%h0:S%h1) = x0(S%h0:S%h1) + (1-temp_random) * w * nhat
 
         ! Calculate initial likelihoods
         call calculate_point(loglikelihood,prior,R,S,n)
@@ -280,28 +279,29 @@ module chordal_module
 
         ! Sample within this bound
         do i_step=0,100
-            ! Find the distance between x0 and L 
+            ! Find the distance between x0 and L
             x0Ld= distance(x0(S%h0:S%h1),L(S%h0:S%h1), [(.false., i=1,S%nDims)])
-            ! Find the distance between x0 and R 
+            ! Find the distance between x0 and R
             x0Rd= distance(x0(S%h0:S%h1),R(S%h0:S%h1), [(.false., i=1,S%nDims)])
 
-            ! --- NEW AGGRESSIVE CHECK 4 ---
+#ifdef DEBUG
             if (ieee_is_nan(x0Ld) .or. ieee_is_nan(x0Rd)) then
-                write(*, '(A)') 'TRACE 4 (slice_sample): NaN detected in boundary distances.'
+                write(*, '(A)') 'PolyChord DEBUG (slice_sample): NaN detected in boundary distances.'
                 write(*, '(A, F24.15)') '                       x0Ld = ', x0Ld
                 write(*, '(A, F24.15)') '                       x0Rd = ', x0Rd
             end if
+#endif
 
             ! Draw a random point within L and R
-            baby_point(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat 
+            baby_point(S%h0:S%h1) = x0(S%h0:S%h1)+ (random_real() * (x0Rd+x0Ld) - x0Ld) * nhat
 
-            ! --- START OF ADDED WARNING ---
+#ifdef DEBUG
             if (any(ieee_is_nan(baby_point(S%h0:S%h1)))) then
-                write(*,'(A)') 'PolyChord TRACE (slice_sample): NaN detected in new parameter vector immediately after creation.'
+                write(*,'(A)') 'PolyChord DEBUG (slice_sample): NaN detected in new parameter vector immediately after creation.'
             end if
-            ! --- END OF ADDED WARNING ---
+#endif
 
-            ! calculate the likelihood 
+            ! calculate the likelihood
             call calculate_point(loglikelihood,prior,baby_point,S,n)
 
             ! If we're not within the likelihood bound then we need to sample further
@@ -330,4 +330,3 @@ module chordal_module
 
 
 end module chordal_module
-

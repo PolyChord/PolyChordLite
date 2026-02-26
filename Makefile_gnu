@@ -62,7 +62,7 @@ ifeq ($(DEBUG),1)
 # backtrace     : produce backtrace of error
 # fpe-trap      : search for floating point exceptions (dividing by zero etc)
 # fbounds-check : check array indices
-FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
+FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow -DDEBUG
 #
 CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
 CFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++

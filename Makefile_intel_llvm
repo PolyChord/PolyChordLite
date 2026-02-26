@@ -55,7 +55,7 @@ ifeq ($(DEBUG),1)
 # gen-interfaces : generate an interface block for each routine
 # warn-interfaces: warn on these interface blocks
 # fpe0           : halts program if dividing by zero, etc
-FFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces
+FFLAGS += -g -O0 -traceback -check all,noarg_temp_created -warn all -ftrapuv -debug all -gen-interfaces -warn-interfaces -DDEBUG
 CXXFLAGS += -g -O0 -traceback -Wcheck -Wremarks -Wall -Weffc++ -ftrapuv -debug all
 LDFLAGS += -g
 else
