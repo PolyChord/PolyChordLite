@@ -435,7 +435,7 @@ module mpi_module
         integer,               intent(in) :: epoch                !> The epoch the babies were generated in
         type(mpi_bundle), intent(in) :: mpi_information
 
-        call MPI_SEND(                              &! 
+        call MPI_SEND(                              &!
             baby_points,                            &! 
             size(baby_points,1)*size(baby_points,2),&! 
             MPI_DOUBLE_PRECISION,                   &! 

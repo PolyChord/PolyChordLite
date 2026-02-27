@@ -600,21 +600,38 @@ module run_time_module
 
     subroutine calculate_covmats(settings,RTI)
         use settings_module, only: program_settings
-        use utils_module, only: calc_cholesky, calc_covmat
+        use utils_module, only: calc_cholesky, calc_covmat, dp
         use array_module, only: concat
+        use, intrinsic :: ieee_arithmetic
         implicit none
 
         type(program_settings), intent(in) :: settings  !> Program settings
         type(run_time_info),intent(inout) :: RTI        !> Run time information
 
         integer :: i_cluster ! cluster iterator
+        integer :: num_points
+        real(dp), allocatable, dimension(:,:) :: points_to_check
+
         ! For each cluster:
         do i_cluster = 1,RTI%ncluster
-            RTI%covmat(:,:,i_cluster) = calc_covmat(concat(RTI%live(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster),&
-                                                           RTI%phantom(settings%h0:settings%h1,:RTI%nphantom(i_cluster),i_cluster)),&
-                                                    settings%wraparound)
+            ! Concatenate live and phantom points for this cluster
+            if (RTI%nlive(i_cluster) + RTI%nphantom(i_cluster) > 0) then
+                points_to_check = concat(RTI%live(settings%h0:settings%h1,:RTI%nlive(i_cluster),i_cluster),&
+                                         RTI%phantom(settings%h0:settings%h1,:RTI%nphantom(i_cluster),i_cluster))
+            else
+                allocate(points_to_check(settings%nDims,0))
+            end if
+            num_points = size(points_to_check,2)
+
+            ! Calculate the covariance matrix
+            RTI%covmat(:,:,i_cluster) = calc_covmat(points_to_check, settings%wraparound)
+
+            if (allocated(points_to_check)) deallocate(points_to_check)
+
             ! Calculate the cholesky decomposition
-            RTI%cholesky(:,:,i_cluster) = calc_cholesky(RTI%covmat(:,:,i_cluster))
+            ! Pass num_points to enable eigendecomposition-based regularization
+            ! for rank-deficient covariance matrices (when n < D+1)
+            RTI%cholesky(:,:,i_cluster) = calc_cholesky(RTI%covmat(:,:,i_cluster), num_points)
         end do
 
 

@@ -5,6 +5,10 @@ module calculate_module
 
     subroutine calculate_point(loglikelihood,prior,point,settings,nlike)
         use settings_module, only: program_settings
+#ifdef DEBUG
+        use, intrinsic :: ieee_arithmetic
+#endif
+
         implicit none
         interface
             function loglikelihood(theta,phi)
@@ -31,18 +35,26 @@ module calculate_module
         real(dp),dimension(settings%nDims)    :: mn, mx ! Min and max bounds
         real(dp),dimension(settings%nDerived) :: phi    ! derived parameters
         real(dp)                              :: logL
-        
+
         mn = merge(-1d0,0d0,settings%wraparound)
         mx = merge(2d0,1d0,settings%wraparound)
 
         cube = point(settings%h0:settings%h1)
+
+#ifdef DEBUG
+        if (any(ieee_is_nan(cube))) then
+            write(*,'(A)') 'PolyChord DEBUG (calculate_point): NaN detected in hypercube vector before prior transformation.'
+        end if
+#endif
 
         if ( any(cube<mn) .or. any(cube>mx) )  then
             theta = 0
             logL  = settings%logzero
         else
             where(settings%wraparound) cube = modulo(cube,1d0)
+
             theta = prior(cube)
+
             logL  = loglikelihood(theta,phi)
         end if
 
@@ -72,7 +84,7 @@ module calculate_module
         posterior_point(settings%pos_X)  = volume
         ! Likelihood
         posterior_point(settings%pos_l)  = point(settings%l0)
-        ! Un-normalised weighting 
+        ! Un-normalised weighting
         posterior_point(settings%pos_w)  = logweight
         ! un-normalise cumulative weighting
         posterior_point(settings%pos_Z)  = evidence
@@ -114,7 +126,6 @@ module calculate_module
         end do
 
     end function calculate_similarity_matrix
-
 
 
 

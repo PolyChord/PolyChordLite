@@ -43,6 +43,13 @@ else
 RPATH= 
 endif
 
+# LAPACK support for eigendecomposition-based covariance regularization
+# Set LAPACK=0 to disable (will use pure-Fortran Jacobi fallback)
+ifeq ($(LAPACK),1)
+FFLAGS += -DHAVE_LAPACK
+LDLIBS += -llapack -lblas
+endif
+
 ifeq ($(DEBUG),1)
 # Debugging mode
 # --------------
@@ -55,7 +62,7 @@ ifeq ($(DEBUG),1)
 # backtrace     : produce backtrace of error
 # fpe-trap      : search for floating point exceptions (dividing by zero etc)
 # fbounds-check : check array indices
-FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow 
+FFLAGS += -g -O0 -Wall -Wextra -pedantic -fcheck=all -fimplicit-none -fbacktrace -ffpe-trap=zero,overflow -DDEBUG
 #
 CXXFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
 CFLAGS += -g -O0 -Wall -Wextra -Wshadow -Weffc++
@@ -63,7 +70,7 @@ else
 # Optimised mode
 # --------------
 # Ofast : maximum optimisation
-FFLAGS += -Ofast
+FFLAGS += -Ofast -fno-finite-math-only # no-finit-math-only is needed for detectinng NaNs
 CXXFLAGS += -Ofast
 CXFLAGS += -Ofast
 endif

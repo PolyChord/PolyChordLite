@@ -5,7 +5,6 @@
 module generate_module
     use utils_module, only: dp
 
-
     implicit none
 
     contains
@@ -249,6 +248,7 @@ module generate_module
                 ! The workers simply generate and send points until they're told to stop by the administrator
                 
                 do while(live_point_needed(live_point,mpi_information))
+
                     time0 = time()
                     call calculate_point( loglikelihood, prior, live_point, settings,nlike) ! Compute physical coordinates, likelihoods and derived parameters
                     ndiscarded=ndiscarded+1

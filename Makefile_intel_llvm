@@ -1,16 +1,22 @@
-ifeq ($(MPI),1)
-FC = mpiifort
-CC = mpiicc
-CXX = mpiicpc
-else
-FC = ifort
-CXX = icpc
-CC = icc
-endif
+# Makefile_intel_llvm (for Intel LLVM-based compilers: ifx, icx, icpx)
 
-CPP = $(CC)
-LD = $(FC)
+ifeq ($(MPI),1)
+# Using specific MPI-enabled Intel LLVM compilers
+FC = mpiifx
+CC = mpiicx
+CXX = mpiicpx
+else
+# Using standard Intel LLVM compilers
+FC = ifx
+CXX = icpx
+CC = icx
+endif
 LDSHARED = $(LD) -shared
+
+# CPP uses the C compiler
+CPP = $(CC)
+# LD uses the C/C++ compiler as the primary linker driver for mixed-language projects
+LD = $(CC)
 
 # Archive tool
 AR = ar rv
@@ -20,20 +26,20 @@ AR = ar rv
 # --------------
 # fpp                    : perform preprocessing
 # fpic                   : shared object libraries
-# assume noold_maxminloc : in intel v16 compilers, they changed the default behavior of minloc (ffs).
-# 						   this flag is necessary to ensure consistent behavior across compilers
-FFLAGS += -fpp -fpic -assume noold_maxminloc -heap-arrays
+# heap-arrays            : allocate local arrays on heap
+FFLAGS += -fpp -fpic -heap-arrays
 CXXFLAGS += -std=c++11 -fpic
-# nofor_main 	         : essential for linking c++ and fortran
-LDFLAGS += -nofor-main
-LDLIBS += -cxxlib
+LDFLAGS +=
+
+# Link specific Intel runtime libraries
+LDLIBS += -lifcore -lifport -limf -lsvml -liomp5
 
 # LAPACK support for eigendecomposition-based covariance regularization
 # Set LAPACK=0 to disable (will use pure-Fortran Jacobi fallback)
-# Intel MKL provides LAPACK
+# Intel MKL provides LAPACK (use -qmkl for LLVM-based compilers)
 ifeq ($(LAPACK),1)
-FFLAGS += -DHAVE_LAPACK
-LDLIBS += -mkl
+FFLAGS += -DHAVE_LAPACK -qmkl
+LDLIBS += -qmkl
 endif
 
 ifeq ($(DEBUG),1)
@@ -55,21 +61,11 @@ LDFLAGS += -g
 else
 # Optimised mode
 # --------------
-#   ipo          : interprocedural optimization (optimize entire program)
-#   O3           : maximum optimisation
-#   no-prec-div  : slightly less precise floating point divides, but speeds up
-#   static       : link intel libraries statically
-#   xHost        : maximise architecture usage
-#   w            : turn off all warnings
-#   vec-report0  : disables printing of vectorizer diagnostic information
-#   opt-report0  : disables printing of optimization reports
-IPO = -ipo
-FFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
-CXXFLAGS += $(IPO) -O3 -no-prec-div $(HOST) -w -vec-report0 -qopt-report0
-
-ifdef IPO
-# Archive tool for compiling with ipo.
-AR = xiar rv
-endif
+# O2             : A high but safe level of optimisation.
+# fp-model precise: Disables value-unsafe floating-point optimisations. This is crucial for numerical stability and cross-compiler consistency.
+# xHost          : maximise architecture usage (from $(HOST) variable)
+# warn all       : Enable all warnings instead of suppressing them with -w.
+FFLAGS += -O2 -fp-model precise $(HOST) -warn all
+CXXFLAGS += -O2 -fp-model precise $(HOST) -Wall
 
 endif

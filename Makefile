@@ -20,23 +20,33 @@ MPI=1
 # Whether to compile in debugging mode (default: false)
 DEBUG=0
 
-export MPI DEBUG
+# Whether to use LAPACK for eigendecomposition (default: true)
+# Set LAPACK=0 to use pure-Fortran Jacobi fallback
+LAPACK=1
+
+export MPI DEBUG LAPACK
 
 # We can autodetect the compiler type on unix systems via the shell.
 # if you want to override this then just run make with
 # make COMPILER_TYPE=<your type>
-# where <your type> is gnu or intel
+# where <your type> is gnu, intel, intel_llvm, or cray
 ifeq "$(shell which ftn >/dev/null 2>&1; echo $$?)" "0"
 COMPILER_TYPE=cray
-else ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0" 
+else ifeq "$(shell which ifx >/dev/null 2>&1; echo $$?)" "0"
+# Detected Intel LLVM-based compilers (ifx, icx, icpx)
+COMPILER_TYPE=intel_llvm
+else ifeq "$(shell which ifort >/dev/null 2>&1; echo $$?)" "0"
+# Detected Intel classic compilers (ifort, icc, icpc)
 COMPILER_TYPE=intel
 else ifeq "$(shell which gfortran >/dev/null 2>&1; echo $$?)" "0"
 COMPILER_TYPE=gnu
 endif
 
-ifeq ($(COMPILER_TYPE),intel)
+ifeq ($(COMPILER_TYPE),intel_llvm)
+include Makefile_intel_llvm
+else ifeq ($(COMPILER_TYPE),intel)
 include Makefile_intel
-else ifeq ($(COMPILER_TYPE),gnu) 
+else ifeq ($(COMPILER_TYPE),gnu)
 include Makefile_gnu
 else ifeq ($(COMPILER_TYPE),cray)
 include Makefile_cray
@@ -105,6 +115,8 @@ print_CC:
 	@echo $(CC)
 print_CXX:
 	@echo $(CXX)
+print_FC:
+	@echo $(FC)
 
 CLEANDIRS = $(POLYCHORD_DIR) $(PYPOLYCHORD_DIR) $(LIKELIHOOD_DIR) $(BIN_DIR) $(LIB_DIR) $(DRIVERS_DIR) 
 .PHONY: clean veryclean print_CC print_CXX $(addsuffix clean,$(CLEANDIRS)) $(addsuffix veryclean,$(CLEANDIRS)) 
@@ -118,4 +130,3 @@ veryclean: clean $(addsuffix veryclean,$(CLEANDIRS))
 	$(RM) *~ build dist pypolychord.egg-info pypolychord/*.pyc pypolychord/__pycache__ __pycache__ pypolychord/lib/*.so
 $(addsuffix veryclean,$(CLEANDIRS))  : %veryclean: 
 	$(MAKE) -C $* veryclean
-	

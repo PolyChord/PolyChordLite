@@ -1,5 +1,6 @@
 
 module utils_module
+    use, intrinsic :: ieee_arithmetic
     implicit none
 #ifdef MPI
     include 'mpif.h'
@@ -86,6 +87,28 @@ module utils_module
     ! which means that we neglect all terms smaller than eps times the
     ! current sum
 
+    !> Minimum variance for regularization of covariance matrices
+    !! Used when clusters have insufficient points or near-zero variance
+    real(dp), parameter :: min_variance = 1.d-20
+
+    !> Relative threshold for detecting zero eigenvalues in regularization
+    real(dp), parameter :: eigenvalue_rel_threshold = 1.d-10
+    !> Absolute floor threshold for eigenvalues (prevents issues when max eigenvalue is tiny)
+    real(dp), parameter :: eigenvalue_abs_threshold = 1.d-20
+
+#ifdef HAVE_LAPACK
+    !> LAPACK interface for symmetric eigenvalue decomposition
+    interface
+        subroutine dsyev(jobz, uplo, n, a, lda, w, work, lwork, info)
+            import :: dp
+            character, intent(in) :: jobz, uplo
+            integer, intent(in) :: n, lda, lwork
+            integer, intent(out) :: info
+            real(dp), intent(inout) :: a(lda,*)
+            real(dp), intent(out) :: w(*), work(*)
+        end subroutine dsyev
+    end interface
+#endif
 
     integer,parameter :: flag_blank     = -2
     integer,parameter :: flag_gestating = -1
@@ -629,11 +652,45 @@ module utils_module
 
     end function abovetol
 
-    function calc_cholesky(a) result(L)
+    !> Compute Cholesky decomposition of a covariance matrix
+    !!
+    !! If n_points is provided and n_points < nDims + 1, the covariance matrix
+    !! is rank-deficient. In this case, we first apply eigendecomposition-based
+    !! regularization to make it positive-definite before computing Cholesky.
+    !!
+    !! @param[in] a         Input covariance matrix
+    !! @param[in] n_points  Optional: number of points used to compute covariance
+    !! @return    L         Lower-triangular Cholesky factor
+    function calc_cholesky(a, n_points) result(L)
         implicit none
         real(dp), intent(in),dimension(:,:) :: a
+        integer, intent(in), optional :: n_points
+        real(dp), dimension(size(a,1),size(a,2)) :: a_reg
         real(dp), dimension(size(a,1),size(a,2)) :: L
-        integer :: i,j
+        integer :: i,j, nDims
+        logical :: needs_regularization
+
+        nDims = size(a, 1)
+
+        ! Determine if eigendecomposition-based regularization is needed
+        ! This is required when the covariance matrix is rank-deficient (n < D+1)
+        needs_regularization = .false.
+        if (present(n_points)) then
+            if (n_points < nDims + 1) then
+                needs_regularization = .true.
+            end if
+        end if
+
+        if (needs_regularization) then
+            ! Use eigendecomposition-based regularization for rank-deficient matrices
+            ! This replaces zero eigenvalues with 1.0 (unit variance in null-space)
+            a_reg = regularize_covmat(a)
+        else
+            ! === FIX 3: Pre-regularize the matrix to avoid numerical issues ===
+            ! Add min_variance to diagonal before attempting decomposition
+            ! This prevents failure for near-singular matrices from tight clusters
+            a_reg = a + identity_matrix(nDims) * min_variance
+        end if
 
         ! Set it all to zero to begin with
         L = 0
@@ -641,23 +698,330 @@ module utils_module
         ! Zero out the upper half
         do i=1,size(a,1)
 
-            L(i,i)= a(i,i) - sum(L(i,:i-1)**2) 
+            L(i,i)= a_reg(i,i) - sum(L(i,:i-1)**2)
             if (L(i,i).le.0d0) then
                 ! If the cholesky decomposition does not exist, then set it to
-                ! be a re-scaled identity matrix
-                L = identity_matrix(size(a,1)) * sqrt(trace(a))
+                ! be a re-scaled identity matrix (original PolyChord behavior)
+                L = identity_matrix(nDims) * sqrt(trace(a_reg))
                 return
             else
                 L(i,i)=sqrt(L(i,i))
             end if
 
-            do j=i+1,size(a,1)
-                L(j,i) = (a(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)
+            do j=i+1,size(a_reg,1)
+                L(j,i) = (a_reg(i,j) - sum(L(i,:i-1)*L(j,:i-1)))/L(i,i)
             end do
 
         end do
 
     end function calc_cholesky
+
+    !> Compute eigenvalues and eigenvectors of a symmetric matrix using Jacobi method
+    !!
+    !! This is a pure-Fortran fallback for systems without LAPACK.
+    !! Uses the cyclic Jacobi algorithm which iteratively applies Givens rotations
+    !! to diagonalize the matrix.
+    !!
+    !! @param[inout] a  On entry: symmetric matrix. On exit: destroyed.
+    !! @param[out]   w  Eigenvalues in ascending order
+    !! @param[out]   v  Eigenvectors as columns (v(:,i) is eigenvector for w(i))
+    !! @param[out]   info  0 on success, >0 if failed to converge
+    subroutine jacobi_eigen(a, w, v, info)
+        implicit none
+        real(dp), intent(inout), dimension(:,:) :: a
+        real(dp), intent(out), dimension(:) :: w
+        real(dp), intent(out), dimension(:,:) :: v
+        integer, intent(out) :: info
+
+        integer :: n, i, j, k, p, q, sweep
+        real(dp) :: threshold, off_diag, c, s, t, tau, h, g, temp
+        real(dp) :: tol, sum_off
+        integer, parameter :: max_sweeps = 50
+
+        n = size(a, 1)
+        info = 0
+        tol = 1.0d-15
+
+        ! Initialize eigenvector matrix to identity
+        v = 0.0d0
+        do i = 1, n
+            v(i,i) = 1.0d0
+        end do
+
+        ! Main Jacobi iteration
+        do sweep = 1, max_sweeps
+            ! Compute sum of off-diagonal elements
+            sum_off = 0.0d0
+            do i = 1, n-1
+                do j = i+1, n
+                    sum_off = sum_off + abs(a(i,j))
+                end do
+            end do
+
+            ! Check for convergence
+            if (sum_off < tol * n * n) exit
+
+            ! Threshold for this sweep
+            if (sweep < 4) then
+                threshold = 0.2d0 * sum_off / (n * n)
+            else
+                threshold = 0.0d0
+            end if
+
+            ! Sweep through all off-diagonal elements
+            do p = 1, n-1
+                do q = p+1, n
+                    off_diag = abs(a(p,q))
+
+                    ! Skip if element is small enough
+                    if (sweep > 4 .and. off_diag < tol * abs(a(p,p)) .and. &
+                        off_diag < tol * abs(a(q,q))) then
+                        a(p,q) = 0.0d0
+                        a(q,p) = 0.0d0
+                        cycle
+                    end if
+
+                    if (off_diag > threshold) then
+                        h = a(q,q) - a(p,p)
+
+                        if (abs(h) < tol * off_diag) then
+                            t = 1.0d0
+                            if (a(p,q) < 0.0d0) t = -1.0d0
+                        else
+                            tau = h / (2.0d0 * a(p,q))
+                            if (tau >= 0.0d0) then
+                                t = 1.0d0 / (tau + sqrt(1.0d0 + tau*tau))
+                            else
+                                t = -1.0d0 / (-tau + sqrt(1.0d0 + tau*tau))
+                            end if
+                        end if
+
+                        c = 1.0d0 / sqrt(1.0d0 + t*t)
+                        s = t * c
+                        tau = s / (1.0d0 + c)
+                        h = t * a(p,q)
+
+                        ! Update diagonal elements
+                        a(p,p) = a(p,p) - h
+                        a(q,q) = a(q,q) + h
+                        a(p,q) = 0.0d0
+                        a(q,p) = 0.0d0
+
+                        ! Update rest of row/column p and q
+                        do k = 1, p-1
+                            g = a(k,p)
+                            h = a(k,q)
+                            a(k,p) = g - s * (h + g * tau)
+                            a(k,q) = h + s * (g - h * tau)
+                        end do
+                        do k = p+1, q-1
+                            g = a(p,k)
+                            h = a(k,q)
+                            a(p,k) = g - s * (h + g * tau)
+                            a(k,q) = h + s * (g - h * tau)
+                        end do
+                        do k = q+1, n
+                            g = a(p,k)
+                            h = a(q,k)
+                            a(p,k) = g - s * (h + g * tau)
+                            a(q,k) = h + s * (g - h * tau)
+                        end do
+
+                        ! Update eigenvector matrix
+                        do k = 1, n
+                            g = v(k,p)
+                            h = v(k,q)
+                            v(k,p) = g - s * (h + g * tau)
+                            v(k,q) = h + s * (g - h * tau)
+                        end do
+                    end if
+                end do
+            end do
+        end do
+
+        ! Check convergence
+        if (sweep > max_sweeps) then
+            info = 1
+            write(*,'(A)') 'PolyChord WARNING (jacobi_eigen): Failed to converge'
+        end if
+
+        ! Extract eigenvalues from diagonal
+        do i = 1, n
+            w(i) = a(i,i)
+        end do
+
+        ! Sort eigenvalues in ascending order (simple bubble sort - n is small)
+        do i = 1, n-1
+            do j = i+1, n
+                if (w(j) < w(i)) then
+                    ! Swap eigenvalues
+                    temp = w(i)
+                    w(i) = w(j)
+                    w(j) = temp
+                    ! Swap eigenvector columns
+                    do k = 1, n
+                        temp = v(k,i)
+                        v(k,i) = v(k,j)
+                        v(k,j) = temp
+                    end do
+                end if
+            end do
+        end do
+
+    end subroutine jacobi_eigen
+
+
+    !> Compute eigenvalues and eigenvectors of a symmetric matrix
+    !!
+    !! Uses LAPACK DSYEV if available, otherwise falls back to Jacobi method.
+    !!
+    !! @param[in]   a_in  Symmetric matrix (not modified)
+    !! @param[out]  w     Eigenvalues in ascending order
+    !! @param[out]  v     Eigenvectors as columns
+    !! @param[out]  info  0 on success, >0 on failure
+    subroutine sym_eigen(a_in, w, v, info)
+        implicit none
+        real(dp), intent(in), dimension(:,:) :: a_in
+        real(dp), intent(out), dimension(:) :: w
+        real(dp), intent(out), dimension(:,:) :: v
+        integer, intent(out) :: info
+
+        integer :: n, lwork
+        real(dp), allocatable :: work(:)
+#ifdef HAVE_LAPACK
+        real(dp), allocatable :: a_copy(:,:)
+#endif
+
+        n = size(a_in, 1)
+
+#ifdef HAVE_LAPACK
+        ! Use LAPACK DSYEV
+        allocate(a_copy(n,n))
+        a_copy = a_in
+
+        ! Query optimal workspace size
+        allocate(work(1))
+        lwork = -1
+        call dsyev('V', 'U', n, a_copy, n, w, work, lwork, info)
+        lwork = int(work(1))
+        deallocate(work)
+        allocate(work(lwork))
+
+        ! Compute eigenvalues and eigenvectors
+        call dsyev('V', 'U', n, a_copy, n, w, work, lwork, info)
+
+        ! DSYEV stores eigenvectors in a_copy
+        v = a_copy
+
+        deallocate(work, a_copy)
+#else
+        ! Use pure-Fortran Jacobi fallback
+        ! jacobi_eigen destroys the input matrix, so we work on a copy
+        ! and store eigenvectors separately
+        allocate(work(n*n))
+        work = reshape(a_in, [n*n])
+        v = reshape(work, [n,n])  ! v is used as working copy for matrix
+        deallocate(work)
+
+        ! jacobi_eigen expects separate output for eigenvectors
+        block
+            real(dp), dimension(n,n) :: a_work, v_work
+            a_work = a_in
+            call jacobi_eigen(a_work, w, v_work, info)
+            v = v_work
+        end block
+#endif
+
+    end subroutine sym_eigen
+
+
+    !> Regularize a covariance matrix to ensure positive-definiteness
+    !!
+    !! For rank-deficient covariance matrices (from clusters with n < D+1 points),
+    !! this function replaces zero eigenvalues with 1.0 (unit variance in null-space).
+    !!
+    !! Algorithm:
+    !! 1. Eigendecomposition: Σ = Q Λ Q^T
+    !! 2. Replace eigenvalues below threshold with 1.0
+    !! 3. Reconstruct: Σ_reg = Q Λ_reg Q^T
+    !!
+    !! @param[in]  covmat  Input covariance matrix (may be singular)
+    !! @return     covmat_reg  Regularized positive-definite covariance matrix
+    function regularize_covmat(covmat) result(covmat_reg)
+        implicit none
+        real(dp), intent(in), dimension(:,:) :: covmat
+        real(dp), dimension(size(covmat,1), size(covmat,2)) :: covmat_reg
+
+        integer :: n, i, j, info
+        real(dp), allocatable :: w(:), v(:,:), w_reg(:)
+        real(dp) :: max_eigenvalue, threshold
+
+        n = size(covmat, 1)
+        allocate(w(n), v(n,n), w_reg(n))
+
+        ! Step 1: Eigendecomposition
+        call sym_eigen(covmat, w, v, info)
+
+        if (info /= 0) then
+            write(*,'(A,I3)') 'PolyChord WARNING (regularize_covmat): Eigendecomposition failed with info=', info
+            write(*,'(A)') '                   Returning identity matrix'
+            covmat_reg = identity_matrix(n)
+            deallocate(w, v, w_reg)
+            return
+        end if
+
+        ! Check for NaN in eigenvalues
+        if (any(ieee_is_nan(w))) then
+            write(*,'(A)') 'PolyChord WARNING (regularize_covmat): NaN in eigenvalues, returning identity matrix'
+            covmat_reg = identity_matrix(n)
+            deallocate(w, v, w_reg)
+            return
+        end if
+
+        ! Step 2: Handle negative eigenvalues (numerical error) and compute threshold
+        w_reg = max(0.0d0, w)
+        max_eigenvalue = maxval(w_reg)
+
+        ! Hybrid threshold: relative + absolute floor
+        threshold = max(max_eigenvalue * eigenvalue_rel_threshold, eigenvalue_abs_threshold)
+
+        ! Step 3: Replace small/zero eigenvalues with 1.0 (unit variance in null-space)
+        ! Also handle rank-0 case (all eigenvalues near zero)
+        if (max_eigenvalue < eigenvalue_abs_threshold) then
+            ! All eigenvalues effectively zero - return identity
+            write(*,'(A)') 'PolyChord INFO (regularize_covmat): All eigenvalues near zero, using identity matrix'
+            covmat_reg = identity_matrix(n)
+            deallocate(w, v, w_reg)
+            return
+        end if
+
+        do i = 1, n
+            if (w_reg(i) < threshold) then
+                w_reg(i) = 1.0d0
+            end if
+        end do
+
+        ! Step 4: Reconstruct covariance matrix: Σ_reg = V * diag(w_reg) * V^T
+        ! Use efficient matmul instead of nested loops for BLAS optimization
+        block
+            real(dp), dimension(n,n) :: temp_mat
+            ! Calculate V * Lambda (scale columns of V by eigenvalues)
+            do j = 1, n
+                temp_mat(:,j) = v(:,j) * w_reg(j)
+            end do
+            ! Calculate (V * Lambda) * V^T
+            covmat_reg = matmul(temp_mat, transpose(v))
+        end block
+
+        ! Sanity check
+        if (any(ieee_is_nan(covmat_reg))) then
+            write(*,'(A)') 'PolyChord WARNING (regularize_covmat): NaN in reconstructed matrix, returning identity'
+            covmat_reg = identity_matrix(n)
+        end if
+
+        deallocate(w, v, w_reg)
+
+    end function regularize_covmat
 
     function calc_covmat(x,wraparound) result(covmat)
         implicit none
@@ -669,23 +1033,49 @@ module utils_module
         real(dp), dimension(size(x,1),size(x,2)) :: dx
         real(dp), dimension(size(x,1)) :: mu, circle_mu
 
-        integer :: nDims,n
+        integer :: nDims,n,i
+        real(dp) :: sum_s, sum_c  ! For wraparound checks
 
         nDims = size(x,1)
         n = size(x,2)
 
-        ! Compute the circle mean
-        circle_mu = 0d0
-        where(wraparound) circle_mu = atan2(sum(sin(x*TwoPi),dim=2),sum(cos(x*TwoPi),dim=2))/TwoPi
+        ! Handle insufficient points (n < 2)
+        if (n < 2) then
+            ! Return unit identity matrix to allow local exploration
+            ! This is mathematically sound: represents zero correlation and unit variance
+            covmat = identity_matrix(nDims)
+            return
+        endif
 
-        ! Compute the mean 
-        dx = x - spread(circle_mu,dim=2,ncopies=n)  
+        ! === FIX 2: Wraparound atan2(0,0) protection ===
+        ! Compute the circle mean with protection against atan2(0,0)
+        circle_mu = 0d0
+        if (any(wraparound)) then
+            do i = 1, nDims
+                if (wraparound(i)) then
+                    sum_s = sum(sin(x(i,:)*TwoPi))
+                    sum_c = sum(cos(x(i,:)*TwoPi))
+                    ! Check if magnitude is effectively zero (all points identical or antipodal)
+                    if (sqrt(sum_s**2 + sum_c**2) < 1.d-15) then
+                        ! Mean is undefined, use first point's value
+                        circle_mu(i) = x(i,1)
+                    else
+                        ! Normal case: compute angle
+                        circle_mu(i) = atan2(sum_s, sum_c) / TwoPi
+                    endif
+                endif
+            end do
+        endif
+
+        ! Compute the mean
+        dx = x - spread(circle_mu,dim=2,ncopies=n)
         where(spread(wraparound,dim=2,ncopies=n)) dx = dx - nint(dx)
         mu = modulo(sum(dx,dim=2)/n + circle_mu, 1d0)
 
         ! Compute the covariance matrix
-        dx = x - spread(mu,dim=2,ncopies=n) 
+        dx = x - spread(mu,dim=2,ncopies=n)
         where(spread(wraparound,dim=2,ncopies=n)) dx = dx - nint(dx)
+
         covmat = matmul(dx,transpose(dx))/(n-1)
 
     end function calc_covmat
