@@ -16,7 +16,6 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy",
     "scipy",
-    "fortranformat",
 ]
 
 [project.optional-dependencies]

@@ -659,14 +659,52 @@ def run(loglikelihood, nDims, **kwargs):
 
 
 
+def _format_fortran_double(val, w=24, d=15, e=3):
+    """Format a float in Fortran E format (E24.15E3).
+
+    Produces output like: ' 0.123456789012345E+001'
+    """
+    import math
+    if math.isnan(val):
+        return f"{'NaN':>{w}}"
+    if math.isinf(val):
+        s = '-Infinity' if val < 0 else 'Infinity'
+        return f"{s:>{w}}"
+    if val == 0.0:
+        sign = '-' if math.copysign(1.0, val) < 0 else ' '
+        return f"{sign}0.{'0' * d}E+{'0' * e}".rjust(w)
+    sign = '-' if val < 0 else ' '
+    aval = abs(val)
+    # Get Python scientific notation with d digits of precision
+    # Python's :.{d}E gives d digits after the decimal with 1 digit before
+    py_str = f"{aval:.{d}E}"
+    # Parse mantissa and exponent from Python format: "d.dddE±ee"
+    mantissa_str, exp_str = py_str.split('E')
+    exp_val = int(exp_str)
+    # Python: d.ddd × 10^exp  →  Fortran: 0.dddd × 10^(exp+1)
+    # Shift decimal: remove '.', prepend '0.'
+    digits = mantissa_str.replace('.', '')  # e.g. "1234567890123456"
+    # digits has d+1 characters; we need d digits after '0.'
+    fortran_mantissa = '0.' + digits[:d]
+    fortran_exp = exp_val + 1
+    exp_sign = '+' if fortran_exp >= 0 else '-'
+    exp_digits = f"{abs(fortran_exp):0{e}d}"
+    result = f"{sign}{fortran_mantissa}E{exp_sign}{exp_digits}"
+    return result.rjust(w)
+
+
+def _format_fortran_int(val, w=12):
+    """Format an integer right-justified in width w."""
+    return f"{int(val):>{w}d}"
+
+
 def _make_resume_file(loglikelihood, **kwargs):
-    import fortranformat as ff
     resume_filename = Path(kwargs['base_dir']) / (kwargs['file_root']
                                                   + ".resume")
 
     try:
         from mpi4py import MPI
-        comm = MPI.COMM_WORLD
+        comm = kwargs.get('comm', None) or MPI.COMM_WORLD
         rank = comm.Get_rank()
         size = comm.Get_size()
     except ImportError:
@@ -676,20 +714,28 @@ def _make_resume_file(loglikelihood, **kwargs):
 
     lives = []
     logL_birth = kwargs['logzero']
-    for i in np.array_split(np.arange(len(kwargs['cube_samples'])), size)[rank]:
-        cube = kwargs['cube_samples'][i]
-        theta = kwargs['prior'](cube)
-        logL = loglikelihood(theta)
-        try:
-            logL, derived = logL
-        except TypeError:
-            derived = []
-        nDims = len(theta)
-        nDerived = len(derived)
-        lives.append(np.concatenate([cube,theta,derived,[logL_birth, logL]]))
+    n_samples = len(kwargs['cube_samples'])
 
-    if MPI:
-        sendbuf = np.array(lives).flatten()
+    # In MPI mode with multiple ranks, only workers (rank > 0) evaluate
+    # likelihoods, matching PolyChord's controller/worker split where rank 0
+    # is the administrator. In serial mode, rank 0 does everything.
+    if MPI and size > 1:
+        n_workers = size - 1
+        if rank > 0:
+            worker_index = rank - 1
+            for i in np.array_split(np.arange(n_samples), n_workers)[worker_index]:
+                cube = kwargs['cube_samples'][i]
+                theta = kwargs['prior'](cube)
+                logL = loglikelihood(theta)
+                try:
+                    logL, derived = logL
+                except TypeError:
+                    derived = []
+                nDims = len(theta)
+                nDerived = len(derived)
+                lives.append(np.concatenate([cube,theta,derived,[logL_birth, logL]]))
+
+        sendbuf = np.array(lives).flatten() if lives else np.array([], dtype=np.float64)
         sendcounts = np.array(comm.gather(len(sendbuf)))
         if rank == 0:
             recvbuf = np.empty(sum(sendcounts))
@@ -697,22 +743,36 @@ def _make_resume_file(loglikelihood, **kwargs):
             recvbuf = None
         comm.Gatherv(sendbuf=sendbuf, recvbuf=(recvbuf, sendcounts), root=0)
 
+        if rank == 0:
+            # Infer row width: nDims (cube) + nDims (theta) + nDerived + 2 (logL_birth, logL)
+            nDims = len(kwargs['cube_samples'][0])
+            nDerived = kwargs.get('nDerived', 0)
+            row_width = 2 * nDims + nDerived + 2
+            lives = np.reshape(recvbuf, (n_samples, row_width))
+    else:
+        for i in range(n_samples):
+            cube = kwargs['cube_samples'][i]
+            theta = kwargs['prior'](cube)
+            logL = loglikelihood(theta)
+            try:
+                logL, derived = logL
+            except TypeError:
+                derived = []
+            nDims = len(theta)
+            nDerived = len(derived)
+            lives.append(np.concatenate([cube,theta,derived,[logL_birth, logL]]))
+        lives = np.array(lives)
+
     if rank == 0:
-        if MPI:
-            lives = np.reshape(recvbuf, (len(kwargs['cube_samples']), len(lives[0])))
-        else:
-            lives = np.array(lives)
         with open(resume_filename,"w") as f:
             def write(var):
                 var = np.atleast_1d(var)
                 if isinstance(var[0], np.integer):
-                    fmt = '(%iI12)' % var.size
-                elif isinstance(var[0], np.double):
-                    fmt = '(%iE24.15E3)' % var.size
+                    f.write(''.join(_format_fortran_int(v) for v in var) + '\n')
+                elif isinstance(var[0], (np.floating, float)):
+                    f.write(''.join(_format_fortran_double(v) for v in var) + '\n')
                 else:
-                    fmt = '(A)'
-                writer = ff.FortranRecordWriter(fmt)
-                f.write(writer.write(var) + '\n')
+                    f.write(str(var[0]) + '\n')
 
             write('=== Number of dimensions ===')
             write(nDims)
