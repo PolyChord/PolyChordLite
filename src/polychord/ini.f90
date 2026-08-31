@@ -13,14 +13,14 @@ contains
 
 
     subroutine initialise_program(settings,priors,params,derived_params)
-        use priors_module, only: create_priors,prior
+        use priors_module, only: create_priors,prior_spec
         use settings_module,   only: program_settings,initialise_settings
         use params_module, only: param_type
         use read_write_module, only: write_paramnames_file
         implicit none
         
         type(program_settings),intent(inout)            :: settings  !> Program settings
-        type(prior),dimension(:),allocatable,intent(out):: priors
+        type(prior_spec),dimension(:),allocatable,intent(out):: priors
 
         type(param_type),dimension(:),allocatable,intent(in) :: params         ! Parameter array
         type(param_type),dimension(:),allocatable,intent(in) :: derived_params ! Derived parameter array

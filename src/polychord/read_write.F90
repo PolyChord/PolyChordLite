@@ -962,7 +962,7 @@ module read_write_module
 
 
     subroutine write_paramnames_file(settings,params,derived_params)
-        use priors_module, only: prior
+        use priors_module, only: prior_spec
         use settings_module,   only: program_settings
         use utils_module,  only: paramnames_unit
         use params_module, only: param_type
@@ -994,7 +994,7 @@ module read_write_module
 
 
     subroutine write_properties_file(settings)
-        use priors_module, only: prior
+        use priors_module, only: prior_spec
         use settings_module,   only: program_settings
         use utils_module,  only: properties_unit
         use params_module, only: param_type

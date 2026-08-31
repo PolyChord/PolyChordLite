@@ -1,7 +1,7 @@
 !> This allows for a simple C interface... 
 module interfaces_module
     use utils_module, only: dp
-    use priors_module, only: prior, hypercube_to_physical
+    use priors_module, only: prior_spec, hypercube_to_physical
     use iso_c_binding
     implicit none
 #ifdef MPI
@@ -49,7 +49,7 @@ module interfaces_module
 
 
 
-    type(prior), dimension(:),allocatable     :: priors    ! The details of the priors
+    type(prior_spec), dimension(:),allocatable     :: priors    ! The details of the priors
 contains
 
     function default_prior_transform(cube) result(theta)
