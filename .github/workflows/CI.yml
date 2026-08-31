@@ -78,3 +78,31 @@ jobs:
 
     - name: Test pypolychord (MPI)
       run: mpirun --oversubscribe -np 3 python -m pytest tests
+
+
+  make:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install dependencies (Linux)
+      run: sudo apt-get install gfortran libopenmpi-dev
+
+    - name: Build libraries
+      run: make
+
+    - name: Build fortran driver
+      run: make polychord_fortran
+
+    - name: Build C++ drivers
+      run: make polychord_CC polychord_CC_ini
+
+    - name: Build examples
+      run: make examples
+
+    - name: Run gaussian example
+      run: ./bin/gaussian ini/gaussian.ini

@@ -19,14 +19,14 @@ module priors_module
     integer, parameter :: adaptive_sorted_exponential_type    = 14
     integer, parameter :: nn_adaptive_layer_gaussian_type     = 15
 
-    type prior
+    type prior_spec
         integer :: npars = 0
         integer :: prior_type = unknown_type
         integer, dimension(:), allocatable :: hypercube_indices
         integer, dimension(:), allocatable :: physical_indices
         real(dp), dimension(:), allocatable :: parameters
 
-    end type prior
+    end type prior_spec
 
 
     contains
@@ -494,7 +494,7 @@ module priors_module
     function hypercube_to_physical(hypercube_coords,priors) result(physical_coords)
 
         implicit none
-        type(prior), dimension(:), intent(in) :: priors
+        type(prior_spec), dimension(:), intent(in) :: priors
         real(dp), intent(in), dimension(:) :: hypercube_coords
 
         real(dp), dimension(size(hypercube_coords)) :: physical_coords
@@ -558,7 +558,7 @@ module priors_module
     function physical_to_hypercube(physical_coords,priors) result(hypercube_coords)
 
         implicit none
-        type(prior), dimension(:), intent(in) :: priors
+        type(prior_spec), dimension(:), intent(in) :: priors
         real(dp), intent(in), dimension(:) :: physical_coords
 
         real(dp), dimension(size(physical_coords)) :: hypercube_coords
@@ -591,7 +591,7 @@ module priors_module
     function prior_log_volume(priors) result(log_volume)
         use utils_module, only: logTwoPi
         implicit none
-        type(prior), dimension(:), intent(in) :: priors
+        type(prior_spec), dimension(:), intent(in) :: priors
 
         real(dp) :: log_volume
         integer :: i
@@ -673,7 +673,7 @@ module priors_module
         use params_module, only: param_type
         use utils_module,  only: relabel
         implicit none 
-        type(prior), dimension(:), allocatable,intent(out)   :: priors  !> The array of priors to be returned
+        type(prior_spec), dimension(:), allocatable,intent(out)   :: priors  !> The array of priors to be returned
         type(param_type),dimension(:),allocatable,intent(in) :: params  !> Parameter array
         type(program_settings), intent(inout) :: settings !> Program settings
 
@@ -753,7 +753,7 @@ module priors_module
         use array_module,  only: reallocate
         use abort_module,  only: halt_program
         implicit none
-        type(prior), intent(inout)   :: priori          !> The prior to be added to
+        type(prior_spec), intent(inout)   :: priori          !> The prior to be added to
         type(param_type),intent(in)  :: param           !> The params to add
         integer, intent(in)          :: physical_index  !> The position in the likelihood call
         integer, intent(in)          :: hypercube_index !> The position in the unit hypercube
