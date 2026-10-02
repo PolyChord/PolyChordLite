@@ -222,7 +222,7 @@ module chordal_module
         i_step=0
         do while( R(S%l0) >= logL .and. R(S%l0) > S%logzero )
             i_step=i_step+1
-            R(S%h0:S%h1) = x0(S%h0:S%h1) + nhat * w * i_step
+            R(S%h0:S%h1) = R(S%h0:S%h1) + nhat * w
             call calculate_point(loglikelihood,prior,R,S,n)
         end do
         if(i_step>100) write(*,'(" too many R steps (",I10,")")') i_step
@@ -231,7 +231,7 @@ module chordal_module
         i_step=0
         do while(L(S%l0) >= logL      .and. L(S%l0) > S%logzero )
             i_step=i_step+1
-            L(S%h0:S%h1) = x0(S%h0:S%h1) - nhat * w * i_step
+            L(S%h0:S%h1) = L(S%h0:S%h1) - nhat * w
             call calculate_point(loglikelihood,prior,L,S,n)
         end do
         if(i_step>100) write(*,'(" too many L steps (",I10,")")') i_step
